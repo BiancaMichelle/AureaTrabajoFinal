@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Registro de Usuario</title>
+</head>
+<body>
+  <h2>Crear nueva cuenta</h2>
+
+  <div th:if="${errorMessage}">
+    <p th:text="${errorMessage}" style="color:red;"></p>
+  </div>
+
+  <form th:action="@{/register}" method="post">
+    <input type="hidden"
+           th:name="${_csrf.parameterName}"
+           th:value="${_csrf.token}"/>
+
+    <div>
+      <label>Usuario:</label>
+      <input type="text" name="username" required/>
+    </div>
+
+    <div>
+      <label>Contraseña:</label>
+      <input type="password" name="password" required/>
+    </div>
+
+    <div>
+      <button type="submit">Registrarse</button>
+    </div>
+  </form>
+</body>
+</html>

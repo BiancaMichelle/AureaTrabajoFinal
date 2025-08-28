@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Iniciar Sesión</title>
+</head>
+<body>
+<div class="login-container">
+  <h2>Iniciar Sesión</h2>
+
+  <!-- Mensaje si acabo de registrarme -->
+  <div th:if="${param.registered}">
+    <p>Registro exitoso. Ahora inicia sesión.</p>
+  </div>
+
+  <!-- Mensaje si la sesión expiró -->
+  <div th:if="${param.timeout}">
+    <p>Tu sesión ha expirado. Por favor, inicia sesión de nuevo.</p>
+  </div>
+
+  <!-- Mensaje de error de credenciales -->
+  <div th:if="${param.error}">
+    <p>Credenciales inválidas. Intenta otra vez.</p>
+  </div>
+
+  <form th:action="@{/login}" method="post">
+    <input type="hidden"
+           th:name="${_csrf.parameterName}"
+           th:value="${_csrf.token}"/>
+
+    <div>
+      <label>Usuario:</label>
+      <input type="text" name="username" required/>
+    </div>
+    <div>
+      <label>Contraseña:</label>
+      <input type="password" name="password" required/>
+    </div>
+    <button type="submit">Entrar</button>
+  </form>
+</div>
+</body>
+</html>
