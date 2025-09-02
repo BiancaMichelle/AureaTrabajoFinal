@@ -5,7 +5,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import com.example.demo.model.Role;
+import com.example.demo.model.Rol;
 import com.example.demo.model.Usuario;
 import com.example.demo.repository.UsuarioRepository;
 
@@ -25,23 +25,22 @@ public class UsuarioJpaService implements UserDetailsService {
     }
 
     @Override
-    public UserDetails loadUserByUsername(String username)
+    public UserDetails loadUserByUsername(String dni)
         throws UsernameNotFoundException {
         
-        Usuario user = usuarioRepository.findByUsername(username)
-            .orElseThrow(() -> new UsernameNotFoundException("No existe " + username));
+        Usuario user = usuarioRepository.findById(dni)
+            .orElseThrow(() -> new UsernameNotFoundException("No existe " + dni));
 
         return org.springframework.security.core.userdetails.User
-            .withUsername(user.getUsername())
-            .password(user.getPassword())
+            .withUsername(user.getDni())
+            .password(user.getContraseña())
             .authorities(user.getRoles()
                 .stream()
-                .map(Role::getName)
+                .map(Rol::getNombre)
                 .toArray(String[]::new))
             .accountExpired(false)
             .accountLocked(false)
             .credentialsExpired(false)
-            .disabled(!user.isEnabled())
             .build();
     }
 }

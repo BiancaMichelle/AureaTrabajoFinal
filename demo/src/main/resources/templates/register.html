@@ -1,35 +1,97 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml"
-      xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org">
 <head>
-  <meta charset="UTF-8"/>
-  <title>Registro de Usuario</title>
+    <title>Registro Alumno</title>
 </head>
 <body>
-  <h2>Crear nueva cuenta</h2>
+<h2>Registro de Alumno</h2>
 
-  <div th:if="${errorMessage}">
-    <p th:text="${errorMessage}" style="color:red;"></p>
-  </div>
+<form th:action="@{/register}" th:object="${alumno}" method="post">
 
-  <form th:action="@{/register}" method="post">
-    <input type="hidden"
-           th:name="${_csrf.parameterName}"
-           th:value="${_csrf.token}"/>
+    <label>Nombre:</label>
+    <input type="text" th:field="*{nombre}" required/><br/>
 
-    <div>
-      <label>Usuario:</label>
-      <input type="text" name="username" required/>
-    </div>
+    <label>Apellido:</label>
+    <input type="text" th:field="*{apellido}" required/><br/>
 
-    <div>
-      <label>Contraseña:</label>
-      <input type="password" name="password" required/>
-    </div>
+    <label>DNI:</label>
+    <input type="text" th:field="*{dni}" required/><br/>
 
-    <div>
-      <button type="submit">Registrarse</button>
-    </div>
-  </form>
+    <label>Fecha de nacimiento:</label>
+    <input type="date" th:field="*{fechaNacimiento}" required/><br/>
+
+    <label>Correo:</label>
+    <input type="email" th:field="*{correo}" required/><br/>
+
+    <label>Contraseña:</label>
+    <input type="password" th:field="*{contraseña}" required/><br/>
+
+    <label>Teléfono:</label>
+    <input type="text" th:field="*{numTelefono}"/><br/>
+
+    <label>País:</label>
+    <select th:field="*{pais}" id="pais">
+        <option value="">Seleccione un país</option>
+        <option th:each="p : ${paises}" th:value="${p}" th:text="${p.name}"></option>
+    </select><br/>
+
+    <label>Provincia:</label>
+    <select th:field="*{provincia}" id="provincia">
+        <option value="">Seleccione una provincia</option>
+    </select><br/>
+
+    <label>Ciudad:</label>
+    <select th:field="*{ciudad}" id="ciudad">
+        <option value="">Seleccione una ciudad</option>
+    </select><br/>
+
+    <label>Domicilio:</label>
+    <input type="text" th:field="*{domicilio}"/><br/>
+
+    <!-- Campos extras de Alumno -->
+    <label>Institución de egreso:</label>
+    <select th:field="*{colegioEgreso}" th:object="${alumno}">
+        <option th:each="inst : ${instituciones}" th:value="${inst}" th:text="${inst.nombre}"></option>
+    </select>
+
+    <label>Año de egreso:</label>
+    <input type="number" th:field="*{añoEgreso}"/><br/>
+
+    <label>Últimos estudios:</label>
+    <input type="text" th:field="*{ultimosEstudios}"/><br/>
+
+    <button type="submit">Registrar</button>
+</form>
+
+<!-- Mensajes -->
+<p th:text="${mensaje}" style="color:green"></p>
+<p th:text="${error}" style="color:red"></p>
+
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    const provinciasMap = /*[[${provinciasMap}]]*/ {};
+    const ciudadesMap = /*[[${ciudadesMap}]]*/ {};
+
+    document.getElementById('pais').addEventListener('change', function() {
+        const paisCodigo = this.value;
+        const provinciaSelect = document.getElementById('provincia');
+        provinciaSelect.innerHTML = '<option value="">Seleccione una provincia</option>';
+        provinciasMap[paisCodigo]?.forEach(p => {
+            provinciaSelect.innerHTML += `<option value="${p.codigo}">${p.name}</option>`;
+        });
+    });
+
+    document.getElementById('provincia').addEventListener('change', function() {
+        const provinciaCodigo = this.value;
+        const ciudadSelect = document.getElementById('ciudad');
+        ciudadSelect.innerHTML = '<option value="">Seleccione una ciudad</option>';
+        ciudadesMap[provinciaCodigo]?.forEach(c => {
+            ciudadSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+        });
+    });
+    /*]]>*/
+</script>
+
 </body>
 </html>

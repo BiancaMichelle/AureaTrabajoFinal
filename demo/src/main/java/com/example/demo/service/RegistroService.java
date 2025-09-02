@@ -3,36 +3,39 @@ package com.example.demo.service;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import com.example.demo.model.Role;
+import com.example.demo.model.Alumno;
+import com.example.demo.model.Rol;
 import com.example.demo.model.Usuario;
-import com.example.demo.repository.RoleRepository;
+import com.example.demo.repository.RolRepository;
 import com.example.demo.repository.UsuarioRepository;
 
 @Service
 public class RegistroService {
     private UsuarioRepository usuarioRepository;
-    private RoleRepository roleRepository;
+    private RolRepository rolRepository;
     private PasswordEncoder encoder;
 
-    public RegistroService(UsuarioRepository usuarioRepository, RoleRepository roleRepository, PasswordEncoder encoder){
+    public RegistroService(UsuarioRepository usuarioRepository, RolRepository rolRepository, PasswordEncoder encoder){
         this.usuarioRepository = usuarioRepository;
-        this.roleRepository = roleRepository;
+        this.rolRepository = rolRepository;
         this.encoder = encoder;
     }
 
-    public Usuario registrarUsuario(String username, String rawPassword, String roleName) {
-        if (usuarioRepository.findByUsername(username).isPresent()) {
-            throw new IllegalArgumentException("Usuario ya existe");
-        }
+    /**
+     * Registrar un nuevo alumno
+     */
+    public Alumno registrarUsuario(Alumno alumno) {
+        // Encriptar contraseña
+        alumno.setContraseña(encoder.encode(alumno.getContraseña()));
 
-        Role role = roleRepository.findByName(roleName)
-            .orElseThrow(() -> new IllegalArgumentException("Rol inválido"));
+        // Asignar rol ALUMNO
+        Rol rolAlumno = rolRepository.findByNombre("ALUMNO")
+                .orElseThrow(() -> new RuntimeException("No existe el rol ALUMNO en la BD"));
 
-        Usuario user = new Usuario();
-        user.setUsername(username);
-        user.setPassword(encoder.encode(rawPassword));
-        user.getRoles().add(role);
-        return usuarioRepository.save(user);
+        alumno.getRoles().add(rolAlumno);
+
+        // Guardar en repositorio
+        return usuarioRepository.save(alumno);
     }
 
 }

@@ -1,20 +1,21 @@
 package com.example.demo.configSecurity;
 
 
+import java.time.Duration;
+
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.client.RestTemplate;
 
 import com.example.demo.service.UsuarioJpaService;
 
@@ -48,11 +49,11 @@ public class SecurityConfig {
               .invalidSessionUrl("/login?timeout")
         )
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/", "/publico", "/login", "/register", "/css/**", "/js/**")
-                .permitAll()
-            .requestMatchers("/admin/**").hasRole("ADMIN")
-            .requestMatchers("/alumno/**").hasRole("ESTUDIANTE")
-            .requestMatchers("/docente/**").hasRole("DOCENTE")
+            .requestMatchers("/", "/publico", "/login","/register", "/css/**", "/js/**")
+            .permitAll()
+            .requestMatchers("/admin/**").hasAuthority("ADMIN")
+            .requestMatchers("/alumno/**").hasAuthority("ALUMNO")
+            .requestMatchers("/docente/**").hasAuthority("DOCENTE")
             .anyRequest().authenticated()
         )
         .formLogin(form -> form
@@ -62,11 +63,11 @@ public class SecurityConfig {
                                         .stream()
                                         .map(a -> a.getAuthority())
                                         .toList();
-                if (roles.contains("ROLE_ADMIN")) {
+                if (roles.contains("ADMIN")) {
                     response.sendRedirect("/admin/dashboard");
-                } else if (roles.contains("ROLE_ESTUDIANTE")) {
+                } else if (roles.contains("ALUMNO")) {
                     response.sendRedirect("/alumno");
-                } else if (roles.contains("ROLE_DOCENTE")) {
+                } else if (roles.contains("DOCENTE")) {
                     response.sendRedirect("/docente");
                 } else {
                     response.sendRedirect("/");  

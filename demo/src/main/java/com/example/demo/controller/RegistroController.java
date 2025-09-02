@@ -1,44 +1,64 @@
 package com.example.demo.controller;
 
+import com.example.demo.model.Alumno;
+import com.example.demo.model.Ciudad;
+import com.example.demo.model.Institucion;
+import com.example.demo.model.Pais;
+import com.example.demo.model.Provincia;
+import com.example.demo.repository.CiudadRepository;
+import com.example.demo.repository.InstitucionRepository;
+import com.example.demo.repository.PaisRepository;
+import com.example.demo.repository.ProvinciaRepository;
+import com.example.demo.service.InstitucionService;
 import com.example.demo.service.RegistroService;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
+@RequestMapping("/register")
 public class RegistroController {
 
     private final RegistroService registroService;
+    private final InstitucionRepository institucionRepository;
 
-    public RegistroController(RegistroService registroService) {
+    public RegistroController(RegistroService registroService, InstitucionRepository institucionRepository) {
+        this.institucionRepository = institucionRepository;
         this.registroService = registroService;
     }
 
-    @GetMapping("/register")
-    public String showForm(@RequestParam(value="error", required=false) String error,
-                           Model model) {
-        if (error != null) {
-            model.addAttribute("errorMessage", error);
-        }
-        return "register";
+    /**
+     * Mostrar formulario de registro
+     */
+    @GetMapping
+    public String mostrarFormulario(Model model) {
+    Alumno alumno = new Alumno();
+    model.addAttribute("alumno", alumno);
+
+    List<Institucion> instituciones = institucionRepository.findAll();
+    model.addAttribute("instituciones", instituciones);
+
+    return "register";
     }
 
-    @PostMapping("/register")
-    public String processRegistration(
-            @RequestParam String username,
-            @RequestParam String password,
-            RedirectAttributes ra) {
+    /**
+     * Procesar formulario de registro
+     */
+    @PostMapping
+    public String registrarAlumno(@ModelAttribute("alumno") Alumno alumno, Model model) {
         try {
-            registroService.registrarUsuario(
-                username,
-                password,
-                "ROLE_ESTUDIANTE"         
-            );
-            return "redirect:/login?registered";
-        } catch (IllegalArgumentException ex) {
-            ra.addAttribute("error", ex.getMessage());
-            return "redirect:/register";
+            registroService.registrarUsuario(alumno);
+            model.addAttribute("mensaje", "Alumno registrado con éxito");
+            model.addAttribute("alumno", new Alumno()); // reinicia el form
+        } catch (Exception e) {
+            model.addAttribute("error", "Error al registrar: " + e.getMessage());
         }
+        return "register";
     }
 }
