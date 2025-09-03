@@ -1,5 +1,10 @@
 package com.example.demo.model;
 
+import java.time.LocalDate;
+import java.util.UUID;
+
+import com.example.demo.enums.TipoCalificacion;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -10,9 +15,11 @@ import jakarta.persistence.ManyToOne;
 @Entity
 public class Calificacion {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    @ManyToOne
-    @JoinColumn(name = "alumno_id")
-    private Alumno alumno;
+    private UUID idCalificacion = UUID.randomUUID();
+    private Double nota;
+    private String observaciones;
+    private LocalDate fecha;
+    private Docente docente;
+    private TipoCalificacion tipoCalificacion;
+
 }

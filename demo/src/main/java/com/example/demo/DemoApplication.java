@@ -42,7 +42,7 @@ public class DemoApplication implements CommandLineRunner {
         Stream.of("ADMIN", "ALUMNO", "DOCENTE")
               .forEach(name -> {
                   if (roleRepository.findByNombre(name).isEmpty()) {
-                      roleRepository.save(new Rol(null, name));
+                      roleRepository.save(new Rol(null, name, name));
                   }
               });
 
