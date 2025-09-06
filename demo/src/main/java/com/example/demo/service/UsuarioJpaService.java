@@ -9,7 +9,6 @@ import com.example.demo.model.Rol;
 import com.example.demo.model.Usuario;
 import com.example.demo.repository.UsuarioRepository;
 
-
 /*Este servicio es utilizado cuando un usuario intenta acceder, busca al usuario en la base de datos
  * luego empaca todo para traerle a spring. Compara la contraseña que se tecleo con la que se guardo.
  * comprueba y usa los roles para saber a donde llevar el usuario.

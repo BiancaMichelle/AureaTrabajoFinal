@@ -1,5 +1,7 @@
 package com.example.demo.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -16,11 +18,13 @@ import lombok.Setter;
 @Table(name = "cities")
 public class Ciudad {
     @Id
+    @JsonProperty("id")
     private Long id;
-    private String nombre;
 
-    @ManyToOne
-    @JoinColumn(name = "state_code")
-    private Provincia provincia;
+    @JsonProperty("name")
+    private String nombre;
     
+    @ManyToOne
+    @JoinColumn(name = "provincia_id")
+    private Provincia provincia;
 }

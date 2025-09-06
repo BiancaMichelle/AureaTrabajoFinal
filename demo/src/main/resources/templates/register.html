@@ -6,92 +6,432 @@
 <body>
 <h2>Registro de Alumno</h2>
 
-<form th:action="@{/register}" th:object="${alumno}" method="post">
+<form th:action="@{/register}" th:object="${alumno}" method="post" id="registroForm" onsubmit="return validarFormulario()">
 
     <label>Nombre:</label>
-    <input type="text" th:field="*{nombre}" required/><br/>
+    <input type="text" th:field="*{nombre}" id="nombre" required/>
+    <span class="error" id="errorNombre"></span><br/>
 
     <label>Apellido:</label>
-    <input type="text" th:field="*{apellido}" required/><br/>
+    <input type="text" th:field="*{apellido}" id="apellido" required/>
+    <span class="error" id="errorApellido"></span><br/>
 
     <label>DNI:</label>
-    <input type="text" th:field="*{dni}" required/><br/>
+    <input type="number" th:field="*{dni}" id="dni" required/>
+    <span class="error" id="errorDni"></span><br/>
 
     <label>Fecha de nacimiento:</label>
-    <input type="date" th:field="*{fechaNacimiento}" required/><br/>
+    <input type="date" th:field="*{fechaNacimiento}" id="fechaNacimiento" required/>
+    <span class="error" id="errorFechaNacimiento"></span><br/>
 
     <label>Correo:</label>
-    <input type="email" th:field="*{correo}" required/><br/>
+    <input type="email" th:field="*{correo}" id="correo" required/>
+    <span class="error" id="errorCorreo"></span><br/>
 
     <label>Contraseña:</label>
-    <input type="password" th:field="*{contraseña}" required/><br/>
+    <input type="password" th:field="*{contraseña}" id="contraseña" required/>
+    <span class="error" id="errorContraseña"></span><br/>
+
+    <label>Confirmar Contraseña:</label>
+    <input type="password" id="confirmarContraseña" required/>
+    <span class="error" id="errorConfirmarContraseña"></span><br/>
 
     <label>Teléfono:</label>
-    <input type="text" th:field="*{numTelefono}"/><br/>
+    <input type="number" th:field="*{numTelefono}" id="telefono"/>
+    <span class="error" id="errorTelefono"></span><br/>
 
-    <label>País:</label>
-    <select th:field="*{pais}" id="pais">
-        <option value="">Seleccione un país</option>
-        <option th:each="p : ${paises}" th:value="${p}" th:text="${p.name}"></option>
-    </select><br/>
+    <div>
+        <label>País:</label>
+        <select id="pais" th:field="*{pais.codigo}" required onchange="cargarProvincias()">
+            <option value="">Seleccionar país</option>
+            <option th:each="pais : ${paises}" 
+                    th:value="${pais.codigo}" 
+                    th:text="${pais.nombre}">
+            </option>
+        </select>
+        <span class="error" id="errorPais"></span>
+    </div>
 
-    <label>Provincia:</label>
-    <select th:field="*{provincia}" id="provincia">
-        <option value="">Seleccione una provincia</option>
-    </select><br/>
+    <div>
+        <label>Provincia/Estado:</label>
+        <select id="provincia" th:field="*{provincia.codigo}" required onchange="cargarCiudades()">
+            <option value="">Seleccionar provincia</option>
+        </select>
+        <span class="error" id="errorProvincia"></span>
+    </div>
 
-    <label>Ciudad:</label>
-    <select th:field="*{ciudad}" id="ciudad">
-        <option value="">Seleccione una ciudad</option>
-    </select><br/>
+    <div>
+        <label>Ciudad:</label>
+        <select id="ciudad" th:field="*{ciudad.id}" required>
+            <option value="">Seleccionar ciudad</option>
+        </select>
+        <span class="error" id="errorCiudad"></span>
+    </div>
 
     <label>Domicilio:</label>
-    <input type="text" th:field="*{domicilio}"/><br/>
+    <input type="text" th:field="*{domicilio}" id="domicilio"/>
+    <span class="error" id="errorDomicilio"></span><br/>
 
-    <!-- Campos extras de Alumno -->
     <label>Institución de egreso:</label>
-    <select th:field="*{colegioEgreso}" th:object="${alumno}">
-        <option th:each="inst : ${instituciones}" th:value="${inst}" th:text="${inst.nombre}"></option>
+    <select th:field="*{colegioEgreso}" id="institucion">
+        <option value="">Seleccionar institución</option>
+        <option th:each="inst : ${instituciones}" th:value="${inst.id}" th:text="${inst.nombre}"></option>
     </select>
+    <span class="error" id="errorInstitucion"></span><br/>
 
     <label>Año de egreso:</label>
-    <input type="number" th:field="*{añoEgreso}"/><br/>
+    <input type="number" th:field="*{añoEgreso}" id="anioEgreso" min="1950" max="2025"/>
+    <span class="error" id="errorAnioEgreso"></span><br/>
 
     <label>Últimos estudios:</label>
-    <input type="text" th:field="*{ultimosEstudios}"/><br/>
+    <input type="text" th:field="*{ultimosEstudios}" id="ultimosEstudios"/>
+    <span class="error" id="errorUltimosEstudios"></span><br/>
 
     <button type="submit">Registrar</button>
 </form>
 
-<!-- Mensajes -->
-<p th:text="${mensaje}" style="color:green"></p>
-<p th:text="${error}" style="color:red"></p>
+<style>
+.error {
+    color: red;
+    font-size: 12px;
+    display: block;
+    margin-top: 5px;
+}
+</style>
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-<script th:inline="javascript">
-    /*<![CDATA[*/
-    const provinciasMap = /*[[${provinciasMap}]]*/ {};
-    const ciudadesMap = /*[[${ciudadesMap}]]*/ {};
+<script>
+// Variable para controlar si ya se intentó enviar el formulario
+let formularioIntentadoEnviar = false;
 
-    document.getElementById('pais').addEventListener('change', function() {
-        const paisCodigo = this.value;
-        const provinciaSelect = document.getElementById('provincia');
-        provinciaSelect.innerHTML = '<option value="">Seleccione una provincia</option>';
-        provinciasMap[paisCodigo]?.forEach(p => {
-            provinciaSelect.innerHTML += `<option value="${p.codigo}">${p.name}</option>`;
+// Función principal de validación
+function validarFormulario() {
+    formularioIntentadoEnviar = true;
+    let esValido = true;
+    
+    // Resetear errores
+    document.querySelectorAll('.error').forEach(el => el.textContent = '');
+    
+    // Validar cada campo
+    esValido = validarNombre() && esValido;
+    esValido = validarApellido() && esValido;
+    esValido = validarDni() && esValido;
+    esValido = validarFechaNacimiento() && esValido;
+    esValido = validarCorreo() && esValido;
+    esValido = validarContraseña() && esValido;
+    esValido = validarConfirmarContraseña() && esValido;
+    esValido = validarTelefono() && esValido;
+    esValido = validarPais() && esValido;
+    esValido = validarProvincia() && esValido;
+    esValido = validarCiudad() && esValido;
+    esValido = validarInstitucion() && esValido;
+    esValido = validarAnioEgreso() && esValido;
+    
+    if (!esValido) {
+        // Scroll al primer error
+        const primerError = document.querySelector('.error:not(:empty)');
+        if (primerError) {
+            primerError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        
+        // Mostrar alerta con resumen de errores
+        mostrarResumenErrores();
+    }
+    
+    return esValido;
+}
+
+// Función para mostrar resumen de errores
+function mostrarResumenErrores() {
+    const errores = [];
+    
+    if (document.getElementById('errorNombre').textContent) {
+        errores.push('• Nombre: ' + document.getElementById('errorNombre').textContent);
+    }
+    if (document.getElementById('errorApellido').textContent) {
+        errores.push('• Apellido: ' + document.getElementById('errorApellido').textContent);
+    }
+    if (document.getElementById('errorDni').textContent) {
+        errores.push('• DNI: ' + document.getElementById('errorDni').textContent);
+    }
+    if (document.getElementById('errorFechaNacimiento').textContent) {
+        errores.push('• Fecha de nacimiento: ' + document.getElementById('errorFechaNacimiento').textContent);
+    }
+    if (document.getElementById('errorCorreo').textContent) {
+        errores.push('• Correo: ' + document.getElementById('errorCorreo').textContent);
+    }
+    if (document.getElementById('errorContraseña').textContent) {
+        errores.push('• Contraseña: ' + document.getElementById('errorContraseña').textContent);
+    }
+    if (document.getElementById('errorConfirmarContraseña').textContent) {
+        errores.push('• Confirmar contraseña: ' + document.getElementById('errorConfirmarContraseña').textContent);
+    }
+    if (document.getElementById('errorTelefono').textContent) {
+        errores.push('• Teléfono: ' + document.getElementById('errorTelefono').textContent);
+    }
+    if (document.getElementById('errorPais').textContent) {
+        errores.push('• País: ' + document.getElementById('errorPais').textContent);
+    }
+    if (document.getElementById('errorProvincia').textContent) {
+        errores.push('• Provincia: ' + document.getElementById('errorProvincia').textContent);
+    }
+    if (document.getElementById('errorCiudad').textContent) {
+        errores.push('• Ciudad: ' + document.getElementById('errorCiudad').textContent);
+    }
+    if (document.getElementById('errorInstitucion').textContent) {
+        errores.push('• Institución: ' + document.getElementById('errorInstitucion').textContent);
+    }
+    if (document.getElementById('errorAnioEgreso').textContent) {
+        errores.push('• Año de egreso: ' + document.getElementById('errorAnioEgreso').textContent);
+    }
+    
+    if (errores.length > 0) {
+        alert('Por favor, corrige los siguientes errores:\n\n' + errores.join('\n'));
+    }
+}
+
+// Funciones de validación individuales (las mismas que antes)
+function validarNombre() {
+    const nombre = document.getElementById('nombre').value.trim();
+    if (!nombre) {
+        document.getElementById('errorNombre').textContent = 'El nombre es requerido';
+        return false;
+    }
+    if (nombre.length < 2) {
+        document.getElementById('errorNombre').textContent = 'El nombre debe tener al menos 2 caracteres';
+        return false;
+    }
+    if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(nombre)) {
+        document.getElementById('errorNombre').textContent = 'El nombre solo puede contener letras';
+        return false;
+    }
+    return true;
+}
+
+function validarApellido() {
+    const apellido = document.getElementById('apellido').value.trim();
+    if (!apellido) {
+        document.getElementById('errorApellido').textContent = 'El apellido es requerido';
+        return false;
+    }
+    if (apellido.length < 2) {
+        document.getElementById('errorApellido').textContent = 'El apellido debe tener al menos 2 caracteres';
+        return false;
+    }
+    if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(apellido)) {
+        document.getElementById('errorApellido').textContent = 'El apellido solo puede contener letras';
+        return false;
+    }
+    return true;
+}
+
+function validarDni() {
+    const dni = document.getElementById('dni').value.trim();
+    if (!dni) {
+        document.getElementById('errorDni').textContent = 'El DNI es requerido';
+        return false;
+    }
+    if (!/^\d{8}$/.test(dni)) {
+        document.getElementById('errorDni').textContent = 'El DNI debe tener 8 dígitos';
+        return false;
+    }
+    return true;
+}
+
+function validarFechaNacimiento() {
+    const fecha = document.getElementById('fechaNacimiento').value;
+    if (!fecha) {
+        document.getElementById('errorFechaNacimiento').textContent = 'La fecha de nacimiento es requerida';
+        return false;
+    }
+    
+    const fechaNacimiento = new Date(fecha);
+    const hoy = new Date();
+    const edad = hoy.getFullYear() - fechaNacimiento.getFullYear();
+    
+    if (edad < 16) {
+        document.getElementById('errorFechaNacimiento').textContent = 'Debes tener al menos 16 años';
+        return false;
+    }
+    if (edad > 100) {
+        document.getElementById('errorFechaNacimiento').textContent = 'La edad no puede ser mayor a 100 años';
+        return false;
+    }
+    return true;
+}
+
+function validarCorreo() {
+    const correo = document.getElementById('correo').value.trim();
+    if (!correo) {
+        document.getElementById('errorCorreo').textContent = 'El correo es requerido';
+        return false;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+        document.getElementById('errorCorreo').textContent = 'Formato de correo inválido';
+        return false;
+    }
+    return true;
+}
+
+function validarContraseña() {
+    const contraseña = document.getElementById('contraseña').value;
+    if (!contraseña) {
+        document.getElementById('errorContraseña').textContent = 'La contraseña es requerida';
+        return false;
+    }
+    if (contraseña.length < 8) {
+        document.getElementById('errorContraseña').textContent = 'La contraseña debe tener al menos 8 caracteres';
+        return false;
+    }
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(contraseña)) {
+        document.getElementById('errorContraseña').textContent = 'Debe contener mayúsculas, minúsculas y números';
+        return false;
+    }
+    return true;
+}
+
+function validarConfirmarContraseña() {
+    const contraseña = document.getElementById('contraseña').value;
+    const confirmar = document.getElementById('confirmarContraseña').value;
+    if (!confirmar) {
+        document.getElementById('errorConfirmarContraseña').textContent = 'Confirma tu contraseña';
+        return false;
+    }
+    if (contraseña !== confirmar) {
+        document.getElementById('errorConfirmarContraseña').textContent = 'Las contraseñas no coinciden';
+        return false;
+    }
+    return true;
+}
+
+function validarTelefono() {
+    const telefono = document.getElementById('telefono').value.trim();
+    if (telefono && !/^[\d\s\+\-\(\)]{7,15}$/.test(telefono)) {
+        document.getElementById('errorTelefono').textContent = 'Formato de teléfono inválido';
+        return false;
+    }
+    return true;
+}
+
+function validarPais() {
+    const pais = document.getElementById('pais').value;
+    if (!pais) {
+        document.getElementById('errorPais').textContent = 'Selecciona un país';
+        return false;
+    }
+    return true;
+}
+
+function validarProvincia() {
+    const provincia = document.getElementById('provincia').value;
+    if (!provincia) {
+        document.getElementById('errorProvincia').textContent = 'Selecciona una provincia';
+        return false;
+    }
+    return true;
+}
+
+function validarCiudad() {
+    const ciudad = document.getElementById('ciudad').value;
+    if (!ciudad) {
+        document.getElementById('errorCiudad').textContent = 'Selecciona una ciudad';
+        return false;
+    }
+    return true;
+}
+
+function validarInstitucion() {
+    const institucion = document.getElementById('institucion').value;
+    if (institucion) {
+        document.getElementById('errorInstitucion').textContent = 'Selecciona una institución';
+        return false;
+    }
+    return true;
+}
+
+function validarAnioEgreso() {
+    const anio = document.getElementById('anioEgreso').value;
+    if (anio) {
+        const añoActual = new Date().getFullYear();
+        if (anio < 1950 || anio > añoActual) {
+            document.getElementById('errorAnioEgreso').textContent = `El año debe estar entre 1950 y ${añoActual}`;
+            return false;
+        }
+    }
+    return true;
+}
+
+// FUNCIONES ORIGINALES PARA CARGAR PROVINCIAS Y CIUDADES (IMPORTANTE: NO CAMBIAR NOMBRES)
+function cargarProvincias() {
+    const paisCodigo = $('#pais').val();
+    if (paisCodigo) {
+        $('#provincia').prop('disabled', true).html('<option value="">Cargando...</option>');
+        $('#ciudad').prop('disabled', true).html('<option value="">Selecciona provincia primero</option>');
+        
+        $.ajax({
+            url: '/register/provincias/' + paisCodigo,
+            type: 'GET',
+            success: function(provincias) {
+                const $select = $('#provincia');
+                $select.empty().append('<option value="">Seleccionar provincia</option>');
+                
+                console.log("Provincias recibidas:", provincias);
+                
+                provincias.forEach(function(provincia) {
+                    $select.append($('<option>', {
+                        value: provincia.iso2,
+                        text: provincia.name
+                    }));
+                });
+                
+                $select.prop('disabled', false);
+            },
+            error: function(xhr, status, error) {
+                console.error("Error cargando provincias:", error);
+                $('#provincia').html('<option value="">Error al cargar</option>');
+            }
         });
-    });
+    } else {
+        $('#provincia').prop('disabled', true).html('<option value="">Selecciona país primero</option>');
+        $('#ciudad').prop('disabled', true).html('<option value="">Selecciona provincia primero</option>');
+    }
+}
 
-    document.getElementById('provincia').addEventListener('change', function() {
-        const provinciaCodigo = this.value;
-        const ciudadSelect = document.getElementById('ciudad');
-        ciudadSelect.innerHTML = '<option value="">Seleccione una ciudad</option>';
-        ciudadesMap[provinciaCodigo]?.forEach(c => {
-            ciudadSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+function cargarCiudades() {
+    const paisCodigo = $('#pais').val();
+    const provinciaCodigo = $('#provincia').val();
+    
+    if (paisCodigo && provinciaCodigo) {
+        $('#ciudad').prop('disabled', true).html('<option value="">Cargando...</option>');
+        
+        $.ajax({
+            url: '/register/ciudades/' + paisCodigo + '/' + provinciaCodigo,
+            type: 'GET',
+            success: function(ciudades) {
+                const $select = $('#ciudad');
+                $select.empty().append('<option value="">Seleccionar ciudad</option>');
+                
+                console.log("Ciudades recibidas:", ciudades);
+                
+                ciudades.forEach(function(ciudad) {
+                    $select.append($('<option>', {
+                        value: ciudad.id,
+                        text: ciudad.name
+                    }));
+                });
+                
+                $select.prop('disabled', false);
+            },
+            error: function(xhr, status, error) {
+                console.error("Error cargando ciudades:", error);
+                $('#ciudad').html('<option value="">Error al cargar</option>');
+            }
         });
-    });
-    /*]]>*/
+    } else {
+        $('#ciudad').prop('disabled', true).html('<option value="">Selecciona provincia primero</option>');
+    }
+}
 </script>
-
 </body>
 </html>

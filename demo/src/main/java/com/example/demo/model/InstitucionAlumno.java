@@ -8,9 +8,15 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import lombok.Getter;
 
 @Entity
+<<<<<<< Updated upstream:demo/src/main/java/com/example/demo/model/InstitucionAlumno.java
 public class InstitucionAlumno {
+=======
+@Getter
+public class Institucion {
+>>>>>>> Stashed changes:demo/src/main/java/com/example/demo/model/Institucion.java
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long idInstitucion;

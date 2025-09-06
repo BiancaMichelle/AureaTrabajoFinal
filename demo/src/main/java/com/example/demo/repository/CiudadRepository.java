@@ -9,5 +9,5 @@ import com.example.demo.model.Ciudad;
 
 @Repository
 public interface CiudadRepository extends JpaRepository<Ciudad,Long> {
-    List<Ciudad> findByProvinciaCodigo(String provinciaCodigo);
+    
 }
