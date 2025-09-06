@@ -58,66 +58,128 @@
                     </div>
 
                     <form th:action="@{/register}" method="post">
-                        <!-- Paso 1: Datos Personales -->
-                        <div class="form-step active" data-step="1">
-                            <div class="input-group">
-                                <label for="reg-nombre">Nombre</label>
-                                <input type="text" id="reg-nombre" name="nombre" required>
-                                <span class="error-message" id="error-nombre"></span>
+                        <div class="form-scroll">
+                            <!-- Paso 1: Datos Personales -->
+                            <div class="form-step active" data-step="1">
+                                <div class="input-group">
+                                    <label for="reg-nombre">Nombre</label>
+                                    <input type="text" id="reg-nombre" name="nombre" required>
+                                    <span class="error-message" id="error-nombre"></span>
+                                </div>
+                                <div class="input-group">
+                                    <label for="reg-apellido">Apellido</label>
+                                    <input type="text" id="reg-apellido" name="apellido" required>
+                                    <span class="error-message" id="error-apellido"></span>
+                                </div>
+                                <div class="input-group">
+                                    <label for="reg-dni">DNI</label>
+                                    <input type="text" id="reg-dni" name="dni" required>
+                                    <span class="error-message" id="error-dni"></span>
+                                </div>
+                                <div class="input-group">
+                                    <label for="reg-genero">Género</label>
+                                    <select id="reg-genero" name="genero" required>
+                                        <option value="" disabled selected>Selecciona tu género</option>
+                                        <option value="Femenino">Femenino</option>
+                                        <option value="Masculino">Masculino</option>
+                                        <option value="X">X</option>
+                                        <option value="Otro">Otro</option>
+                                    </select>
+                                    <span class="error-message" id="error-genero"></span>
+                                </div>
+                                <div class="input-group">
+                                    <label for="reg-fecha-nac">Fecha de nacimiento</label>
+                                    <input type="date" id="reg-fecha-nac" name="fechaNacimiento" required>
+                                    <span class="error-message" id="error-fecha-nac"></span>
+                                </div>
+                                <div class="input-group">
+                                    <label for="reg-telefono">Teléfono</label>
+                                    <input type="tel" id="reg-telefono" name="telefono" required>
+                                    <span class="error-message" id="error-telefono"></span>
+                                </div>
+                                 <div class="input-group">
+                                    <label for="reg-email">Correo Electrónico</label>
+                                    <input type="email" id="reg-email" name="email" required>
+                                    <span class="error-message" id="error-email"></span>
+                                </div>
                             </div>
-                            <div class="input-group">
-                                <label for="reg-apellido">Apellido</label>
-                                <input type="text" id="reg-apellido" name="apellido" required>
-                                <span class="error-message" id="error-apellido"></span>
-                            </div>
-                             <div class="input-group">
-                                <label for="reg-dni">DNI</label>
-                                <input type="text" id="reg-dni" name="dni" required>
-                                <span class="error-message" id="error-dni"></span>
-                            </div>
-                            <button type="button" class="auth-btn next-btn" id="btn-step1" onclick="nextStep(2)">Siguiente</button>
-                        </div>
 
-                        <!-- Paso 2: Domicilio -->
-                        <div class="form-step" data-step="2">
-                            <div class="input-group">
-                                <label for="reg-pais">País</label>
-                                <input type="text" id="reg-pais" name="pais" required>
-                                <span class="error-message" id="error-pais"></span>
+                            <!-- Paso 2: Domicilio -->
+                            <div class="form-step" data-step="2">
+                                <div class="input-group">
+                                    <label for="reg-pais">País</label>
+                                    <select id="reg-pais" name="pais" required>
+                                        <option value="" disabled selected>Selecciona tu país</option>
+                                        <option value="Argentina">Argentina</option>
+                                        <option value="Otro">Otro</option>
+                                    </select>
+                                    <span class="error-message" id="error-pais"></span>
+                                </div>
+                                <div class="input-group">
+                                    <label for="reg-provincia">Provincia</label>
+                                    <select id="reg-provincia" name="provincia" required>
+                                        <option value="" disabled selected>Selecciona tu provincia</option>
+                                    </select>
+                                    <span class="error-message" id="error-provincia"></span>
+                                </div>
+                                <div class="input-group">
+                                    <label for="reg-ciudad">Ciudad</label>
+                                    <select id="reg-ciudad" name="ciudad" required>
+                                        <option value="" disabled selected>Selecciona tu ciudad</option>
+                                    </select>
+                                    <span class="error-message" id="error-ciudad"></span>
+                                </div>
+                                <div class="input-group">
+                                    <label for="reg-domicilio">Domicilio</label>
+                                    <input type="text" id="reg-domicilio" name="domicilio" required>
+                                    <span class="error-message" id="error-domicilio"></span>
+                                </div>
                             </div>
-                            <div class="input-group">
-                                <label for="reg-provincia">Provincia</label>
-                                <input type="text" id="reg-provincia" name="provincia" required>
-                                <span class="error-message" id="error-provincia"></span>
-                            </div>
-                            <button type="button" class="auth-btn prev-btn" onclick="prevStep(1)">Anterior</button>
-                            <button type="button" class="auth-btn next-btn" onclick="nextStep(3)">Siguiente</button>
-                        </div>
 
-                        <!-- Paso 3: Datos Académicos -->
-                        <div class="form-step" data-step="3">
-                            <div class="input-group">
-                                <label for="reg-estudios">Últimos estudios</label>
-                                <input type="text" id="reg-estudios" name="ultimosEstudios" required>
-                                <span class="error-message" id="error-estudios"></span>
+                            <!-- Paso 3: Datos Académicos -->
+                            <div class="form-step" data-step="3">
+                                <div class="input-group">
+                                    <label for="reg-estudios">Últimos estudios alcanzados</label>
+                                    <input type="text" id="reg-estudios" name="ultimosEstudios" required>
+                                    <span class="error-message" id="error-estudios"></span>
+                                </div>
+                                <div class="input-group">
+                                    <label for="reg-colegio">Colegio de egreso</label>
+                                    <input type="text" id="reg-colegio" name="colegio" required>
+                                    <span class="error-message" id="error-colegio"></span>
+                                </div>
+                                <div class="input-group">
+                                    <label for="reg-password">Contraseña</label>
+                                    <input type="password" id="reg-password" name="password" required>
+                                    <span class="error-message" id="error-password"></span>
+                                </div>
+                                <div class="input-group">
+                                    <label for="reg-password2">Repetir Contraseña</label>
+                                    <input type="password" id="reg-password2" name="password2" required>
+                                    <span class="error-message" id="error-password2"></span>
+                                </div>
+                                <div class="input-group terms-group" style="display:flex; align-items:center; gap:8px;">
+                                    <input type="checkbox" id="reg-terms" name="terms" required style="width:16px; height:16px;">
+                                    <label for="reg-terms" style="margin:0;">Acepto los <a href="#" target="_blank">términos y condiciones</a></label>
+                                </div>
                             </div>
-                            <div class="input-group">
-                                <label for="reg-password">Contraseña</label>
-                                <input type="password" id="reg-password" name="password" required>
-                                <span class="error-message" id="error-password"></span>
+                        </div>
+                        <div class="step-actions">
+                            <div class="action-group active" data-step="1">
+                                <button type="button" class="auth-btn next-btn" id="btn-step1" onclick="nextStep(2)" style="width: 100%;">Siguiente</button>
                             </div>
-                            <div class="input-group terms-group" style="display:flex; align-items:center; gap:8px;">
-                                <input type="checkbox" id="reg-terms" name="terms" required style="width:16px; height:16px;">
-                                <label for="reg-terms" style="margin:0;">Acepto los <a href="#" target="_blank">términos y condiciones</a></label>
+                            <div class="action-group" data-step="2">
+                                <button type="button" class="auth-btn prev-btn" onclick="prevStep(1)">Anterior</button>
+                                <button type="button" class="auth-btn next-btn" onclick="nextStep(3)">Siguiente</button>
                             </div>
-                            <div class="actions-row" style="display:flex; gap:4%;">
-                                <button type="button" class="auth-btn prev-btn" onclick="prevStep(2)" style="width:48%;">Anterior</button>
-                                <button type="submit" class="auth-btn" style="width:48%;">Registrarse</button>
+                            <div class="action-group" data-step="3">
+                                <button type="button" class="auth-btn prev-btn" onclick="prevStep(2)">Anterior</button>
+                                <button type="submit" class="auth-btn">Registrarse</button>
                             </div>
                         </div>
                     </form>
+                    <p class="switch-form" id="to-login">¿Ya tienes una cuenta? <a href="#" onclick="toggleForms()">Inicia Sesión</a></p>
                 </div>
-                <p class="switch-form" id="to-login">¿Ya tienes una cuenta? <a href="#" onclick="toggleForms()">Inicia Sesión</a></p>
             </div>
         </div>
     </div>

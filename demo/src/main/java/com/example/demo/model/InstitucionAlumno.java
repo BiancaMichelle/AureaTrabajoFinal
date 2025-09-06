@@ -11,12 +11,7 @@ import jakarta.persistence.ManyToOne;
 import lombok.Getter;
 
 @Entity
-<<<<<<< Updated upstream:demo/src/main/java/com/example/demo/model/InstitucionAlumno.java
 public class InstitucionAlumno {
-=======
-@Getter
-public class Institucion {
->>>>>>> Stashed changes:demo/src/main/java/com/example/demo/model/Institucion.java
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long idInstitucion;
@@ -25,6 +20,10 @@ public class Institucion {
     private String localidad;
     private String correoInstitucional;
     private String telefonoContacto;
+    public Long getId() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getId'");
+    }
     
 
 }

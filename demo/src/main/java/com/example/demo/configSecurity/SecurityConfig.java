@@ -1,14 +1,6 @@
 package com.example.demo.configSecurity;
 
 
-<<<<<<< Updated upstream
-=======
-import java.time.Duration;
-import java.util.List;
-
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.web.client.RestTemplateBuilder;
->>>>>>> Stashed changes
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -18,13 +10,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-<<<<<<< Updated upstream
-=======
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
->>>>>>> Stashed changes
 
 import com.example.demo.service.UsuarioJpaService;
 @Configuration
@@ -55,18 +41,11 @@ public class SecurityConfig {
         .cors(cors -> cors.configurationSource(corsConfigurationSource())) // ← AÑADE ESTO
         .userDetailsService(usuarioJpaService)
         .sessionManagement(session -> session
-<<<<<<< Updated upstream
               .invalidSessionUrl("/?timeout")
         )
         .authorizeHttpRequests(auth -> auth
             .requestMatchers("/", "/publico", "/login", "/register", 
                            "/css/**", "/js/**", "/style/**", "/img/**")
-=======
-            .invalidSessionUrl("/login?timeout")
-        )
-        .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/", "/publico", "/login","/register/**", "/css/**", "/js/**")
->>>>>>> Stashed changes
             .permitAll()
             .requestMatchers("/admin/**").hasAuthority("ADMIN")
             .requestMatchers("/alumno/**").hasAuthority("ALUMNO")
@@ -100,37 +79,9 @@ public class SecurityConfig {
         );
         return http.build();
     }
-<<<<<<< Updated upstream
-}
-=======
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of("*")); // Permite todos los orígenes
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(true);
-        
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
+    private CorsConfigurationSource corsConfigurationSource() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'corsConfigurationSource'");
     }
-
-    @Value("${csc.api.key}")
-    private String apiKey;
-
-    @Bean
-    public RestTemplate restTemplate() {
-        RestTemplate restTemplate = new RestTemplate();
-
-        restTemplate.getInterceptors().add((request, body, execution) -> {
-            request.getHeaders().add("X-CSCAPI-KEY", apiKey);
-            return execution.execute(request, body);
-        });
-
-        return restTemplate;
-    }
-
 }
->>>>>>> Stashed changes

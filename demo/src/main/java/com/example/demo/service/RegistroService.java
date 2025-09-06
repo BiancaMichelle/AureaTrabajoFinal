@@ -5,7 +5,7 @@ import org.springframework.stereotype.Service;
 
 import com.example.demo.model.Alumno;
 import com.example.demo.model.Ciudad;
-import com.example.demo.model.Institucion;
+import com.example.demo.model.InstitucionAlumno;
 import com.example.demo.model.Pais;
 import com.example.demo.model.Provincia;
 import com.example.demo.model.Rol;
@@ -83,7 +83,7 @@ public class RegistroService {
 
         // 4. Manejar Institución
         if (alumno.getColegioEgreso() != null && alumno.getColegioEgreso().getId() != null) {
-            Institucion institucion = institucionRepository.findById(alumno.getColegioEgreso().getId())
+            InstitucionAlumno institucion = institucionRepository.findById(alumno.getColegioEgreso().getId())
                 .orElseThrow(() -> new RuntimeException("Institución no encontrada con ID: " + alumno.getColegioEgreso().getId()));
             alumno.setColegioEgreso(institucion);
         }

@@ -36,39 +36,9 @@ import lombok.Setter;
 @Inheritance(strategy = InheritanceType.JOINED)
 @DiscriminatorColumn(name = "tipo_usuario")
 public class Usuario {
-<<<<<<< Updated upstream
   @Id
   @GeneratedValue
   private UUID id;
-=======
-    @Id
-    private String dni;
-    @Column(unique = true, nullable = false)
-    private String nombre;
-    private String apellido;
-
-    @DateTimeFormat(pattern = "yyyy-MM-dd")
-    private LocalDate fechaNacimiento;
-    private String genero;
-    private String correo;
-    private String numTelefono;
-    private String contraseña;
-    @ManyToOne
-    @JoinColumn(name = "pais_codigo")
-    private Pais pais;
-    
-    @ManyToOne
-    @JoinColumn(name = "provincia_codigo")
-    private Provincia provincia;
-    
-    @ManyToOne
-    @JoinColumn(name = "ciudad_id")
-    private Ciudad ciudad;
-    
-    private String domicilio;
-    private boolean estado = true;
-    private boolean estadoCuenta;
->>>>>>> Stashed changes
 
   @Column(nullable = false, unique = true)
   private String dni;
