@@ -1,0 +1,302 @@
+/* =================   RESET & VARIABLES   ================= */
+:root {
+    --dark-blue: #0D1B2A;
+    --main-red: #E5383B;
+    --white: #FFFFFF;
+    --light-gray: #F1F1F1;
+    --header-height: 80px;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    background-color: var(--light-gray);
+    
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+ul {
+    list-style: none;
+}
+
+/* =================   HEADER & NAV   ================= */
+.header {
+    background-color: var(--dark-blue);
+    color: var(--white);
+    height: var(--header-height);
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 100;
+}
+
+.nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 100%;
+    padding: 0 20px;
+}
+
+.nav-left {
+    display: flex;
+    align-items: center;
+    gap: 25px; /* Espacio entre el logo y la búsqueda */
+}
+
+.nav-logo {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--white);
+}
+
+.nav-search {
+    display: flex;
+    /* Se quita flex-grow y margin para controlar mejor la posición */
+    max-width: 400px;
+}
+
+.nav-search input {
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 5px 0 0 5px;
+    outline: none;
+}
+
+.nav-search button {
+    padding: 8px 12px;
+    border: none;
+    background-color: var(--main-red);
+    color: var(--white);
+    border-radius: 0 5px 5px 0;
+    cursor: pointer;
+}
+
+.nav-menu {
+    display: flex;
+    align-items: center;
+    margin-left: auto; /* Empuja el menú a la derecha */
+}
+
+.nav-menu-item {
+    margin: 0 15px;
+}
+
+.nav-menu-link {
+    padding: 8px 0;
+    border-bottom: 2px solid transparent;
+    transition: border-color 0.3s;
+}
+
+.nav-menu-link:hover {
+    border-bottom-color: var(--main-red);
+}
+
+.nav-menu-link-button {
+    background-color: var(--main-red);
+    color: var(--white);
+    padding: 8px 16px;
+    border-radius: 5px;
+    border-bottom: none;
+}
+
+.nav-menu-link-button:hover {
+    background-color: #c22a2d;
+    border-bottom: none;
+}
+
+.nav-toggle {
+    display: none;
+    background: none;
+    border: none;
+    color: var(--white);
+    font-size: 24px;
+    cursor: pointer;
+}
+
+/* =================   PROFILE DROPDOWN   ================= */
+.profile-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.profile-pic {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid var(--main-red);
+}
+
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    background-color: var(--white);
+    color: var(--dark-blue);
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 1;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.dropdown-menu a {
+    color: black;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+}
+
+.dropdown-menu a:hover {
+    background-color: var(--light-gray);
+}
+
+.show {
+    display: block;
+}
+
+/* =================   MAIN CONTENT   ================= */
+main {
+    margin-top: var(--header-height); /* Se añade el margen aquí */
+    min-height: calc(100vh - var(--header-height) - 150px); /* 150px es la altura aprox del footer */
+    padding: 20px;
+}
+
+
+/* =================   FOOTER   ================= */
+.footer {
+    background-color: var(--dark-blue);
+    color: var(--white);
+    padding: 40px 20px;
+    text-align: center; /* Centra el texto para los elementos que no son flex */
+}
+
+.footer-container {
+    display: flex;
+    justify-content: space-around; /* Distribuye las columnas */
+    flex-wrap: wrap;
+    max-width: 1200px;
+    margin: 0 auto 30px auto; /* Margen inferior para separar de la sección social */
+    text-align: left; /* Alinea el texto de cada sección a la izquierda */
+}
+
+.footer-section {
+    flex: 1;
+    min-width: 200px;
+    margin: 20px;
+}
+
+.footer-section h4 {
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+    color: var(--main-red);
+}
+
+.footer-section p,
+.footer-section ul li a {
+    color: var(--light-gray);
+    line-height: 1.6;
+}
+
+.footer-section ul li {
+    margin-bottom: 8px;
+}
+
+.footer-section ul li a:hover {
+    color: var(--white);
+    text-decoration: underline;
+}
+
+.footer-social {
+    margin-bottom: 30px; /* Espacio antes del copyright */
+}
+
+.footer-social h4 {
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+    color: var(--main-red);
+}
+
+.footer-section ul li a:hover {
+    text-decoration: underline;
+}
+
+.social-icons a {
+    color: var(--white);
+    font-size: 1.5rem;
+    margin: 0 15px;
+    transition: color 0.3s;
+}
+
+.social-icons a:hover {
+    color: var(--main-red);
+}
+
+.footer-bottom {
+    padding-top: 20px;
+    font-size: 0.9rem;
+    color: var(--light-gray);
+    border-top: 1px solid #334d6e;
+}
+
+/* =================   RESPONSIVE   ================= */
+@media (max-width: 992px) {
+    .nav-left {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .nav-search {
+        order: 3; /* Mueve la búsqueda al final */
+        width: 100%;
+        margin: 10px 0 0;
+        max-width: none;
+    }
+
+    .nav-menu {
+        flex-direction: column;
+        align-items: center;
+        position: fixed;
+        top: var(--header-height);
+        left: 0;
+        background-color: var(--dark-blue);
+        width: 100%;
+        padding: 20px 0;
+        height: calc(100% - var(--header-height));
+        overflow-y: auto;
+        left: 100%;
+        transition: left 0.3s;
+    }
+
+    .nav-menu_visible {
+        left: 0;
+    }
+
+    .nav-menu-item {
+        margin: 15px 0;
+    }
+
+    .nav-toggle {
+        display: block;
+    }
+    
+    .nav {
+        flex-wrap: wrap;
+    }
+
+    .profile-dropdown {
+        display: none; /* Oculta el dropdown en móvil, se puede integrar al menú hamburguesa si se desea */
+    }
+}

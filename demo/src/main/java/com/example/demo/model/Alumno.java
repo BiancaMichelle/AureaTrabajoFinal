@@ -23,7 +23,7 @@ public class Alumno extends Usuario {
     
     @ManyToOne
     @JoinColumn(name = "institucion_id")
-    private Institucion colegioEgreso;
+    private InstitucionAlumno colegioEgreso;
     private Integer añoEgreso;
     private String ultimosEstudios;
     @OneToMany(mappedBy = "alumno", cascade = CascadeType.ALL)

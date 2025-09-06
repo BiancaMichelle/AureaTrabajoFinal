@@ -1,12 +1,11 @@
 package com.example.demo.repository;
 
+import com.example.demo.model.Categoria;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import com.example.demo.model.InstitucionAlumno;
+import java.util.UUID;
 
 @Repository
-public interface InstitucionRepository extends JpaRepository<InstitucionAlumno,Long> {
-    
-    
+public interface CategoriaRepository extends JpaRepository<Categoria, UUID> {
 }

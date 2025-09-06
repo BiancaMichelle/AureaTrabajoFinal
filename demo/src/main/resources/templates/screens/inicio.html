@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+
+<head>
+    <title>Inicio - Aurea</title>
+    <link rel="stylesheet" th:href="@{/style/styles.css}">
+</head>
+
+<body>
+
+<main layout:fragment="content">
+
+    <!-- =================   PROPAGANDA SECTION   ================= -->
+    <section class="propaganda-section">
+        <div class="propaganda-content">
+            <h1>Propaganda</h1>
+            <p>Descubre un nuevo mundo de conocimiento.</p>
+        </div>
+    </section>
+
+    <!-- =================   FILTERS SECTION   ================= -->
+    <section class="filters-section">
+        <form class="filters-form" th:action="@{/inicio}" method="get">
+            <input type="text" name="nombre" placeholder="Buscar por nombre...">
+            
+            <select name="categoria">
+                <option value="">Todas las categorías</option>
+                <option th:each="cat : ${categorias}" th:value="${cat.id}" th:text="${cat.nombre}"></option>
+            </select>
+            
+            <input type="number" name="precioMax" placeholder="Precio máximo">
+
+            <div class="filter-checkbox">
+                <input type="checkbox" id="certificado" name="conCertificado" value="true">
+                <label for="certificado">Con Certificado</label>
+            </div>
+
+            <button type="submit" class="filter-btn">Filtrar</button>
+        </form>
+    </section>
+
+    <!-- =================   ACADEMIC OFFERS SECTION   ================= -->
+    <div class="offers-container">
+
+        <!-- Formaciones -->
+        <section class="offer-category" th:if="${!formaciones.isEmpty()}">
+            <h2>Formaciones</h2>
+            <div class="offer-carousel">
+                <div class="offer-card" th:each="formacion : ${formaciones}">
+                    <img th:src="@{/img/placeholder.png}" alt="Imagen de la formación">
+                    <div class="offer-card-content">
+                        <h3 th:text="${formacion.nombre}">Nombre de la Formación</h3>
+                        <p th:text="${formacion.descripcion}">Descripción corta.</p>
+                        <span class="offer-price" th:text="${formacion.precio == 0.0} ? 'Gratis' : '$' + ${formacion.precio}">$99.99</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Seminarios -->
+        <section class="offer-category" th:if="${!seminarios.isEmpty()}">
+            <h2>Seminarios</h2>
+            <div class="offer-carousel">
+                <div class="offer-card" th:each="seminario : ${seminarios}">
+                    <img th:src="@{/img/placeholder.png}" alt="Imagen del seminario">
+                    <div class="offer-card-content">
+                        <h3 th:text="${seminario.nombre}">Nombre del Seminario</h3>
+                        <p th:text="${seminario.descripcion}">Descripción corta.</p>
+                        <span class="offer-price" th:text="${seminario.precio == 0.0} ? 'Gratis' : '$' + ${seminario.precio}">$49.99</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Cursos -->
+        <section class="offer-category" th:if="${!cursos.isEmpty()}">
+            <h2>Cursos</h2>
+            <div class="offer-carousel">
+                <div class="offer-card" th:each="curso : ${cursos}">
+                    <img th:src="@{/img/placeholder.png}" alt="Imagen del curso">
+                    <div class="offer-card-content">
+                        <h3 th:text="${curso.nombre}">Nombre del Curso</h3>
+                        <p th:text="${curso.descripcion}">Descripción corta.</p>
+                        <span class="offer-price" th:text="${curso.precio == 0.0} ? 'Gratis' : '$' + ${curso.precio}">$29.99</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Charlas -->
+        <section class="offer-category" th:if="${!charlas.isEmpty()}">
+            <h2>Charlas</h2>
+            <div class="offer-carousel">
+                <div class="offer-card" th:each="charla : ${charlas}">
+                    <img th:src="@{/img/placeholder.png}" alt="Imagen de la charla">
+                    <div class="offer-card-content">
+                        <h3 th:text="${charla.nombre}">Nombre de la Charla</h3>
+                        <p th:text="${charla.descripcion}">Descripción corta.</p>
+                        <span class="offer-price" th:text="${charla.precio == 0.0} ? 'Gratis' : 'Consultar'">Gratis</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- =================   CHAT BUTTON   ================= -->
+    <button class="chat-button">
+        <i class="fas fa-comment-dots"></i>
+    </button>
+
+</main>
+
+</body>
+</html>

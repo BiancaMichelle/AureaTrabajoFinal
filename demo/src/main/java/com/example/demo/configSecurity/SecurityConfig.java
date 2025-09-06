@@ -49,7 +49,7 @@ public class SecurityConfig {
               .invalidSessionUrl("/login?timeout")
         )
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/", "/publico", "/login","/register", "/css/**", "/js/**")
+            .requestMatchers("/", "/publico", "/login","/register", "/css/**", "/js/**", "/style/**", "/img/**")
             .permitAll()
             .requestMatchers("/admin/**").hasAuthority("ADMIN")
             .requestMatchers("/alumno/**").hasAuthority("ALUMNO")

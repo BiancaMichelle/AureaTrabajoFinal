@@ -1,12 +1,16 @@
 package com.example.demo.model;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Inheritance;
+import jakarta.persistence.InheritanceType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -17,13 +21,17 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class Pago {
+@Inheritance(strategy = InheritanceType.JOINED)
+public abstract class Actividad {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long idPago;
-    private BigDecimal monto;
-    private LocalDateTime fechaPago;
-    private String metodoPago;
-    private String estadoPago;
+    private Long idActividad;
+    private String titulo;
     private String descripcion;
+    private LocalDateTime fechaCreacion;
+    private Boolean visibilidad;
+    
+    @ManyToOne
+    @JoinColumn(name = "modulo_id")
+    private Modulo modulo;
 }

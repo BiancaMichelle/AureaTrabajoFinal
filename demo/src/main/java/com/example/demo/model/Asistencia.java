@@ -16,6 +16,11 @@ public class Asistencia {
     private LocalTime hora;
     private Integer tiempoClase;
     private int cantidadRespuestas;
+    @ManyToOne
+    @JoinColumn(name = "clase_id")
     private Clase clase;
+    @ManyToOne
+    @JoinColumn(name = "alumno_id")
+    private Alumno alumno;
 
 }

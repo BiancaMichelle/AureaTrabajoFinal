@@ -1,0 +1,113 @@
+<!-- Fragmento para la ventana modal de autenticación -->
+<div th:fragment="auth-modal" id="authModal" class="auth-modal-overlay">
+
+    <div class="auth-modal-container">
+        <!-- Lado Izquierdo - Decorativo -->
+        <div class="auth-modal-left">
+            <div class="brand-container">
+                <h2>Aurea</h2>
+                <p>Tu plataforma de aprendizaje</p>
+            </div>
+        </div>
+
+        <!-- Lado Derecho - Formularios -->
+        <div class="auth-modal-right">
+            <span class="close-modal" onclick="closeAuthModal()">&times;</span>
+
+            <!-- Contenedor de Formularios (para el efecto de deslizamiento) -->
+            <div class="forms-container">
+
+                <!-- Formulario de Login -->
+                <div class="form-wrapper" id="login-form">
+                    <h3>Iniciar Sesión</h3>
+                    <form th:action="@{/login}" method="post">
+                        <div class="input-group">
+                            <label for="login-dni">DNI</label>
+                            <input type="text" id="login-dni" name="username" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="login-password">Contraseña</label>
+                            <input type="password" id="login-password" name="password" required>
+                        </div>
+                        <a href="#" class="forgot-password">¿Has olvidado tu contraseña?</a>
+                        <button type="submit" class="auth-btn">Iniciar Sesión</button>
+                    </form>
+                    <p class="switch-form">¿No tienes una cuenta? <a href="#" onclick="toggleForms()">Regístrate</a></p>
+                </div>
+
+                <!-- Formulario de Registro -->
+                <div class="form-wrapper" id="register-form" style="display: none;">
+                    <h3>Registrarse</h3>
+
+                    <!-- Navegación por Pasos -->
+                    <div class="step-navigation">
+                        <div class="step active" data-step="1">
+                            <div class="step-icon">1</div>
+                            <p>Datos Personales</p>
+                        </div>
+                        <div class="step" data-step="2">
+                            <div class="step-icon">2</div>
+                            <p>Domicilio</p>
+                        </div>
+                        <div class="step" data-step="3">
+                            <div class="step-icon">3</div>
+                            <p>Datos Académicos</p>
+                        </div>
+                    </div>
+
+                    <form th:action="@{/register}" method="post">
+                        <!-- Paso 1: Datos Personales -->
+                        <div class="form-step active" data-step="1">
+                            <div class="input-group">
+                                <label for="reg-nombre">Nombre</label>
+                                <input type="text" id="reg-nombre" name="nombre" required>
+                            </div>
+                            <div class="input-group">
+                                <label for="reg-apellido">Apellido</label>
+                                <input type="text" id="reg-apellido" name="apellido" required>
+                            </div>
+                             <div class="input-group">
+                                <label for="reg-dni">DNI</label>
+                                <input type="text" id="reg-dni" name="dni" required>
+                            </div>
+                            <button type="button" class="auth-btn next-btn" onclick="validateStep1AndNext()">Siguiente</button>
+                        </div>
+
+                        <!-- Paso 2: Domicilio -->
+                        <div class="form-step" data-step="2">
+                            <div class="input-group">
+                                <label for="reg-pais">País</label>
+                                <input type="text" id="reg-pais" name="pais" required>
+                            </div>
+                            <div class="input-group">
+                                <label for="reg-provincia">Provincia</label>
+                                <input type="text" id="reg-provincia" name="provincia" required>
+                            </div>
+                            <button type="button" class="auth-btn prev-btn" onclick="prevStep(1)">Anterior</button>
+                            <button type="button" class="auth-btn next-btn" onclick="nextStep(3)">Siguiente</button>
+                        </div>
+
+                        <!-- Paso 3: Datos Académicos -->
+                        <div class="form-step" data-step="3">
+                            <div class="input-group">
+                                <label for="reg-estudios">Últimos estudios</label>
+                                <input type="text" id="reg-estudios" name="ultimosEstudios" required>
+                            </div>
+                            <div class="input-group">
+                                <label for="reg-password">Contraseña</label>
+                                <input type="password" id="reg-password" name="password" required>
+                            </div>
+                            <div class="input-group" style="display: flex; align-items: center;"></div>
+                                <input type="checkbox" id="reg-terms" name="terms" required style="width:16px; height:16px; margin-right:8px;">
+                                <label for="reg-terms" style="margin:0;">Acepto los <a href="#" target="_blank">términos y condiciones</a></label>
+                            </div>
+                            <button type="button" class="auth-btn prev-btn" onclick="prevStep(2)">Anterior</button>
+                            <button type="submit" class="auth-btn">Registrarse</button>
+                        </div>
+                    </form>
+                    <p class="switch-form">¿Ya tienes una cuenta? <a href="#" onclick="toggleForms()">Inicia Sesión</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

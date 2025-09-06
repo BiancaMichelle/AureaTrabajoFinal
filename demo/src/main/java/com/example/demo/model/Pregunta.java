@@ -1,17 +1,17 @@
 package com.example.demo.model;
 
-import java.sql.Time;
+import java.util.List;
+import java.util.UUID;
 
-import com.example.demo.enums.Dias;
+import com.example.demo.enums.TipoPregunta;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -22,18 +22,20 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class Horario {
+public class Pregunta {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long idHorario;
+    private UUID idPregunta = UUID.randomUUID();
+    private String enunciado;
     
     @Enumerated(EnumType.STRING)
-    private Dias dia;
+    private TipoPregunta tipoPregunta;
     
-    private Time horaInicio;
-    private Time horaFin;
+    @OneToMany(mappedBy = "pregunta")
+    private List<Opcion> opciones;
+    
+    private Float puntaje;
     
     @ManyToOne
-    @JoinColumn(name = "curso_id")
-    private Curso curso;
+    @JoinColumn(name = "pool_id")
+    private Pool pool;
 }

@@ -10,10 +10,10 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 
 @Entity
-public class Institucion {
+public class InstitucionAlumno {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private UUID idInstitucion;
+    private Long idInstitucion;
     private String nombre;
     private String direccion;
     private String localidad;

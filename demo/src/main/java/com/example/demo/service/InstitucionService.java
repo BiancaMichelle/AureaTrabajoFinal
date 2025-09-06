@@ -4,7 +4,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
-import com.example.demo.model.Institucion;
+import com.example.demo.model.InstitucionAlumno;
 import com.example.demo.repository.InstitucionRepository;
 
 @Service
@@ -15,7 +15,7 @@ public class InstitucionService {
         this.institucionRepository = institucionRepository;
     }
 
-    public List<Institucion> obtenerTodasLasInstituciones() {
+    public List<InstitucionAlumno> obtenerTodasLasInstituciones() {
         return institucionRepository.findAll();
     }
 }

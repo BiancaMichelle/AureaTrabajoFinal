@@ -2,7 +2,7 @@ package com.example.demo.controller;
 
 import com.example.demo.model.Alumno;
 import com.example.demo.model.Ciudad;
-import com.example.demo.model.Institucion;
+import com.example.demo.model.InstitucionAlumno;
 import com.example.demo.model.Pais;
 import com.example.demo.model.Provincia;
 import com.example.demo.repository.CiudadRepository;
@@ -41,7 +41,7 @@ public class RegistroController {
     Alumno alumno = new Alumno();
     model.addAttribute("alumno", alumno);
 
-    List<Institucion> instituciones = institucionRepository.findAll();
+    List<InstitucionAlumno> instituciones = institucionRepository.findAll();
     model.addAttribute("instituciones", instituciones);
 
     return "register";

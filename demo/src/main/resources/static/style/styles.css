@@ -1,0 +1,203 @@
+/* =================   GENERAL STYLES FOR INICIO.HTML   ================= */
+main{
+    padding: 0; /* Override base padding if necessary */
+}
+
+.offers-container {
+    padding: 20px;
+}
+
+/* =================   PROPAGANDA SECTION   ================= */
+.propaganda-section {
+    background-color: #e9ecef; /* A light grey background */
+    text-align: center;
+    padding: 50px 20px;
+    margin-bottom: 20px;
+}
+
+.propaganda-content h1 {
+    font-size: 3rem;
+    font-weight: bold;
+    color: var(--dark-blue);
+    margin-bottom: 10px;
+}
+
+.propaganda-content p {
+    font-size: 1.2rem;
+    color: #6c757d;
+}
+
+/* =================   FILTERS SECTION   ================= */
+.filters-section {
+    background-color: var(--white);
+    padding: 20px;
+    margin: 0 20px 20px 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.filters-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: center;
+    justify-content: center;
+}
+
+.filters-form input[type="text"],
+.filters-form input[type="number"],
+.filters-form select {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 1rem;
+    flex-grow: 1;
+    min-width: 150px;
+}
+
+.filter-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.filter-btn {
+    background-color: var(--main-red);
+    color: var(--white);
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: bold;
+    transition: background-color 0.3s;
+}
+
+.filter-btn:hover {
+    background-color: #c22a2d; /* Darker red */
+}
+
+/* =================   ACADEMIC OFFERS SECTION   ================= */
+.offer-category {
+    margin-bottom: 40px;
+}
+
+.offer-category h2 {
+    font-size: 1.8rem;
+    color: var(--dark-blue);
+    margin-bottom: 20px;
+    border-left: 4px solid var(--main-red);
+    padding-left: 10px;
+}
+
+.offer-carousel {
+    display: flex;
+    overflow-x: auto;
+    gap: 20px;
+    padding-bottom: 15px; /* For scrollbar */
+    scrollbar-width: thin;
+    scrollbar-color: var(--main-red) var(--light-gray);
+}
+
+/* For Webkit browsers */
+.offer-carousel::-webkit-scrollbar {
+    height: 8px;
+}
+
+.offer-carousel::-webkit-scrollbar-track {
+    background: var(--light-gray);
+}
+
+.offer-carousel::-webkit-scrollbar-thumb {
+    background-color: var(--main-red);
+    border-radius: 10px;
+}
+
+.offer-card {
+    flex: 0 0 280px; /* Do not grow, do not shrink, base width 280px */
+    background-color: var(--white);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transition: transform 0.3s, box-shadow 0.3s;
+    display: flex;
+    flex-direction: column;
+}
+
+.offer-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+}
+
+.offer-card img {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+    background-color: #333; /* Placeholder color */
+}
+
+.offer-card-content {
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1; /* Allows content to fill the card */
+}
+
+.offer-card-content h3 {
+    font-size: 1.2rem;
+    color: var(--dark-blue);
+    margin-bottom: 10px;
+}
+
+.offer-card-content p {
+    font-size: 0.9rem;
+    color: #6c757d;
+    flex-grow: 1; /* Pushes price to the bottom */
+    margin-bottom: 15px;
+}
+
+.offer-price {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: var(--main-red);
+    align-self: flex-end; /* Aligns price to the right */
+}
+
+/* =================   CHAT BUTTON   ================= */
+.chat-button {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    background-color: var(--main-red);
+    color: var(--white);
+    border: none;
+    border-radius: 50%;
+    font-size: 1.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    cursor: pointer;
+    z-index: 100;
+    transition: background-color 0.3s, transform 0.3s;
+}
+
+.chat-button:hover {
+    background-color: #c22a2d;
+    transform: scale(1.1);
+}
+
+/* =================   RESPONSIVE   ================= */
+@media (max-width: 768px) {
+    .filters-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .offer-card {
+        flex: 0 0 250px; /* Slightly smaller cards on tablets */
+    }
+}
+

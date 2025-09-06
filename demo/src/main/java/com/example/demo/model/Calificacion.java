@@ -19,7 +19,12 @@ public class Calificacion {
     private Double nota;
     private String observaciones;
     private LocalDate fecha;
+    @ManyToOne
+    @JoinColumn(name = "docente_dni")
     private Docente docente;
     private TipoCalificacion tipoCalificacion;
+    @ManyToOne
+    @JoinColumn(name = "alumno_id")
+    private Alumno alumno;
 
 }
