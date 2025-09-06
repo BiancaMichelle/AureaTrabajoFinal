@@ -60,7 +60,10 @@
     position: relative;
     width: 100%;
     height: 100%;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 4px; /* espacio para scrollbar */
+    padding-bottom: 12px;
 }
 
 .form-wrapper {
@@ -110,15 +113,19 @@
     font-size: 1rem;
     margin-top: 10px;
 }
+.auth-btn[disabled] {
+    opacity: .45;
+    cursor: not-allowed;
+}
 
 .prev-btn {
     background-color: #4A5568;
-    width: 48%;
+    width: 40%;
     display: inline-block;
 }
 
 .next-btn {
-     width: 48%;
+    width: 40%;
     display: inline-block;
 }
 
@@ -126,6 +133,12 @@
     margin-top: 20px;
     text-align: center;
     font-size: 0.9rem;
+    position: sticky;
+    bottom: 0;
+    background: var(--dark-blue);
+    padding-top: 10px;
+    padding-bottom: 6px;
+    box-shadow: 0 -6px 8px -6px rgba(0,0,0,0.4);
 }
 
 .switch-form a {
@@ -182,4 +195,16 @@
 
 .form-step.active {
     display: block;
+}
+/* Ocultar cualquier botón .prev-btn si accidentalmente queda en paso 1 */
+.form-step[data-step="1"] .prev-btn { display:none !important; }
+/* Mensajes de error por campo */
+.input-group .error-message {
+    color: var(--main-red);
+    font-size: 0.7rem;
+    margin-top: 4px;
+    display: none;
+}
+.input-group input.input-error {
+    border-color: var(--main-red);
 }

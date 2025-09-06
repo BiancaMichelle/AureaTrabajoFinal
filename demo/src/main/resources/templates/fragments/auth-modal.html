@@ -34,7 +34,7 @@
                         <a href="#" class="forgot-password">¿Has olvidado tu contraseña?</a>
                         <button type="submit" class="auth-btn">Iniciar Sesión</button>
                     </form>
-                    <p class="switch-form">¿No tienes una cuenta? <a href="#" onclick="toggleForms()">Regístrate</a></p>
+                    <p class="switch-form" id="to-register">¿No tienes una cuenta? <a href="#" onclick="toggleForms()">Regístrate</a></p>
                 </div>
 
                 <!-- Formulario de Registro -->
@@ -63,16 +63,19 @@
                             <div class="input-group">
                                 <label for="reg-nombre">Nombre</label>
                                 <input type="text" id="reg-nombre" name="nombre" required>
+                                <span class="error-message" id="error-nombre"></span>
                             </div>
                             <div class="input-group">
                                 <label for="reg-apellido">Apellido</label>
                                 <input type="text" id="reg-apellido" name="apellido" required>
+                                <span class="error-message" id="error-apellido"></span>
                             </div>
                              <div class="input-group">
                                 <label for="reg-dni">DNI</label>
                                 <input type="text" id="reg-dni" name="dni" required>
+                                <span class="error-message" id="error-dni"></span>
                             </div>
-                            <button type="button" class="auth-btn next-btn" onclick="validateStep1AndNext()">Siguiente</button>
+                            <button type="button" class="auth-btn next-btn" id="btn-step1" onclick="nextStep(2)">Siguiente</button>
                         </div>
 
                         <!-- Paso 2: Domicilio -->
@@ -80,10 +83,12 @@
                             <div class="input-group">
                                 <label for="reg-pais">País</label>
                                 <input type="text" id="reg-pais" name="pais" required>
+                                <span class="error-message" id="error-pais"></span>
                             </div>
                             <div class="input-group">
                                 <label for="reg-provincia">Provincia</label>
                                 <input type="text" id="reg-provincia" name="provincia" required>
+                                <span class="error-message" id="error-provincia"></span>
                             </div>
                             <button type="button" class="auth-btn prev-btn" onclick="prevStep(1)">Anterior</button>
                             <button type="button" class="auth-btn next-btn" onclick="nextStep(3)">Siguiente</button>
@@ -94,71 +99,27 @@
                             <div class="input-group">
                                 <label for="reg-estudios">Últimos estudios</label>
                                 <input type="text" id="reg-estudios" name="ultimosEstudios" required>
+                                <span class="error-message" id="error-estudios"></span>
                             </div>
                             <div class="input-group">
                                 <label for="reg-password">Contraseña</label>
                                 <input type="password" id="reg-password" name="password" required>
+                                <span class="error-message" id="error-password"></span>
                             </div>
-                            <div class="input-group" style="display: flex; align-items: center;"></div>
-                                <input type="checkbox" id="reg-terms" name="terms" required style="width:16px; height:16px; margin-right:8px;">
+                            <div class="input-group terms-group" style="display:flex; align-items:center; gap:8px;">
+                                <input type="checkbox" id="reg-terms" name="terms" required style="width:16px; height:16px;">
                                 <label for="reg-terms" style="margin:0;">Acepto los <a href="#" target="_blank">términos y condiciones</a></label>
                             </div>
-                            <button type="button" class="auth-btn prev-btn" onclick="prevStep(2)">Anterior</button>
-                            <button type="submit" class="auth-btn">Registrarse</button>
+                            <div class="actions-row" style="display:flex; gap:4%;">
+                                <button type="button" class="auth-btn prev-btn" onclick="prevStep(2)" style="width:48%;">Anterior</button>
+                                <button type="submit" class="auth-btn" style="width:48%;">Registrarse</button>
+                            </div>
                         </div>
                     </form>
-                    <p class="switch-form">¿Ya tienes una cuenta? <a href="#" onclick="toggleForms()">Inicia Sesión</a></p>
                 </div>
+                <p class="switch-form" id="to-login">¿Ya tienes una cuenta? <a href="#" onclick="toggleForms()">Inicia Sesión</a></p>
             </div>
         </div>
     </div>
 </div>
 
-
-<script>
-// En tu archivo JavaScript
-document.addEventListener('DOMContentLoaded', function() {
-    // Verificar si hay parámetros de error en la URL
-    const urlParams = new URLSearchParams(window.location.search);
-    
-    if (urlParams.has('error') || urlParams.has('timeout')) {
-        // Abrir el modal automáticamente
-        openAuthModal();
-        // Mostrar el formulario de login
-        showLoginForm();
-    }
-    
-    if (urlParams.has('logout')) {
-        // Mostrar mensaje de logout (puedes agregar un toast o alerta)
-        console.log('Logout exitoso');
-    }
-});
-
-function openAuthModal() {
-    document.getElementById('authModal').style.display = 'flex';
-}
-
-function closeAuthModal() {
-    document.getElementById('authModal').style.display = 'none';
-    // Limpiar parámetros de la URL al cerrar el modal
-    window.history.replaceState({}, document.title, window.location.pathname);
-}
-
-function toggleForms() {
-    const loginForm = document.getElementById('login-form');
-    const registerForm = document.getElementById('register-form');
-    
-    if (loginForm.style.display === 'none') {
-        loginForm.style.display = 'block';
-        registerForm.style.display = 'none';
-    } else {
-        loginForm.style.display = 'none';
-        registerForm.style.display = 'block';
-    }
-}
-
-function showLoginForm() {
-    document.getElementById('login-form').style.display = 'block';
-    document.getElementById('register-form').style.display = 'none';
-}
-</script>

@@ -20,6 +20,8 @@ function toggleForms() {
     const loginForm = document.getElementById('login-form');
     const registerForm = document.getElementById('register-form');
     const container = document.querySelector('.forms-container');
+    const toRegister = document.getElementById('to-register');
+    const toLogin = document.getElementById('to-login');
 
     if (loginForm.style.display === 'none') {
         // Cambiar a login
@@ -27,6 +29,8 @@ function toggleForms() {
         setTimeout(() => {
             loginForm.style.display = 'block';
             registerForm.style.display = 'none';
+            if (toRegister) toRegister.style.display = 'block';
+            if (toLogin) toLogin.style.display = 'none';
         }, 400);
     } else {
         // Cambiar a registro
@@ -36,6 +40,8 @@ function toggleForms() {
             registerForm.style.display = 'block';
             // Resetear el formulario de registro al cambiarlo
             resetRegisterForm();
+            if (toRegister) toRegister.style.display = 'none';
+            if (toLogin) toLogin.style.display = 'block';
         }, 400);
     }
 }
@@ -45,11 +51,15 @@ function showLoginForm() {
     const loginForm = document.getElementById('login-form');
     const registerForm = document.getElementById('register-form');
     const container = document.querySelector('.forms-container');
+    const toRegister = document.getElementById('to-register');
+    const toLogin = document.getElementById('to-login');
     
     container.classList.remove('show-register');
     loginForm.style.display = 'block';
     registerForm.style.display = 'none';
     resetRegisterForm();
+    if (toRegister) toRegister.style.display = 'block';
+    if (toLogin) toLogin.style.display = 'none';
 }
 
 // Función para mostrar específicamente el formulario de registro
@@ -57,10 +67,15 @@ function showRegisterForm() {
     const loginForm = document.getElementById('login-form');
     const registerForm = document.getElementById('register-form');
     const container = document.querySelector('.forms-container');
+    const toRegister = document.getElementById('to-register');
+    const toLogin = document.getElementById('to-login');
     
     container.classList.add('show-register');
     loginForm.style.display = 'none';
     registerForm.style.display = 'block';
+    monitorStep1Fields();
+    if (toRegister) toRegister.style.display = 'none';
+    if (toLogin) toLogin.style.display = 'block';
 }
 
 // Funciones para la navegación por pasos del formulario de registro
@@ -89,30 +104,6 @@ function prevStep(step) {
     currentStep = step;
 }
 
-// Validación del paso 1 (Datos Personales)
-function validateStep1AndNext() {
-    const nombre = document.getElementById('reg-nombre').value.trim();
-    const apellido = document.getElementById('reg-apellido').value.trim();
-    const dni = document.getElementById('reg-dni').value.trim();
-    
-    if (!nombre) {
-        showAuthMessage('Por favor ingresa tu nombre', 'error');
-        return;
-    }
-    
-    if (!apellido) {
-        showAuthMessage('Por favor ingresa tu apellido', 'error');
-        return;
-    }
-    
-    if (!dni || !/^\d+$/.test(dni)) {
-        showAuthMessage('Por favor ingresa un DNI válido (solo números)', 'error');
-        return;
-    }
-    
-    // Si todo está válido, avanzar al paso 2
-    nextStep(2);
-}
 
 // Validación genérica del paso actual
 function validateCurrentStep(step) {
@@ -132,63 +123,52 @@ function validateStep1() {
     const nombre = document.getElementById('reg-nombre').value.trim();
     const apellido = document.getElementById('reg-apellido').value.trim();
     const dni = document.getElementById('reg-dni').value.trim();
-    
-    if (!nombre) {
-        showAuthMessage('Por favor ingresa tu nombre', 'error');
-        return false;
-    }
-    
-    if (!apellido) {
-        showAuthMessage('Por favor ingresa tu apellido', 'error');
-        return false;
-    }
-    
-    if (!dni || !/^\d+$/.test(dni)) {
-        showAuthMessage('Por favor ingresa un DNI válido (solo números)', 'error');
-        return false;
-    }
-    
-    return true;
+    clearFieldErrors(['nombre','apellido','dni']);
+
+    let valid = true;
+    if (!nombre) { setFieldError('nombre','Ingresa tu nombre'); valid = false; }
+    if (!apellido) { setFieldError('apellido','Ingresa tu apellido'); valid = false; }
+    if (!dni || !/^\d+$/.test(dni)) { setFieldError('dni','ingrese un DNI válido'); valid = false; }
+    return valid;
+}
+
+// Habilitar/deshabilitar botón de paso 1 en vivo
+function monitorStep1Fields() {
+    const fields = ['reg-nombre','reg-apellido','reg-dni'];
+    const btn = document.getElementById('btn-step1');
+    fields.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', () => {
+                const ok = document.getElementById('reg-nombre').value.trim() &&
+                           document.getElementById('reg-apellido').value.trim() &&
+                           /^\d+$/.test(document.getElementById('reg-dni').value.trim());
+                btn.disabled = !ok;
+            });
+        }
+    });
 }
 
 function validateStep2() {
     const pais = document.getElementById('reg-pais').value.trim();
     const provincia = document.getElementById('reg-provincia').value.trim();
-    
-    if (!pais) {
-        showAuthMessage('Por favor ingresa tu país', 'error');
-        return false;
-    }
-    
-    if (!provincia) {
-        showAuthMessage('Por favor ingresa tu provincia', 'error');
-        return false;
-    }
-    
-    return true;
+    clearFieldErrors(['pais','provincia']);
+    let valid = true;
+    if (!pais) { setFieldError('pais','Ingresa tu país'); valid = false; }
+    if (!provincia) { setFieldError('provincia','Ingresa tu provincia'); valid = false; }
+    return valid;
 }
 
 function validateStep3() {
     const estudios = document.getElementById('reg-estudios').value.trim();
     const password = document.getElementById('reg-password').value;
     const terms = document.getElementById('reg-terms').checked;
-    
-    if (!estudios) {
-        showAuthMessage('Por favor ingresa tus últimos estudios', 'error');
-        return false;
-    }
-    
-    if (!password || password.length < 6) {
-        showAuthMessage('La contraseña debe tener al menos 6 caracteres', 'error');
-        return false;
-    }
-    
-    if (!terms) {
-        showAuthMessage('Debes aceptar los términos y condiciones', 'error');
-        return false;
-    }
-    
-    return true;
+    clearFieldErrors(['estudios','password']);
+    let valid = true;
+    if (!estudios) { setFieldError('estudios','Ingresa tus estudios'); valid = false; }
+    if (!password || password.length < 8) { setFieldError('password','Mínimo 8 caracteres'); valid = false; }
+    if (!terms) { showAuthMessage('Debes aceptar los términos y condiciones', 'error'); valid = false; }
+    return valid;
 }
 
 // Función para limpiar parámetros de la URL
@@ -256,6 +236,23 @@ function showAuthMessage(message, type) {
     }, 5000);
 }
 
+// ---- Manejo de errores por campo ----
+function setFieldError(field, message) {
+    const span = document.getElementById('error-' + field);
+    const input = document.getElementById('reg-' + field);
+    if (span) { span.textContent = message; span.style.display = 'block'; }
+    if (input) { input.classList.add('input-error'); }
+}
+
+function clearFieldErrors(fields) {
+    fields.forEach(f => {
+        const span = document.getElementById('error-' + f);
+        const input = document.getElementById('reg-' + f);
+        if (span) { span.textContent=''; span.style.display='none'; }
+        if (input) { input.classList.remove('input-error'); }
+    });
+}
+
 // Función para limpiar mensajes
 function clearAuthMessages() {
     const alerts = document.querySelectorAll('.auth-modal-right .alert');
@@ -283,6 +280,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 cleanURLParameters();
             }
         }, 100);
+    }
+
+    // Al iniciar si se abre registro directamente
+    if (document.getElementById('register-form').style.display === 'block') {
+        monitorStep1Fields();
+    }
+    // Estado inicial: ocultar el switch equivocado
+    const toRegister = document.getElementById('to-register');
+    const toLogin = document.getElementById('to-login');
+    if (document.getElementById('login-form').style.display !== 'none') {
+        if (toRegister) toRegister.style.display = 'block';
+        if (toLogin) toLogin.style.display = 'none';
     }
     
     // Cerrar modal al hacer clic fuera del contenido
