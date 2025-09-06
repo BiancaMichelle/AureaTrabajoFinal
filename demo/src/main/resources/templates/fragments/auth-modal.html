@@ -16,11 +16,13 @@
 
             <!-- Contenedor de Formularios (para el efecto de deslizamiento) -->
             <div class="forms-container">
-
                 <!-- Formulario de Login -->
                 <div class="form-wrapper" id="login-form">
                     <h3>Iniciar Sesión</h3>
-                    <form th:action="@{/login}" method="post">
+                    <form th:action="@{/perform_login}" method="post">
+                        <input type="hidden"
+                            th:name="${_csrf.parameterName}"
+                            th:value="${_csrf.token}"/>
                         <div class="input-group">
                             <label for="login-dni">DNI</label>
                             <input type="text" id="login-dni" name="username" required>
@@ -111,3 +113,52 @@
         </div>
     </div>
 </div>
+
+
+<script>
+// En tu archivo JavaScript
+document.addEventListener('DOMContentLoaded', function() {
+    // Verificar si hay parámetros de error en la URL
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    if (urlParams.has('error') || urlParams.has('timeout')) {
+        // Abrir el modal automáticamente
+        openAuthModal();
+        // Mostrar el formulario de login
+        showLoginForm();
+    }
+    
+    if (urlParams.has('logout')) {
+        // Mostrar mensaje de logout (puedes agregar un toast o alerta)
+        console.log('Logout exitoso');
+    }
+});
+
+function openAuthModal() {
+    document.getElementById('authModal').style.display = 'flex';
+}
+
+function closeAuthModal() {
+    document.getElementById('authModal').style.display = 'none';
+    // Limpiar parámetros de la URL al cerrar el modal
+    window.history.replaceState({}, document.title, window.location.pathname);
+}
+
+function toggleForms() {
+    const loginForm = document.getElementById('login-form');
+    const registerForm = document.getElementById('register-form');
+    
+    if (loginForm.style.display === 'none') {
+        loginForm.style.display = 'block';
+        registerForm.style.display = 'none';
+    } else {
+        loginForm.style.display = 'none';
+        registerForm.style.display = 'block';
+    }
+}
+
+function showLoginForm() {
+    document.getElementById('login-form').style.display = 'block';
+    document.getElementById('register-form').style.display = 'none';
+}
+</script>

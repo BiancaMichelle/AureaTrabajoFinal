@@ -1,5 +1,8 @@
 /* Estilos para la ventana modal de autenticación */
 /* =================   AUTH MODAL   ================= */
+
+
+
 .auth-modal-overlay {
     position: fixed;
     top: 0;

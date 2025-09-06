@@ -7,6 +7,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 public class AlumnoController {
     @GetMapping("/alumno")
     public String alumnoDashboard() {
-        return "alumno";
+        return "docente";
     }
 }

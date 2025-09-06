@@ -28,7 +28,7 @@ public class UsuarioJpaService implements UserDetailsService {
     public UserDetails loadUserByUsername(String dni)
         throws UsernameNotFoundException {
         
-        Usuario user = usuarioRepository.findById(dni)
+        Usuario user = usuarioRepository.findByDni(dni)
             .orElseThrow(() -> new UsernameNotFoundException("No existe " + dni));
 
         return org.springframework.security.core.userdetails.User

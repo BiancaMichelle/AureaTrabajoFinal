@@ -1,5 +1,14 @@
 package com.example.demo.controller;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
 import com.example.demo.model.Charla;
 import com.example.demo.model.Curso;
 import com.example.demo.model.Formacion;
@@ -7,13 +16,6 @@ import com.example.demo.model.OfertaAcademica;
 import com.example.demo.model.Seminario;
 import com.example.demo.repository.CategoriaRepository;
 import com.example.demo.repository.OfertaAcademicaRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Controller
 public class PublicoController {
@@ -25,7 +27,20 @@ public class PublicoController {
     private CategoriaRepository categoriaRepository;
 
     @GetMapping({"/", "/inicio"})
-    public String home(Model model) {
+    public String home(Model model, @RequestParam(value = "error", required = false) String error,
+                        @RequestParam(value = "logout", required = false) String logout,
+                        @RequestParam(value = "timeout", required = false) String timeout) {
+
+        if (error != null) {
+                model.addAttribute("error", "Credenciales inválidas. Intenta otra vez.");
+            }
+            if (logout != null) {
+                model.addAttribute("message", "Has cerrado sesión exitosamente.");
+            }
+            if (timeout != null) {
+                model.addAttribute("timeout", "Tu sesión ha expirado. Por favor, inicia sesión de nuevo.");
+            }
+
         List<OfertaAcademica> todasLasOfertas = ofertaAcademicaRepository.findAll();
 
         model.addAttribute("formaciones", todasLasOfertas.stream()
@@ -48,5 +63,6 @@ public class PublicoController {
 
         return "screens/inicio";
     }
+
 }
 

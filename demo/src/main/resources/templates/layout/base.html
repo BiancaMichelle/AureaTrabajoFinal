@@ -19,7 +19,7 @@
             <div class="nav-left">
                 <a href="#" class="nav-logo">Aurea</a>
                 <div class="nav-search">
-                    <input type="search" placeholder="Buscar cursos, charlas...">
+                    <input type="search" placeholder="  cursos, charlas...">
                     <button type="submit"><i class="fa fa-search"></i></button>
                 </div>
             </div>
@@ -45,7 +45,7 @@
                 
                 <!-- Links de Autenticación -->
                 <li class="nav-menu-item" sec:authorize="!isAuthenticated()">
-                    <a href="#" onclick="openAuthModal()" class="nav-menu-link nav-menu-link-button">Login</a>
+                    <a href="#" onclick="openAuthModal(); showLoginForm();" class="nav-menu-link nav-menu-link-button">Login</a>
                 </li>
                 
                 <li class="nav-menu-item" sec:authorize="isAuthenticated()">

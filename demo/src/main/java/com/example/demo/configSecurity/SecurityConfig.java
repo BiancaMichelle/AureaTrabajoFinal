@@ -1,13 +1,8 @@
 package com.example.demo.configSecurity;
 
 
-import java.time.Duration;
-
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -15,10 +10,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.web.client.RestTemplate;
 
 import com.example.demo.service.UsuarioJpaService;
-
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
@@ -34,7 +27,6 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    // Spring inyecta el AuthenticationConfiguration y te devuelve el manager
     @Bean
     public AuthenticationManager authenticationManager(
             AuthenticationConfiguration authConfig) throws Exception {
@@ -46,10 +38,11 @@ public class SecurityConfig {
         http
         .userDetailsService(usuarioJpaService)
         .sessionManagement(session -> session
-              .invalidSessionUrl("/login?timeout")
+              .invalidSessionUrl("/?timeout")
         )
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/", "/publico", "/login","/register", "/css/**", "/js/**", "/style/**", "/img/**")
+            .requestMatchers("/", "/publico", "/login", "/register", 
+                           "/css/**", "/js/**", "/style/**", "/img/**")
             .permitAll()
             .requestMatchers("/admin/**").hasAuthority("ADMIN")
             .requestMatchers("/alumno/**").hasAuthority("ALUMNO")
@@ -57,7 +50,9 @@ public class SecurityConfig {
             .anyRequest().authenticated()
         )
         .formLogin(form -> form
-            .loginPage("/login")
+            .loginPage("/") 
+            .loginProcessingUrl("/perform_login")
+            .failureUrl("/?error=true")
             .successHandler((request, response, authentication) -> {
                 var roles = authentication.getAuthorities()
                                         .stream()
@@ -75,7 +70,10 @@ public class SecurityConfig {
             })
             .permitAll()
         )
-        .logout(logout -> logout.permitAll());
+        .logout(logout -> logout
+            .logoutSuccessUrl("/?logout=true")
+            .permitAll()
+        );
         return http.build();
     }
 }

@@ -1,15 +1,10 @@
 package com.example.demo;
 
-import java.util.stream.Stream;
-
-import javax.sql.DataSource;
+import java.util.List;
 
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.Bean;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.example.demo.model.Rol;
@@ -39,13 +34,29 @@ public class DemoApplication implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
         // Crear roles si no existen
-        Stream.of("ADMIN", "ALUMNO", "DOCENTE")
-              .forEach(name -> {
-                  if (roleRepository.findByNombre(name).isEmpty()) {
-                      roleRepository.save(new Rol(null, name, name));
-                  }
-              });
+        for (String name : List.of("ADMIN", "ALUMNO", "DOCENTE")) {
+            if (roleRepository.findByNombre(name).isEmpty()) {
+                roleRepository.save(new Rol(null, name, name));
+            }
+        }
 
+        if (usuarioRepository.findByDni("01234567").isEmpty()) {
+            Usuario admin = new Usuario();
+            admin.setDni("01234567");
+            admin.setNombre("Super");
+            admin.setApellido("Admin");
+            admin.setCorreo("admin@demo.com");
+            admin.setContraseña(passwordEncoder.encode("1234"));
+            admin.setEstado(true);
+            admin.setEstadoCuenta(true);
+
+            Rol rolAdmin = roleRepository.findByNombre("ADMIN")
+                                        .orElseThrow(() -> new RuntimeException("Rol ADMIN no encontrado"));
+            admin.getRoles().add(rolAdmin);
+
+            usuarioRepository.save(admin);
+        }
     }
+
 }
 
