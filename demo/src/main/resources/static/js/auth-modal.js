@@ -1,22 +1,18 @@
-// Funciones para controlar la visibilidad del modal
-function openAuthModal() {
+// Funciones para la navegación por pasos del formulario de registro
+// Funciones globales para el modal
+window.openAuthModal = function() {
     document.getElementById('authModal').style.display = 'flex';
-    // Limpiar mensajes anteriores al abrir el modal
     clearAuthMessages();
-}
+};
 
-function closeAuthModal() {
+window.closeAuthModal = function() {
     document.getElementById('authModal').style.display = 'none';
-    // Limpiar parámetros de la URL al cerrar el modal
     cleanURLParameters();
-    // Limpiar mensajes
     clearAuthMessages();
-    // Resetear formulario de registro si está visible
     resetRegisterForm();
-}
+};
 
-// Función para cambiar entre el formulario de login y registro
-function toggleForms() {
+window.toggleForms = function() {
     const loginForm = document.getElementById('login-form');
     const registerForm = document.getElementById('register-form');
     const container = document.querySelector('.forms-container');
@@ -38,16 +34,14 @@ function toggleForms() {
         setTimeout(() => {
             loginForm.style.display = 'none';
             registerForm.style.display = 'block';
-            // Resetear el formulario de registro al cambiarlo
             resetRegisterForm();
             if (toRegister) toRegister.style.display = 'none';
             if (toLogin) toLogin.style.display = 'block';
         }, 400);
     }
-}
+};
 
-// Función para mostrar específicamente el formulario de login
-function showLoginForm() {
+window.showLoginForm = function() {
     const loginForm = document.getElementById('login-form');
     const registerForm = document.getElementById('register-form');
     const container = document.querySelector('.forms-container');
@@ -60,10 +54,9 @@ function showLoginForm() {
     resetRegisterForm();
     if (toRegister) toRegister.style.display = 'block';
     if (toLogin) toLogin.style.display = 'none';
-}
+};
 
-// Función para mostrar específicamente el formulario de registro
-function showRegisterForm() {
+window.showRegisterForm = function() {
     const loginForm = document.getElementById('login-form');
     const registerForm = document.getElementById('register-form');
     const container = document.querySelector('.forms-container');
@@ -73,12 +66,34 @@ function showRegisterForm() {
     container.classList.add('show-register');
     loginForm.style.display = 'none';
     registerForm.style.display = 'block';
-    monitorStep1Fields();
     if (toRegister) toRegister.style.display = 'none';
     if (toLogin) toLogin.style.display = 'block';
-}
+};
 
-// Funciones para la navegación por pasos del formulario de registro
+// Funciones para la navegación por pasos (también deben ser globales)
+window.nextStep = function(step) {
+    // Validar el paso actual antes de avanzar
+    if (validateCurrentStep(currentStep)) {
+        document.querySelector(`.form-step[data-step="${currentStep}"]`).classList.remove('active');
+        document.querySelector(`.form-step[data-step="${step}"]`).classList.add('active');
+        
+        document.querySelector(`.step[data-step="${currentStep}"]`).classList.remove('active');
+        document.querySelector(`.step[data-step="${step}"]`).classList.add('active');
+        
+        currentStep = step;
+    }
+};
+
+window.prevStep = function(step) {
+    document.querySelector(`.form-step[data-step="${currentStep}"]`).classList.remove('active');
+    document.querySelector(`.form-step[data-step="${step}"]`).classList.add('active');
+
+    document.querySelector(`.step[data-step="${currentStep}"]`).classList.remove('active');
+    document.querySelector(`.step[data-step="${step}"]`).classList.add('active');
+
+    currentStep = step;
+};
+
 let currentStep = 1;
 
 function nextStep(step) {
@@ -104,7 +119,6 @@ function prevStep(step) {
     currentStep = step;
 }
 
-
 // Validación genérica del paso actual
 function validateCurrentStep(step) {
     switch(step) {
@@ -123,6 +137,7 @@ function validateStep1() {
     const nombre = document.getElementById('reg-nombre').value.trim();
     const apellido = document.getElementById('reg-apellido').value.trim();
     const dni = document.getElementById('reg-dni').value.trim();
+    
     clearFieldErrors(['nombre','apellido','dni']);
 
     let valid = true;
@@ -132,108 +147,38 @@ function validateStep1() {
     return valid;
 }
 
-// Habilitar/deshabilitar botón de paso 1 en vivo
-function monitorStep1Fields() {
-    const fields = ['reg-nombre','reg-apellido','reg-dni'];
-    const btn = document.getElementById('btn-step1');
-    fields.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            el.addEventListener('input', () => {
-                const ok = document.getElementById('reg-nombre').value.trim() &&
-                           document.getElementById('reg-apellido').value.trim() &&
-                           /^\d+$/.test(document.getElementById('reg-dni').value.trim());
-                btn.disabled = !ok;
-            });
-        }
-    });
-}
-
 function validateStep2() {
-    const pais = document.getElementById('reg-pais').value.trim();
-    const provincia = document.getElementById('reg-provincia').value.trim();
-    clearFieldErrors(['pais','provincia']);
+    const pais = document.getElementById('reg-pais').value;
+    const provincia = document.getElementById('reg-provincia').value;
+    const ciudad = document.getElementById('reg-ciudad').value;
+    const domicilio = document.getElementById('reg-domicilio').value.trim();
+    
+    clearFieldErrors(['pais','provincia','ciudad','domicilio']);
+    
     let valid = true;
-    if (!pais) { setFieldError('pais','Ingresa tu país'); valid = false; }
-    if (!provincia) { setFieldError('provincia','Ingresa tu provincia'); valid = false; }
+    if (!pais) { setFieldError('pais','Selecciona tu país'); valid = false; }
+    if (!provincia) { setFieldError('provincia','Selecciona tu provincia'); valid = false; }
+    if (!ciudad) { setFieldError('ciudad','Selecciona tu ciudad'); valid = false; }
+    if (!domicilio) { setFieldError('domicilio','Ingresa tu domicilio'); valid = false; }
+    
     return valid;
 }
 
 function validateStep3() {
     const estudios = document.getElementById('reg-estudios').value.trim();
     const password = document.getElementById('reg-password').value;
+    const password2 = document.getElementById('reg-password2').value;
     const terms = document.getElementById('reg-terms').checked;
-    clearFieldErrors(['estudios','password']);
+    
+    clearFieldErrors(['estudios','password','password2']);
+    
     let valid = true;
     if (!estudios) { setFieldError('estudios','Ingresa tus estudios'); valid = false; }
     if (!password || password.length < 8) { setFieldError('password','Mínimo 8 caracteres'); valid = false; }
+    if (password !== password2) { setFieldError('password2','Las contraseñas no coinciden'); valid = false; }
     if (!terms) { showAuthMessage('Debes aceptar los términos y condiciones', 'error'); valid = false; }
+    
     return valid;
-}
-
-// Función para limpiar parámetros de la URL
-function cleanURLParameters() {
-    const url = new URL(window.location);
-    const params = new URLSearchParams(url.search);
-    
-    // Remover parámetros de autenticación
-    if (params.has('error') || params.has('logout') || params.has('timeout')) {
-        params.delete('error');
-        params.delete('logout');
-        params.delete('timeout');
-        
-        const newUrl = params.toString() ? `${url.pathname}?${params.toString()}` : url.pathname;
-        window.history.replaceState({}, document.title, newUrl);
-    }
-}
-
-// Función para resetear el formulario de registro
-function resetRegisterForm() {
-    // Resetear todos los campos del formulario
-    document.getElementById('reg-nombre').value = '';
-    document.getElementById('reg-apellido').value = '';
-    document.getElementById('reg-dni').value = '';
-    document.getElementById('reg-pais').value = '';
-    document.getElementById('reg-provincia').value = '';
-    document.getElementById('reg-estudios').value = '';
-    document.getElementById('reg-password').value = '';
-    document.getElementById('reg-terms').checked = false;
-    
-    // Volver al paso 1
-    if (currentStep !== 1) {
-        document.querySelectorAll('.form-step').forEach(step => {
-            step.classList.remove('active');
-        });
-        document.querySelectorAll('.step').forEach(step => {
-            step.classList.remove('active');
-        });
-        
-        document.querySelector('.form-step[data-step="1"]').classList.add('active');
-        document.querySelector('.step[data-step="1"]').classList.add('active');
-        currentStep = 1;
-    }
-}
-
-// Función para mostrar mensajes en el modal
-function showAuthMessage(message, type) {
-    clearAuthMessages();
-    
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `alert alert-${type}`;
-    messageDiv.innerHTML = `<p>${message}</p>`;
-    
-    const authRight = document.querySelector('.auth-modal-right');
-    const formsContainer = document.querySelector('.forms-container');
-    
-    // Insertar el mensaje antes del forms container
-    authRight.insertBefore(messageDiv, formsContainer);
-    
-    // Auto-eliminar el mensaje después de 5 segundos
-    setTimeout(() => {
-        if (messageDiv.parentNode) {
-            messageDiv.parentNode.removeChild(messageDiv);
-        }
-    }, 5000);
 }
 
 // ---- Manejo de errores por campo ----
@@ -253,57 +198,106 @@ function clearFieldErrors(fields) {
     });
 }
 
-// Función para limpiar mensajes
-function clearAuthMessages() {
-    const alerts = document.querySelectorAll('.auth-modal-right .alert');
-    alerts.forEach(alert => {
-        alert.parentNode.removeChild(alert);
-    });
+// Cargar provincias y ciudades (si necesitas carga dinámica)
+async function loadProvinces(paisCodigo) {
+    try {
+        const response = await fetch(`/register/provincias/${paisCodigo}`);
+        const provincias = await response.json();
+        
+        const provinciaSelect = document.getElementById('reg-provincia');
+        provinciaSelect.innerHTML = '<option value="">Seleccionar provincia</option>';
+        
+        provincias.forEach(provincia => {
+            const option = document.createElement('option');
+            option.value = provincia.codigo;
+            option.textContent = provincia.nombre;
+            provinciaSelect.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error loading provinces:', error);
+    }
 }
 
-// Event listener para abrir el modal automáticamente cuando hay parámetros de error
+async function loadCities(paisCodigo, provinciaCodigo) {
+    try {
+        const response = await fetch(`/register/ciudades/${paisCodigo}/${provinciaCodigo}`);
+        const ciudades = await response.json();
+        
+        const ciudadSelect = document.getElementById('reg-ciudad');
+        ciudadSelect.innerHTML = '<option value="">Seleccionar ciudad</option>';
+        
+        ciudades.forEach(ciudad => {
+            const option = document.createElement('option');
+            option.value = ciudad.id;
+            option.textContent = ciudad.nombre;
+            ciudadSelect.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error loading cities:', error);
+    }
+}
+
+// Event listeners
 document.addEventListener('DOMContentLoaded', function() {
+
     const urlParams = new URLSearchParams(window.location.search);
     
-    // Verificar si hay mensajes de Thymeleaf
-    const hasError = document.querySelector('.alert-error') !== null;
-    const hasTimeout = document.querySelector('.alert-warning') !== null;
     
-    if (urlParams.has('error') || urlParams.has('timeout') || hasError || hasTimeout) {
-        // Pequeño delay para asegurar que el DOM esté completamente cargado
-        setTimeout(() => {
-            openAuthModal();
-            showLoginForm();
-            
-            // Si hay mensajes de Thymeleaf, limpiar la URL
-            if (hasError || hasTimeout) {
-                cleanURLParameters();
-            }
-        }, 100);
+    // Verificar si hay mensajes de registro
+    if (urlParams.has('registroExitoso')) {
+        showAuthMessage('Registro exitoso. Ya puedes iniciar sesión.', 'success');
+        // Limpiar parámetro de la URL
+        cleanURLParameters();
+    }
+    
+    if (urlParams.has('registroError')) {
+        showAuthMessage('Error en el registro. Intenta nuevamente.', 'error');
+        // Abrir modal de registro automáticamente
+        openAuthModal();
+        showRegisterForm();
+        // Limpiar parámetro de la URL
+        cleanURLParameters();
     }
 
-    // Al iniciar si se abre registro directamente
-    if (document.getElementById('register-form').style.display === 'block') {
-        monitorStep1Fields();
+    function cleanURLParameters() {
+        const url = new URL(window.location);
+        const params = new URLSearchParams(url.search);
+        
+        // Remover parámetros de autenticación y registro
+        ['error', 'logout', 'timeout', 'registroError', 'registroExitoso'].forEach(param => {
+            if (params.has(param)) {
+                params.delete(param);
+            }
+        });
+        
+        const newUrl = params.toString() ? `${url.pathname}?${params.toString()}` : url.pathname;
+        window.history.replaceState({}, document.title, newUrl);
     }
-    // Estado inicial: ocultar el switch equivocado
-    const toRegister = document.getElementById('to-register');
-    const toLogin = document.getElementById('to-login');
-    if (document.getElementById('login-form').style.display !== 'none') {
-        if (toRegister) toRegister.style.display = 'block';
-        if (toLogin) toLogin.style.display = 'none';
-    }
+
+    // Event listeners para selects de ubicación
+    document.getElementById('reg-pais')?.addEventListener('change', function() {
+        if (this.value) {
+            loadProvinces(this.value);
+        }
+    });
     
-    // Cerrar modal al hacer clic fuera del contenido
-    document.getElementById('authModal').addEventListener('click', function(e) {
+    document.getElementById('reg-provincia')?.addEventListener('change', function() {
+        const paisCodigo = document.getElementById('reg-pais').value;
+        if (paisCodigo && this.value) {
+            loadCities(paisCodigo, this.value);
+        }
+    });
+    
+    // Cerrar modal al hacer clic fuera
+    document.getElementById('authModal')?.addEventListener('click', function(e) {
         if (e.target === this) {
             closeAuthModal();
         }
     });
     
-    // Cerrar modal con la tecla ESC
+    // Cerrar modal con ESC
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && document.getElementById('authModal').style.display === 'flex') {
+        if (e.key === 'Escape') {
             closeAuthModal();
         }
     });

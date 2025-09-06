@@ -2,8 +2,6 @@ package com.example.demo.model;
 
 import java.util.List;
 
-import org.stringtemplate.v4.compiler.CodeGenerator.listElement_return;
-
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.JoinColumn;
