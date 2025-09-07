@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/adminBase :: layout(~{::title}, ~{::main})}">
+<head>
+    <title>Admin Dashboard - Aurea</title>
+</head>
+<body>
+<main class="main-content">
+    <header class="main-header">
+        <h1>Dashboard</h1>
+    </header>
+
+    <!-- KPI Cards -->
+    <section class="kpi-grid">
+        <div class="kpi-card">
+            <h4>Total Ofertas</h4>
+            <p th:text="${totalOfertas}">0</p>
+            <i class="fas fa-graduation-cap"></i>
+        </div>
+        <div class="kpi-card">
+            <h4>Ofertas Activas</h4>
+            <p th:text="${ofertasActivas}">0</p>
+            <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="kpi-card">
+            <h4>Total Alumnos</h4>
+            <p th:text="${totalAlumnos}">0</p>
+            <i class="fas fa-user-graduate"></i>
+        </div>
+        <div class="kpi-card">
+            <h4>Total Docentes</h4>
+            <p th:text="${totalDocentes}">0</p>
+            <i class="fas fa-chalkboard-teacher"></i>
+        </div>
+    </section>
+
+    <!-- Charts -->
+    <section class="charts-grid">
+        <div class="chart-container">
+            <h3>Distribución de Ofertas</h3>
+            <canvas id="ofertasChart"></canvas>
+        </div>
+        <div class="chart-container">
+            <h3>Distribución de Usuarios</h3>
+            <canvas id="usuariosChart"></canvas>
+        </div>
+    </section>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script th:src="@{/js/panelAdmin.js}"></script>
+</main>
+</body>
+</html>

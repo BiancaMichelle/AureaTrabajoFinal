@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/adminBase :: layout(~{::title}, ~{::main})}">
+<head>
+    <title>Gestión de Usuarios</title>
+</head>
+<body>
+<main class="main-content">
+    <header class="main-header">
+        <h1>Gestión de Usuarios</h1>
+    </header>
+
+    <div class="gestion-usuarios-container">
+        <!-- Botón para desplegar el formulario -->
+        <div class="form-toggle-container">
+            <button id="btn-show-form" class="btn-primary"><i class="fas fa-plus-circle"></i> Registrar Nuevo Usuario</button>
+        </div>
+
+        <!-- Formulario de Registro de Usuario (colapsable) -->
+        <div id="form-container" class="form-container collapsible-content" style="display: none;">
+            <form th:action="@{/admin/usuarios/registrar}" method="post" id="user-form" enctype="multipart/form-data">
+                <div class="form-main-content">
+                    <!-- Columna Izquierda: Carga de Foto -->
+                    <div class="form-photo-column">
+                        <div class="form-group">
+                            <label>Foto de Perfil</label>
+                            <div class="photo-upload-container">
+                                <input type="file" id="foto" name="foto" accept="image/*" class="photo-upload-input">
+                                <label for="foto" class="photo-upload-label">
+                                    <img id="photo-preview" src="#" alt="Vista previa de la foto" style="display: none;">
+                                    <span id="photo-upload-text">
+                                        <i class="fas fa-camera"></i>
+                                        <br>
+                                        Subir Foto
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Columna Derecha: Campos del Formulario -->
+                    <div class="form-fields-column">
+                        <!-- Datos Personales -->
+                        <div class="form-section">
+                            <h4>Datos Personales</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="nombres">Nombre/s</label>
+                                    <input type="text" id="nombres" name="nombres" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="apellidos">Apellido/s</label>
+                                    <input type="text" id="apellidos" name="apellidos" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="dni">DNI</label>
+                                    <input type="text" id="dni" name="dni" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="genero">Género</label>
+                                    <select id="genero" name="genero">
+                                        <option value="MASCULINO">Masculino</option>
+                                        <option value="FEMENINO">Femenino</option>
+                                        <option value="X">X</option>
+                                        <option value="OTRO">Otro</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="fechaNacimiento">Fecha de Nacimiento</label>
+                                    <input type="date" id="fechaNacimiento" name="fechaNacimiento" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="telefono">Teléfono</label>
+                                    <input type="tel" id="telefono" name="telefono">
+                                </div>
+                                <div class="form-group">
+                                    <label for="correo">Correo Electrónico</label>
+                                    <input type="email" id="correo" name="correo" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="password">Contraseña</label>
+                                    <input type="password" id="password" name="password" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Domicilio -->
+                        <div class="form-section">
+                            <h4>Domicilio</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="provincia">Provincia</label>
+                                    <select id="provincia" name="provincia">
+                                        <option>Seleccione una provincia</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="ciudad">Ciudad</label>
+                                    <select id="ciudad" name="ciudad">
+                                        <option>Seleccione una ciudad</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="domicilio">Dirección</label>
+                                    <input type="text" id="domicilio" name="domicilio">
+                                </div>
+                                <div class="form-group">
+                                    <label for="piso">Piso/Depto</label>
+                                    <input type="text" id="piso" name="piso">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Rol y Estado -->
+                        <div class="form-section">
+                            <h4>Rol y Estado</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="rol">Rol del Usuario</label>
+                                    <select id="rol" name="rol" required>
+                                        <option value="">Seleccione un rol</option>
+                                        <option value="ALUMNO">Alumno</option>
+                                        <option value="DOCENTE">Docente</option>
+                                        <option value="ADMIN">Administrador</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="estado">Estado del Usuario</label>
+                                    <select id="estado" name="estado">
+                                        <option value="ALTA">Alta</option>
+                                        <option value="BAJA">Baja</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Campos Condicionales para Alumno -->
+                        <div id="datos-academicos-alumno" class="form-section conditional-fields" style="display:none;">
+                            <h4>Datos Académicos (Alumno)</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="ultimosEstudios">Últimos Estudios Alcanzados</label>
+                                    <input type="text" id="ultimosEstudios" name="ultimosEstudios">
+                                </div>
+                                <div class="form-group">
+                                    <label for="colegioEgreso">Colegio de Egreso</label>
+                                    <input type="text" id="colegioEgreso" name="colegioEgreso">
+                                </div>
+                                <div class="form-group">
+                                    <label for="anoEgreso">Año de Egreso</label>
+                                    <input type="number" id="anoEgreso" name="anoEgreso">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Campos Condicionales para Docente -->
+                        <div id="datos-profesionales-docente" class="form-section conditional-fields" style="display:none;">
+                            <h4>Datos Profesionales (Docente)</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="matricula">Matrícula</label>
+                                    <input type="text" id="matricula" name="matricula">
+                                </div>
+                                <div class="form-group">
+                                    <label for="experiencia">Años de Experiencia</label>
+                                    <input type="number" id="experiencia" name="experiencia">
+                                </div>
+                            </div>
+                            <div class="availability-container">
+                                <div class="availability-controls">
+                                    <div class="form-group">
+                                        <label for="dia-semana">Día</label>
+                                        <select id="dia-semana">
+                                            <option value="LUNES">Lunes</option>
+                                            <option value="MARTES">Martes</option>
+                                            <option value="MIERCOLES">Miércoles</option>
+                                            <option value="JUEVES">Jueves</option>
+                                            <option value="VIERNES">Viernes</option>
+                                            <option value="SABADO">Sábado</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="hora-desde">Desde</label>
+                                        <input type="time" id="hora-desde">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="hora-hasta">Hasta</label>
+                                        <input type="time" id="hora-hasta">
+                                    </div>
+                                    <button type="button" id="btn-add-availability" class="btn-icon btn-add"><i class="fas fa-plus"></i></button>
+                                </div>
+                                <div class="availability-table-wrapper">
+                                    <table id="availability-table" class="availability-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Día</th>
+                                                <th>Horario</th>
+                                                <th>Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <!-- Filas de disponibilidad se agregarán aquí -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-submit">Registrar Usuario</button>
+                    <button type="button" id="btn-cancel-form" class="btn-cancel">Cancelar</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Sección de Filtros y Tabla -->
+        <div class="users-table-section">
+            <div class="filters-container">
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="Buscar por nombre, DNI, etc...">
+                    <i class="fas fa-search"></i>
+                </div>
+                <div class="filter-selectors">
+                    <select id="filtro-rol" name="filtro-rol">
+                        <option value="">Filtrar por Rol</option>
+                        <option value="ALUMNO">Alumno</option>
+                        <option value="DOCENTE">Docente</option>
+                        <option value="ADMIN">Administrador</option>
+                    </select>
+                    <select id="filtro-estado" name="filtro-estado">
+                        <option value="">Filtrar por Estado</option>
+                        <option value="ALTA">Alta</option>
+                        <option value="BAJA">Baja</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="users-table-container">
+                <table class="users-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre Completo</th>
+                            <th>DNI</th>
+                            <th>Correo</th>
+                            <th>Roles</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Ejemplo de fila -->
+                        <tr>
+                            <td>1</td>
+                            <td>Juan Pérez</td>
+                            <td>12345678</td>
+                            <td>juan.perez@example.com</td>
+                            <td><span class="role-tag role-alumno">ALUMNO</span></td>
+                            <td><span class="status-tag status-alta">ALTA</span></td>
+                            <td class="actions">
+                                <button class="btn-icon btn-edit"><i class="fas fa-pencil-alt"></i></button>
+                                <button class="btn-icon btn-delete"><i class="fas fa-trash-alt"></i></button>
+                            </td>
+                        </tr>
+                        <!-- Ejemplo de fila -->
+                        <tr>
+                            <td>2</td>
+                            <td>Maria Garcia</td>
+                            <td>87654321</td>
+                            <td>maria.garcia@example.com</td>
+                            <td><span class="role-tag role-docente">DOCENTE</span></td>
+                            <td><span class="status-tag status-alta">ALTA</span></td>
+                            <td class="actions">
+                                <button class="btn-icon btn-edit"><i class="fas fa-pencil-alt"></i></button>
+                                <button class="btn-icon btn-delete"><i class="fas fa-trash-alt"></i></button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <script th:src="@{/js/gestionUsuarios.js}"></script>
+</main>
+</body>
+</html>

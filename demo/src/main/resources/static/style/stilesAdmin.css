@@ -1,0 +1,402 @@
+/* Estilos generales para la página de gestión */
+.gestion-usuarios-container {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+/* Botón para mostrar el formulario */
+.form-toggle-container {
+    width: 100%;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+/* Contenedor del formulario colapsable */
+.form-container {
+    background-color: #ffffff;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    border: 1px solid #e9ecef;
+    overflow: hidden;
+}
+
+.collapsible-content {
+    max-height: 0;
+    transition: max-height 0.5s ease-out, padding 0.5s ease-out;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.collapsible-content.show {
+    max-height: 2000px; /* Altura suficientemente grande */
+    padding-top: 25px;
+    padding-bottom: 25px;
+}
+
+/* Estructura del formulario en dos columnas */
+.form-main-content {
+    display: flex;
+    gap: 30px;
+}
+
+.form-photo-column {
+    flex: 0 0 170px; /* No crece, no se encoge, base de 170px */
+}
+
+.form-fields-column {
+    flex: 1; /* Ocupa el espacio restante */
+}
+
+
+.form-container h3 {
+    margin-top: 0;
+    padding-bottom: 15px;
+    margin-bottom: 25px;
+    font-size: 22px;
+    color: #343a40;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.form-section h4 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #495057;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.form-group label {
+    margin-bottom: 6px;
+    font-weight: 500;
+    color: #495057;
+    font-size: 14px;
+}
+
+.form-group input, .form-group select {
+    padding: 10px;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    width: 100%;
+    box-sizing: border-box;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-group input:focus, .form-group select:focus {
+    border-color: #80bdff;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+}
+
+/* Estilos para la carga de fotos */
+.photo-upload-container {
+    position: relative;
+    width: 170px;
+    height: 170px;
+    border-radius: 12px;
+    border: 2px dashed #ced4da;
+    overflow: hidden;
+    background-color: #f8f9fa;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: border-color 0.3s;
+}
+
+.photo-upload-container:hover {
+    border-color: #007bff;
+}
+
+.photo-upload-input {
+    display: none; /* Ocultar el input de archivo por defecto */
+}
+
+.photo-upload-label {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    text-align: center;
+    color: #6c757d;
+    transition: background-color 0.2s;
+}
+
+.photo-upload-label:hover {
+    background-color: #e9ecef;
+}
+
+#photo-upload-text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+#photo-upload-text .fa-camera {
+    font-size: 24px;
+}
+
+#photo-preview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Clave para que la imagen cubra el cuadro sin distorsionarse */
+    display: none; /* Oculta inicialmente */
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #dee2e6;
+}
+
+.btn-submit, .btn-cancel {
+    padding: 10px 25px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+}
+
+.btn-submit {
+    background-color: #28a745;
+    color: white;
+}
+.btn-submit:hover {
+    background-color: #218838;
+}
+
+.btn-cancel {
+    background-color: #6c757d;
+    color: white;
+}
+.btn-cancel:hover {
+    background-color: #5a6268;
+}
+
+/* --- Estilos para el gestor de disponibilidad --- */
+.availability-container {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #dee2e6;
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.availability-controls {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    flex-basis: 60%;
+}
+
+.availability-controls .form-group {
+    margin-bottom: 0;
+}
+
+.availability-controls .form-group:nth-child(1) { flex-grow: 2; } /* Día */
+.availability-controls .form-group:nth-child(2) { flex-grow: 1; } /* Desde */
+.availability-controls .form-group:nth-child(3) { flex-grow: 1; } /* Hasta */
+
+.btn-add {
+    background-color: #17a2b8;
+    color: white;
+    min-width: 42px; /* Ancho del botón de añadir */
+    height: 42px;
+}
+.btn-add:hover {
+    background-color: #138496;
+}
+
+.availability-table-wrapper {
+    flex-basis: 40%;
+    max-height: 180px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+}
+
+.availability-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.availability-table th, .availability-table td {
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 1px solid #dee2e6;
+    font-size: 14px;
+    color: #212529; /* Color de texto oscuro para legibilidad */
+}
+
+.availability-table th {
+    background-color: #e9ecef;
+    position: sticky;
+    top: 0;
+    color: #495057; /* Color de texto un poco más claro para cabeceras */
+}
+
+.availability-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.availability-table .btn-delete {
+    font-size: 14px;
+    width: 28px;
+    height: 28px;
+}
+
+/* Sección de la tabla y filtros */
+.users-table-section {
+    background-color: #ffffff;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    border: 1px solid #e9ecef;
+}
+
+.filters-container {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.search-box {
+    position: relative;
+    flex-grow: 1;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 10px 15px 10px 40px; /* Espacio para el icono */
+    border-radius: 6px;
+    border: 1px solid #ced4da;
+    box-sizing: border-box;
+}
+
+.search-box .fa-search {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #adb5bd;
+}
+
+.filter-selectors {
+    display: flex;
+    gap: 15px;
+}
+
+.filter-selectors select {
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #ced4da;
+    background-color: #f8f9fa;
+}
+
+/* Tabla de usuarios */
+.users-table-container {
+    overflow-x: auto;
+}
+
+.users-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.users-table th, .users-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #dee2e6;
+    vertical-align: middle;
+    color: #212529;
+}
+
+.users-table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    color: #495057;
+    font-size: 14px;
+}
+
+.users-table tbody tr:hover {
+    background-color: #f1f3f5;
+}
+
+/* Etiquetas para rol y estado */
+.role-tag, .status-tag {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+    color: white;
+    text-transform: uppercase;
+}
+
+.role-alumno { background-color: #007bff; }
+.role-docente { background-color: #fd7e14; }
+.role-admin { background-color: #6f42c1; }
+
+.status-alta { background-color: #28a745; }
+.status-baja { background-color: #dc3545; }
+
+/* Botones de acción en la tabla */
+.actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 5px;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+.btn-edit { color: #ffc107; }
+.btn-edit:hover { background-color: #fff3cd; }
+
+.btn-delete { color: #dc3545; }
+.btn-delete:hover { background-color: #f8d7da; }

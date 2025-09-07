@@ -57,7 +57,13 @@ public class AdminController {
         model.addAttribute("inscripcionesCount", 125); // Placeholder
         model.addAttribute("abandonosCount", 15); // Placeholder
 
-        return "screens/panelAdmin";
+        return "admin/panelAdmin";
+    }
+
+    @GetMapping("/admin/gestion-usuarios")
+    public String gestionUsuarios(Model model) {
+        // Aquí puedes agregar lógica para cargar datos necesarios para la página de gestión de usuarios
+        return "admin/gestionUsuarios";
     }
 }
 
