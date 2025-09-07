@@ -8,6 +8,7 @@ import com.example.demo.model.Formacion;
 import com.example.demo.model.OfertaAcademica;
 import com.example.demo.model.Seminario;
 import com.example.demo.model.Usuario;
+import com.example.demo.repository.CategoriaRepository;
 import com.example.demo.repository.OfertaAcademicaRepository;
 import com.example.demo.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +26,9 @@ public class AdminController {
 
     @Autowired
     private UsuarioRepository usuarioRepository;
+
+    @Autowired
+    private CategoriaRepository categoriaRepository;
 
     @GetMapping("/admin/dashboard")
     public String adminDashboard(Model model) {
@@ -51,7 +55,7 @@ public class AdminController {
         model.addAttribute("totalOfertas", todasLasOfertas.size());
         model.addAttribute("totalAlumnos", totalAlumnos);
         model.addAttribute("totalDocentes", totalDocentes);
-        
+
         // Datos para los gráficos (simplificado)
         // En un caso real, podrías tener consultas más complejas
         model.addAttribute("inscripcionesCount", 125); // Placeholder
@@ -64,6 +68,12 @@ public class AdminController {
     public String gestionUsuarios(Model model) {
         // Aquí puedes agregar lógica para cargar datos necesarios para la página de gestión de usuarios
         return "admin/gestionUsuarios";
+    }
+
+    @GetMapping("/admin/gestion-ofertas")
+    public String gestionOfertas(Model model) {
+        // Aquí puedes agregar lógica para cargar datos necesarios para la página de gestión de ofertas académicas
+        return "admin/gestionOfertas";
     }
 }
 

@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/adminBase :: layout(~{::title}, ~{::main})}">
+<head>
+    <title>Gestión de Ofertas Académicas</title>
+</head>
+<body>
+<main class="main-content">
+    <header class="main-header">
+        <h1>Gestión de Ofertas Académicas</h1>
+    </header>
+
+    <div class="gestion-usuarios-container">
+        <!-- Botón para desplegar el formulario -->
+        <div class="form-toggle-container">
+            <button id="btn-show-form" class="btn-primary"><i class="fas fa-plus-circle"></i> Registrar Nueva Oferta</button>
+        </div>
+
+        <!-- Formulario de Registro (colapsable) -->
+        <div id="form-container" class="form-container collapsible-content" style="display: none;">
+            <form th:action="@{/admin/ofertas/registrar}" method="post" id="oferta-form" enctype="multipart/form-data">
+                <div class="form-main-content">
+                    <!-- Columna Izquierda: Imagen -->
+                    <div class="form-photo-column">
+                        <div class="form-group">
+                            <label>Imagen de la Oferta</label>
+                            <div class="photo-upload-container">
+                                <input type="file" id="imagen" name="imagen" accept="image/*" class="photo-upload-input">
+                                <label for="imagen" class="photo-upload-label">
+                                    <img id="photo-preview" src="#" alt="Vista previa" style="display: none;">
+                                    <span id="photo-upload-text">
+                                        <i class="fas fa-image"></i><br>Subir Imagen
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Columna Derecha: Campos del Formulario -->
+                    <div class="form-fields-column">
+                        <!-- Tipo de Oferta -->
+                        <div class="form-section">
+                            <h4>Tipo y Datos Generales</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="tipoOferta">Tipo de Oferta</label>
+                                    <select id="tipoOferta" name="tipoOferta" required>
+                                        <option value="">Seleccione un tipo</option>
+                                        <option value="CURSO">Curso</option>
+                                        <option value="FORMACION">Formación</option>
+                                        <option value="SEMINARIO">Seminario</option>
+                                        <option value="CHARLA">Charla</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="nombre">Nombre</label>
+                                    <input type="text" id="nombre" name="nombre" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="duracion">Duración</label>
+                                    <input type="text" id="duracion" name="duracion">
+                                </div>
+                                <div class="form-group">
+                                    <label for="costoInscripcion">Costo de Inscripción</label>
+                                    <input type="number" step="0.01" id="costoInscripcion" name="costoInscripcion">
+                                </div>
+                                <div class="form-group">
+                                    <label for="modalidad">Modalidad</label>
+                                    <select id="modalidad" name="modalidad">
+                                        <option th:each="m : ${T(com.example.demo.enums.Modalidad).values()}" th:value="${m}" th:text="${m}"></option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="fechaInicio">Fecha de Inicio</label>
+                                    <input type="date" id="fechaInicio" name="fechaInicio">
+                                </div>
+                                <div class="form-group">
+                                    <label for="fechaFin">Fecha de Fin</label>
+                                    <input type="date" id="fechaFin" name="fechaFin">
+                                </div>
+                                <div class="form-group">
+                                    <label for="certificado">Otorga Certificado</label>
+                                    <select id="certificado" name="certificado">
+                                        <option value="true">Sí</option>
+                                        <option value="false">No</option>
+                                    </select>
+                                </div>
+                            </div>
+                             <div class="form-group">
+                                <label for="descripcion">Descripción</label>
+                                <textarea id="descripcion" name="descripcion" rows="4" class="fixed-size-textarea"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="objetivo">Objetivo</label>
+                                <textarea id="objetivo" name="objetivo" rows="4" class="fixed-size-textarea"></textarea>
+                            </div>
+                             <div class="form-group">
+                                <label for="categorias">Categorías</label>
+                                <select id="categorias" name="categorias" multiple="multiple" class="form-control">
+                                    <option th:each="cat : ${categorias}" th:value="${cat.idCategoria}" th:text="${cat.nombre}"></option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Horarios para la oferta -->
+                        <div class="form-section">
+                            <h4>Horarios de Cursado</h4>
+                            <div id="horarios-container" class="availability-container">
+                                <div class="availability-controls">
+                                    <div class="form-group">
+                                        <label for="dia-semana">Día</label>
+                                        <select id="dia-semana">
+                                            <option th:each="dia : ${T(com.example.demo.enums.Dias).values()}" th:value="${dia}" th:text="${dia}"></option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="hora-desde">Desde</label>
+                                        <input type="time" id="hora-desde">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="hora-hasta">Hasta</label>
+                                        <input type="time" id="hora-hasta">
+                                    </div>
+                                    <button type="button" id="btn-add-horario" class="btn-icon btn-add"><i class="fas fa-plus"></i></button>
+                                </div>
+                                <div class="availability-table-wrapper">
+                                    <table id="horarios-table" class="availability-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Día</th>
+                                                <th>Horario</th>
+                                                <th>Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <!-- Filas de horarios se agregarán aquí -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Campos para Charla/Seminario -->
+                        <div id="fields-charla-seminario" class="form-section conditional-fields" style="display:none;">
+                            <h4>Datos de Charla/Seminario</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="lugar">Lugar</label>
+                                    <input type="text" id="lugar" name="lugar">
+                                </div>
+                                <div class="form-group">
+                                    <label for="enlace">Enlace (si es online)</label>
+                                    <input type="url" id="enlace" name="enlace">
+                                </div>
+                                <div class="form-group">
+                                    <label for="publicoObjetivo">Público Objetivo</label>
+                                    <input type="text" id="publicoObjetivo" name="publicoObjetivo">
+                                </div>
+                                <div class="form-group">
+                                    <label for="disertantes">Disertante/s (separados por coma)</label>
+                                    <input type="text" id="disertantes" name="disertantes">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Campos para Formación/Curso -->
+                        <div id="fields-formacion-curso" class="form-section conditional-fields" style="display:none;">
+                            <h4>Datos de Costos y Docentes</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="costoCuota">Costo por Cuota</label>
+                                    <input type="number" step="0.01" id="costoCuota" name="costoCuota">
+                                </div>
+                                <div class="form-group">
+                                    <label for="nrCuotas">Nro. de Cuotas</label>
+                                    <input type="number" id="nrCuotas" name="nrCuotas">
+                                </div>
+                                <div class="form-group">
+                                    <label for="costoMora">Costo por Mora</label>
+                                    <input type="number" step="0.01" id="costoMora" name="costoMora">
+                                </div>
+                                <div class="form-group">
+                                    <label for="vencimientoCuota">Día de Vencimiento de Cuota</label>
+                                    <input type="number" id="vencimientoCuota" name="vencimientoCuota" min="1" max="31">
+                                </div>
+                            </div>
+                             <!-- Asignación de Docentes -->
+                            <div class="form-section">
+                                <h5>Asignar Docentes</h5>
+                                <div class="docente-assignment-container">
+                                    <div class="docente-search-wrapper">
+                                        <div class="form-group">
+                                            <label for="docente-search">Buscar Docente (Nombre o DNI)</label>
+                                            <input type="text" id="docente-search" placeholder="Escriba para buscar...">
+                                            <div id="docente-search-results" class="search-results"></div>
+                                        </div>
+                                    </div>
+                                    <div class="docente-table-wrapper">
+                                        <table id="docentes-table" class="availability-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Docente</th>
+                                                    <th>DNI</th>
+                                                    <th>Acción</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <!-- Docentes asignados se agregarán aquí -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Campos para Formación -->
+                        <div id="fields-formacion" class="form-section conditional-fields" style="display:none;">
+                            <h4>Datos Específicos de Formación</h4>
+                            <div class="form-group">
+                                <label for="plan">Plan de Estudio</label>
+                                <textarea id="plan" name="plan" rows="4"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Campos para Curso -->
+                        <div id="fields-curso" class="form-section conditional-fields" style="display:none;">
+                            <h4>Datos Específicos de Curso</h4>
+                            <div class="form-group">
+                                <label for="temario">Temario</label>
+                                <textarea id="temario" name="temario" rows="4" class="fixed-size-textarea"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="temario-pdf">Adjuntar Temario (PDF)</label>
+                                <input type="file" id="temario-pdf" name="temario-pdf" accept=".pdf" class="form-control">
+                            </div>
+                            <!-- Aquí se podrían añadir campos para requisitos y módulos de forma más compleja si es necesario -->
+                        </div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-submit">Registrar Oferta</button>
+                    <button type="button" id="btn-cancel-form" class="btn-cancel">Cancelar</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Sección de Filtros y Tabla -->
+        <div class="users-table-section">
+            <div class="filters-container">
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="Buscar por nombre...">
+                    <i class="fas fa-search"></i>
+                </div>
+                <div class="filter-selectors">
+                    <select id="filtro-tipo" name="filtro-tipo">
+                        <option value="">Filtrar por Tipo</option>
+                        <option value="CURSO">Curso</option>
+                        <option value="FORMACION">Formación</option>
+                        <option value="SEMINARIO">Seminario</option>
+                        <option value="CHARLA">Charla</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="users-table-container">
+                <table class="users-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre</th>
+                            <th>Tipo</th>
+                            <th>Modalidad</th>
+                            <th>Fecha Inicio</th>
+                            <th>Costo Inscripción</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Las filas se cargarán dinámicamente -->
+                        <tr>
+                            <td>1</td>
+                            <td>Curso de Java Avanzado</td>
+                            <td><span class="role-tag role-docente">CURSO</span></td>
+                            <td>ONLINE</td>
+                            <td>2025-10-01</td>
+                            <td>50.00</td>
+                            <td class="actions">
+                                <button class="btn-icon btn-edit"><i class="fas fa-pencil-alt"></i></button>
+                                <button class="btn-icon btn-delete"><i class="fas fa-trash-alt"></i></button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <script th:src="@{/js/gestionOfertas.js}"></script>
+</main>
+</body>
+</html>
