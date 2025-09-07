@@ -52,6 +52,9 @@ public class PublicoController {
     @Autowired
     private LocacionAPIService locacionApiService;
 
+    @Autowired
+    private UbicacionController ubicacionController;
+
     @GetMapping({"/", "/inicio"})
     public String home(Model model, 
                       @RequestParam(value = "error", required = false) String error,
@@ -83,8 +86,13 @@ public class PublicoController {
         List<InstitucionAlumno> instituciones = institucionService.obtenerTodasLasInstituciones();
         model.addAttribute("instituciones", instituciones);
 
-        List<Pais> paises = locacionApiService.obtenerTodosPaises();
-        model.addAttribute("paises", paises);
+        try {
+            List<Pais> paises = locacionApiService.obtenerTodosPaises();
+            model.addAttribute("paises", paises);
+        } catch (Exception e) {
+            // Manejar error, tal vez cargar una lista vacía o de respaldo
+            model.addAttribute("paises", List.of());
+        }
 
         // Datos existentes para la página principal
         List<OfertaAcademica> todasLasOfertas = ofertaAcademicaRepository.findAll();

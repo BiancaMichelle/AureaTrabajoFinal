@@ -51,7 +51,7 @@ public class SecurityConfig {
         )
         .authorizeHttpRequests(auth -> auth
             .requestMatchers("/", "/publico", "/login", "/register", 
-                           "/css/**", "/js/**", "/style/**", "/img/**")
+                           "/css/**", "/js/**", "/style/**", "/img/**","/api/**")
             .permitAll()
             .requestMatchers("/admin/**").hasAuthority("ADMIN")
             .requestMatchers("/alumno/**").hasAuthority("ALUMNO")
