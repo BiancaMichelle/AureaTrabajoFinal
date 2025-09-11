@@ -58,7 +58,7 @@
                         </div>
                     </div>
                 
-                    <form th:action="@{/register}" th:object="${alumno}" method="post" id="registerForm">
+                    <form th:action="@{/register}" th:object="${alumno}" method="post" id="registerForm" novalidate>
                         <div class="form-scroll">
                             <!-- Paso 1: Datos Personales -->
                             <div class="form-step active" data-step="1">
@@ -90,7 +90,7 @@
                                 </div>
                                 <div class="input-group">
                                     <label for="reg-fecha-nac">Fecha de nacimiento</label>
-                                    <input type="date" th:field="*{fechaNacimiento}" id="reg-fecha-nac" name="fechaNacimiento" required>
+                                    <input type="date" th:field="*{fechaNacimiento}" id="reg-fecha-nac" name="fechaNacimiento" pattern="yyyy-MM-dd" required>
                                     <span class="error-message" th:if="${#fields.hasErrors('fechaNacimiento')}" th:errors="*{fechaNacimiento}"></span>
                                 </div>
                                 <div class="input-group">
@@ -177,11 +177,11 @@
                         </div>
                         <div class="step-actions">
                             <div class="action-group active" data-step="1">
-                                <button type="button" class="auth-btn next-btn" onclick="avanzarPaso1()" style="width: 100%;">Siguiente</button>
+                                <button type="button" class="auth-btn next-btn" onclick="nextStep(2)" style="width: 100%;">Siguiente</button>
                             </div>
                             <div class="action-group" data-step="2">
                                 <button type="button" class="auth-btn prev-btn" onclick="prevStep(1)">Anterior</button>
-                                <button type="button" class="auth-btn next-btn" onclick="avanzarPaso2()">Siguiente</button>
+                                <button type="button" class="auth-btn next-btn" onclick="nextStep(3)">Siguiente</button>
                             </div>
                             <div class="action-group" data-step="3">
                                 <button type="button" class="auth-btn prev-btn" onclick="prevStep(2)">Anterior</button>

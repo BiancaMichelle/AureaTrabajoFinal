@@ -45,7 +45,8 @@ public class Usuario {
 
   private String nombre;
   private String apellido;
-  private Date fechaNacimiento;
+  
+  private LocalDate fechaNacimiento;
   private String genero;
   private String correo;
   private String numTelefono;

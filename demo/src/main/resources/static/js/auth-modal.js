@@ -94,155 +94,70 @@ let currentStep = 1;
 
 // Funciones para la navegación por pasos (también deben ser globales)
 function nextStep(step) {
-    console.log("nextStep() llamado, paso actual:", currentStep, "siguiente paso:", step);
-    
-    // Validar el paso actual antes de avanzar
-    if (validateCurrentStep(currentStep)) {
-        console.log("Validación exitosa, avanzando...");
-        
-        // Ocultar paso actual
-        document.querySelector(`.form-step[data-step="${currentStep}"]`).classList.remove('active');
-        document.querySelector(`.step-navigation .step[data-step="${currentStep}"]`).classList.remove('active');
-        
-        // Mostrar siguiente paso
-        document.querySelector(`.form-step[data-step="${step}"]`).classList.add('active');
-        document.querySelector(`.step-navigation .step[data-step="${step}"]`).classList.add('active');
-        
-        currentStep = step;
-        console.log("Paso actual cambiado a:", currentStep);
-    } else {
-        console.log("Validación fallida, no se avanza");
-    }
+  if (!validateStep(currentStep)) {
+    return; // no avanza hasta que se complete este paso
+  }
+
+  // Desactivar required en paso actual
+  toggleRequired(currentStep, false);
+  // Activar required en paso siguiente
+  toggleRequired(step, true);
+
+  // ocultar paso actual
+  document.querySelector(`.form-step[data-step="${currentStep}"]`).classList.remove('active');
+  document.querySelector(`.step-navigation .step[data-step="${currentStep}"]`).classList.remove('active');
+  document.querySelector(`.action-group[data-step="${currentStep}"]`).classList.remove('active');
+
+  // mostrar siguiente paso
+  document.querySelector(`.form-step[data-step="${step}"]`).classList.add('active');
+  document.querySelector(`.step-navigation .step[data-step="${step}"]`).classList.add('active');
+  document.querySelector(`.action-group[data-step="${step}"]`).classList.add('active');
+
+  currentStep = step;
 }
+function validateStep(step) {
+  const inputs = document.querySelectorAll(`.form-step[data-step="${step}"] [required]`);
+  for (let input of inputs) {
+    if (!input.checkValidity()) {
+      input.reportValidity(); // muestra el mensaje de error nativo
+      return false;
+    }
+  }
+  return true;
+}
+
+function toggleRequired(step, enable) {
+  const inputs = document.querySelectorAll(`.form-step[data-step="${step}"] [required]`);
+  inputs.forEach(input => {
+    if (enable) {
+      input.setAttribute("data-required", "true");
+      input.setAttribute("required", "true");
+    } else {
+      input.removeAttribute("required");
+    }
+  });
+}
+
+
 
 function prevStep(step) {
-    document.querySelector(`.form-step[data-step="${currentStep}"]`).classList.remove('active');
-    document.querySelector(`.form-step[data-step="${step}"]`).classList.add('active');
+  // Desactivar required en paso actual
+  toggleRequired(currentStep, false);
+  // Activar required en paso anterior
+  toggleRequired(step, true);
 
+  document.querySelector(`.form-step[data-step="${currentStep}"]`).classList.remove('active');
+  document.querySelector(`.form-step[data-step="${step}"]`).classList.add('active');
 
-    document.querySelector(`.step[data-step="${currentStep}"]`).classList.remove('active');
-    document.querySelector(`.step[data-step="${step}"]`).classList.add('active');
+  document.querySelector(`.step[data-step="${currentStep}"]`).classList.remove('active');
+  document.querySelector(`.step[data-step="${step}"]`).classList.add('active');
 
-    currentStep = step;
+  document.querySelector(`.action-group[data-step="${currentStep}"]`).classList.remove('active');
+  document.querySelector(`.action-group[data-step="${step}"]`).classList.add('active');
+
+  currentStep = step;
 }
 
-
-
-
-
-
-// Validación genérica del paso actual
-function validateCurrentStep(step) {
-    switch(step) {
-        case 1:
-            return validateStep1();
-        case 2:
-            return validateStep2();
-        case 3:
-            return validateStep3();
-        default:
-            return true;
-    }
-}
-
-function validateStep1() {
-    const nombre = document.getElementById('reg-nombre').value.trim();
-    const apellido = document.getElementById('reg-apellido').value.trim();
-    const dni = document.getElementById('reg-dni').value.trim();
-    
-    clearFieldErrors(['nombre','apellido','dni']);
-
-    let valid = true;
-    if (!nombre) { setFieldError('nombre','Ingresa tu nombre'); valid = false; }
-    if (!apellido) { setFieldError('apellido','Ingresa tu apellido'); valid = false; }
-    if (!dni || !/^\d+$/.test(dni)) { setFieldError('dni','ingrese un DNI válido'); valid = false; }
-    return valid;
-}
-
-function validateStep2() {
-    console.log("validateStep2() llamado");
-    const pais = document.getElementById('reg-pais').value;
-    const provincia = document.getElementById('reg-provincia').value;
-    const ciudad = document.getElementById('reg-ciudad').value;
-    const domicilio = document.getElementById('reg-domicilio').value.trim();
-    
-    console.log("Valores:", {pais, provincia, ciudad, domicilio});
-    
-    clearFieldErrors(['pais', 'provincia', 'ciudad', 'domicilio']);
-    
-    let valid = true;
-    if (!pais) { 
-        console.log("Error: País no seleccionado");
-        setFieldError('pais', 'Selecciona tu país'); 
-        valid = false; 
-    }
-    if (!provincia) { 
-        console.log("Error: Provincia no seleccionada");
-        setFieldError('provincia', 'Selecciona tu provincia'); 
-        valid = false; 
-    }
-    if (!ciudad) { 
-        console.log("Error: Ciudad no seleccionada");
-        setFieldError('ciudad', 'Selecciona tu ciudad'); 
-        valid = false; 
-    }
-    if (!domicilio) { 
-        console.log("Error: Domicilio vacío");
-        setFieldError('domicilio', 'Ingresa tu domicilio'); 
-        valid = false; 
-    }
-    
-    console.log("Validación resultado:", valid);
-    return valid; 
-}
-function validateStep3() {
-    const estudios = document.getElementById('reg-estudios').value.trim();
-    const password = document.getElementById('reg-password').value;
-    const password2 = document.getElementById('reg-password2').value;
-    const terms = document.getElementById('reg-terms').checked;
-    
-    clearFieldErrors(['estudios','password','password2']);
-    
-    let valid = true;
-    if (!estudios) { setFieldError('estudios','Ingresa tus estudios'); valid = false; }
-    if (!password || password.length < 8) { setFieldError('password','Mínimo 8 caracteres'); valid = false; }
-    if (password !== password2) { setFieldError('password2','Las contraseñas no coinciden'); valid = false; }
-    if (!terms) { showAuthMessage('Debes aceptar los términos y condiciones', 'error'); valid = false; }
-    
-    return valid;
-}
-
-function avanzarPaso1() {
-    if (validateStep1()) {
-        nextStep(2);
-    }
-}
-
-function avanzarPaso2() {
-    if (validateStep2()) {
-        // Ocultar paso 2
-        const formStep2 = document.querySelector('.form-step[data-step="2"]');
-        const navStep2 = document.querySelector('.step-navigation .step[data-step="2"]');
-        
-        // Mostrar paso 3  
-        const formStep3 = document.querySelector('.form-step[data-step="3"]');
-        const navStep3 = document.querySelector('.step-navigation .step[data-step="3"]');
-        
-        if (formStep2 && formStep3 && navStep2 && navStep3) {
-            formStep2.classList.remove('active');
-            navStep2.classList.remove('active');
-            
-            formStep3.classList.add('active');
-            navStep3.classList.add('active');
-            
-            currentStep = 3;
-            console.log("Avanzado al paso 3");
-            
-            // FORZAR REFLOW - Esto asegura que los estilos se apliquen
-            void formStep3.offsetWidth;
-        }
-    }
-}
 
 
 // ---- Manejo de errores por campo ----
@@ -269,22 +184,6 @@ function clearFieldErrors(fields) {
     });
 }
 
-async function probarEndpoints() {
-    try {
-        // Probar endpoint de países
-        const responsePaises = await fetch('/register/paises');
-        const paisesText = await responsePaises.text();
-        console.log("Respuesta de /register/paises:", paisesText.substring(0, 200));
-        
-        // Probar endpoint de provincias (usa un código de país conocido)
-        const responseProvincias = await fetch('/register/provincias/AR');
-        const provinciasText = await responseProvincias.text();
-        console.log("Respuesta de /register/provincias/AR:", provinciasText.substring(0, 200));
-        
-    } catch (error) {
-        console.error("Error probando endpoints:", error);
-    }
-}
 
 // Cargar provincias y ciudades (si necesitas carga dinámica)
 async function cargarProvincias() {
@@ -459,3 +358,19 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+window.showAuthMessage = function (message, type) {
+    const container = document.querySelector('.auth-modal-right');
+    if (!container) return;
+
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type}`;
+    alert.textContent = message;
+
+    container.prepend(alert);
+
+    // opcional: auto-ocultar
+    setTimeout(() => {
+        alert.remove();
+    }, 5000);
+};
