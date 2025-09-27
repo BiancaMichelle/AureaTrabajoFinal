@@ -1,23 +1,21 @@
 <!DOCTYPE html>
-<html lang="es" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<html lang="es" xmlns:th="http://www.thymeleaf.org" 
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aurea</title>
     <link rel="stylesheet" th:href="@{/style/styleBase.css}">
-    <link rel="stylesheet" th:href="@{/style/auth-modal.css}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
-
-    <!-- =================   MODAL DE AUTENTICACIÓN   ================= -->
-    <div th:replace="~{fragments/auth-modal :: auth-modal}"></div>
 
     <!-- =================   HEADER   ================= -->
     <header class="header">
         <nav class="nav">
             <div class="nav-left">
-                <a href="#" class="nav-logo">Aurea</a>
+                <a th:href="@{/}" class="nav-logo">Aurea</a>
                 <div class="nav-search">
                     <input type="search" placeholder="  cursos, charlas...">
                     <button type="submit"><i class="fa fa-search"></i></button>
@@ -26,7 +24,7 @@
 
             <ul class="nav-menu">
                 <!-- Links para todos -->
-                <li class="nav-menu-item"><a href="#" class="nav-menu-link">Inicio</a></li>
+                <li class="nav-menu-item"><a th:href="@{/}" class="nav-menu-link">Inicio</a></li>
 
                 <!-- Links solo para Administrador -->
                 <div sec:authorize="hasRole('ADMIN')">
@@ -45,7 +43,7 @@
                 
                 <!-- Links de Autenticación -->
                 <li class="nav-menu-item" sec:authorize="!isAuthenticated()">
-                    <a href="#" onclick="openAuthModal(); showLoginForm();" class="nav-menu-link nav-menu-link-button">Login</a>
+                    <a th:href="@{/login}" class="nav-menu-link nav-menu-link-button">Login</a>
                 </li>
                 
                 <li class="nav-menu-item" sec:authorize="isAuthenticated()">
@@ -67,7 +65,7 @@
 
     <!-- =================   MAIN CONTENT   ================= -->
     <main>
-        <div th:fragment="content">
+        <div layout:fragment="content">
             <!-- El contenido de cada página se insertará aquí -->
         </div>
     </main>
@@ -113,7 +111,6 @@
     </footer>
 
     <script th:src="@{/js/main.js}"></script>
-    <script th:src="@{/js/auth-modal.js}"></script>
 
 </body>
 </html>

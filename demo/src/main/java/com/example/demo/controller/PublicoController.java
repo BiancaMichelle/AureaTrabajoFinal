@@ -137,6 +137,13 @@ public class PublicoController {
         return ResponseEntity.ok(ciudades);
     }
 
+    // Mostrar página de registro
+    @GetMapping("/register")
+    public String mostrarRegistro(Model model) {
+        model.addAttribute("alumno", new Alumno());
+        return "screens/register";
+    }
+
     // Nuevo endpoint para registro desde modal
     @PostMapping("/register")
     public String registrarAlumno(@ModelAttribute("alumno") Alumno alumno, 
@@ -144,24 +151,23 @@ public class PublicoController {
                                 Model model,
                                 HttpServletRequest request) {
         
-        System.out.println("Datos recibidos desde modal:");
+        System.out.println("Datos recibidos desde formulario de registro:");
         System.out.println("Nombre: " + alumno.getNombre());
         System.out.println("Email: " + alumno.getCorreo());
         System.out.println("País código: " + (alumno.getPais() != null ? alumno.getPais().getCodigo() : "null"));
         
         if (result.hasErrors()) {
             System.out.println("Errores de validación: " + result.getAllErrors());
-            // Redirigir a la página principal con error
-            return "redirect:/?registroError=true";
+            return "redirect:/register?error=true";
         }
         
         try {
             registroService.registrarUsuario(alumno);
-            return "redirect:/?registroExitoso=true";
+            return "redirect:/login?success=true";
         } catch (Exception e) {
             System.out.println("Error al registrar: " + e.getMessage());
             e.printStackTrace();
-            return "redirect:/?registroError=true";
+            return "redirect:/register?error=true";
         }
     }
 }

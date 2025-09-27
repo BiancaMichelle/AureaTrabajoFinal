@@ -7,12 +7,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
 public class LoginController {
-@GetMapping("/login")
+    @GetMapping("/login")
     public String loginPage(@RequestParam(value = "error", required = false) String error,
                             @RequestParam(value = "logout", required = false) String logout,
                             Model model) {
         if (error != null) model.addAttribute("error", true);
         if (logout != null) model.addAttribute("logout", true);
-        return "login"; // Thymeleaf view
-}
+        return "screens/LogIn"; 
+    }
 }

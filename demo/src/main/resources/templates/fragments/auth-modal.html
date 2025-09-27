@@ -38,7 +38,6 @@
                 </div>
 
                 <!-- Formulario de Registro -->
-                <!-- Formulario de Registro -->
                 <div class="form-wrapper" id="register-form" style="display: none;">
                     <h3>Registrarse</h3>
                 
@@ -54,62 +53,65 @@
                         </div>
                         <div class="step" data-step="3">
                             <div class="step-icon">3</div>
-                            <p>Datos Académicos</p>
+                            <p>Académicos</p>
+                        </div>
+                        <div class="step" data-step="4">
+                            <div class="step-icon">4</div>
+                            <p>Cuenta</p>
                         </div>
                     </div>
                 
                     <form th:action="@{/register}" th:object="${alumno}" method="post" id="registerForm" novalidate>
                         <div class="form-scroll">
-                            <!-- Paso 1: Datos Personales -->
+                            <!-- Paso 1: Datos Personales (nombre, apellido, dni, género, fecha de nacimiento, teléfono, correo electrónico) -->
                             <div class="form-step active" data-step="1">
                                 <div class="input-group">
                                     <label for="reg-nombre">Nombre</label>
-                                    <input type="text" th:field="*{nombre}" id="reg-nombre" name="nombre" required>
+                                    <input type="text" th:field="*{nombre}" id="reg-nombre" placeholder="Nombre" class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white placeholder-slate-400 transition-colors duration-200" required>
                                     <span class="error-message" th:if="${#fields.hasErrors('nombre')}" th:errors="*{nombre}"></span>
                                 </div>
                                 <div class="input-group">
                                     <label for="reg-apellido">Apellido</label>
-                                    <input type="text" th:field="*{apellido}" id="reg-apellido" name="apellido" required>
+                                    <input type="text" th:field="*{apellido}" id="reg-apellido" placeholder="Apellido" class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white placeholder-slate-400 transition-colors duration-200" required>
                                     <span class="error-message" th:if="${#fields.hasErrors('apellido')}" th:errors="*{apellido}"></span>
                                 </div>
                                 <div class="input-group">
                                     <label for="reg-dni">DNI</label>
-                                    <input type="text" th:field="*{dni}" id="reg-dni" name="dni" required>
+                                    <input type="text" th:field="*{dni}" id="reg-dni" placeholder="DNI" class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white placeholder-slate-400 transition-colors duration-200" required>
                                     <span class="error-message" th:if="${#fields.hasErrors('dni')}" th:errors="*{dni}"></span>
                                 </div>
                                 <div class="input-group">
                                     <label for="reg-genero">Género</label>
-                                    <select id="reg-genero" name="genero" required>
-                                        <option value="" disabled selected>Selecciona tu género</option>
-                                        <option value="Femenino">Femenino</option>
-                                        <option value="Masculino">Masculino</option>
-                                        <option value="X">X</option>
-                                        <option value="Otro">Otro</option>
+                                    <select th:field="*{genero}" id="reg-genero" class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white transition-colors duration-200" required>
+                                        <option value="" class="text-slate-400">Seleccionar género</option>
+                                        <option value="MASCULINO">Masculino</option>
+                                        <option value="FEMENINO">Femenino</option>
+                                        <option value="OTRO">Otro</option>
                                     </select>
                                     <span class="error-message" id="error-genero"></span>
                                 </div>
                                 <div class="input-group">
                                     <label for="reg-fecha-nac">Fecha de nacimiento</label>
-                                    <input type="date" th:field="*{fechaNacimiento}" id="reg-fecha-nac" name="fechaNacimiento" pattern="yyyy-MM-dd" required>
+                                    <input type="date" th:field="*{fechaNacimiento}" id="reg-fecha-nac" class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white placeholder-slate-400 transition-colors duration-200" required>
                                     <span class="error-message" th:if="${#fields.hasErrors('fechaNacimiento')}" th:errors="*{fechaNacimiento}"></span>
                                 </div>
                                 <div class="input-group">
                                     <label for="reg-telefono">Teléfono</label>
-                                    <input type="tel" th:field="*{numTelefono}" id="reg-telefono" name="telefono" required>
+                                    <input type="tel" th:field="*{numTelefono}" id="reg-telefono" placeholder="Teléfono" class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white placeholder-slate-400 transition-colors duration-200" required>
                                     <span class="error-message" th:if="${#fields.hasErrors('numTelefono')}" th:errors="*{numTelefono}"></span>
                                 </div>
                                 <div class="input-group">
-                                    <label for="reg-email">Correo Electrónico</label>
-                                    <input type="email" th:field="*{correo}" id="reg-email" name="email" required>
+                                    <label for="reg-email">Correo electrónico</label>
+                                    <input type="email" th:field="*{correo}" id="reg-email" placeholder="Correo electrónico" class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white placeholder-slate-400 transition-colors duration-200" required>
                                     <span class="error-message" th:if="${#fields.hasErrors('correo')}" th:errors="*{correo}"></span>
                                 </div>
                             </div>
                 
-                            <!-- Paso 2: Domicilio -->
+                            <!-- Paso 2: Datos de domicilio (país, provincia, ciudad y domicilio) -->
                             <div class="form-step" data-step="2">
                                 <div class="input-group">
                                     <label for="reg-pais">País</label>
-                                    <select id="reg-pais" th:field="*{pais.codigo}" name="pais.codigo" required>
+                                    <select id="reg-pais" th:field="*{pais.codigo}" class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white transition-colors duration-200" required>
                                         <option value="">Seleccionar país</option>
                                         <option th:each="pais : ${paises}" 
                                                 th:value="${pais.codigo}" 
@@ -120,58 +122,64 @@
                                 </div>
                                 <div class="input-group">
                                     <label for="reg-provincia">Provincia</label>
-                                    <select id="reg-provincia" th:field="*{provincia.codigo}" name="provincia.codigo" required>
+                                    <select id="reg-provincia" th:field="*{provincia.codigo}" class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white transition-colors duration-200" required>
                                         <option value="">Seleccionar provincia</option>
                                     </select>
                                     <span class="error-message" th:if="${#fields.hasErrors('provincia.codigo')}" th:errors="*{provincia.codigo}"></span>
                                 </div>
                                 <div class="input-group">
                                     <label for="reg-ciudad">Ciudad</label>
-                                    <select id="reg-ciudad" th:field="*{ciudad.id}" name="ciudad.id" required>
+                                    <select id="reg-ciudad" th:field="*{ciudad.id}" class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white transition-colors duration-200" required>
                                         <option value="">Seleccionar ciudad</option>
                                     </select>
                                     <span class="error-message" th:if="${#fields.hasErrors('ciudad.id')}" th:errors="*{ciudad.id}"></span>
                                 </div>
                                 <div class="input-group">
                                     <label for="reg-domicilio">Domicilio</label>
-                                    <input type="text" th:field="*{domicilio}" id="reg-domicilio" name="domicilio" required>
+                                    <input type="text" th:field="*{domicilio}" id="reg-domicilio" placeholder="Domicilio" class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white placeholder-slate-400 transition-colors duration-200" required>
                                     <span class="error-message" th:if="${#fields.hasErrors('domicilio')}" th:errors="*{domicilio}"></span>
                                 </div>
                             </div>
                 
-                            <!-- Paso 3: Datos Académicos -->
+                            <!-- Paso 3: Datos académicos (últimos estudios alcanzados, colegio de egreso, año de egreso) -->
                             <div class="form-step" data-step="3">
                                 <div class="input-group">
                                     <label for="reg-estudios">Últimos estudios alcanzados</label>
-                                    <input type="text" th:field="*{ultimosEstudios}" id="reg-estudios" name="ultimosEstudios" required>
+                                    <input type="text" th:field="*{ultimosEstudios}" id="reg-estudios" placeholder="Últimos estudios alcanzados" class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white placeholder-slate-400 transition-colors duration-200" required>
                                     <span class="error-message" th:if="${#fields.hasErrors('ultimosEstudios')}" th:errors="*{ultimosEstudios}"></span>
                                 </div>
                                 <div class="input-group">
                                     <label for="reg-colegio">Colegio de egreso</label>
-                                    <select th:field="*{colegioEgreso}" id="reg-colegio" name="colegioEgreso" required>
-                                        <option value="">Seleccionar institución</option>
+                                    <select th:field="*{colegioEgreso}" id="reg-colegio" class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white transition-colors duration-200" required>
+                                        <option value="">Colegio de egreso</option>
                                         <option th:each="inst : ${instituciones}" th:value="${inst.id}" th:text="${inst.nombre}"></option>
                                     </select>
                                     <span class="error-message" th:if="${#fields.hasErrors('colegioEgreso')}" th:errors="*{colegioEgreso}"></span>
                                 </div>
                                 <div class="input-group">
                                     <label for="reg-anio-egreso">Año de egreso</label>
-                                    <input type="number" th:field="*{añoEgreso}" id="reg-anio-egreso" name="añoEgreso" min="1950" max="2025"/>
+                                    <input type="number" th:field="*{añoEgreso}" id="reg-anio-egreso" placeholder="Año de egreso" min="1950" max="2025" class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white placeholder-slate-400 transition-colors duration-200"/>
                                     <span class="error-message" th:if="${#fields.hasErrors('añoEgreso')}" th:errors="*{añoEgreso}"></span>
                                 </div>
+                            </div>
+
+                            <!-- Paso 4: Datos de la cuenta (contraseña, repetir contraseña y aceptación de términos) -->
+                            <div class="form-step" data-step="4">
                                 <div class="input-group">
                                     <label for="reg-password">Contraseña</label>
-                                    <input type="password" th:field="*{contraseña}" id="reg-password" name="password" required>
+                                    <input type="password" th:field="*{contraseña}" id="reg-password" placeholder="Contraseña" class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white placeholder-slate-400 transition-colors duration-200" required>
                                     <span class="error-message" th:if="${#fields.hasErrors('contraseña')}" th:errors="*{contraseña}"></span>
                                 </div>
                                 <div class="input-group">
-                                    <label for="reg-password2">Repetir Contraseña</label>
-                                    <input type="password" id="reg-password2" name="confirmPassword" required>
+                                    <label for="reg-password2">Repetir contraseña</label>
+                                    <input type="password" id="reg-password2" placeholder="Repetir contraseña" class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white placeholder-slate-400 transition-colors duration-200" required>
                                     <span class="error-message" id="error-password2"></span>
                                 </div>
-                                <div class="input-group terms-group" style="display:flex; align-items:center; gap:8px;">
-                                    <input type="checkbox" id="reg-terms" name="terms" required style="width:16px; height:16px;">
-                                    <label for="reg-terms" style="margin:0;">Acepto los <a href="#" target="_blank">términos y condiciones</a></label>
+                                <div class="input-group terms-group" style="display:flex; align-items:start; gap:8px;">
+                                    <input type="checkbox" id="reg-terms" class="w-4 h-4 text-indigo-600 bg-slate-700 rounded border-slate-600 focus:ring-indigo-500 mt-1" required>
+                                    <label for="reg-terms" class="text-sm text-slate-300" style="margin:0;">
+                                        Acepto los términos y condiciones. He leído y comprendo las políticas de privacidad y el uso de mis datos personales para fines académicos.
+                                    </label>
                                 </div>
                             </div>
                         </div>
@@ -185,6 +193,10 @@
                             </div>
                             <div class="action-group" data-step="3">
                                 <button type="button" class="auth-btn prev-btn" onclick="prevStep(2)">Anterior</button>
+                                <button type="button" class="auth-btn next-btn" onclick="nextStep(4)">Siguiente</button>
+                            </div>
+                            <div class="action-group" data-step="4">
+                                <button type="button" class="auth-btn prev-btn" onclick="prevStep(3)">Anterior</button>
                                 <button type="submit" class="auth-btn">Registrarse</button>
                             </div>
                         </div>

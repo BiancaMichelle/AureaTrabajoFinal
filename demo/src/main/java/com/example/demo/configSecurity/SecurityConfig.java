@@ -59,9 +59,9 @@ public class SecurityConfig {
             .anyRequest().authenticated()
         )
         .formLogin(form -> form
-            .loginPage("/") 
+            .loginPage("/login") // Usar nuestra nueva página de login
             .loginProcessingUrl("/perform_login")
-            .failureUrl("/?error=true")
+            .failureUrl("/login?error=true") // Redirigir a la página de login con error
             .successHandler((request, response, authentication) -> {
                 var roles = authentication.getAuthorities()
                                         .stream()
@@ -80,7 +80,7 @@ public class SecurityConfig {
             .permitAll()
         )
         .logout(logout -> logout
-            .logoutSuccessUrl("/?logout=true")
+            .logoutSuccessUrl("/login?logout=true") // Redirigir a la página de login después del logout
             .permitAll()
         );
         return http.build();
