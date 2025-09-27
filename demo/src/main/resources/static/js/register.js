@@ -1,6 +1,6 @@
 // ================ REGISTRO MULTI-STEP ================
 let currentStep = 1;
-const totalSteps = 4;
+const totalSteps = 4; // Corregido a 4 pasos
 
 // Inicializar cuando se carga el DOM
 document.addEventListener('DOMContentLoaded', function() {
@@ -50,7 +50,7 @@ function initializeForm() {
                 return false;
             }
             
-            // Verificar términos en el último paso
+            // Verificar términos en el último paso (paso 4)
             if (currentStep === totalSteps) {
                 const termsCheckbox = document.getElementById('terms');
                 if (termsCheckbox && !termsCheckbox.checked) {
@@ -75,9 +75,9 @@ function nextStep() {
     
     if (validateCurrentStep()) {
         if (currentStep < totalSteps) {
-            // Generar resumen antes del último paso
+            // Generar resumen antes del último paso (paso 3 -> paso 4)
             if (currentStep === totalSteps - 1) {
-                console.log('📊 Generando resumen para confirmatción');
+                console.log('📊 Generando resumen para último paso');
                 generateSummary();
             }
             
@@ -240,10 +240,51 @@ function validateCurrentStep() {
                     console.log(`   ❌ Fecha inválida: ${fieldName} (${age} años)`);
                 }
             }
+            
+            if (input.id === 'dni') {
+                const dniPattern = /^[0-9]{7,8}$/;
+                if (!dniPattern.test(value)) {
+                    isValid = false;
+                    errorCount++;
+                    input.classList.add('error');
+                    console.log(`   ❌ DNI inválido: ${fieldName}`);
+                }
+            }
+            
+            if (input.id === 'telefono') {
+                // Validar teléfono (al menos 8 dígitos)
+                const phonePattern = /^[\d\s\-\(\)\+]{8,}$/;
+                if (!phonePattern.test(value)) {
+                    isValid = false;
+                    errorCount++;
+                    input.classList.add('error');
+                    console.log(`   ❌ Teléfono inválido: ${fieldName}`);
+                }
+            }
+            
+            if (input.id === 'anoEgreso') {
+                const year = parseInt(value);
+                const currentYear = new Date().getFullYear();
+                if (year < 1950 || year > currentYear + 5) {
+                    isValid = false;
+                    errorCount++;
+                    input.classList.add('error');
+                    console.log(`   ❌ Año de egreso inválido: ${fieldName}`);
+                }
+            }
+            
+            if (input.id === 'password') {
+                if (value.length < 8) {
+                    isValid = false;
+                    errorCount++;
+                    input.classList.add('error');
+                    console.log(`   ❌ Contraseña muy corta: ${fieldName}`);
+                }
+            }
         }
     });
 
-    // Validación especial para términos y condiciones
+    // Validación especial para términos y condiciones en el último paso
     if (currentStep === totalSteps) {
         const termsCheckbox = document.getElementById('terms');
         if (termsCheckbox && !termsCheckbox.checked) {
@@ -301,25 +342,51 @@ function generateSummary() {
             <h4><i>👤</i> Datos Personales</h4>
             ${createSummaryItem('Nombre completo', `${formData.get('nombre') || ''} ${formData.get('apellido') || ''}`)}
             ${createSummaryItem('DNI', formData.get('dni') || '')}
-            ${createSummaryItem('Email', formData.get('email') || '')}
+            ${createSummaryItem('Género', formData.get('genero') || '')}
             ${createSummaryItem('Fecha de Nacimiento', formatDate(formData.get('fechaNacimiento')))}
+            ${createSummaryItem('Teléfono', formData.get('telefono') || '')}
+            ${createSummaryItem('Correo Electrónico', formData.get('email') || '')}
         </div>
         
         <div class="summary-section">
             <h4><i>🏠</i> Domicilio</h4>
-            ${createSummaryItem('Dirección', `${formData.get('calle') || ''} ${formData.get('numero') || ''}`)}
-            ${createSummaryItem('Localidad', `${formData.get('ciudad') || ''}, ${formData.get('provincia') || ''}`)}
-            ${createSummaryItem('Código Postal', formData.get('codigoPostal') || '')}
+            ${createSummaryItem('País', formData.get('pais') || '')}
+            ${createSummaryItem('Provincia', formData.get('provincia') || '')}
+            ${createSummaryItem('Ciudad', formData.get('ciudad') || '')}
+            ${createSummaryItem('Domicilio', formData.get('domicilio') || '')}
         </div>
         
         <div class="summary-section">
-            <h4><i>📞</i> Contacto</h4>
-            ${createSummaryItem('Teléfono', formData.get('telefono') || '')}
+            <h4><i>🎓</i> Datos Académicos</h4>
+            ${createSummaryItem('Últimos Estudios', getEstudiosLabel(formData.get('ultimosEstudios')))}
+            ${createSummaryItem('Colegio de Egreso', formData.get('colegioEgreso') || '')}
+            ${createSummaryItem('Año de Egreso', formData.get('anoEgreso') || '')}
+        </div>
+        
+        <div class="summary-section">
+            <h4><i>�</i> Cuenta</h4>
+            ${createSummaryItem('Correo de Usuario', formData.get('email') || '')}
+            ${createSummaryItem('Contraseña', '••••••••')}
         </div>
     `;
     
     summaryContent.innerHTML = summaryHTML;
     console.log('✅ Resumen generado correctamente');
+}
+
+function getEstudiosLabel(value) {
+    const labels = {
+        'primaria-completa': 'Primaria Completa',
+        'primaria-incompleta': 'Primaria Incompleta',
+        'secundaria-completa': 'Secundaria Completa',
+        'secundaria-incompleta': 'Secundaria Incompleta',
+        'terciario-completo': 'Terciario Completo',
+        'terciario-incompleto': 'Terciario Incompleto',
+        'universitario-completo': 'Universitario Completo',
+        'universitario-incompleto': 'Universitario Incompleto',
+        'posgrado': 'Posgrado'
+    };
+    return labels[value] || value || 'No especificado';
 }
 
 function createSummaryItem(label, value) {

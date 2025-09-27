@@ -245,6 +245,46 @@ body {
     border-color: var(--main-red);
 }
 
+.form-group input::placeholder {
+    color: var(--text-gray);
+    opacity: 0.7;
+}
+
+.form-group small {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.8rem;
+    color: var(--text-gray);
+    opacity: 0.8;
+}
+
+/* Estilos para datalist */
+.form-group input[list] {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23adb5bd' viewBox='0 0 16 16'%3e%3cpath d='M8 11.5L3 6.5h10L8 11.5z'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 16px 12px;
+    padding-right: 2.5rem;
+}
+
+/* Select personalizado */
+.form-group select {
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23adb5bd' viewBox='0 0 16 16'%3e%3cpath d='M8 11.5L3 6.5h10L8 11.5z'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 16px 12px;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+}
+
+.form-group select option {
+    background-color: var(--input-bg);
+    color: var(--white);
+    padding: 0.5rem;
+}
+
 .form-options {
     display: flex;
     justify-content: space-between;
@@ -477,6 +517,7 @@ body {
     cursor: pointer;
     user-select: none;
     margin-bottom: 1rem;
+    line-height: 1.4;
 }
 
 .checkbox-wrapper input {
@@ -485,6 +526,15 @@ body {
     cursor: pointer;
     height: 0;
     width: 0;
+}
+
+.checkbox-wrapper a {
+    color: var(--main-red);
+    text-decoration: none;
+}
+
+.checkbox-wrapper a:hover {
+    text-decoration: underline;
 }
 
 .checkmark {
@@ -496,6 +546,7 @@ body {
     margin-right: 0.75rem;
     position: relative;
     transition: all 0.3s ease;
+    flex-shrink: 0;
 }
 
 .checkbox-wrapper:hover .checkmark {
@@ -567,5 +618,21 @@ body {
     
     .nav-btn {
         width: 100%;
+    }
+    
+    .form-wrapper {
+        max-width: none;
+    }
+    
+    .steps-indicator {
+        margin-bottom: 1.5rem;
+    }
+    
+    .step-label {
+        font-size: 0.7rem;
+    }
+    
+    .checkbox-wrapper {
+        font-size: 0.9rem;
     }
 }
