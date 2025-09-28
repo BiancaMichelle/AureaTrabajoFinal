@@ -17,16 +17,12 @@ import lombok.Setter;
 public class InstitucionAlumno {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long idInstitucion;
+    private Long id;
     private String nombre;
     private String direccion;
     private String localidad;
     private String correoInstitucional;
     private String telefonoContacto;
-    public Long getId() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getId'");
-    }
     
 
 }

@@ -42,56 +42,48 @@ public class RegistroService {
     }
 
     public void registrarUsuario(Alumno alumno) {
-        // 1. Manejar País
-        if (alumno.getPais() != null && alumno.getPais().getCodigo() != null) {
-            Pais pais = paisRepository.findByCodigo(alumno.getPais().getCodigo())
-                .orElseGet(() -> {
-                    // Crear nuevo país si no existe
-                    Pais nuevoPais = new Pais();
-                    nuevoPais.setCodigo(alumno.getPais().getCodigo());
-                    nuevoPais.setNombre("Nombre temporal"); // Puedes obtener el nombre de la API si lo necesitas
-                    return paisRepository.save(nuevoPais);
-                });
-            alumno.setPais(pais);
+        System.out.println("🔍 Iniciando registro para: " + alumno.getNombre());
+        
+        try {
+            // 1. Manejar País - BUSCAR EXISTENTE en lugar de crear nuevo
+            if (alumno.getPais() != null && alumno.getPais().getCodigo() != null) {
+                System.out.println("🌎 Buscando país con código: " + alumno.getPais().getCodigo());
+                Pais pais = paisRepository.findByCodigo(alumno.getPais().getCodigo())
+                    .orElseThrow(() -> new RuntimeException("País no encontrado: " + alumno.getPais().getCodigo()));
+                alumno.setPais(pais);
+            }
+
+            // 2. Manejar Provincia - BUSCAR EXISTENTE
+            if (alumno.getProvincia() != null && alumno.getProvincia().getCodigo() != null) {
+                System.out.println("🏙️ Buscando provincia con código: " + alumno.getProvincia().getCodigo());
+                Provincia provincia = provinciaRepository.findByCodigo(alumno.getProvincia().getCodigo())
+                    .orElseThrow(() -> new RuntimeException("Provincia no encontrada: " + alumno.getProvincia().getCodigo()));
+                alumno.setProvincia(provincia);
+            }
+
+            // 3. Manejar Ciudad (si existe)
+            if (alumno.getCiudad() != null && alumno.getCiudad().getId() != null) {
+                System.out.println("🏡 Buscando ciudad con ID: " + alumno.getCiudad().getId());
+                Ciudad ciudad = ciudadRepository.findById(alumno.getCiudad().getId())
+                    .orElseThrow(() -> new RuntimeException("Ciudad no encontrada con ID: " + alumno.getCiudad().getId()));
+                alumno.setCiudad(ciudad);
+            }
+
+            // 4. TEMPORAL: No procesar institución - estamos usando campo simple
+            System.out.println("🏫 Colegio de egreso: " + alumno.getColegioEgreso());
+
+            // 5. Encriptar contraseña
+            System.out.println("🔐 Encriptando contraseña");
+            alumno.setContraseña(passwordEncoder.encode(alumno.getContraseña()));
+
+            // 6. Guardar alumno
+            System.out.println("💾 Guardando alumno en la base de datos");
+            alumnoRepository.save(alumno);
+            System.out.println("✅ Registro completado exitosamente");
+            
+        } catch (Exception e) {
+            System.out.println("❌ Error en registro: " + e.getMessage());
+            throw e;
         }
-
-        // 2. Manejar Provincia
-        if (alumno.getProvincia() != null && alumno.getProvincia().getCodigo() != null) {
-            Provincia provincia = provinciaRepository.findByCodigo(alumno.getProvincia().getCodigo())
-                .orElseGet(() -> {
-                    Provincia nuevaProvincia = new Provincia();
-                    nuevaProvincia.setCodigo(alumno.getProvincia().getCodigo());
-                    nuevaProvincia.setNombre("Nombre temporal");
-                    nuevaProvincia.setPais(alumno.getPais()); // Asignar el país ya gestionado
-                    return provinciaRepository.save(nuevaProvincia);
-                });
-            alumno.setProvincia(provincia);
-        }
-
-        // 3. Manejar Ciudad
-        if (alumno.getCiudad() != null && alumno.getCiudad().getId() != null) {
-            Ciudad ciudad = ciudadRepository.findById(alumno.getCiudad().getId())
-                .orElseGet(() -> {
-                    Ciudad nuevaCiudad = new Ciudad();
-                    nuevaCiudad.setId(alumno.getCiudad().getId());
-                    nuevaCiudad.setNombre("Nombre temporal");
-                    nuevaCiudad.setProvincia(alumno.getProvincia()); // Asignar la provincia ya gestionada
-                    return ciudadRepository.save(nuevaCiudad);
-                });
-            alumno.setCiudad(ciudad);
-        }
-
-        // 4. Manejar Institución
-        if (alumno.getColegioEgreso() != null && alumno.getColegioEgreso().getId() != null) {
-            InstitucionAlumno institucion = institucionRepository.findById(alumno.getColegioEgreso().getId())
-                .orElseThrow(() -> new RuntimeException("Institución no encontrada con ID: " + alumno.getColegioEgreso().getId()));
-            alumno.setColegioEgreso(institucion);
-        }
-
-        // 5. Encriptar contraseña
-        alumno.setContraseña(passwordEncoder.encode(alumno.getContraseña()));
-
-        // 6. Guardar alumno
-        alumnoRepository.save(alumno);
     }
 }

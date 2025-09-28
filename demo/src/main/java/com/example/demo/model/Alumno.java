@@ -19,9 +19,13 @@ import lombok.Setter;
 @NoArgsConstructor
 public class Alumno extends Usuario {
     
+    /* 
     @ManyToOne
     @JoinColumn(name = "institucion_id")
     private InstitucionAlumno colegioEgreso;
+    */
+    private String colegioEgreso;
+    
     private Integer añoEgreso;
     private String ultimosEstudios;
     @OneToMany(mappedBy = "alumno", cascade = CascadeType.ALL)
@@ -30,4 +34,12 @@ public class Alumno extends Usuario {
     private List<Asistencia> asistencias;
     @OneToMany(mappedBy = "alumno", cascade = CascadeType.ALL)
     private List<Inscripciones> inscripciones;
+
+    public String getColegioEgreso() {
+        return colegioEgreso;
+    }
+
+    public void setColegioEgreso(String colegioEgreso) {
+        this.colegioEgreso = colegioEgreso;
+    }
 }

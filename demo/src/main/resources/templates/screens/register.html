@@ -51,7 +51,7 @@
                         </div>
                 </div>
 
-                <form th:action="@{/registro}" th:object="${alumno}" method="post" id="registerForm" novalidate>
+        <form th:action="@{/register}" th:object="${alumno}" method="post" id="registerForm" novalidate>
         <!-- Paso 1: Datos Personales -->
         <div class="form-step" data-step="1">
             <h3>Datos Personales</h3>
@@ -94,21 +94,32 @@
         <!-- Paso 2: Datos de Domicilio -->
         <div class="form-step" data-step="2" style="display:none;">
             <h3>Domicilio</h3>
+            
+            <!-- Campos hidden para los IDs -->
+            <input type="hidden" id="paisCodigo" name="paisCodigo" />
+            <input type="hidden" id="provinciaCodigo" name="provinciaCodigo" />
+            <input type="hidden" id="ciudadId" name="ciudadId" />
+    
             <div>
                 <label for="pais">País</label>
-                <input list="paisList" id="pais" th:field="*{pais}" placeholder="Escribe o selecciona tu país" required />
+                <input list="paisList" id="pais" placeholder="Escribe o selecciona tu país" required />
                 <datalist id="paisList">
-                    <option th:each="pais : ${paises}" th:value="${pais.nombre}" th:data-code="${pais.codigo}"></option>
+                    <option th:each="pais : ${paises}" 
+                            th:value="${pais.nombre}" 
+                            th:attr="data-codigo=${pais.codigo}">
+                    </option>
                 </datalist>
             </div>
+            
             <div>
                 <label for="provincia">Provincia</label>
-                <input list="provinciaList" id="provincia" th:field="*{provincia}" placeholder="Escribe o selecciona tu provincia" required />
+                <input list="provinciaList" id="provincia" placeholder="Escribe o selecciona tu provincia" required />
                 <datalist id="provinciaList"></datalist>
             </div>
+            
             <div>
                 <label for="ciudad">Ciudad</label>
-                <input list="ciudadList" id="ciudad" th:field="*{ciudad}" placeholder="Escribe o selecciona tu ciudad" required />
+                <input list="ciudadList" id="ciudad" placeholder="Escribe o selecciona tu ciudad" required />
                 <datalist id="ciudadList"></datalist>
             </div>
         </div>
@@ -116,6 +127,8 @@
         <!-- Paso 3: Datos Académicos -->
         <div class="form-step" data-step="3" style="display:none;">
             <h3>Datos Académicos</h3>
+            
+            
             <div>
                 <label for="ultimosEstudios">Últimos Estudios Alcanzados</label>
                 <select id="ultimosEstudios" th:field="*{ultimosEstudios}" required>
@@ -127,14 +140,17 @@
                     <option value="terciario-completo">Terciario Completo</option>
                     <option value="terciario-incompleto">Terciario Incompleto</option>
                     <option value="universitario-completo">Universitario Completo</option>
-                    <option value="universitario-incompleto">Universitario Incompleto</option>
+                    <option value="universitario-incompleto">Universitario Incompleta</option>
                     <option value="posgrado">Posgrado</option>
                 </select>
             </div>
+            
             <div>
-                <label for="colegioEgreso">Colegio de Egreso</label>
-                <input type="text" id="colegioEgreso" th:field="*{colegioEgreso}" placeholder="Nombre del colegio" required />
-            </div>
+            <label for="colegioEgreso">Colegio de Egreso</label>
+            <!-- Usa el campo simple -->
+            <input type="text" id="colegioEgreso" th:field="*{colegioEgreso}" placeholder="Nombre del colegio" required />
+        </div>
+            
             <div>
                 <label for="añoEgreso">Año de Egreso</label>
                 <input type="number" id="añoEgreso" th:field="*{añoEgreso}" placeholder="2024" min="1950" max="2030" required />
@@ -168,7 +184,6 @@
         </div>
 
         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-</body>
     </form>
 
             </div> <!-- .form-wrapper -->
