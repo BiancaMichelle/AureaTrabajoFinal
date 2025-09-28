@@ -63,7 +63,6 @@ public class Usuario {
   @JoinColumn(name = "ciudad_id")
   private Ciudad ciudad;
     
-  private String domicilio;
   private boolean estado = true;
   private boolean estadoCuenta;
 

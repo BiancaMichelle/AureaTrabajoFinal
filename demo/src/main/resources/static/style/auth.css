@@ -1,638 +1,694 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap');
 
 :root {
-    --dark-blue: #0d1b2a;
-    --deep-space-blue: #1a1a2e;
-    --main-red: #e5383b;
-    --white: #ffffff;
-    --light-gray: #f1f1f1;
-    --text-gray: #adb5bd;
-    --input-bg: #343a40;
+	--dark-blue: #0d1b2a;
+	--deep-space-blue: #1a1a2e;
+	--main-red: #e5383b;
+	--white: #ffffff;
+	--light-gray: #f1f1f1;
+	--text-gray: #adb5bd;
+	--input-bg: #343a40;
+}
+/* Estilos esenciales para los pasos */
+
+/* AGREGA ESTA CLASE NUEVA */
+.hidden {
+	display: none !important;
 }
 
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+/* MANTÉN ESTAS REGLAS ORIGINALES */
+.step-content {
+	display: none;
 }
+
+.step-content.active {
+	display: block !important;
+}
+
+
+.step-content {
+	display: none;
+}
+
+.step-content.active {
+	display: block !important;
+}
+
+.step-navigation {
+	margin-top: 2rem;
+	display: flex;
+	gap: 10px;
+}
+
+.nav-btn, .auth-button {
+	padding: 10px 20px;
+	border: none;
+	border-radius: 5px;
+	cursor: pointer;
+	font-size: 14px;
+}
+
+/* Asegurar que los botones de navegación no queden ocultos por reglas accidentales */
+.nav-btn, .auth-button, .step-navigation button, #nextBtn, #prevBtn, #submitBtn {
+	display: inline-block !important;
+	visibility: visible !important;
+	opacity: 1 !important;
+}
+
+.nav-btn.primary {
+	background-color: #007bff;
+	color: white;
+}
+
+.nav-btn.secondary {
+	background-color: #6c757d;
+	color: white;
+}
+
+.auth-button {
+	background-color: #28a745;
+	color: white;
+}
+
 
 body {
-    font-family: 'Poppins', sans-serif;
-    background-color: var(--deep-space-blue);
-    color: var(--white);
-    overflow-x: hidden;
+	font-family: 'Poppins', sans-serif;
+	background-color: var(--deep-space-blue);
+	color: var(--white);
+	overflow-x: hidden;
 }
 
 .auth-container {
-    display: flex;
-    justify-content: center;
-    min-height: calc(100vh - 180px); /* Ajusta este valor según la altura de tu header y footer */
-    border-radius: 20px;
-    box-shadow: 0 8px 32px 0 rgba(13, 27, 42, 0.25);
+	display: flex;
+	justify-content: center;
+	min-height: calc(100vh - 180px); /* Ajusta este valor según la altura de tu header y footer */
+	border-radius: 20px;
+	box-shadow: 0 8px 32px 0 rgba(13, 27, 42, 0.25);
 }
 
 /* ==================== LADO IZQUIERDO (BRANDING) ==================== */
 .auth-left {
-    flex: 1;
-    background-color: var(--deep-space-blue);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-    min-height: 100%;
+	flex: 1;
+	background-color: var(--deep-space-blue);
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	text-align: center;
+	position: relative;
+	overflow: hidden;
+	min-height: 100%;
 }
 
 .brand-logo {
-    font-size: 4rem;
-    font-weight: 800;
-    margin-bottom: 1rem;
-    z-index: 2;
-    position: relative;
+	font-size: 4rem;
+	font-weight: 800;
+	margin-bottom: 1rem;
+	z-index: 2;
+	position: relative;
 }
 
 .brand-subtitle {
-    font-size: 1.2rem;
-    color: var(--text-gray);
-    z-index: 2;
-    position: relative;
+	font-size: 1.2rem;
+	color: var(--text-gray);
+	z-index: 2;
+	position: relative;
 }
 
 .brand-subtitle a {
-    color: var(--main-red);
-    text-decoration: none;
-    font-weight: 600;
-    transition: color 0.3s ease;
+	color: var(--main-red);
+	text-decoration: none;
+	font-weight: 600;
+	transition: color 0.3s ease;
 }
 
 .brand-subtitle a:hover {
-    color: var(--white);
-    text-decoration: underline;
+	color: var(--white);
+	text-decoration: underline;
 }
 
 /* ==================== EFECTOS DE PARTÍCULAS ==================== */
 .particle {
-    position: absolute;
-    background: rgba(229, 56, 59, 0.5);
-    border-radius: 50%;
-    animation: float 20s infinite linear;
-    box-shadow: 0 0 10px rgba(229, 56, 59, 0.7), 0 0 20px rgba(229, 56, 59, 0.5);
-    opacity: 0.8;
+	position: absolute;
+	background: rgba(229, 56, 59, 0.5);
+	border-radius: 50%;
+	animation: float 20s infinite linear;
+	box-shadow: 0 0 10px rgba(229, 56, 59, 0.7), 0 0 20px rgba(229, 56, 59, 0.5);
+	opacity: 0.8;
 }
 
 .particle:nth-child(odd) {
-    animation-direction: reverse;
+	animation-direction: reverse;
 }
 
 .particle:nth-child(3n) {
-    animation-duration: 25s;
-    animation-name: floatDown;
+	animation-duration: 25s;
+	animation-name: floatDown;
 }
 
 .particle:nth-child(4n) {
-    animation-duration: 15s;
-    animation-name: floatWide;
+	animation-duration: 15s;
+	animation-name: floatWide;
 }
 
 .particle:nth-child(5n) {
-    animation-duration: 30s;
-    animation-name: floatUp;
+	animation-duration: 30s;
+	animation-name: floatUp;
 }
 
 @keyframes float {
-    0% { 
-        transform: translateY(0) translateX(0) scale(1); 
-        opacity: 0.6;
-    }
-    25% { 
-        transform: translateY(-200px) translateX(80px) scale(1.2); 
-        opacity: 1;
-    }
-    50% { 
-        transform: translateY(-350px) translateX(-60px) scale(0.8); 
-        opacity: 0.8;
-    }
-    75% { 
-        transform: translateY(-180px) translateX(-120px) scale(1.1); 
-        opacity: 0.9;
-    }
-    100% { 
-        transform: translateY(0) translateX(0) scale(1); 
-        opacity: 0.6;
-    }
+	0% { 
+		transform: translateY(0) translateX(0) scale(1); 
+		opacity: 0.6;
+	}
+	25% { 
+		transform: translateY(-200px) translateX(80px) scale(1.2); 
+		opacity: 1;
+	}
+	50% { 
+		transform: translateY(-350px) translateX(-60px) scale(0.8); 
+		opacity: 0.8;
+	}
+	75% { 
+		transform: translateY(-180px) translateX(-120px) scale(1.1); 
+		opacity: 0.9;
+	}
+	100% { 
+		transform: translateY(0) translateX(0) scale(1); 
+		opacity: 0.6;
+	}
 }
 
 @keyframes floatDown {
-    0% { 
-        transform: translateY(0) translateX(0) scale(1); 
-        opacity: 0.5;
-    }
-    33% { 
-        transform: translateY(150px) translateX(-70px) scale(1.3); 
-        opacity: 1;
-    }
-    66% { 
-        transform: translateY(280px) translateX(90px) scale(0.7); 
-        opacity: 0.7;
-    }
-    100% { 
-        transform: translateY(0) translateX(0) scale(1); 
-        opacity: 0.5;
-    }
+	0% { 
+		transform: translateY(0) translateX(0) scale(1); 
+		opacity: 0.5;
+	}
+	33% { 
+		transform: translateY(150px) translateX(-70px) scale(1.3); 
+		opacity: 1;
+	}
+	66% { 
+		transform: translateY(280px) translateX(90px) scale(0.7); 
+		opacity: 0.7;
+	}
+	100% { 
+		transform: translateY(0) translateX(0) scale(1); 
+		opacity: 0.5;
+	}
 }
 
 @keyframes floatWide {
-    0% { 
-        transform: translateY(0) translateX(0) scale(1); 
-        opacity: 0.7;
-    }
-    20% { 
-        transform: translateY(-100px) translateX(-150px) scale(1.1); 
-        opacity: 0.9;
-    }
-    40% { 
-        transform: translateY(-250px) translateX(120px) scale(0.9); 
-        opacity: 1;
-    }
-    60% { 
-        transform: translateY(-180px) translateX(180px) scale(1.2); 
-        opacity: 0.8;
-    }
-    80% { 
-        transform: translateY(80px) translateX(-100px) scale(0.8); 
-        opacity: 0.6;
-    }
-    100% { 
-        transform: translateY(0) translateX(0) scale(1); 
-        opacity: 0.7;
-    }
+	0% { 
+		transform: translateY(0) translateX(0) scale(1); 
+		opacity: 0.7;
+	}
+	20% { 
+		transform: translateY(-100px) translateX(-150px) scale(1.1); 
+		opacity: 0.9;
+	}
+	40% { 
+		transform: translateY(-250px) translateX(120px) scale(0.9); 
+		opacity: 1;
+	}
+	60% { 
+		transform: translateY(-180px) translateX(180px) scale(1.2); 
+		opacity: 0.8;
+	}
+	80% { 
+		transform: translateY(80px) translateX(-100px) scale(0.8); 
+		opacity: 0.6;
+	}
+	100% { 
+		transform: translateY(0) translateX(0) scale(1); 
+		opacity: 0.7;
+	}
 }
 
 @keyframes floatUp {
-    0% { 
-        transform: translateY(0) translateX(0) scale(1); 
-        opacity: 0.4;
-    }
-    25% { 
-        transform: translateY(-400px) translateX(-50px) scale(1.4); 
-        opacity: 1;
-    }
-    50% { 
-        transform: translateY(-600px) translateX(100px) scale(0.6); 
-        opacity: 0.8;
-    }
-    75% { 
-        transform: translateY(-300px) translateX(-80px) scale(1.1); 
-        opacity: 0.9;
-    }
-    100% { 
-        transform: translateY(0) translateX(0) scale(1); 
-        opacity: 0.4;
-    }
+	0% { 
+		transform: translateY(0) translateX(0) scale(1); 
+		opacity: 0.4;
+	}
+	25% { 
+		transform: translateY(-400px) translateX(-50px) scale(1.4); 
+		opacity: 1;
+	}
+	50% { 
+		transform: translateY(-600px) translateX(100px) scale(0.6); 
+		opacity: 0.8;
+	}
+	75% { 
+		transform: translateY(-300px) translateX(-80px) scale(1.1); 
+		opacity: 0.9;
+	}
+	100% { 
+		transform: translateY(0) translateX(0) scale(1); 
+		opacity: 0.4;
+	}
 }
 
 /* ==================== LADO DERECHO (FORMULARIO) ==================== */
 .auth-right {
-    flex: 1;
-    background-color: var(--dark-blue);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 3rem;
+	flex: 1;
+	background-color: var(--dark-blue);
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	padding: 3rem;
 }
 
 .form-wrapper {
-    width: 100%;
-    max-width: 400px;
+	width: 100%;
+	max-width: 400px;
 }
 
 .form-wrapper h1 {
-    font-size: 2.5rem;
-    font-weight: 700;
-    margin-bottom: 2rem;
-    text-align: left;
+	font-size: 2.5rem;
+	font-weight: 700;
+	margin-bottom: 2rem;
+	text-align: left;
 }
 
 /* ==================== FORMULARIOS ==================== */
 .form-group {
-    margin-bottom: 1.5rem;
+	margin-bottom: 1.5rem;
 }
 
 .form-group label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 600;
-    color: var(--text-gray);
+	display: block;
+	margin-bottom: 0.5rem;
+	font-weight: 600;
+	color: var(--text-gray);
 }
 
 .form-group input,
 .form-group select {
-    width: 100%;
-    padding: 0.8rem 1rem;
-    background-color: var(--input-bg);
-    border: 2px solid transparent;
-    border-radius: 8px;
-    color: var(--white);
-    font-size: 1rem;
-    transition: border-color 0.3s ease;
+	width: 100%;
+	padding: 0.8rem 1rem;
+	background-color: var(--input-bg);
+	border: 2px solid transparent;
+	border-radius: 8px;
+	color: var(--white);
+	font-size: 1rem;
+	transition: border-color 0.3s ease;
 }
 
 .form-group input:focus,
 .form-group select:focus {
-    outline: none;
-    border-color: var(--main-red);
+	outline: none;
+	border-color: var(--main-red);
 }
 
 .form-group input::placeholder {
-    color: var(--text-gray);
-    opacity: 0.7;
+	color: var(--text-gray);
+	opacity: 0.7;
 }
 
 .form-group small {
-    display: block;
-    margin-top: 0.25rem;
-    font-size: 0.8rem;
-    color: var(--text-gray);
-    opacity: 0.8;
+	display: block;
+	margin-top: 0.25rem;
+	font-size: 0.8rem;
+	color: var(--text-gray);
+	opacity: 0.8;
 }
 
 /* Estilos para datalist */
 .form-group input[list] {
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23adb5bd' viewBox='0 0 16 16'%3e%3cpath d='M8 11.5L3 6.5h10L8 11.5z'/%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right 0.75rem center;
-    background-size: 16px 12px;
-    padding-right: 2.5rem;
+	background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23adb5bd' viewBox='0 0 16 16'%3e%3cpath d='M8 11.5L3 6.5h10L8 11.5z'/%3e%3c/svg%3e");
+	background-repeat: no-repeat;
+	background-position: right 0.75rem center;
+	background-size: 16px 12px;
+	padding-right: 2.5rem;
 }
 
 /* Select personalizado */
 .form-group select {
-    cursor: pointer;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23adb5bd' viewBox='0 0 16 16'%3e%3cpath d='M8 11.5L3 6.5h10L8 11.5z'/%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right 0.75rem center;
-    background-size: 16px 12px;
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
+	cursor: pointer;
+	background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23adb5bd' viewBox='0 0 16 16'%3e%3cpath d='M8 11.5L3 6.5h10L8 11.5z'/%3e%3c/svg%3e");
+	background-repeat: no-repeat;
+	background-position: right 0.75rem center;
+	background-size: 16px 12px;
+	appearance: none;
+	-webkit-appearance: none;
+	-moz-appearance: none;
 }
 
 .form-group select option {
-    background-color: var(--input-bg);
-    color: var(--white);
-    padding: 0.5rem;
+	background-color: var(--input-bg);
+	color: var(--white);
+	padding: 0.5rem;
 }
 
 .form-options {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2rem;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 2rem;
 }
 
 .form-options a {
-    color: var(--text-gray);
-    text-decoration: none;
-    font-size: 0.9rem;
-    transition: color 0.3s ease;
+	color: var(--text-gray);
+	text-decoration: none;
+	font-size: 0.9rem;
+	transition: color 0.3s ease;
 }
 
 .form-options a:hover {
-    color: var(--main-red);
+	color: var(--main-red);
 }
 
 .auth-button {
-    width: 100%;
-    padding: 1rem;
-    background-color: var(--main-red);
-    border: none;
-    border-radius: 8px;
-    color: var(--white);
-    font-size: 1.1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
+	width: 100%;
+	padding: 1rem;
+	background-color: var(--main-red);
+	border: none;
+	border-radius: 8px;
+	color: var(--white);
+	font-size: 1.1rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background-color 0.3s ease;
 }
 
 .auth-button:hover {
-    background-color: #c12e31;
+	background-color: #c12e31;
 }
 
 .alert {
-    padding: 1rem;
-    border-radius: 8px;
-    margin-bottom: 1.5rem;
-    text-align: center;
+	padding: 1rem;
+	border-radius: 8px;
+	margin-bottom: 1.5rem;
+	text-align: center;
 }
 
 .alert-error {
-    background-color: rgba(229, 56, 59, 0.1);
-    border: 1px solid var(--main-red);
-    color: var(--white);
+	background-color: rgba(229, 56, 59, 0.1);
+	border: 1px solid var(--main-red);
+	color: var(--white);
 }
 
 /* ==================== REGISTRO MULTI-STEP ==================== */
 
 /* Indicador de pasos */
 .steps-indicator {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 2rem;
-    position: relative;
+	display: flex;
+	justify-content: space-between;
+	margin-bottom: 2rem;
+	position: relative;
 }
 
 .steps-indicator::before {
-    content: '';
-    position: absolute;
-    top: 15px;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background-color: var(--input-bg);
-    z-index: 1;
+	content: '';
+	position: absolute;
+	top: 15px;
+	left: 0;
+	right: 0;
+	height: 2px;
+	background-color: var(--input-bg);
+	z-index: 1;
 }
 
 .step-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    position: relative;
-    z-index: 2;
-    flex: 1;
-    cursor: pointer;
-    transition: all 0.3s ease;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	position: relative;
+	z-index: 2;
+	flex: 1;
+	cursor: pointer;
+	transition: all 0.3s ease;
 }
 
 .step-number {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    background-color: var(--input-bg);
-    color: var(--text-gray);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    transition: all 0.3s ease;
+	width: 30px;
+	height: 30px;
+	border-radius: 50%;
+	background-color: var(--input-bg);
+	color: var(--text-gray);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-weight: 600;
+	margin-bottom: 0.5rem;
+	transition: all 0.3s ease;
 }
 
 .step-label {
-    font-size: 0.8rem;
-    color: var(--text-gray);
-    text-align: center;
-    transition: color 0.3s ease;
+	font-size: 0.8rem;
+	color: var(--text-gray);
+	text-align: center;
+	transition: color 0.3s ease;
 }
 
 .step-item.active .step-number {
-    background-color: var(--main-red);
-    color: var(--white);
+	background-color: var(--main-red);
+	color: var(--white);
 }
 
 .step-item.active .step-label {
-    color: var(--main-red);
-    font-weight: 600;
+	color: var(--main-red);
+	font-weight: 600;
 }
 
 .step-item.completed .step-number {
-    background-color: #28a745;
-    color: var(--white);
+	background-color: #28a745;
+	color: var(--white);
 }
 
 .step-item.completed .step-label {
-    color: #28a745;
+	color: #28a745;
 }
 
 /* Contenido de los pasos */
 .step-content {
-    display: none;
-    animation: fadeIn 0.3s ease-in-out;
+	display: none;
+	animation: fadeIn 0.3s ease-in-out;
 }
 
 .step-content.active {
-    display: block;
+	display: block;
 }
 
 @keyframes fadeIn {
-    from { 
-        opacity: 0; 
-        transform: translateX(20px); 
-    }
-    to { 
-        opacity: 1; 
-        transform: translateX(0); 
-    }
+	from { 
+		opacity: 0; 
+		transform: translateX(20px); 
+	}
+	to { 
+		opacity: 1; 
+		transform: translateX(0); 
+	}
 }
 
 /* Navegación de pasos */
 .step-navigation {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1rem;
-    margin-top: 2rem;
-    position: relative;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 1rem;
+	margin-top: 2rem;
+	position: relative;
 }
 
 /* Contenedor para el botón anterior (izquierda) */
 .step-navigation #prevBtn {
-    margin-right: auto;
-    order: 1;
+	margin-right: auto;
+	order: 1;
 }
 
 /* Contenedor para botones siguientes/enviar (derecha) */
 .step-navigation #nextBtn,
 .step-navigation #submitBtn {
-    margin-left: auto;
-    order: 3;
+	margin-left: auto;
+	order: 3;
 }
 
 .nav-btn {
-    padding: 0.8rem 1.5rem;
-    border: none;
-    border-radius: 8px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    min-width: 120px;
+	padding: 0.8rem 1.5rem;
+	border: none;
+	border-radius: 8px;
+	font-size: 1rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	min-width: 120px;
 }
 
 .nav-btn.primary {
-    background-color: var(--main-red);
-    color: var(--white);
+	background-color: var(--main-red);
+	color: var(--white);
 }
 
 .nav-btn.primary:hover {
-    background-color: #c12e31;
+	background-color: #c12e31;
 }
 
 .nav-btn.secondary {
-    background-color: var(--input-bg);
-    color: var(--text-gray);
+	background-color: var(--input-bg);
+	color: var(--text-gray);
 }
 
 .nav-btn.secondary:hover {
-    background-color: #495057;
-    color: var(--white);
+	background-color: #495057;
+	color: var(--white);
 }
 
 /* Resumen de confirmación */
 .confirmation-summary {
-    background-color: rgba(229, 56, 59, 0.1);
-    border: 1px solid var(--main-red);
-    border-radius: 8px;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
+	background-color: rgba(229, 56, 59, 0.1);
+	border: 1px solid var(--main-red);
+	border-radius: 8px;
+	padding: 1.5rem;
+	margin-bottom: 1.5rem;
 }
 
 .confirmation-summary h3 {
-    color: var(--main-red);
-    margin-bottom: 1rem;
+	color: var(--main-red);
+	margin-bottom: 1rem;
 }
 
 .summary-item {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 0.5rem;
-    padding: 0.25rem 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+	display: flex;
+	justify-content: space-between;
+	margin-bottom: 0.5rem;
+	padding: 0.25rem 0;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .summary-label {
-    font-weight: 600;
-    color: var(--text-gray);
+	font-weight: 600;
+	color: var(--text-gray);
 }
 
 .summary-value {
-    color: var(--white);
+	color: var(--white);
 }
 
 /* Checkbox personalizado */
 .checkbox-wrapper {
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-    user-select: none;
-    margin-bottom: 1rem;
-    line-height: 1.4;
+	display: flex;
+	align-items: center;
+	cursor: pointer;
+	user-select: none;
+	margin-bottom: 1rem;
+	line-height: 1.4;
 }
 
 .checkbox-wrapper input {
-    position: absolute;
-    opacity: 0;
-    cursor: pointer;
-    height: 0;
-    width: 0;
+	position: absolute;
+	opacity: 0;
+	cursor: pointer;
+	height: 0;
+	width: 0;
 }
 
 .checkbox-wrapper a {
-    color: var(--main-red);
-    text-decoration: none;
+	color: var(--main-red);
+	text-decoration: none;
 }
 
 .checkbox-wrapper a:hover {
-    text-decoration: underline;
+	text-decoration: underline;
 }
 
 .checkmark {
-    height: 20px;
-    width: 20px;
-    background-color: var(--input-bg);
-    border: 2px solid var(--text-gray);
-    border-radius: 4px;
-    margin-right: 0.75rem;
-    position: relative;
-    transition: all 0.3s ease;
-    flex-shrink: 0;
+	height: 20px;
+	width: 20px;
+	background-color: var(--input-bg);
+	border: 2px solid var(--text-gray);
+	border-radius: 4px;
+	margin-right: 0.75rem;
+	position: relative;
+	transition: all 0.3s ease;
+	flex-shrink: 0;
 }
 
 .checkbox-wrapper:hover .checkmark {
-    border-color: var(--main-red);
+	border-color: var(--main-red);
 }
 
 .checkbox-wrapper input:checked ~ .checkmark {
-    background-color: var(--main-red);
-    border-color: var(--main-red);
+	background-color: var(--main-red);
+	border-color: var(--main-red);
 }
 
 .checkmark:after {
-    content: "";
-    position: absolute;
-    display: none;
+	content: "";
+	position: absolute;
+	display: none;
 }
 
 .checkbox-wrapper input:checked ~ .checkmark:after {
-    display: block;
+	display: block;
 }
 
 .checkbox-wrapper .checkmark:after {
-    left: 6px;
-    top: 2px;
-    width: 4px;
-    height: 8px;
-    border: solid white;
-    border-width: 0 2px 2px 0;
-    transform: rotate(45deg);
+	left: 6px;
+	top: 2px;
+	width: 4px;
+	height: 8px;
+	border: solid white;
+	border-width: 0 2px 2px 0;
+	transform: rotate(45deg);
 }
 
 /* ==================== RESPONSIVE ==================== */
 @media (max-width: 768px) {
-    .auth-container {
-        flex-direction: column;
-    }
+	.auth-container {
+		flex-direction: column;
+	}
 
-    .auth-left, .auth-right {
-        flex: none;
-        width: 100%;
-        min-height: 50vh;
-    }
+	.auth-left, .auth-right {
+		flex: none;
+		width: 100%;
+		min-height: 50vh;
+	}
 
-    .auth-right {
-        min-height: auto;
-        padding: 2rem;
-    }
+	.auth-right {
+		min-height: auto;
+		padding: 2rem;
+	}
     
-    .form-wrapper h1 {
-        font-size: 2rem;
-    }
+	.form-wrapper h1 {
+		font-size: 2rem;
+	}
     
-    .steps-indicator {
-        flex-direction: column;
-        gap: 1rem;
-    }
+	.steps-indicator {
+		flex-direction: column;
+		gap: 1rem;
+	}
     
-    .steps-indicator::before {
-        display: none;
-    }
+	.steps-indicator::before {
+		display: none;
+	}
     
-    .step-label {
-        font-size: 0.9rem;
-    }
+	.step-label {
+		font-size: 0.9rem;
+	}
     
-    .step-navigation {
-        flex-direction: column;
-    }
+	.step-navigation {
+		flex-direction: column;
+	}
     
-    .nav-btn {
-        width: 100%;
-    }
+	.nav-btn {
+		width: 100%;
+	}
     
-    .form-wrapper {
-        max-width: none;
-    }
+	.form-wrapper {
+		max-width: none;
+	}
     
-    .steps-indicator {
-        margin-bottom: 1.5rem;
-    }
+	.steps-indicator {
+		margin-bottom: 1.5rem;
+	}
     
-    .step-label {
-        font-size: 0.7rem;
-    }
+	.step-label {
+		font-size: 0.7rem;
+	}
     
-    .checkbox-wrapper {
-        font-size: 0.9rem;
-    }
+	.checkbox-wrapper {
+		font-size: 0.9rem;
+	}
 }
+

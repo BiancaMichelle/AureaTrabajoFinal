@@ -50,7 +50,7 @@ public class SecurityConfig {
               .invalidSessionUrl("/?timeout")
         )
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/", "/publico", "/login", "/register", 
+            .requestMatchers("/", "/publico", "/login", "/register","/register/**", 
                            "/css/**", "/js/**", "/style/**", "/img/**","/api/**")
             .permitAll()
             .requestMatchers("/admin/**").hasAuthority("ADMIN")
@@ -60,8 +60,7 @@ public class SecurityConfig {
         )
         .formLogin(form -> form
             .loginPage("/login") // Usar nuestra nueva página de login
-            .loginProcessingUrl("/perform_login")
-            .failureUrl("/login?error=true") // Redirigir a la página de login con error
+            .failureUrl("/login?error=true") 
             .successHandler((request, response, authentication) -> {
                 var roles = authentication.getAuthorities()
                                         .stream()

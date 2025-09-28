@@ -137,12 +137,6 @@ public class PublicoController {
         return ResponseEntity.ok(ciudades);
     }
 
-    // Mostrar página de registro
-    @GetMapping("/register")
-    public String mostrarRegistro(Model model) {
-        model.addAttribute("alumno", new Alumno());
-        return "screens/register";
-    }
 
     // Nuevo endpoint para registro desde modal
     @PostMapping("/register")
