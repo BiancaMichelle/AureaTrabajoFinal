@@ -9,4 +9,7 @@ import com.example.demo.model.Usuario;
 
 public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
     Optional<Usuario> findByDni(String dni);
+    Optional<Usuario> findByCorreo(String correo);
+    boolean existsByDni(String dni);
+    boolean existsByCorreo(String correo);
 }

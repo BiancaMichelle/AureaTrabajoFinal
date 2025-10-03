@@ -1,5 +1,7 @@
 package com.example.demo.service;
 
+import java.util.Optional;
+
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -42,4 +44,21 @@ public class UsuarioJpaService implements UserDetailsService {
             .credentialsExpired(false)
             .build();
     }
+
+    public boolean existePorDni(String dni) {
+        return usuarioRepository.findByDni(dni).isPresent();
+    }
+
+    public boolean existePorCorreo(String correo) {
+        return usuarioRepository.findByCorreo(correo).isPresent();
+    }
+
+    public Optional<Usuario> buscarPorDni(String dni) {
+        return usuarioRepository.findByDni(dni);
+    }
+
+    public Optional<Usuario> buscarPorCorreo(String correo) {
+        return usuarioRepository.findByCorreo(correo);
+    }
+    
 }

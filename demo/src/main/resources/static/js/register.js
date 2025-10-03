@@ -8,6 +8,71 @@ document.addEventListener("DOMContentLoaded", function () {
     const formSteps = document.querySelectorAll(".form-step");
     let currentStep = 0;
 
+    // ✅ MÁSCARA PARA FECHA - Formato DD/MM/AAAA
+    const fechaInput = document.getElementById('fechaNacimiento');
+    if (fechaInput) {
+        fechaInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            
+            // Aplicar formato DD/MM/AAAA
+            if (value.length > 2 && value.length <= 4) {
+                value = value.substring(0, 2) + '/' + value.substring(2);
+            } else if (value.length > 4) {
+                value = value.substring(0, 2) + '/' + value.substring(2, 4) + '/' + value.substring(4, 8);
+            }
+            
+            e.target.value = value;
+        });
+
+        // Validar fecha al perder foco
+        fechaInput.addEventListener('blur', function(e) {
+            const value = e.target.value;
+            if (value && !isValidDate(value)) {
+                showFieldError(fechaInput, 'Fecha inválida. Usa el formato DD/MM/AAAA');
+            } else {
+                hideFieldError(fechaInput);
+            }
+        });
+    }
+
+    // ✅ Función para validar fecha DD/MM/AAAA
+    function isValidDate(dateString) {
+        if (!dateString) return false;
+        
+        const pattern = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+        const match = dateString.match(pattern);
+        
+        if (!match) return false;
+        
+        const dia = parseInt(match[1], 10);
+        const mes = parseInt(match[2], 10);
+        const año = parseInt(match[3], 10);
+        
+        // Validar rangos
+        if (mes < 1 || mes > 12) return false;
+        if (dia < 1 || dia > 31) return false;
+        
+        // Validar febrero y meses con 30 días
+        const fecha = new Date(año, mes - 1, dia);
+        return fecha.getDate() === dia && 
+               fecha.getMonth() === mes - 1 && 
+               fecha.getFullYear() === año;
+    }
+
+    // ✅ Función para convertir DD/MM/AAAA a yyyy-MM-dd
+    function convertirFechaParaBackend(fechaDDMMAAAA) {
+        if (!fechaDDMMAAAA) return null;
+        
+        const partes = fechaDDMMAAAA.split('/');
+        if (partes.length === 3) {
+            const dia = partes[0].padStart(2, '0');
+            const mes = partes[1].padStart(2, '0');
+            const año = partes[2];
+            return `${año}-${mes}-${dia}`;
+        }
+        return null;
+    }
+
     // ✅ Función para mostrar errores debajo del campo
     function showFieldError(input, message) {
         // Remover error previo
@@ -284,19 +349,20 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    function validateStep(step) {
+    async function validateStep(step) {
         console.log("🔍 Validando paso:", step + 1);
         
         const stepNode = formSteps[step];
         if (!stepNode) return true;
-
+    
         // Limpiar errores previos del paso actual
         clearStepErrors(step);
-    
+        
         const inputs = stepNode.querySelectorAll('input, select, textarea');
         let isValid = true;
         let firstInvalidInput = null;
-
+    
+        // Validaciones síncronas primero
         for (let input of inputs) {
             if (input.disabled) continue;
             
@@ -331,91 +397,244 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         }
     
-        // ✅ Validación específica para cada paso
-        if (isValid) {
-            switch (step) {
-                case 0: // Paso 1: Datos Personales
-                    isValid = validatePersonalData();
-                    break;
-                case 1: // Paso 2: Domicilio
-                    isValid = validateLocation();
-                    break;
-                case 2: // Paso 3: Datos Académicos
-                    isValid = validateAcademicData();
-                    break;
-                case 3: // Paso 4: Cuenta y Confirmación
-                    isValid = validateAccountData();
-                    break;
+        // Si hay errores síncronos, no continuar
+        if (!isValid) {
+            if (firstInvalidInput) {
+                firstInvalidInput.focus();
+                firstInvalidInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
+            return false;
         }
-
-        // Hacer scroll al primer error
-        if (firstInvalidInput) {
+    
+        // ✅ Validación específica para cada paso (incluyendo las asíncronas)
+        let stepValidationResult = true;
+        switch (step) {
+            case 0: // Paso 1: Datos Personales
+                stepValidationResult = await validatePersonalData();
+                break;
+            case 1: // Paso 2: Domicilio
+                stepValidationResult = validateLocation();
+                break;
+            case 2: // Paso 3: Datos Académicos
+                stepValidationResult = validateAcademicData();
+                break;
+            case 3: // Paso 4: Cuenta y Confirmación
+                stepValidationResult = validateAccountData();
+                break;
+        }
+    
+        // Hacer scroll al primer error si hay problemas
+        if (!stepValidationResult && firstInvalidInput) {
             firstInvalidInput.focus();
             firstInvalidInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
     
-        return isValid;
+        return stepValidationResult;
     }
 
-    function validatePersonalData() {
-        let isValid = true;
-        const dni = document.getElementById('dni');
-        const telefono = document.getElementById('telefono');
-        const email = document.getElementById('email');
-        const fechaNacimiento = document.getElementById('fechaNacimiento');
-        const nombre = document.getElementById('nombre');
-        const apellido = document.getElementById('apellido');
-
-        // Validar nombre (solo letras)
-        if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(nombre.value)) {
-            showFieldError(nombre, 'El nombre solo puede contener letras y espacios');
-            isValid = false;
-        }
-
-        // Validar apellido (solo letras)
-        if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(apellido.value)) {
-            showFieldError(apellido, 'El apellido solo puede contener letras y espacios');
-            isValid = false;
-        }
-
-        // Validar DNI (7 u 8 dígitos)
-        if (!/^\d{7,8}$/.test(dni.value)) {
-            showFieldError(dni, 'El DNI debe tener 7 u 8 dígitos numéricos');
-            isValid = false;
-        }
-
-        // Validar teléfono (al menos 10 dígitos)
-        const digitosTelefono = telefono.value.replace(/\D/g, '');
-        if (digitosTelefono.length < 10) {
-            showFieldError(telefono, 'El teléfono debe tener al menos 10 dígitos');
-            isValid = false;
-        }
-
-        // Validar email (debe tener @ y dominio)
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
-            showFieldError(email, 'Por favor ingresa un correo electrónico válido (ejemplo: usuario@dominio.com)');
-            isValid = false;
-        }
-
-        // Validar fecha de nacimiento (mínimo 16 años)
-        if (fechaNacimiento.value) {
-            const fechaNac = new Date(fechaNacimiento.value);
-            const hoy = new Date();
-            let edad = hoy.getFullYear() - fechaNac.getFullYear();
-            const mes = hoy.getMonth() - fechaNac.getMonth();
-            
-            if (mes < 0 || (mes === 0 && hoy.getDate() < fechaNac.getDate())) {
-                edad--;
+    // ✅ Función para verificar si el DNI ya existe
+    function verificarDNIExistente(dni) {
+        return new Promise((resolve, reject) => {
+            if (!dni || dni.length < 7) {
+                resolve(false);
+                return;
             }
-            
-            if (edad < 16) {
-                showFieldError(fechaNacimiento, 'Debes tener al menos 16 años para registrarte');
+    
+            // Timeout de 5 segundos
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Timeout verificando DNI')), 5000)
+            );
+    
+            const fetchPromise = fetch(`/api/usuarios/verificar-dni?dni=${dni}`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                console.log("📡 Respuesta DNI - Status:", response.status);
+                if (!response.ok) {
+                    throw new Error(`Error del servidor: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log("📊 Datos DNI recibidos:", data);
+                resolve(data.existe);
+            });
+    
+            Promise.race([fetchPromise, timeoutPromise])
+                .then(resolve)
+                .catch(error => {
+                    console.error('❌ Error verificando DNI:', error);
+                    reject(error);
+                });
+        });
+    }
+    
+    function verificarEmailExistente(email) {
+        return new Promise((resolve, reject) => {
+            if (!email || !email.includes('@')) {
+                resolve(false);
+                return;
+            }
+    
+            // Timeout de 5 segundos
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Timeout verificando email')), 5000)
+            );
+    
+            const fetchPromise = fetch(`/api/usuarios/verificar-email?email=${encodeURIComponent(email)}`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                console.log("📡 Respuesta email - Status:", response.status);
+                if (!response.ok) {
+                    throw new Error(`Error del servidor: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log("📊 Datos email recibidos:", data);
+                resolve(data.existe);
+            });
+    
+            Promise.race([fetchPromise, timeoutPromise])
+                .then(resolve)
+                .catch(error => {
+                    console.error('❌ Error verificando email:', error);
+                    reject(error);
+                });
+        });
+    }
+
+
+    async function validatePersonalData() {
+        return new Promise(async (resolve) => {
+            let isValid = true;
+            const dni = document.getElementById('dni');
+            const telefono = document.getElementById('telefono');
+            const email = document.getElementById('email');
+            const fechaNacimiento = document.getElementById('fechaNacimiento');
+            const nombre = document.getElementById('nombre');
+            const apellido = document.getElementById('apellido');
+    
+            // ✅ Validar fecha
+            if (fechaNacimiento.value) {
+                if (!isValidDate(fechaNacimiento.value)) {
+                    showFieldError(fechaNacimiento, 'Fecha inválida. Usa el formato DD/MM/AAAA');
+                    isValid = false;
+                } else {
+                    // ✅ Crear campo hidden con el formato correcto para el backend
+                    let hiddenFecha = document.getElementById('fechaNacimientoBackend');
+                    if (!hiddenFecha) {
+                        hiddenFecha = document.createElement('input');
+                        hiddenFecha.type = 'hidden';
+                        hiddenFecha.id = 'fechaNacimientoBackend';
+                        hiddenFecha.name = 'fechaNacimiento';
+                        fechaNacimiento.parentNode.appendChild(hiddenFecha);
+                    }
+                    const fechaConvertida = convertirFechaParaBackend(fechaNacimiento.value);
+                    hiddenFecha.value = fechaConvertida;
+                    
+                    // ✅ Validar edad mínima (16 años)
+                    const partes = fechaNacimiento.value.split('/');
+                    const dia = parseInt(partes[0], 10);
+                    const mes = parseInt(partes[1], 10);
+                    const año = parseInt(partes[2], 10);
+                    const fechaNac = new Date(año, mes - 1, dia);
+                    const hoy = new Date();
+                    let edad = hoy.getFullYear() - fechaNac.getFullYear();
+                    const mesActual = hoy.getMonth();
+                    const diaActual = hoy.getDate();
+                    
+                    if (mesActual < (mes - 1) || (mesActual === (mes - 1) && diaActual < dia)) {
+                        edad--;
+                    }
+                    
+                    if (edad < 16) {
+                        showFieldError(fechaNacimiento, 'Debes tener al menos 16 años para registrarte');
+                        isValid = false;
+                    } else {
+                        hideFieldError(fechaNacimiento);
+                    }
+                }
+            } else {
+                showFieldError(fechaNacimiento, 'La fecha de nacimiento es obligatoria');
                 isValid = false;
             }
-        }
-
-        return isValid;
+    
+            // Validar nombre (solo letras)
+            if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(nombre.value)) {
+                showFieldError(nombre, 'El nombre solo puede contener letras y espacios');
+                isValid = false;
+            }
+    
+            // Validar apellido (solo letras)
+            if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(apellido.value)) {
+                showFieldError(apellido, 'El apellido solo puede contener letras y espacios');
+                isValid = false;
+            }
+    
+            // Validar DNI (7 u 8 dígitos)
+            if (!/^\d{7,8}$/.test(dni.value)) {
+                showFieldError(dni, 'El DNI debe tener 7 u 8 dígitos numéricos');
+                isValid = false;
+            } else {
+                // ✅ VERIFICAR SI EL DNI YA EXISTE (ASÍNCRONO)
+                try {
+                    const dniExiste = await verificarDNIExistente(dni.value);
+                    if (dniExiste) {
+                        showFieldError(dni, 'Este DNI ya está registrado en el sistema');
+                        isValid = false;
+                    } else {
+                        hideFieldError(dni);
+                    }
+                } catch (error) {
+                    console.error('Error verificando DNI:', error);
+                    // En caso de error, permitir continuar pero mostrar advertencia
+                    showFieldError(dni, 'Error verificando DNI. Intenta nuevamente.');
+                    isValid = false;
+                }
+            }
+    
+            // Validar teléfono (al menos 10 dígitos)
+            const digitosTelefono = telefono.value.replace(/\D/g, '');
+            if (digitosTelefono.length < 10) {
+                showFieldError(telefono, 'El teléfono debe tener al menos 10 dígitos');
+                isValid = false;
+            }
+    
+            // Validar email (debe tener @ y dominio)
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
+                showFieldError(email, 'Por favor ingresa un correo electrónico válido (ejemplo: usuario@dominio.com)');
+                isValid = false;
+            } else {
+                // ✅ VERIFICAR SI EL EMAIL YA EXISTE (ASÍNCRONO)
+                try {
+                    const emailExiste = await verificarEmailExistente(email.value);
+                    if (emailExiste) {
+                        showFieldError(email, 'Este correo electrónico ya está registrado en el sistema');
+                        isValid = false;
+                    } else {
+                        hideFieldError(email);
+                    }
+                } catch (error) {
+                    console.error('Error verificando email:', error);
+                    // En caso de error, permitir continuar pero mostrar advertencia
+                    showFieldError(email, 'Error verificando email. Intenta nuevamente.');
+                    isValid = false;
+                }
+            }
+    
+            console.log("✅ Validación personal data completada, resultado:", isValid);
+            resolve(isValid);
+        });
     }
     
     function validateLocation() {
@@ -531,25 +750,51 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    nextBtn.addEventListener("click", function () {
-        if (validateStep(currentStep)) {
+    nextBtn.addEventListener("click", async function () {
+    console.log("🔄 Validando paso antes de avanzar...");
+    
+    // Deshabilitar el botón temporalmente para evitar múltiples clics
+    nextBtn.disabled = true;
+    nextBtn.textContent = "Validando...";
+    
+    try {
+        const isValid = await validateStep(currentStep);
+        console.log("✅ Resultado validación:", isValid);
+        
+        if (isValid) {
             // ✅ SI ES EL PASO 2 (DOMICILIO), GUARDAR LAS UBICACIONES ANTES DE AVANZAR
             if (currentStep === 1) { // Paso 2 es índice 1
-                guardarUbicaciones().then(success => {
-                    if (success) {
-                        currentStep++;
-                        showStep(currentStep);
-                    }
-                }).catch(error => {
-                    console.error('❌ Error guardando ubicaciones:', error);
+                console.log("💾 Guardando ubicaciones antes de avanzar...");
+                const success = await guardarUbicaciones();
+                if (success) {
+                    currentStep++;
+                    showStep(currentStep);
+                } else {
                     alert('Error al guardar la ubicación. Intenta nuevamente.');
-                });
+                }
             } else {
                 currentStep++;
                 showStep(currentStep);
             }
+        } else {
+            console.log("❌ Validación fallida, no se avanza");
+            // Mostrar mensaje general de error
+            const stepNode = formSteps[currentStep];
+            const firstError = stepNode.querySelector('.input-error');
+            if (firstError) {
+                firstError.focus();
+                firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
         }
-    });
+    } catch (error) {
+        console.error('❌ Error durante la validación:', error);
+        alert('Error durante la validación. Intenta nuevamente.');
+    } finally {
+        // Rehabilitar el botón
+        nextBtn.disabled = false;
+        nextBtn.textContent = "Siguiente";
+    }
+});
     
     // ✅ Función para guardar ubicaciones
     function guardarUbicaciones() {
@@ -596,25 +841,6 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
     
-    // En el evento del botón Siguiente
-    nextBtn.addEventListener("click", function () {
-        if (validateStep(currentStep)) {
-            if (currentStep === 1) { // Paso 2 es índice 1
-                guardarUbicaciones().then(success => {
-                    if (success) {
-                        currentStep++;
-                        showStep(currentStep);
-                    }
-                }).catch(error => {
-                    console.error('❌ Error guardando ubicaciones:', error);
-                    alert('Error al guardar la ubicación. Intenta nuevamente.');
-                });
-            } else {
-                currentStep++;
-                showStep(currentStep);
-            }
-        }
-    });
 
     // Manejar envío del formulario
     const form = document.getElementById('registerForm');

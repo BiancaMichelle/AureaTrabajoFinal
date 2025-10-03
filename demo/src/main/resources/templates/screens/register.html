@@ -91,11 +91,11 @@
             
             <div class="field-group">
                 <label for="fechaNacimiento">Fecha de nacimiento</label>
-                <input type="text" id="fechaNacimiento" th:field="*{fechaNacimiento}" 
-                    pattern="\d{1,2}/\d{1,2}/\d{4}" 
-                    placeholder="DD/MM/AAAA"
-                    title="Formato: DD/MM/AAAA" 
-                    required />
+                <input type="text" id="fechaNacimiento" 
+                       name="fechaNacimientoStr" 
+                       placeholder="DD/MM/AAAA"
+                       maxlength="10"
+                       required />
             </div>
             
             <div class="field-group">

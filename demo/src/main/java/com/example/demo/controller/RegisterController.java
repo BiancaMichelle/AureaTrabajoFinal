@@ -2,9 +2,13 @@ package com.example.demo.controller;
 
 import java.time.LocalDate;
 import java.time.Period;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -27,8 +31,7 @@ import com.example.demo.repository.ProvinciaRepository;
 import com.example.demo.service.InstitucionService;
 import com.example.demo.service.LocacionAPIService;
 import com.example.demo.service.RegistroService;
-
-import jakarta.validation.Valid;
+import com.example.demo.service.UsuarioJpaService;
 @Controller
 public class RegisterController {
 
@@ -37,9 +40,10 @@ public class RegisterController {
     private final CiudadRepository ciudadRepository;
     private final InstitucionRepository institucionAlumnoRepository;
     private final RegistroService registroService;
-    private final InstitucionService institucionService; // ✅ Agregar
-    private final LocacionAPIService locacionApiService; // ✅ Agregar
+    private final InstitucionService institucionService;
+    private final LocacionAPIService locacionApiService;
     private final AlumnoRepository alumnoRepository;
+    private final UsuarioJpaService usuarioJpaService; // ✅ Nuevo servicio
 
     public RegisterController(PaisRepository paisRepository,
                                 AlumnoRepository alumnoRepository,
@@ -47,8 +51,9 @@ public class RegisterController {
                               CiudadRepository ciudadRepository,
                               InstitucionRepository institucionAlumnoRepository,
                               RegistroService registroService,
-                              InstitucionService institucionService, // ✅ Inyectar
-                              LocacionAPIService locacionApiService) { // ✅ Inyectar
+                              InstitucionService institucionService,
+                              LocacionAPIService locacionApiService,
+                              UsuarioJpaService usuarioJpaService) { // ✅ Inyectar
         this.paisRepository = paisRepository;
         this.alumnoRepository = alumnoRepository;
         this.provinciaRepository = provinciaRepository;
@@ -57,6 +62,7 @@ public class RegisterController {
         this.registroService = registroService;
         this.institucionService = institucionService;
         this.locacionApiService = locacionApiService;
+        this.usuarioJpaService = usuarioJpaService; // ✅ Inicializar
     }
 
     @GetMapping("/register")
@@ -86,23 +92,53 @@ public class RegisterController {
 
 
     @PostMapping("/register")
-    public String registerAlumno(@Valid @ModelAttribute("alumno") Alumno alumno,
-                                BindingResult result,
-                                @RequestParam(value = "paisCodigo", required = false) String paisCodigo,
-                                @RequestParam(value = "provinciaCodigo", required = false) String provinciaCodigo,
-                                @RequestParam(value = "ciudadId", required = false) Long ciudadId,
-                                @RequestParam("confirmPassword") String confirmPassword,
-                                Model model) {
+    public String registerAlumno(@ModelAttribute("alumno") Alumno alumno,
+                            BindingResult result,
+                            @RequestParam(value = "paisCodigo", required = false) String paisCodigo,
+                            @RequestParam(value = "provinciaCodigo", required = false) String provinciaCodigo,
+                            @RequestParam(value = "ciudadId", required = false) Long ciudadId,
+                            @RequestParam("confirmPassword") String confirmPassword,
+                            @RequestParam("fechaNacimientoStr") String fechaNacimientoStr,
+                            Model model) {
         
         System.out.println("✅ FORMULARIO RECIBIDO - Iniciando validaciones");
         System.out.println("📝 Datos recibidos:");
         System.out.println("   - DNI: " + alumno.getDni());
         System.out.println("   - Nombre: " + alumno.getNombre());
         System.out.println("   - Email: " + alumno.getCorreo());
-        System.out.println("   - País código: " + paisCodigo);
-        System.out.println("   - Provincia código: " + provinciaCodigo);
-        System.out.println("   - Ciudad ID: " + ciudadId);
 
+        // ✅ Validar si el DNI ya existe
+        if (usuarioJpaService.existePorDni(alumno.getDni())) {
+            result.rejectValue("dni", "error.alumno", "Ya existe una cuenta con este DNI");
+            System.out.println("❌ DNI ya existe: " + alumno.getDni());
+        }
+
+        // ✅ Validar si el correo ya existe
+        if (usuarioJpaService.existePorCorreo(alumno.getCorreo())) {
+            result.rejectValue("correo", "error.alumno", "Ya existe una cuenta con este correo electrónico");
+            System.out.println("❌ Correo ya existe: " + alumno.getCorreo());
+        }
+
+
+        try {
+        if (fechaNacimientoStr != null && !fechaNacimientoStr.isEmpty()) {
+            String[] partes = fechaNacimientoStr.split("/");
+            if (partes.length == 3) {
+                int dia = Integer.parseInt(partes[0]);
+                int mes = Integer.parseInt(partes[1]);
+                int año = Integer.parseInt(partes[2]);
+                LocalDate fecha = LocalDate.of(año, mes, dia);
+                alumno.setFechaNacimiento(fecha);
+                System.out.println("📅 Fecha convertida a LocalDate: " + fecha);
+            } else {
+                result.rejectValue("fechaNacimiento", "error.alumno", "Formato de fecha inválido. Use DD/MM/AAAA");
+            }
+        }
+    } catch (Exception e) {
+        System.out.println("❌ Error convirtiendo fecha: " + e.getMessage());
+        result.rejectValue("fechaNacimiento", "error.alumno", "Formato de fecha inválido. Use DD/MM/AAAA");
+    }
+        
         // Validar que las contraseñas coincidan
         if (!alumno.getContraseña().equals(confirmPassword)) {
             result.rejectValue("contraseña", "error.alumno", "Las contraseñas no coinciden");
@@ -291,26 +327,48 @@ public String guardarUbicaciones(
         model.addAttribute("instituciones", instituciones);
     }
 
-    // Método temporal para verificar la conexión a la base de datos
-@GetMapping("/test-db")
-@ResponseBody
-public String testDatabase() {
-    try {
-        long countPaises = paisRepository.count();
-        long countProvincias = provinciaRepository.count();
-        long countCiudades = ciudadRepository.count();
-        long countAlumnos = alumnoRepository.count();
-        
-        return String.format(
-            "✅ Base de datos conectada:<br>" +
-            " - Países: %d<br>" +
-            " - Provincias: %d<br>" +
-            " - Ciudades: %d<br>" +
-            " - Alumnos: %d", 
-            countPaises, countProvincias, countCiudades, countAlumnos
-        );
-    } catch (Exception e) {
-        return "❌ Error conectando a la base de datos: " + e.getMessage();
+    @GetMapping("/api/usuarios/verificar-dni")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> verificarDni(@RequestParam String dni) {
+        try {
+            System.out.println("🔍 Verificando DNI: " + dni);
+            boolean existe = usuarioJpaService.existePorDni(dni);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("existe", existe);
+            response.put("mensaje", existe ? "Ya existe una cuenta con este DNI" : "DNI disponible");
+            response.put("valido", !existe);
+            
+            System.out.println("✅ Respuesta DNI: " + response);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            System.out.println("❌ Error verificando DNI: " + e.getMessage());
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Error al verificar DNI");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
     }
-}
+
+    @GetMapping("/api/usuarios/verificar-email")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> verificarEmail(@RequestParam String email) {
+        try {
+            System.out.println("🔍 Verificando email: " + email);
+            boolean existe = usuarioJpaService.existePorCorreo(email);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("existe", existe);
+            response.put("mensaje", existe ? "Ya existe una cuenta con este correo" : "Correo disponible");
+            response.put("valido", !existe);
+            
+            System.out.println("✅ Respuesta email: " + response);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            System.out.println("❌ Error verificando email: " + e.getMessage());
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Error al verificar email");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
 }
