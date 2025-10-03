@@ -3,6 +3,7 @@ package com.example.demo.controller;
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -147,6 +148,136 @@ public class RegisterController {
         }
     }   
 
+    @PostMapping("/guardar-ubicaciones")
+@ResponseBody
+public String guardarUbicaciones(
+        @RequestParam String paisCodigo,
+        @RequestParam String provinciaCodigo,
+        @RequestParam Long ciudadId) {
+    
+    System.out.println("📍 Guardando ubicaciones:");
+    System.out.println("   - País: " + paisCodigo);
+    System.out.println("   - Provincia: " + provinciaCodigo);
+    System.out.println("   - Ciudad ID: " + ciudadId);
+    
+    try {
+        // 1. PAÍS - Buscar o crear
+        Pais pais = null;
+        Optional<Pais> paisExistente = paisRepository.findByCodigo(paisCodigo);
+        if (paisExistente.isPresent()) {
+            pais = paisExistente.get();
+            System.out.println("✅ País encontrado: " + pais.getNombre());
+        } else {
+            System.out.println("🌎 Creando nuevo país: " + paisCodigo);
+            try {
+                List<Pais> paises = locacionApiService.obtenerTodosPaises();
+                for (Pais p : paises) {
+                    if (paisCodigo.equals(p.getCodigo())) {
+                        pais = p;
+                        break;
+                    }
+                }
+                if (pais == null) {
+                    pais = new Pais();
+                    pais.setCodigo(paisCodigo);
+                    pais.setNombre("País " + paisCodigo);
+                    pais.setCodigo(paisCodigo);
+                }
+                pais = paisRepository.save(pais);
+                System.out.println("✅ País creado: " + pais.getNombre());
+            } catch (Exception e) {
+                pais = new Pais();
+                pais.setCodigo(paisCodigo);
+                pais.setNombre("País " + paisCodigo);
+                pais.setCodigo(paisCodigo);
+                pais = paisRepository.save(pais);
+                System.out.println("✅ País creado (fallback): " + pais.getNombre());
+            }
+        }
+
+        // 2. PROVINCIA - Buscar o crear
+        Provincia provincia = null;
+        Optional<Provincia> provinciaExistente = provinciaRepository.findByCodigo(provinciaCodigo);
+        if (provinciaExistente.isPresent()) {
+            provincia = provinciaExistente.get();
+            System.out.println("✅ Provincia encontrada: " + provincia.getNombre());
+        } else {
+            System.out.println("🏙️ Creando nueva provincia: " + provinciaCodigo);
+            try {
+                List<Provincia> provincias = locacionApiService.obtenerProvinciasPorPais(paisCodigo);
+                for (Provincia p : provincias) {
+                    if (provinciaCodigo.equals(p.getCodigo())) {
+                        provincia = p;
+                        provincia.setPais(pais); // Asegurar relación
+                        break;
+                    }
+                }
+                if (provincia == null) {
+                    provincia = new Provincia();
+                    provincia.setCodigo(provinciaCodigo);
+                    provincia.setNombre("Provincia " + provinciaCodigo);
+                    provincia.setPais(pais);
+                }
+                provincia = provinciaRepository.save(provincia);
+                System.out.println("✅ Provincia creada: " + provincia.getNombre());
+            } catch (Exception e) {
+                provincia = new Provincia();
+                provincia.setCodigo(provinciaCodigo);
+                provincia.setNombre("Provincia " + provinciaCodigo);
+                provincia.setPais(pais);
+                provincia = provinciaRepository.save(provincia);
+                System.out.println("✅ Provincia creada (fallback): " + provincia.getNombre());
+            }
+        }
+
+        // 3. CIUDAD - Buscar o crear
+        Ciudad ciudad = null;
+        Optional<Ciudad> ciudadExistente = ciudadRepository.findById(ciudadId);
+        if (ciudadExistente.isPresent()) {
+            ciudad = ciudadExistente.get();
+            System.out.println("✅ Ciudad encontrada: " + ciudad.getNombre());
+        } else {
+            System.out.println("🏡 Creando nueva ciudad: " + ciudadId);
+            try {
+                List<Ciudad> ciudades = locacionApiService.obtenerCiudadesPorProvincia(paisCodigo, provinciaCodigo);
+                for (Ciudad c : ciudades) {
+                    if (ciudadId.equals(c.getId())) {
+                        ciudad = c;
+                        ciudad.setProvincia(provincia); // Asegurar relación
+                        break;
+                    }
+                }
+                if (ciudad == null) {
+                    ciudad = new Ciudad();
+                    ciudad.setId(ciudadId);
+                    ciudad.setNombre("Ciudad " + ciudadId);
+                    ciudad.setProvincia(provincia);
+                }
+                ciudad = ciudadRepository.save(ciudad);
+                System.out.println("✅ Ciudad creada: " + ciudad.getNombre());
+            } catch (Exception e) {
+                ciudad = new Ciudad();
+                ciudad.setId(ciudadId);
+                ciudad.setNombre("Ciudad " + ciudadId);
+                ciudad.setProvincia(provincia);
+                ciudad = ciudadRepository.save(ciudad);
+                System.out.println("✅ Ciudad creada (fallback): " + ciudad.getNombre());
+            }
+        }
+
+        String mensaje = String.format("Ubicaciones guardadas: %s - %s - %s", 
+            pais.getNombre(), provincia.getNombre(), ciudad.getNombre());
+        
+        System.out.println("✅ " + mensaje);
+        return mensaje;
+
+    } catch (Exception e) {
+        System.out.println("❌ Error guardando ubicaciones: " + e.getMessage());
+        e.printStackTrace();
+        return "Error: " + e.getMessage();
+    }
+}
+    
     // ✅ Método auxiliar para recargar datos del formulario
     private void recargarDatosFormulario(Model model) {
         try {

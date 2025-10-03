@@ -533,8 +533,86 @@ document.addEventListener("DOMContentLoaded", function () {
 
     nextBtn.addEventListener("click", function () {
         if (validateStep(currentStep)) {
-            currentStep++;
-            showStep(currentStep);
+            // ✅ SI ES EL PASO 2 (DOMICILIO), GUARDAR LAS UBICACIONES ANTES DE AVANZAR
+            if (currentStep === 1) { // Paso 2 es índice 1
+                guardarUbicaciones().then(success => {
+                    if (success) {
+                        currentStep++;
+                        showStep(currentStep);
+                    }
+                }).catch(error => {
+                    console.error('❌ Error guardando ubicaciones:', error);
+                    alert('Error al guardar la ubicación. Intenta nuevamente.');
+                });
+            } else {
+                currentStep++;
+                showStep(currentStep);
+            }
+        }
+    });
+    
+    // ✅ Función para guardar ubicaciones
+    function guardarUbicaciones() {
+        return new Promise((resolve, reject) => {
+            const paisCodigo = document.getElementById('paisCodigo').value;
+            const provinciaCodigo = document.getElementById('provinciaCodigo').value;
+            const ciudadId = document.getElementById('ciudadId').value;
+            
+            console.log("💾 Guardando ubicaciones:", { paisCodigo, provinciaCodigo, ciudadId });
+    
+            if (!paisCodigo || !provinciaCodigo || !ciudadId) {
+                reject(new Error('Faltan datos de ubicación'));
+                return;
+            }
+    
+            // ✅ Obtener el token CSRF del formulario principal
+            const csrfToken = document.querySelector('input[name="_csrf"]').value;
+            console.log("🔐 CSRF Token:", csrfToken);
+    
+            const formData = new FormData();
+            formData.append('paisCodigo', paisCodigo);
+            formData.append('provinciaCodigo', provinciaCodigo);
+            formData.append('ciudadId', ciudadId);
+            formData.append('_csrf', csrfToken); // ✅ Agregar el token CSRF
+    
+            fetch('/api/ubicaciones/guardar', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error del servidor: ' + response.status);
+                }
+                return response.text();
+            })
+            .then(message => {
+                console.log("✅ Ubicaciones guardadas:", message);
+                resolve(true);
+            })
+            .catch(error => {
+                console.error('❌ Error:', error);
+                reject(error);
+            });
+        });
+    }
+    
+    // En el evento del botón Siguiente
+    nextBtn.addEventListener("click", function () {
+        if (validateStep(currentStep)) {
+            if (currentStep === 1) { // Paso 2 es índice 1
+                guardarUbicaciones().then(success => {
+                    if (success) {
+                        currentStep++;
+                        showStep(currentStep);
+                    }
+                }).catch(error => {
+                    console.error('❌ Error guardando ubicaciones:', error);
+                    alert('Error al guardar la ubicación. Intenta nuevamente.');
+                });
+            } else {
+                currentStep++;
+                showStep(currentStep);
+            }
         }
     });
 
