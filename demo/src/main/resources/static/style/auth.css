@@ -48,13 +48,6 @@
 	font-size: 14px;
 }
 
-/* Asegurar que los botones de navegación no queden ocultos por reglas accidentales */
-.nav-btn, .auth-button, .step-navigation button, #nextBtn, #prevBtn, #submitBtn {
-	display: inline-block !important;
-	visibility: visible !important;
-	opacity: 1 !important;
-}
-
 .nav-btn.primary {
 	background-color: #007bff;
 	color: white;

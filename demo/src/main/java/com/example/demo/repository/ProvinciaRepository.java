@@ -11,4 +11,5 @@ import com.example.demo.model.Provincia;
 @Repository
 public interface ProvinciaRepository extends JpaRepository<Provincia,Long> {
     Optional<Provincia> findByCodigo(String codigo);
+    List<Provincia> findByPaisCodigo(String paisCodigo);
 }

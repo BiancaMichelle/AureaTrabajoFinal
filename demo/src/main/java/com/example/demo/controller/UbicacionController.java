@@ -37,9 +37,23 @@ public class UbicacionController {
     @GetMapping("/provincias/{paisCode}")
     public ResponseEntity<List<Provincia>> obtenerProvincias(@PathVariable String paisCode) {
         try {
+            System.out.println("🌍 Solicitando provincias para país: " + paisCode);
             List<Provincia> provincias = locacionApiService.obtenerProvinciasPorPais(paisCode);
+            
+            System.out.println("✅ Provincias encontradas: " + provincias.size());
+            
+            // Log de las primeras 3 provincias para debug
+            if (!provincias.isEmpty()) {
+                System.out.println("📋 Primeras provincias:");
+                provincias.stream().limit(3).forEach(p -> 
+                    System.out.println("   - " + p.getNombre() + " (Código: " + p.getCodigo() + ", ID: " + p.getId() + ")")
+                );
+            }
+            
             return ResponseEntity.ok(provincias);
         } catch (Exception e) {
+            System.err.println("❌ Error obteniendo provincias para " + paisCode + ": " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

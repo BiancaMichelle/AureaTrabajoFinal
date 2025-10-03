@@ -1,5 +1,6 @@
 package com.example.demo;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.boot.CommandLineRunner;
@@ -49,15 +50,22 @@ public class DemoApplication implements CommandLineRunner {
             admin.setDni("01234567");
             admin.setNombre("Super");
             admin.setApellido("Admin");
+            admin.setFechaNacimiento(LocalDate.of(1990, 1, 1)); // Fecha que cumple +16 años
+            admin.setGenero("masculino");
             admin.setCorreo("admin@demo.com");
-            admin.setContraseña(passwordEncoder.encode("1234"));
+            admin.setNumTelefono("1234567890"); // 10 dígitos
+            admin.setContraseña(passwordEncoder.encode("Admin123")); // Cumple: 8 chars, mayúscula y minúscula
+            
+            // Campos de estado
             admin.setEstado(true);
             admin.setEstadoCuenta(true);
-
+            
+            // Asignar rol ADMIN
             Rol rolAdmin = roleRepository.findByNombre("ADMIN")
                                         .orElseThrow(() -> new RuntimeException("Rol ADMIN no encontrado"));
             admin.getRoles().add(rolAdmin);
 
+            // Guardar usuario
             usuarioRepository.save(admin);
         }
     }
