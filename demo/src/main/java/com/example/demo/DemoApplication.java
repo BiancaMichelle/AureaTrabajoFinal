@@ -37,7 +37,10 @@ public class DemoApplication implements CommandLineRunner {
         // Crear roles si no existen
         for (String name : List.of("ADMIN", "ALUMNO", "DOCENTE")) {
             if (roleRepository.findByNombre(name).isEmpty()) {
-                roleRepository.save(new Rol(null, name, name));
+                Rol rol = new Rol();
+                rol.setNombre(name);
+                rol.setDescripcion(name);
+                roleRepository.save(rol);
             }
         }
 

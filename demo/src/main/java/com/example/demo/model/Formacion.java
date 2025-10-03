@@ -25,5 +25,17 @@ public class Formacion extends OfertaAcademica {
     private Double costoCuota;
     private Double costoMora;
     private Integer nrCuotas;
-    private LocalDate vencimientoCuota;
+   // private LocalDate vencimientoCuota;
+    private Integer diaVencimiento; // Día del mes límite para pago sin mora
+
+    /**
+     * Información de docentes
+     */
+    public String getDocentesTexto() {
+        if (docentes == null || docentes.isEmpty()) {
+            return "Sin docentes";
+        }
+        return docentes.size() + " docente(s)";
+    }
+    
 }

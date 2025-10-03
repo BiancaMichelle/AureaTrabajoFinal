@@ -18,7 +18,19 @@ public class Seminario extends OfertaAcademica {
     private String lugar;
     private String enlace;
     private String publicoObjetivo;
-    
+
+    private Integer duracionMinutos; // en minutos
+
     @ElementCollection
     private List<String> disertantes;
+
+    /**
+     * Duración formateada
+     */
+    public String getDuracionTexto() {
+        if (duracionMinutos == null) return "No definida";
+        if (duracionMinutos < 60) return duracionMinutos + " min";
+        return (duracionMinutos / 60) + "h " + (duracionMinutos % 60) + "min";
+    }
+
 }

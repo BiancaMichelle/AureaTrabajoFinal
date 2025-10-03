@@ -1,8 +1,10 @@
 package com.example.demo.model;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import com.example.demo.enums.*;
 
@@ -81,4 +83,115 @@ public class OfertaAcademica {
             }
         return estaActiva;
     }
+
+    /**
+     * Devuelve el tipo específico de oferta para mostrar en la tabla
+     */
+    public String getTipoOferta() {
+        if (this instanceof Curso) return "CURSO";
+        if (this instanceof Formacion) return "FORMACION"; 
+        if (this instanceof Seminario) return "SEMINARIO";
+        if (this instanceof Charla) return "CHARLA";
+        return "GENERAL";
+    }
+
+
+
+
+    /**
+     * Devuelve el ícono CSS según el tipo para la interfaz
+     */
+    public String getIconoTipo() {
+        switch (getTipoOferta()) {
+            case "CURSO": return "fas fa-book";
+            case "FORMACION": return "fas fa-graduation-cap";
+            case "SEMINARIO": return "fas fa-users";
+            case "CHARLA": return "fas fa-microphone";
+            default: return "fas fa-folder";
+        }
+    }
+    /**
+     * Devuelve el costo formateado para mostrar en la tabla
+     */
+    public String getCostoFormateado() {
+        if (costoInscripcion == null || costoInscripcion == 0) {
+            return "Gratuito";
+        }
+        return String.format("$%.2f", costoInscripcion);
+    }
+    /**
+     * Información de cupos para la tabla
+     */
+    public String getInfoCupos() {
+        if (cupos == null) return "Sin límite";
+        int ocupados = inscripciones != null ? inscripciones.size() : 0;
+        return ocupados + " / " + cupos;
+    }
+    /**
+     * Porcentaje de ocupación de cupos
+     */
+    public Double getPorcentajeOcupacion() {
+        if (cupos == null || cupos == 0) return 0.0;
+        int ocupados = inscripciones != null ? inscripciones.size() : 0;
+        return (ocupados * 100.0) / cupos;
+    }
+    /**
+     * Verifica si tiene cupos disponibles
+     */
+    public Boolean tieneCuposDisponibles() {
+        if (cupos == null) return true;
+        return getPorcentajeOcupacion() < 100;
+    }
+    /**
+     * Devuelve las categorías como texto para filtros
+     */
+    public String getCategoriasTexto() {
+        if (categorias == null || categorias.isEmpty()) {
+            return "Sin categorías";
+        }
+        return categorias.stream()
+                .map(Categoria::getNombre)
+                .collect(Collectors.joining(", "));
+    }
+    /**
+     * Duración calculada en días
+     */
+    public Long getDuracionDias() {
+        if (fechaInicio == null || fechaFin == null) return null;
+        return ChronoUnit.DAYS.between(fechaInicio, fechaFin) + 1;
+    }
+    /**
+     * Verifica si la oferta puede ser editada
+     */
+    public Boolean puedeSerEditada() {
+        return estado != EstadoOferta.FINALIZADA && 
+               estado != EstadoOferta.CANCELADA;
+    }
+    /**
+     * Verifica si puede ser eliminada
+     */
+    public Boolean puedeSerEliminada() {
+        int inscriptos = inscripciones != null ? inscripciones.size() : 0;
+        return inscriptos == 0 && estado != EstadoOferta.FINALIZADA;
+    }
+    
+    /**
+     * Duración formateada para mostrar
+     */
+    public String getDuracionTexto() {
+        Long dias = getDuracionDias();
+        if (dias == null) return "No definida";
+        if (dias == 1) return "1 día";
+        if (dias < 7) return dias + " días";
+        if (dias < 30) return (dias / 7) + " semanas";
+        return (dias / 30) + " meses";
+    }
+    /**
+     * Devuelve la clase CSS para el badge de estado
+     */
+    public String getClaseEstado() {
+        if (estado == null) return "status-inactiva";
+        return "status-" + estado.name().toLowerCase();
+    }
+
 }

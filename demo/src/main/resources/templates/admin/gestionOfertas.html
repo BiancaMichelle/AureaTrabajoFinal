@@ -6,293 +6,533 @@
 <body>
 <main class="main-content">
     <header class="main-header">
-        <h1>Gestión de Ofertas Académicas</h1>
+        <h1><i class="fas fa-graduation-cap"></i> Gestión de Ofertas Académicas</h1>
+        <div class="header-actions">
+            <button id="btn-show-form" class="btn-primary">
+                <i class="fas fa-plus-circle"></i> Nueva Oferta
+            </button>
+        </div>
     </header>
 
-    <div class="gestion-usuarios-container">
-        <!-- Botón para desplegar el formulario -->
-        <div class="form-toggle-container">
-            <button id="btn-show-form" class="btn-primary"><i class="fas fa-plus-circle"></i> Registrar Nueva Oferta</button>
-        </div>
-
-        <!-- Formulario de Registro (colapsable) -->
-        <div id="form-container" class="form-container collapsible-content" style="display: none;">
+    <!-- Formulario de Registro (colapsable) -->
+    <div id="form-container" class="form-container" style="display: none;">
+        <div class="form-card">
+            <div class="form-header">
+                <h3><i class="fas fa-plus-circle"></i> Registrar Nueva Oferta Académica</h3>
+                <button type="button" id="btn-close-form" class="btn-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
             <form th:action="@{/admin/ofertas/registrar}" method="post" id="oferta-form" enctype="multipart/form-data">
-                <div class="form-main-content">
-                    <!-- Columna Izquierda: Imagen -->
-                    <div class="form-photo-column">
-                        <div class="form-group">
-                            <label>Imagen de la Oferta</label>
-                            <div class="photo-upload-container">
-                                <input type="file" id="imagen" name="imagen" accept="image/*" class="photo-upload-input">
-                                <label for="imagen" class="photo-upload-label">
-                                    <img id="photo-preview" src="#" alt="Vista previa" style="display: none;">
-                                    <span id="photo-upload-text">
-                                        <i class="fas fa-image"></i><br>Subir Imagen
-                                    </span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Columna Derecha: Campos del Formulario -->
-                    <div class="form-fields-column">
-                        <!-- Tipo de Oferta -->
+                <div class="form-content">
+                    <!-- Columna Izquierda: Campos principales -->
+                    <div class="form-left-column">
+                        <!-- Datos Básicos -->
                         <div class="form-section">
-                            <h4>Tipo y Datos Generales</h4>
+                            <h4><i class="fas fa-info-circle"></i> Información Básica</h4>
                             <div class="form-grid">
                                 <div class="form-group">
-                                    <label for="tipoOferta">Tipo de Oferta</label>
-                                    <select id="tipoOferta" name="tipoOferta" required>
+                                    <label for="tipoOferta">Tipo de Oferta *</label>
+                                    <select id="tipoOferta" name="tipoOferta" required class="form-control">
                                         <option value="">Seleccione un tipo</option>
                                         <option value="CURSO">Curso</option>
-                                        <option value="FORMACION">Formación</option>
+                                        <option value="FORMACION">Formación Profesional</option>
                                         <option value="SEMINARIO">Seminario</option>
                                         <option value="CHARLA">Charla</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <label for="nombre">Nombre</label>
-                                    <input type="text" id="nombre" name="nombre" required>
+                                    <label for="nombre">Nombre de la Oferta *</label>
+                                    <input type="text" id="nombre" name="nombre" required class="form-control" 
+                                           placeholder="Ej: Curso de Programación Java">
                                 </div>
                                 <div class="form-group">
-                                    <label for="duracion">Duración</label>
-                                    <input type="text" id="duracion" name="duracion">
-                                </div>
-                                <div class="form-group">
-                                    <label for="costoInscripcion">Costo de Inscripción</label>
-                                    <input type="number" step="0.01" id="costoInscripcion" name="costoInscripcion">
-                                </div>
-                                <div class="form-group">
-                                    <label for="modalidad">Modalidad</label>
-                                    <select id="modalidad" name="modalidad">
-                                        <option th:each="m : ${T(com.example.demo.enums.Modalidad).values()}" th:value="${m}" th:text="${m}"></option>
+                                    <label for="modalidad">Modalidad *</label>
+                                    <select id="modalidad" name="modalidad" required class="form-control">
+                                        <option value="">Seleccione modalidad</option>
+                                        <option value="PRESENCIAL">Presencial</option>
+                                        <option value="ONLINE">Online</option>
+                                        <option value="HIBRIDA">Híbrida</option>
                                     </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="cupos">Cantidad de Cupos</label>
+                                    <input type="number" id="cupos" name="cupos" class="form-control" min="1" 
+                                           placeholder="Número máximo de estudiantes">
                                 </div>
                                 <div class="form-group">
                                     <label for="fechaInicio">Fecha de Inicio</label>
-                                    <input type="date" id="fechaInicio" name="fechaInicio">
+                                    <input type="date" id="fechaInicio" name="fechaInicio" class="form-control">
                                 </div>
                                 <div class="form-group">
                                     <label for="fechaFin">Fecha de Fin</label>
-                                    <input type="date" id="fechaFin" name="fechaFin">
-                                </div>
-                                <div class="form-group">
-                                    <label for="certificado">Otorga Certificado</label>
-                                    <select id="certificado" name="certificado">
-                                        <option value="true">Sí</option>
-                                        <option value="false">No</option>
-                                    </select>
+                                    <input type="date" id="fechaFin" name="fechaFin" class="form-control">
                                 </div>
                             </div>
-                             <div class="form-group">
-                                <label for="descripcion">Descripción</label>
-                                <textarea id="descripcion" name="descripcion" rows="4" class="fixed-size-textarea"></textarea>
-                            </div>
+                            
                             <div class="form-group">
-                                <label for="objetivo">Objetivo</label>
-                                <textarea id="objetivo" name="objetivo" rows="4" class="fixed-size-textarea"></textarea>
-                            </div>
-                             <div class="form-group">
-                                <label for="categorias">Categorías</label>
-                                <select id="categorias" name="categorias" multiple="multiple" class="form-control">
-                                    <option th:each="cat : ${categorias}" th:value="${cat.idCategoria}" th:text="${cat.nombre}"></option>
-                                </select>
+                                <label for="descripcion">Descripción *</label>
+                                <textarea id="descripcion" name="descripcion" rows="3" required class="form-control" 
+                                          placeholder="Descripción detallada de la oferta académica"></textarea>
                             </div>
                         </div>
 
-                        <!-- Horarios para la oferta -->
+                        <!-- Costos -->
                         <div class="form-section">
-                            <h4>Horarios de Cursado</h4>
-                            <div id="horarios-container" class="availability-container">
-                                <div class="availability-controls">
-                                    <div class="form-group">
-                                        <label for="dia-semana">Día</label>
-                                        <select id="dia-semana">
-                                            <option th:each="dia : ${T(com.example.demo.enums.Dias).values()}" th:value="${dia}" th:text="${dia}"></option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="hora-desde">Desde</label>
-                                        <input type="time" id="hora-desde">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="hora-hasta">Hasta</label>
-                                        <input type="time" id="hora-hasta">
-                                    </div>
-                                    <button type="button" id="btn-add-horario" class="btn-icon btn-add"><i class="fas fa-plus"></i></button>
+                            <h4><i class="fas fa-dollar-sign"></i> Información de Costos</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="costoInscripcion">Costo de Inscripción</label>
+                                    <input type="number" step="0.01" id="costoInscripcion" name="costoInscripcion" 
+                                           class="form-control" placeholder="0.00">
                                 </div>
-                                <div class="availability-table-wrapper">
-                                    <table id="horarios-table" class="availability-table">
+                                <div class="form-group" id="grupo-costo-cuota" style="display: none;">
+                                    <label for="costoCuota">Costo por Cuota</label>
+                                    <input type="number" step="0.01" id="costoCuota" name="costoCuota" 
+                                           class="form-control" placeholder="0.00">
+                                </div>
+                                <div class="form-group" id="grupo-nro-cuotas" style="display: none;">
+                                    <label for="nrCuotas">Número de Cuotas</label>
+                                    <input type="number" id="nrCuotas" name="nrCuotas" class="form-control" min="1">
+                                </div>
+                                <div class="form-group" id="grupo-costo-mora" style="display: none;">
+                                    <label for="costoMora">Costo por Mora</label>
+                                    <input type="number" step="0.01" id="costoMora" name="costoMora" 
+                                           class="form-control" placeholder="0.00">
+                                </div>
+                                <div class="form-group" id="grupo-dia-vencimiento" style="display: none;">
+                                    <label for="diaVencimiento">Día de Vencimiento</label>
+                                    <input type="number" id="diaVencimiento" name="diaVencimiento" 
+                                           class="form-control" min="1" max="29" 
+                                           placeholder="Ingrese día del mes (1-29)">
+                                    <small class="form-text text-muted">
+                                        <i class="fas fa-info-circle"></i>
+                                        Día límite para pago sin mora (1-29). Después de esta fecha se aplicará el recargo por mora.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Certificación -->
+                        <div class="form-section">
+                            <h4><i class="fas fa-certificate"></i> Certificación</h4>
+                            <div class="checkbox-container">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="otorgaCertificado" name="otorgaCertificado" class="form-checkbox">
+                                    <span class="checkmark"></span>
+                                    Otorga Certificado
+                                </label>
+                            </div>
+                            
+                            <div id="certificado-fields" style="display: none;">
+                                <div class="form-group">
+                                    <label for="tituloCertificado">Título del Certificado</label>
+                                    <input type="text" id="tituloCertificado" name="tituloCertificado" class="form-control" 
+                                           placeholder="Ej: Certificado de Finalización en...">
+                                </div>
+                                <div class="form-group">
+                                    <label for="descripcionCertificado">Descripción del Certificado</label>
+                                    <textarea id="descripcionCertificado" name="descripcionCertificado" rows="2" 
+                                              class="form-control" placeholder="Descripción que aparecerá en el certificado"></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Categorías -->
+                        <div class="form-section">
+                            <h4><i class="fas fa-tags"></i> Categorías</h4>
+                            <div class="form-group">
+                                <label for="categoria-select">Seleccionar Categorías</label>
+                                <p class="field-description">Seleccione una o más categorías que describan esta oferta académica</p>
+                                <select id="categoria-select" class="form-control categoria-select">
+                                    <option value="">-- Seleccione una categoría --</option>
+                                    <option value="programacion" data-icon="fas fa-code">Programación</option>
+                                    <option value="diseno" data-icon="fas fa-palette">Diseño</option>
+                                    <option value="marketing" data-icon="fas fa-chart-line">Marketing</option>
+                                    <option value="administracion" data-icon="fas fa-briefcase">Administración</option>
+                                    <option value="idiomas" data-icon="fas fa-language">Idiomas</option>
+                                    <option value="oficios" data-icon="fas fa-tools">Oficios</option>
+                                    <option value="salud" data-icon="fas fa-heartbeat">Salud</option>
+                                    <option value="tecnologia" data-icon="fas fa-microchip">Tecnología</option>
+                                    <option value="finanzas" data-icon="fas fa-dollar-sign">Finanzas</option>
+                                    <option value="educacion" data-icon="fas fa-graduation-cap">Educación</option>
+                                    <option value="arte" data-icon="fas fa-paint-brush">Arte</option>
+                                    <option value="gastronomia" data-icon="fas fa-utensils">Gastronomía</option>
+                                </select>
+                                <div class="selected-categories" id="selected-categories">
+                                    <span class="selected-label">Categorías seleccionadas:</span>
+                                    <div class="selected-chips" id="selected-chips">
+                                        <!-- Las categorías seleccionadas aparecerán aquí como chips -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Horarios -->
+                        <div class="form-section">
+                            <h4><i class="fas fa-clock"></i> Horarios</h4>
+                            <div class="horarios-container">
+                                <div class="horario-controls">
+                                    <div class="form-grid-3">
+                                        <div class="form-group">
+                                            <label for="dia-semana">Día</label>
+                                            <select id="dia-semana" class="form-control">
+                                                <option value="">Seleccionar día</option>
+                                                <option value="LUNES">Lunes</option>
+                                                <option value="MARTES">Martes</option>
+                                                <option value="MIERCOLES">Miércoles</option>
+                                                <option value="JUEVES">Jueves</option>
+                                                <option value="VIERNES">Viernes</option>
+                                                <option value="SABADO">Sábado</option>
+                                                <option value="DOMINGO">Domingo</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="hora-desde">Desde</label>
+                                            <input type="time" id="hora-desde" class="form-control">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="hora-hasta">Hasta</label>
+                                            <input type="time" id="hora-hasta" class="form-control">
+                                        </div>
+                                    </div>
+                                    <button type="button" id="btn-add-horario" class="btn-secondary">
+                                        <i class="fas fa-plus"></i> Agregar Horario
+                                    </button>
+                                </div>
+                                
+                                <div class="horarios-table-container">
+                                    <table id="horarios-table" class="data-table">
                                         <thead>
                                             <tr>
                                                 <th>Día</th>
                                                 <th>Horario</th>
-                                                <th>Acciones</th>
+                                                <th>Acción</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <!-- Filas de horarios se agregarán aquí -->
+                                            <!-- Horarios dinámicos -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Columna Derecha: Imagen y campos específicos -->
+                    <div class="form-right-column">
+                        <!-- Imagen de presentación -->
+                        <div class="form-section">
+                            <h4><i class="fas fa-image"></i> Imagen de Presentación</h4>
+                            <div class="image-upload-container">
+                                <input type="file" id="imagen" name="imagen" accept="image/*" class="image-input">
+                                <label for="imagen" class="image-upload-area">
+                                    <div class="upload-placeholder">
+                                        <i class="fas fa-cloud-upload-alt"></i>
+                                        <p>Subir imagen</p>
+                                        <span>JPG, PNG, GIF hasta 5MB</span>
+                                    </div>
+                                    <img id="image-preview" style="display: none;" alt="Vista previa">
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Campos específicos por tipo de oferta -->
+                        
+                        <!-- Campos para CURSO -->
+                        <div id="fields-curso" class="form-section tipo-specific" style="display: none;">
+                            <h4><i class="fas fa-book"></i> Información del Curso</h4>
+                            <div class="form-group">
+                                <label for="planEstudio">Plan de Estudio</label>
+                                <textarea id="planEstudio" name="planEstudio" rows="4" class="form-control" 
+                                          placeholder="Detalle del plan de estudios del curso"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="temario">Temario</label>
+                                <textarea id="temario" name="temario" rows="4" class="form-control" 
+                                          placeholder="Temario detallado del curso"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="requisitos">Requisitos Previos</label>
+                                <textarea id="requisitos" name="requisitos" rows="2" class="form-control" 
+                                          placeholder="Conocimientos o cursos previos necesarios"></textarea>
+                            </div>
+                            
+                            <!-- Docentes a cargo -->
+                            <div class="docentes-section">
+                                <h5>Docentes a Cargo</h5>
+                                <div class="docente-search-container">
+                                    <input type="text" id="docente-search" placeholder="Buscar docente..." 
+                                           class="form-control">
+                                    <div id="docente-results" class="search-results"></div>
+                                </div>
+                                <div class="docentes-list">
+                                    <table id="docentes-table" class="mini-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Docente</th>
+                                                <th>Especialidad</th>
+                                                <th>Acción</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <!-- Docentes asignados -->
                                         </tbody>
                                     </table>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Campos para Charla/Seminario -->
-                        <div id="fields-charla-seminario" class="form-section conditional-fields" style="display:none;">
-                            <h4>Datos de Charla/Seminario</h4>
-                            <div class="form-grid">
-                                <div class="form-group">
-                                    <label for="lugar">Lugar</label>
-                                    <input type="text" id="lugar" name="lugar">
+                        <!-- Campos para FORMACIÓN PROFESIONAL -->
+                        <div id="fields-formacion" class="form-section tipo-specific" style="display: none;">
+                            <h4><i class="fas fa-graduation-cap"></i> Formación Profesional</h4>
+                            <div class="form-group">
+                                <label for="planFormacion">Plan de Formación</label>
+                                <textarea id="planFormacion" name="planFormacion" rows="4" class="form-control" 
+                                          placeholder="Plan detallado de la formación profesional"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="temarioFormacion">Temario</label>
+                                <textarea id="temarioFormacion" name="temarioFormacion" rows="4" class="form-control" 
+                                          placeholder="Temario de la formación"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="estructuraModular">Estructura Modular</label>
+                                <textarea id="estructuraModular" name="estructuraModular" rows="4" class="form-control" 
+                                          placeholder="Descripción de los módulos que componen la formación"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="requisitosFormacion">Requisitos</label>
+                                <textarea id="requisitosFormacion" name="requisitosFormacion" rows="2" class="form-control" 
+                                          placeholder="Requisitos para ingresar a la formación"></textarea>
+                            </div>
+                            
+                            <!-- Docentes para formación también -->
+                            <div class="docentes-section">
+                                <h5>Docentes a Cargo</h5>
+                                <div class="docente-search-container">
+                                    <input type="text" id="docente-search-formacion" placeholder="Buscar docente..." 
+                                           class="form-control">
+                                    <div id="docente-results-formacion" class="search-results"></div>
                                 </div>
-                                <div class="form-group">
-                                    <label for="enlace">Enlace (si es online)</label>
-                                    <input type="url" id="enlace" name="enlace">
-                                </div>
-                                <div class="form-group">
-                                    <label for="publicoObjetivo">Público Objetivo</label>
-                                    <input type="text" id="publicoObjetivo" name="publicoObjetivo">
-                                </div>
-                                <div class="form-group">
-                                    <label for="disertantes">Disertante/s (separados por coma)</label>
-                                    <input type="text" id="disertantes" name="disertantes">
+                                <div class="docentes-list">
+                                    <table id="docentes-table-formacion" class="mini-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Docente</th>
+                                                <th>Especialidad</th>
+                                                <th>Acción</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <!-- Docentes asignados -->
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Campos para Formación/Curso -->
-                        <div id="fields-formacion-curso" class="form-section conditional-fields" style="display:none;">
-                            <h4>Datos de Costos y Docentes</h4>
-                            <div class="form-grid">
-                                <div class="form-group">
-                                    <label for="costoCuota">Costo por Cuota</label>
-                                    <input type="number" step="0.01" id="costoCuota" name="costoCuota">
-                                </div>
-                                <div class="form-group">
-                                    <label for="nrCuotas">Nro. de Cuotas</label>
-                                    <input type="number" id="nrCuotas" name="nrCuotas">
-                                </div>
-                                <div class="form-group">
-                                    <label for="costoMora">Costo por Mora</label>
-                                    <input type="number" step="0.01" id="costoMora" name="costoMora">
-                                </div>
-                                <div class="form-group">
-                                    <label for="vencimientoCuota">Día de Vencimiento de Cuota</label>
-                                    <input type="number" id="vencimientoCuota" name="vencimientoCuota" min="1" max="31">
-                                </div>
+                        <!-- Campos para CHARLA -->
+                        <div id="fields-charla" class="form-section tipo-specific" style="display: none;">
+                            <h4><i class="fas fa-microphone"></i> Información de la Charla</h4>
+                            <div class="form-group">
+                                <label for="disertantesCharla">Disertantes</label>
+                                <input type="text" id="disertantesCharla" name="disertantesCharla" class="form-control" 
+                                       placeholder="Nombres de los disertantes separados por coma">
                             </div>
-                             <!-- Asignación de Docentes -->
-                            <div class="form-section">
-                                <h5>Asignar Docentes</h5>
-                                <div class="docente-assignment-container">
-                                    <div class="docente-search-wrapper">
-                                        <div class="form-group">
-                                            <label for="docente-search">Buscar Docente (Nombre o DNI)</label>
-                                            <input type="text" id="docente-search" placeholder="Escriba para buscar...">
-                                            <div id="docente-search-results" class="search-results"></div>
-                                        </div>
-                                    </div>
-                                    <div class="docente-table-wrapper">
-                                        <table id="docentes-table" class="availability-table">
-                                            <thead>
-                                                <tr>
-                                                    <th>Docente</th>
-                                                    <th>DNI</th>
-                                                    <th>Acción</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <!-- Docentes asignados se agregarán aquí -->
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
+                            <div class="form-group">
+                                <label for="duracionEstimada">Duración Estimada</label>
+                                <input type="text" id="duracionEstimada" name="duracionEstimada" class="form-control" 
+                                       placeholder="Ej: 2 horas, 90 minutos">
+                            </div>
+                            <div class="form-group">
+                                <label for="publicoObjetivo">Público Objetivo</label>
+                                <input type="text" id="publicoObjetivo" name="publicoObjetivo" class="form-control" 
+                                       placeholder="A quién está dirigida la charla">
+                            </div>
+                            <div class="form-group">
+                                <label for="lugarCharla">Lugar o Enlace</label>
+                                <input type="text" id="lugarCharla" name="lugarCharla" class="form-control" 
+                                       placeholder="Dirección física o enlace de acceso">
+                            </div>
+                            <div class="form-group">
+                                <label for="materialesApoyo">Materiales de Apoyo</label>
+                                <textarea id="materialesApoyo" name="materialesApoyo" rows="2" class="form-control" 
+                                          placeholder="Descripción de materiales que se proporcionarán"></textarea>
                             </div>
                         </div>
 
-                        <!-- Campos para Formación -->
-                        <div id="fields-formacion" class="form-section conditional-fields" style="display:none;">
-                            <h4>Datos Específicos de Formación</h4>
+                        <!-- Campos para SEMINARIO -->
+                        <div id="fields-seminario" class="form-section tipo-specific" style="display: none;">
+                            <h4><i class="fas fa-users"></i> Información del Seminario</h4>
                             <div class="form-group">
-                                <label for="plan">Plan de Estudio</label>
-                                <textarea id="plan" name="plan" rows="4"></textarea>
-                            </div>
-                        </div>
-
-                        <!-- Campos para Curso -->
-                        <div id="fields-curso" class="form-section conditional-fields" style="display:none;">
-                            <h4>Datos Específicos de Curso</h4>
-                            <div class="form-group">
-                                <label for="temario">Temario</label>
-                                <textarea id="temario" name="temario" rows="4" class="fixed-size-textarea"></textarea>
+                                <label for="disertantesSeminario">Disertantes</label>
+                                <input type="text" id="disertantesSeminario" name="disertantesSeminario" class="form-control" 
+                                       placeholder="Nombres de los disertantes separados por coma">
                             </div>
                             <div class="form-group">
-                                <label for="temario-pdf">Adjuntar Temario (PDF)</label>
-                                <input type="file" id="temario-pdf" name="temario-pdf" accept=".pdf" class="form-control">
+                                <label for="fechaSeminario">Fecha del Seminario</label>
+                                <input type="date" id="fechaSeminario" name="fechaSeminario" class="form-control">
                             </div>
-                            <!-- Aquí se podrían añadir campos para requisitos y módulos de forma más compleja si es necesario -->
+                            <div class="form-group">
+                                <label for="horaSeminario">Hora del Seminario</label>
+                                <input type="time" id="horaSeminario" name="horaSeminario" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label for="duracionSeminario">Duración Estimada</label>
+                                <input type="text" id="duracionSeminario" name="duracionSeminario" class="form-control" 
+                                       placeholder="Ej: 4 horas, medio día">
+                            </div>
+                            <div class="form-group">
+                                <label for="requisitosParticipacion">Requisitos de Participación</label>
+                                <textarea id="requisitosParticipacion" name="requisitosParticipacion" rows="2" 
+                                          class="form-control" placeholder="Requisitos para participar (opcional)"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="lugarSeminario">Lugar o Enlace</label>
+                                <input type="text" id="lugarSeminario" name="lugarSeminario" class="form-control" 
+                                       placeholder="Dirección física o enlace de acceso">
+                            </div>
                         </div>
                     </div>
                 </div>
+                
                 <div class="form-actions">
-                    <button type="submit" class="btn-submit">Registrar Oferta</button>
-                    <button type="button" id="btn-cancel-form" class="btn-cancel">Cancelar</button>
+                    <button type="submit" class="btn-submit">
+                        <i class="fas fa-save"></i> Registrar Oferta
+                    </button>
+                    <button type="button" id="btn-cancel-form" class="btn-cancel">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
                 </div>
             </form>
         </div>
+    </div>
 
-        <!-- Sección de Filtros y Tabla -->
-        <div class="users-table-section">
-            <div class="filters-container">
-                <div class="search-box">
-                    <input type="text" id="search-input" placeholder="Buscar por nombre...">
-                    <i class="fas fa-search"></i>
+    <!-- Sección de Filtros y Tabla -->
+    <div class="ofertas-table-section">
+        <div class="filters-section">
+            <div class="filters-header">
+                <h3><i class="fas fa-filter"></i> Filtros y Búsqueda</h3>
+            </div>
+            <div class="filters-content">
+                <div class="search-container">
+                    <div class="search-input-container">
+                        <input type="text" id="search-input" placeholder="Buscar por nombre de oferta..." class="search-input">
+                        <i class="fas fa-search search-icon"></i>
+                    </div>
                 </div>
-                <div class="filter-selectors">
-                    <select id="filtro-tipo" name="filtro-tipo">
-                        <option value="">Filtrar por Tipo</option>
+                <div class="filters-grid">
+                    <select id="filtro-tipo" class="filter-select">
+                        <option value="">Todos los tipos</option>
                         <option value="CURSO">Curso</option>
                         <option value="FORMACION">Formación</option>
                         <option value="SEMINARIO">Seminario</option>
                         <option value="CHARLA">Charla</option>
                     </select>
+                    <select id="filtro-modalidad" class="filter-select">
+                        <option value="">Todas las modalidades</option>
+                        <option value="PRESENCIAL">Presencial</option>
+                        <option value="ONLINE">Online</option>
+                        <option value="HIBRIDA">Híbrida</option>
+                    </select>
+                    <select id="filtro-estado" class="filter-select">
+                        <option value="">Todos los estados</option>
+                        <option value="ACTIVA">Activa</option>
+                        <option value="INACTIVA">Inactiva</option>
+                        <option value="FINALIZADA">Finalizada</option>
+                    </select>
+                    <select id="filtro-certificado" class="filter-select">
+                        <option value="">Certificado</option>
+                        <option value="SI">Con certificado</option>
+                        <option value="NO">Sin certificado</option>
+                    </select>
+                    <input type="number" id="filtro-costo-min" placeholder="Costo mínimo" class="filter-input">
+                    <input type="number" id="filtro-costo-max" placeholder="Costo máximo" class="filter-input">
+                </div>
+                <div class="filters-actions">
+                    <button id="btn-apply-filters" class="btn-secondary">
+                        <i class="fas fa-search"></i> Aplicar Filtros
+                    </button>
+                    <button id="btn-clear-filters" class="btn-outline">
+                        <i class="fas fa-times"></i> Limpiar
+                    </button>
                 </div>
             </div>
+        </div>
 
-            <div class="users-table-container">
-                <table class="users-table">
+        <div class="table-section">
+            <div class="table-header">
+                <h3><i class="fas fa-list"></i> Lista de Ofertas Académicas</h3>
+                <div class="table-stats">
+                    <span class="stats-text">Total: <strong id="total-ofertas">1</strong> ofertas</span>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table id="ofertas-table" class="data-table">
                     <thead>
                         <tr>
                             <th>ID</th>
                             <th>Nombre</th>
                             <th>Tipo</th>
                             <th>Modalidad</th>
+                            <th>Cupos</th>
                             <th>Fecha Inicio</th>
-                            <th>Costo Inscripción</th>
+                            <th>Costo</th>
+                            <th>Certificado</th>
+                            <th>Estado</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <!-- Las filas se cargarán dinámicamente -->
+                        <!-- Ejemplo de datos -->
                         <tr>
-                            <td>1</td>
+                            <td>001</td>
                             <td>Curso de Java Avanzado</td>
-                            <td><span class="role-tag role-docente">CURSO</span></td>
-                            <td>ONLINE</td>
-                            <td>2025-10-01</td>
-                            <td>50.00</td>
+                            <td><span class="status-badge status-curso">CURSO</span></td>
+                            <td><span class="status-badge status-online">ONLINE</span></td>
+                            <td>25</td>
+                            <td>15/10/2025</td>
+                            <td>$1,500</td>
+                            <td><i class="fas fa-check-circle text-success"></i></td>
+                            <td><span class="status-badge status-activa">ACTIVA</span></td>
                             <td class="actions">
-                                <button class="btn-icon btn-edit"><i class="fas fa-pencil-alt"></i></button>
-                                <button class="btn-icon btn-delete"><i class="fas fa-trash-alt"></i></button>
+                                <button class="btn-icon btn-edit" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn-icon btn-view" title="Ver detalles">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn-icon btn-delete" title="Eliminar">
+                                    <i class="fas fa-trash"></i>
+                                </button>
                             </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
+            
+            <div class="table-pagination">
+                <div class="pagination-info">
+                    Mostrando 1-1 de 1 ofertas
+                </div>
+                <div class="pagination-controls">
+                    <button class="btn-pagination" disabled>
+                        <i class="fas fa-chevron-left"></i> Anterior
+                    </button>
+                    <span class="pagination-pages">
+                        <button class="btn-page active">1</button>
+                    </span>
+                    <button class="btn-pagination" disabled>
+                        Siguiente <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
+
     <script th:src="@{/js/gestionOfertas.js}"></script>
 </main>
 </body>
