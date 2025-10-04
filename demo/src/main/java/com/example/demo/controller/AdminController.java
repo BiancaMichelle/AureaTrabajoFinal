@@ -1,6 +1,7 @@
 package com.example.demo.controller;
 
 import java.time.LocalDate;
+import java.time.Period;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,10 +21,11 @@ import com.example.demo.enums.Modalidad;
 import com.example.demo.model.Categoria;
 import com.example.demo.model.OfertaAcademica;
 import com.example.demo.model.Pais;
+import com.example.demo.model.Usuario;
 import com.example.demo.repository.CategoriaRepository;
 import com.example.demo.repository.OfertaAcademicaRepository;
-import com.example.demo.repository.UsuarioRepository;
 import com.example.demo.service.LocacionAPIService;
+import com.example.demo.service.RegistroService;
 
 @Controller
 public class AdminController {
@@ -38,10 +40,12 @@ public class AdminController {
     private final LocacionAPIService locacionApiService;
     
     @Autowired
-    private UsuarioRepository usuarioRepository;
+    private RegistroService registroService;
 
-    public AdminController(LocacionAPIService locacionApiService) {
+    public AdminController(LocacionAPIService locacionApiService,
+                           RegistroService registroService) {
         this.locacionApiService = locacionApiService;
+        this.registroService = registroService;
     }
 
     @GetMapping("/admin/dashboard")
@@ -67,7 +71,7 @@ public class AdminController {
         return "admin/gestionOfertas";
     }
 
-    
+
     @GetMapping("/admin/gestion-usuarios")
     public String gestionUsuarios(Model model) {
 
@@ -230,46 +234,88 @@ public class AdminController {
 
     // =================== ENDPOINTS PARA USUARIOS ===================
 
-    @PostMapping("/admin/usuarios/registrar")
-    @ResponseBody
-    public ResponseEntity<Map<String, Object>> registrarUsuario(
-            @RequestParam String dni,
-            @RequestParam String nombreCompleto,
-            @RequestParam String fechaNacimiento,
-            @RequestParam String genero,
-            @RequestParam String pais,
-            @RequestParam String provincia,
-            @RequestParam String ciudad,
-            @RequestParam String domicilio,
-            @RequestParam String correo,
-            @RequestParam(required = false) String telefono,
-            @RequestParam String password,
-            @RequestParam(required = false) String[] roles,
-            @RequestParam(required = false) String matricula,
-            @RequestParam(required = false) Integer experiencia,
-            @RequestParam(required = false) String horariosDisponibilidad,
-            @RequestParam(required = false) String estado,
-            @RequestParam(required = false) String notificacionesEmail,
-            @RequestParam(required = false) String cambiarPasswordPrimerAcceso) {
-        
-        try {
-            // Crear usuario básico por ahora (esto se puede expandir según tu modelo de datos)
+     @PostMapping("/admin/usuarios/registrar")
+@ResponseBody
+public ResponseEntity<Map<String, Object>> registrarUsuario(
+        @RequestParam String dni,
+        @RequestParam String nombre,        // ✅ Cambiado de nombreCompleto
+        @RequestParam String apellido,      // ✅ Nuevo parámetro
+        @RequestParam String fechaNacimientoStr,
+        @RequestParam String genero,
+        @RequestParam String paisCodigo,
+        @RequestParam String provinciaCodigo,
+        @RequestParam String ciudadId,
+        @RequestParam String correo,
+        @RequestParam(required = false) String telefono,
+        @RequestParam String password,
+        @RequestParam String rol,
+        @RequestParam(required = false) String matricula,
+        @RequestParam(required = false) Integer experiencia,
+        @RequestParam(required = false) String horariosDisponibilidad,
+        @RequestParam(required = false) String estado,
+        @RequestParam(required = false, defaultValue = "true") Boolean notificacionesEmail,
+        @RequestParam(required = false, defaultValue = "false") Boolean cambiarPasswordPrimerAcceso,
+        @RequestParam(required = false) String colegioEgreso,
+        @RequestParam(required = false) Integer añoEgreso,
+        @RequestParam(required = false) String ultimosEstudios) {
+    
+    try {
+        System.out.println("📝 Registrando usuario desde admin:");
+        System.out.println("   - DNI: " + dni);
+        System.out.println("   - Nombre: " + nombre);
+        System.out.println("   - Apellido: " + apellido);
+        System.out.println("   - Rol: " + rol);
+
+        // Convertir fecha de DD/MM/AAAA a LocalDate
+        LocalDate fechaNacimiento = null;
+        if (fechaNacimientoStr != null && !fechaNacimientoStr.isEmpty()) {
+            String[] partes = fechaNacimientoStr.split("/");
+            if (partes.length == 3) {
+                int dia = Integer.parseInt(partes[0]);
+                int mes = Integer.parseInt(partes[1]);
+                int año = Integer.parseInt(partes[2]);
+                fechaNacimiento = LocalDate.of(año, mes, dia);
+                
+                // Validar edad mínima (16 años)
+                Period edad = Period.between(fechaNacimiento, LocalDate.now());
+                if (edad.getYears() < 16) {
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("success", false);
+                    response.put("message", "El usuario debe tener al menos 16 años");
+                    return ResponseEntity.badRequest().body(response);
+                }
+            } else {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "Formato de fecha inválido. Use DD/MM/AAAA");
+                return ResponseEntity.badRequest().body(response);
+            }
+        }
+
+            // Usar el servicio unificado
+            Usuario nuevoUsuario = registroService.registrarUsuarioAdministrativo(
+                dni, nombre, apellido, fechaNacimiento, genero,
+                correo, telefono, password, paisCodigo, provinciaCodigo, 
+                Long.parseLong(ciudadId), rol, matricula,
+                experiencia, colegioEgreso, añoEgreso, ultimosEstudios
+            );
+
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "Usuario registrado exitosamente");
-            response.put("dni", dni);
-            response.put("nombre", nombreCompleto);
+            response.put("id", nuevoUsuario.getId());
+            response.put("dni", nuevoUsuario.getDni());
+            response.put("nombre", nuevoUsuario.getNombre() + " " + nuevoUsuario.getApellido());
+            response.put("rol", rol);
             
-            // Aquí irían las validaciones y el guardado real en la base de datos
-            // Usuario nuevoUsuario = new Usuario();
-            // nuevoUsuario.setDni(dni);
-            // nuevoUsuario.setNombreCompleto(nombreCompleto);
-            // ... etc
-            // usuarioRepository.save(nuevoUsuario);
+            System.out.println("✅ Usuario registrado exitosamente desde admin: " + nuevoUsuario.getId());
             
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
+            System.out.println("❌ Error al registrar usuario desde admin: " + e.getMessage());
+            e.printStackTrace();
+            
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", "Error al registrar usuario: " + e.getMessage());

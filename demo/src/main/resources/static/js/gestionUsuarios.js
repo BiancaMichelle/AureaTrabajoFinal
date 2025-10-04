@@ -309,6 +309,7 @@ document.addEventListener('DOMContentLoaded', function () {
         resetRoles();
         resetLocation();
         resetFechaNacimiento();
+        removeAllSpecificRequired();
     }
 
     function resetFechaNacimiento() {
@@ -517,13 +518,86 @@ document.addEventListener('DOMContentLoaded', function () {
                     // Mostrar/ocultar campos específicos
                     showDocenteFields(selectedValue === 'DOCENTE');
                     showAlumnoFields(selectedValue === 'ALUMNO');
+                    
+                    // ✅ Manejar requeridos según el rol
+                    manageRequiredFields(selectedValue);
                 } else {
                     // Si se selecciona la opción vacía, limpiar
                     selectedRoles = [];
                     updateSelectedRoles();
                     hideAllSpecificFields();
+                    // ✅ Quitar todos los requeridos específicos
+                    removeAllSpecificRequired();
                 }
             });
+        }
+    
+        // ✅ NUEVA: Función para manejar campos requeridos según el rol
+        function manageRequiredFields(rol) {
+            // Primero quitar todos los requeridos específicos
+            removeAllSpecificRequired();
+            
+            // Luego agregar requeridos según el rol
+            switch(rol.toUpperCase()) {
+                case 'ALUMNO':
+                    addAlumnoRequired();
+                    break;
+                case 'DOCENTE':
+                    // Los campos de docente no son requeridos por ahora
+                    break;
+                case 'ADMIN':
+                case 'COORDINADOR':
+                    // No hay campos específicos requeridos
+                    break;
+            }
+        }
+    
+        // ✅ NUEVA: Quitar requeridos de todos los campos específicos
+        function removeAllSpecificRequired() {
+            // Campos de alumno
+            const colegioEgreso = document.getElementById('colegioEgreso');
+            const añoEgreso = document.getElementById('añoEgreso');
+            const ultimosEstudios = document.getElementById('ultimosEstudios');
+            
+            if (colegioEgreso) {
+                colegioEgreso.removeAttribute('required');
+                colegioEgreso.removeAttribute('aria-required');
+            }
+            if (añoEgreso) {
+                añoEgreso.removeAttribute('required');
+                añoEgreso.removeAttribute('aria-required');
+            }
+            if (ultimosEstudios) {
+                ultimosEstudios.removeAttribute('required');
+                ultimosEstudios.removeAttribute('aria-required');
+            }
+            
+            // Campos de docente (si los haces requeridos en el futuro)
+            const matricula = document.getElementById('matricula');
+            const experiencia = document.getElementById('experiencia');
+            
+            if (matricula) matricula.removeAttribute('required');
+            if (experiencia) experiencia.removeAttribute('required');
+        }
+    
+        // ✅ NUEVA: Agregar requeridos para alumno
+        function addAlumnoRequired() {
+            const colegioEgreso = document.getElementById('colegioEgreso');
+            const añoEgreso = document.getElementById('añoEgreso');
+            const ultimosEstudios = document.getElementById('ultimosEstudios');
+            
+            if (colegioEgreso) {
+                colegioEgreso.setAttribute('required', 'required');
+                colegioEgreso.setAttribute('aria-required', 'true');
+            }
+            if (añoEgreso) {
+                añoEgreso.setAttribute('required', 'required');
+                añoEgreso.setAttribute('aria-required', 'true');
+            }
+            if (ultimosEstudios) {
+                ultimosEstudios.setAttribute('required', 'required');
+                ultimosEstudios.setAttribute('aria-required', 'true');
+            }
         }
     
         function updateSelectedRoles() {
@@ -562,12 +636,13 @@ document.addEventListener('DOMContentLoaded', function () {
             return roleNames[role] || role;
         }
     
-        // ✅ NUEVA: Función para remover el rol seleccionado
+        // ✅ MODIFICADA: Función para remover el rol seleccionado
         window.removeSelectedRole = function() {
             selectedRoles = [];
             rolSelect.value = ''; // Resetear el select
             updateSelectedRoles();
             hideAllSpecificFields();
+            removeAllSpecificRequired(); // ✅ Quitar requeridos al remover rol
         };
     
         // ✅ NUEVA: Función para obtener el rol seleccionado
@@ -596,12 +671,13 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
     
-        // Función para resetear roles
+        // ✅ MODIFICADA: Función para resetear roles
         window.resetRoles = function() {
             selectedRoles = [];
             if (rolSelect) rolSelect.value = '';
             updateSelectedRoles();
             hideAllSpecificFields();
+            removeAllSpecificRequired(); // ✅ Quitar requeridos al resetear
         };
     }
 
@@ -813,16 +889,33 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Validación del formulario
     function validateForm() {
-        const requiredFields = document.querySelectorAll('#user-form [required]');
         let isValid = true;
     
-        // Validar campos requeridos básicos
-        requiredFields.forEach(field => {
+        // ✅ Validar campos básicos requeridos (siempre visibles)
+        const basicRequiredFields = document.querySelectorAll(`
+            #dni[required], 
+            #nombre[required], 
+            #apellido[required], 
+            #fechaNacimiento[required],
+            #genero[required],
+            #pais[required],
+            #provincia[required],
+            #ciudad[required],
+            #correo[required],
+            #rol-select[required]
+        `);
+        
+        basicRequiredFields.forEach(field => {
             if (!field.value.trim()) {
                 field.classList.add('error');
                 isValid = false;
+                
+                // Mostrar mensaje de error específico
+                const fieldName = field.previousElementSibling?.textContent?.replace('*', '').trim() || 'Este campo';
+                showFieldError(field, `${fieldName} es obligatorio`);
             } else {
                 field.classList.remove('error');
+                hideFieldError(field);
             }
         });
     
@@ -837,11 +930,54 @@ document.addEventListener('DOMContentLoaded', function () {
             isValid = false;
         }
     
-        // ✅ NUEVO: Validar fecha de nacimiento
+        // ✅ Validar fecha de nacimiento
         if (!validateFechaNacimiento()) {
             isValid = false;
         }
     
+        // ✅ Validar campos específicos según el rol seleccionado
+        if (selectedRoles.length > 0) {
+            const rol = selectedRoles[0];
+            if (rol === 'ALUMNO') {
+                if (!validateAlumnoFields()) {
+                    isValid = false;
+                }
+            }
+            // Puedes agregar validaciones para DOCENTE aquí si es necesario
+        }
+    
+        return isValid;
+    }
+    
+    // ✅ NUEVA: Función para validar campos de alumno
+    function validateAlumnoFields() {
+        let isValid = true;
+        
+        const colegioEgreso = document.getElementById('colegioEgreso');
+        const añoEgreso = document.getElementById('añoEgreso');
+        const ultimosEstudios = document.getElementById('ultimosEstudios');
+        
+        if (colegioEgreso && !colegioEgreso.value.trim()) {
+            showFieldError(colegioEgreso, 'El colegio de egreso es obligatorio');
+            isValid = false;
+        } else if (colegioEgreso) {
+            hideFieldError(colegioEgreso);
+        }
+        
+        if (añoEgreso && !añoEgreso.value) {
+            showFieldError(añoEgreso, 'El año de egreso es obligatorio');
+            isValid = false;
+        } else if (añoEgreso) {
+            hideFieldError(añoEgreso);
+        }
+        
+        if (ultimosEstudios && !ultimosEstudios.value) {
+            showFieldError(ultimosEstudios, 'Los últimos estudios son obligatorios');
+            isValid = false;
+        } else if (ultimosEstudios) {
+            hideFieldError(ultimosEstudios);
+        }
+        
         return isValid;
     }
 
