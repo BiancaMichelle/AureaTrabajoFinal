@@ -44,13 +44,14 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+        
         .cors(cors -> cors.configurationSource(corsConfigurationSource())) // ← AÑADE ESTO
         .userDetailsService(usuarioJpaService)
         .sessionManagement(session -> session
               .invalidSessionUrl("/?timeout")
         )
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/", "/publico", "/login", "/register","/register/**","/provincias/**","/ciudades/**", "/api/ubicaciones/**", 
+            .requestMatchers("/", "/publico", "/login", "/register","/register/**","/provincias/**","/ciudades/**", "/api/ubicaciones/**","/email/**",
                            "/css/**", "/js/**", "/style/**", "/img/**","/api/**")
             .permitAll()
             .requestMatchers("/admin/**").hasAuthority("ADMIN")

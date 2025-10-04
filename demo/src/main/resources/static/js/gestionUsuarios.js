@@ -27,6 +27,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const btnApplyFilters = document.getElementById('btn-apply-filters');
     const btnClearFilters = document.getElementById('btn-clear-filters');
 
+    const paisSelect = document.getElementById('pais');
+    const provinciaSelect = document.getElementById('provincia');
+    const ciudadSelect = document.getElementById('ciudad');
+
     // Variables para roles seleccionados
     let selectedRoles = [];
 
@@ -38,8 +42,228 @@ document.addEventListener('DOMContentLoaded', function () {
     initializeFilters();
     initializeTable();
 
+    function initializeLocationSystem() {
+        console.log("📍 Inicializando sistema de ubicación...");
+        
+        if (!paisSelect) {
+            console.error("❌ No se encontró el select de país");
+            return;
+        }
+    
+        // Configurar listener para país
+        paisSelect.addEventListener('change', function(e) {
+            const select = e.target;
+            const selectedOption = select.options[select.selectedIndex];
+            const hiddenCodigo = document.getElementById('paisCodigo');
+            
+            console.log("País seleccionado:", select.value);
+            
+            if (selectedOption.value && selectedOption.getAttribute('data-codigo')) {
+                const countryCode = selectedOption.getAttribute('data-codigo');
+                hiddenCodigo.value = countryCode;
+                console.log("✅ País seleccionado - Código:", countryCode);
+                
+                cargarProvinciasAdmin(countryCode);
+            } else {
+                hiddenCodigo.value = '';
+                provinciaSelect.disabled = true;
+                provinciaSelect.innerHTML = '<option value="">Primero selecciona un país</option>';
+                ciudadSelect.disabled = true;
+                ciudadSelect.innerHTML = '<option value="">Primero selecciona una provincia</option>';
+            }
+        });
+    
+        // Configurar listener para provincia
+        provinciaSelect.addEventListener('change', function(e) {
+            const select = e.target;
+            const selectedOption = select.options[select.selectedIndex];
+            const hiddenCodigo = document.getElementById('provinciaCodigo');
+            
+            console.log("Provincia seleccionada:", select.value);
+            
+            if (selectedOption.value && selectedOption.getAttribute('data-code')) {
+                const provinceCode = selectedOption.getAttribute('data-code');
+                hiddenCodigo.value = provinceCode;
+                console.log("✅ Provincia seleccionada - Código:", provinceCode);
+                
+                const countryCode = document.getElementById('paisCodigo').value;
+                cargarCiudadesAdmin(countryCode, provinceCode);
+            } else {
+                hiddenCodigo.value = '';
+                ciudadSelect.disabled = true;
+                ciudadSelect.innerHTML = '<option value="">Primero selecciona una provincia</option>';
+            }
+        });
+    
+        // Configurar listener para ciudad
+        ciudadSelect.addEventListener('change', function(e) {
+            const select = e.target;
+            const selectedOption = select.options[select.selectedIndex];
+            const hiddenId = document.getElementById('ciudadId');
+            
+            console.log("Ciudad seleccionada:", select.value);
+            
+            if (selectedOption.value && selectedOption.getAttribute('data-id')) {
+                const cityId = selectedOption.getAttribute('data-id');
+                hiddenId.value = cityId;
+                console.log("✅ Ciudad seleccionada - ID:", cityId);
+            } else {
+                hiddenId.value = '';
+            }
+        });
+    
+        console.log("✅ Sistema de ubicación configurado");
+    }
+    
+    // Funciones para cargar provincias y ciudades (versión admin)
+    function cargarProvinciasAdmin(paisCode) {
+        console.log("🌍 Cargando provincias para país:", paisCode);
+        
+        provinciaSelect.innerHTML = '<option value="">Cargando provincias...</option>';
+        provinciaSelect.disabled = true;
+        
+        fetch(`/api/ubicaciones/provincias/${paisCode}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(provincias => {
+                console.log("📋 Provincias recibidas:", provincias);
+                
+                provinciaSelect.innerHTML = '<option value="">Selecciona una provincia</option>';
+                
+                if (provincias && provincias.length > 0) {
+                    provincias.forEach(provincia => {
+                        const option = document.createElement('option');
+                        
+                        const nombre = provincia.name || 'Sin nombre';
+                        const codigo = provincia.iso2 || '';
+                        const id = provincia.id || '';
+                        
+                        option.value = nombre;
+                        option.textContent = nombre;
+                        option.setAttribute('data-id', id);
+                        option.setAttribute('data-code', codigo);
+                        
+                        provinciaSelect.appendChild(option);
+                    });
+                    provinciaSelect.disabled = false;
+                    console.log(`✅ ${provincias.length} provincias cargadas correctamente`);
+                } else {
+                    provinciaSelect.innerHTML = '<option value="">No hay provincias disponibles</option>';
+                }
+                
+                document.getElementById('provinciaCodigo').value = '';
+                ciudadSelect.innerHTML = '<option value="">Primero selecciona una provincia</option>';
+                ciudadSelect.disabled = true;
+                document.getElementById('ciudadId').value = '';
+            })
+            .catch(error => {
+                console.error('❌ Error cargando provincias:', error);
+                provinciaSelect.innerHTML = '<option value="">Error al cargar provincias</option>';
+            });
+    }
+    
+    function cargarCiudadesAdmin(paisCode, provinciaCode) {
+        console.log("🏙️ Cargando ciudades para país:", paisCode, "provincia:", provinciaCode);
+        
+        ciudadSelect.innerHTML = '<option value="">Cargando ciudades...</option>';
+        ciudadSelect.disabled = true;
+        
+        fetch(`/api/ubicaciones/ciudades/${paisCode}/${provinciaCode}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(ciudades => {
+                console.log("📋 Ciudades recibidas:", ciudades);
+                
+                ciudadSelect.innerHTML = '<option value="">Selecciona una ciudad</option>';
+                
+                if (ciudades && ciudades.length > 0) {
+                    ciudades.forEach(ciudad => {
+                        const option = document.createElement('option');
+                        
+                        const nombre = ciudad.name || ciudad.nombre || 'Sin nombre';
+                        const id = ciudad.id || '';
+                        
+                        option.value = nombre;
+                        option.textContent = nombre;
+                        option.setAttribute('data-id', id);
+                        ciudadSelect.appendChild(option);
+                    });
+                    ciudadSelect.disabled = false;
+                } else {
+                    ciudadSelect.innerHTML = '<option value="">No hay ciudades disponibles</option>';
+                }
+                
+                document.getElementById('ciudadId').value = '';
+            })
+            .catch(error => {
+                console.error('❌ Error cargando ciudades:', error);
+                ciudadSelect.innerHTML = '<option value="">Error al cargar ciudades</option>';
+            });
+    }
+    
+    // Función para validar la ubicación en el formulario
+    function validateLocation() {
+        let isValid = true;
+        const paisCodigo = document.getElementById('paisCodigo').value;
+        const provinciaCodigo = document.getElementById('provinciaCodigo').value;
+        const ciudadId = document.getElementById('ciudadId').value;
+        
+        if (!paisCodigo) {
+            showFieldError(paisSelect, 'Por favor, selecciona un país');
+            isValid = false;
+        } else {
+            hideFieldError(paisSelect);
+        }
+        
+        if (!provinciaCodigo) {
+            showFieldError(provinciaSelect, 'Por favor, selecciona una provincia');
+            isValid = false;
+        } else {
+            hideFieldError(provinciaSelect);
+        }
+        
+        if (!ciudadId) {
+            showFieldError(ciudadSelect, 'Por favor, selecciona una ciudad');
+            isValid = false;
+        } else {
+            hideFieldError(ciudadSelect);
+        }
+        
+        return isValid;
+    }
+    
+    // Función para mostrar/ocultar errores en campos
+    function showFieldError(input, message) {
+        hideFieldError(input);
+        input.classList.add('error');
+        
+        const errorElement = document.createElement('span');
+        errorElement.className = 'error-message';
+        errorElement.textContent = message;
+        errorElement.id = `${input.id}-error`;
+        input.parentNode.appendChild(errorElement);
+    }
+    
+    function hideFieldError(input) {
+        input.classList.remove('error');
+        const existingError = document.getElementById(`${input.id}-error`);
+        if (existingError) {
+            existingError.remove();
+        }
+    }
+
+
     // Mostrar/ocultar formulario
     function initializeFormHandlers() {
+        
         if (btnShowForm) {
             btnShowForm.addEventListener('click', function() {
                 showForm();
@@ -63,6 +287,8 @@ document.addEventListener('DOMContentLoaded', function () {
         formContainer.style.display = 'block';
         setTimeout(() => {
             formContainer.classList.add('show');
+            initializeLocationSystem();
+            initializeDateMask();
         }, 10);
     }
 
@@ -79,7 +305,159 @@ document.addEventListener('DOMContentLoaded', function () {
         resetFotoUpload();
         clearHorariosDocenteTable();
         hideDocenteFields();
+        hideAlumnoFields(); // ← Agregar esta línea
         resetRoles();
+        resetLocation();
+        resetFechaNacimiento();
+        removeAllSpecificRequired();
+    }
+
+    function resetFechaNacimiento() {
+        const fechaBackendField = document.getElementById('fechaNacimientoBackend');
+        if (fechaBackendField) {
+            fechaBackendField.value = '';
+        }
+    }
+    
+    function resetLocation() {
+        if (provinciaSelect) {
+            provinciaSelect.disabled = true;
+            provinciaSelect.innerHTML = '<option value="">Primero selecciona un país</option>';
+        }
+        if (ciudadSelect) {
+            ciudadSelect.disabled = true;
+            ciudadSelect.innerHTML = '<option value="">Primero selecciona una provincia</option>';
+        }
+        // Limpiar hidden fields
+        document.getElementById('paisCodigo').value = '';
+        document.getElementById('provinciaCodigo').value = '';
+        document.getElementById('ciudadId').value = '';
+    }
+
+    function initializeDateMask() {
+        const fechaInput = document.getElementById('fechaNacimiento');
+        
+        if (fechaInput) {
+            // Aplicar máscara para formato DD/MM/AAAA
+            fechaInput.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                
+                // Aplicar formato DD/MM/AAAA
+                if (value.length > 2 && value.length <= 4) {
+                    value = value.substring(0, 2) + '/' + value.substring(2);
+                } else if (value.length > 4) {
+                    value = value.substring(0, 2) + '/' + value.substring(2, 4) + '/' + value.substring(4, 8);
+                }
+                
+                e.target.value = value;
+            });
+    
+            // Validar fecha al perder foco
+            fechaInput.addEventListener('blur', function(e) {
+                const value = e.target.value;
+                if (value && !isValidDate(value)) {
+                    showFieldError(fechaInput, 'Fecha inválida. Usa el formato DD/MM/AAAA');
+                } else {
+                    hideFieldError(fechaInput);
+                    // Actualizar campo hidden para backend
+                    updateBackendDateField(value);
+                }
+            });
+    
+            // También validar al cambiar
+            fechaInput.addEventListener('change', function(e) {
+                const value = e.target.value;
+                if (value && isValidDate(value)) {
+                    updateBackendDateField(value);
+                }
+            });
+        }
+    }
+    function isValidDate(dateString) {
+        if (!dateString) return false;
+        
+        const pattern = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+        const match = dateString.match(pattern);
+        
+        if (!match) return false;
+        
+        const dia = parseInt(match[1], 10);
+        const mes = parseInt(match[2], 10);
+        const año = parseInt(match[3], 10);
+        
+        // Validar rangos básicos
+        if (mes < 1 || mes > 12) return false;
+        if (dia < 1 || dia > 31) return false;
+        
+        // Validar febrero y meses con 30 días
+        const fecha = new Date(año, mes - 1, dia);
+        return fecha.getDate() === dia && 
+               fecha.getMonth() === mes - 1 && 
+               fecha.getFullYear() === año;
+    }
+    
+    // ✅ Función para convertir DD/MM/AAAA a yyyy-MM-dd (formato backend)
+    function convertirFechaParaBackend(fechaDDMMAAAA) {
+        if (!fechaDDMMAAAA) return null;
+        
+        const partes = fechaDDMMAAAA.split('/');
+        if (partes.length === 3) {
+            const dia = partes[0].padStart(2, '0');
+            const mes = partes[1].padStart(2, '0');
+            const año = partes[2];
+            return `${año}-${mes}-${dia}`;
+        }
+        return null;
+    }
+    
+    // ✅ Función para actualizar el campo hidden del backend
+    function updateBackendDateField(fechaDDMMAAAA) {
+        const backendField = document.getElementById('fechaNacimientoBackend');
+        if (backendField && fechaDDMMAAAA) {
+            const fechaBackend = convertirFechaParaBackend(fechaDDMMAAAA);
+            backendField.value = fechaBackend;
+            console.log("📅 Fecha para backend:", fechaBackend);
+        }
+    }
+    
+    // ✅ Función para validar la fecha en el formulario
+    function validateFechaNacimiento() {
+        const fechaInput = document.getElementById('fechaNacimiento');
+        let isValid = true;
+    
+        if (!fechaInput.value.trim()) {
+            showFieldError(fechaInput, 'La fecha de nacimiento es obligatoria');
+            isValid = false;
+        } else if (!isValidDate(fechaInput.value)) {
+            showFieldError(fechaInput, 'Fecha inválida. Usa el formato DD/MM/AAAA');
+            isValid = false;
+        } else {
+            // ✅ Validar edad mínima (16 años)
+            const partes = fechaInput.value.split('/');
+            const dia = parseInt(partes[0], 10);
+            const mes = parseInt(partes[1], 10);
+            const año = parseInt(partes[2], 10);
+            const fechaNac = new Date(año, mes - 1, dia);
+            const hoy = new Date();
+            let edad = hoy.getFullYear() - fechaNac.getFullYear();
+            const mesActual = hoy.getMonth();
+            const diaActual = hoy.getDate();
+            
+            if (mesActual < (mes - 1) || (mesActual === (mes - 1) && diaActual < dia)) {
+                edad--;
+            }
+            
+            if (edad < 16) {
+                showFieldError(fechaInput, 'El usuario debe tener al menos 16 años');
+                isValid = false;
+            } else {
+                hideFieldError(fechaInput);
+                // Asegurar que el campo hidden esté actualizado
+                updateBackendDateField(fechaInput.value);
+            }
+        }
+    
+        return isValid;
     }
 
     // Manejo del upload de foto
@@ -119,7 +497,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function initializeRoles() {
         const selectedRolesContainer = document.getElementById('selected-roles');
         const selectedChipsContainer = document.getElementById('selected-roles-chips');
-
+    
         // Mapeo de iconos para cada rol
         const roleIcons = {
             ALUMNO: 'fas fa-user-graduate',
@@ -127,32 +505,108 @@ document.addEventListener('DOMContentLoaded', function () {
             ADMIN: 'fas fa-user-shield',
             COORDINADOR: 'fas fa-user-tie'
         };
-
+    
         if (rolSelect) {
             rolSelect.addEventListener('change', function() {
                 const selectedValue = this.value;
-                const selectedText = this.options[this.selectedIndex].text;
-
-                if (selectedValue && !selectedRoles.includes(selectedValue)) {
-                    selectedRoles.push(selectedValue);
+                
+                if (selectedValue) {
+                    // ✅ SOLO UN ROL: Reemplazar cualquier rol existente
+                    selectedRoles = [selectedValue];
                     updateSelectedRoles();
                     
-                    // Mostrar campos específicos si se selecciona DOCENTE
-                    if (selectedValue === 'DOCENTE') {
-                        showDocenteFields();
-                    }
+                    // Mostrar/ocultar campos específicos
+                    showDocenteFields(selectedValue === 'DOCENTE');
+                    showAlumnoFields(selectedValue === 'ALUMNO');
+                    
+                    // ✅ Manejar requeridos según el rol
+                    manageRequiredFields(selectedValue);
+                } else {
+                    // Si se selecciona la opción vacía, limpiar
+                    selectedRoles = [];
+                    updateSelectedRoles();
+                    hideAllSpecificFields();
+                    // ✅ Quitar todos los requeridos específicos
+                    removeAllSpecificRequired();
                 }
-
-                // Resetear select
-                this.value = '';
             });
         }
-
+    
+        // ✅ NUEVA: Función para manejar campos requeridos según el rol
+        function manageRequiredFields(rol) {
+            // Primero quitar todos los requeridos específicos
+            removeAllSpecificRequired();
+            
+            // Luego agregar requeridos según el rol
+            switch(rol.toUpperCase()) {
+                case 'ALUMNO':
+                    addAlumnoRequired();
+                    break;
+                case 'DOCENTE':
+                    // Los campos de docente no son requeridos por ahora
+                    break;
+                case 'ADMIN':
+                case 'COORDINADOR':
+                    // No hay campos específicos requeridos
+                    break;
+            }
+        }
+    
+        // ✅ NUEVA: Quitar requeridos de todos los campos específicos
+        function removeAllSpecificRequired() {
+            // Campos de alumno
+            const colegioEgreso = document.getElementById('colegioEgreso');
+            const añoEgreso = document.getElementById('añoEgreso');
+            const ultimosEstudios = document.getElementById('ultimosEstudios');
+            
+            if (colegioEgreso) {
+                colegioEgreso.removeAttribute('required');
+                colegioEgreso.removeAttribute('aria-required');
+            }
+            if (añoEgreso) {
+                añoEgreso.removeAttribute('required');
+                añoEgreso.removeAttribute('aria-required');
+            }
+            if (ultimosEstudios) {
+                ultimosEstudios.removeAttribute('required');
+                ultimosEstudios.removeAttribute('aria-required');
+            }
+            
+            // Campos de docente (si los haces requeridos en el futuro)
+            const matricula = document.getElementById('matricula');
+            const experiencia = document.getElementById('experiencia');
+            
+            if (matricula) matricula.removeAttribute('required');
+            if (experiencia) experiencia.removeAttribute('required');
+        }
+    
+        // ✅ NUEVA: Agregar requeridos para alumno
+        function addAlumnoRequired() {
+            const colegioEgreso = document.getElementById('colegioEgreso');
+            const añoEgreso = document.getElementById('añoEgreso');
+            const ultimosEstudios = document.getElementById('ultimosEstudios');
+            
+            if (colegioEgreso) {
+                colegioEgreso.setAttribute('required', 'required');
+                colegioEgreso.setAttribute('aria-required', 'true');
+            }
+            if (añoEgreso) {
+                añoEgreso.setAttribute('required', 'required');
+                añoEgreso.setAttribute('aria-required', 'true');
+            }
+            if (ultimosEstudios) {
+                ultimosEstudios.setAttribute('required', 'required');
+                ultimosEstudios.setAttribute('aria-required', 'true');
+            }
+        }
+    
         function updateSelectedRoles() {
             if (selectedChipsContainer) {
                 selectedChipsContainer.innerHTML = '';
                 
-                selectedRoles.forEach(role => {
+                // ✅ SOLO MOSTRAR UN ROL
+                if (selectedRoles.length > 0) {
+                    const role = selectedRoles[0];
                     const chip = document.createElement('div');
                     chip.className = 'category-chip';
                     chip.setAttribute('data-role', role.toLowerCase());
@@ -161,21 +615,17 @@ document.addEventListener('DOMContentLoaded', function () {
                     chip.innerHTML = `
                         <i class="${icon}"></i>
                         <span>${getRoleDisplayName(role)}</span>
-                        <i class="fas fa-times chip-remove" onclick="removeRole('${role}')"></i>
+                        <i class="fas fa-times chip-remove" onclick="removeSelectedRole()"></i>
                     `;
                     selectedChipsContainer.appendChild(chip);
-                });
-
-                // Mostrar/ocultar contenedor
-                if (selectedRoles.length > 0) {
+                    
                     selectedRolesContainer.classList.add('show');
                 } else {
                     selectedRolesContainer.classList.remove('show');
-                    hideDocenteFields();
                 }
             }
         }
-
+    
         function getRoleDisplayName(role) {
             const roleNames = {
                 ALUMNO: 'Alumno',
@@ -185,39 +635,53 @@ document.addEventListener('DOMContentLoaded', function () {
             };
             return roleNames[role] || role;
         }
-
-        // Función global para remover roles
-        window.removeRole = function(value) {
-            selectedRoles = selectedRoles.filter(role => role !== value);
+    
+        // ✅ MODIFICADA: Función para remover el rol seleccionado
+        window.removeSelectedRole = function() {
+            selectedRoles = [];
+            rolSelect.value = ''; // Resetear el select
             updateSelectedRoles();
+            hideAllSpecificFields();
+            removeAllSpecificRequired(); // ✅ Quitar requeridos al remover rol
         };
-
-        // Función para obtener los roles seleccionados (para el formulario)
-        window.getSelectedRoles = function() {
-            return selectedRoles;
+    
+        // ✅ NUEVA: Función para obtener el rol seleccionado
+        window.getSelectedRole = function() {
+            return selectedRoles.length > 0 ? selectedRoles[0] : null;
         };
-
-        // Función para resetear roles
+    
+        // ✅ NUEVA: Función para ocultar todos los campos específicos
+        function hideAllSpecificFields() {
+            hideDocenteFields();
+            hideAlumnoFields();
+        }
+    
+        // ✅ MODIFICADA: Función para mostrar campos de docente
+        function showDocenteFields(show) {
+            if (fieldsDocente) {
+                fieldsDocente.style.display = show ? 'block' : 'none';
+            }
+        }
+    
+        // ✅ MODIFICADA: Función para mostrar campos de alumno  
+        function showAlumnoFields(show) {
+            const fieldsAlumno = document.getElementById('fields-alumno');
+            if (fieldsAlumno) {
+                fieldsAlumno.style.display = show ? 'block' : 'none';
+            }
+        }
+    
+        // ✅ MODIFICADA: Función para resetear roles
         window.resetRoles = function() {
             selectedRoles = [];
-            selectedRolesContainer.classList.remove('show');
-            selectedChipsContainer.innerHTML = '';
-            hideDocenteFields();
+            if (rolSelect) rolSelect.value = '';
+            updateSelectedRoles();
+            hideAllSpecificFields();
+            removeAllSpecificRequired(); // ✅ Quitar requeridos al resetear
         };
     }
 
-    // Mostrar/ocultar campos específicos de docente
-    function showDocenteFields() {
-        if (fieldsDocente) {
-            fieldsDocente.style.display = 'block';
-        }
-    }
 
-    function hideDocenteFields() {
-        if (fieldsDocente && !selectedRoles.includes('DOCENTE')) {
-            fieldsDocente.style.display = 'none';
-        }
-    }
 
     // Manejo de horarios para docente
     function initializeHorariosDocente() {
@@ -240,6 +704,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    
     function addHorarioDocente() {
         const dia = diaSelect.value;
         const horaDesde = horaDesdeInput.value;
@@ -424,24 +889,95 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Validación del formulario
     function validateForm() {
-        const requiredFields = document.querySelectorAll('#user-form [required]');
         let isValid = true;
-
-        requiredFields.forEach(field => {
+    
+        // ✅ Validar campos básicos requeridos (siempre visibles)
+        const basicRequiredFields = document.querySelectorAll(`
+            #dni[required], 
+            #nombre[required], 
+            #apellido[required], 
+            #fechaNacimiento[required],
+            #genero[required],
+            #pais[required],
+            #provincia[required],
+            #ciudad[required],
+            #correo[required],
+            #rol-select[required]
+        `);
+        
+        basicRequiredFields.forEach(field => {
             if (!field.value.trim()) {
                 field.classList.add('error');
                 isValid = false;
+                
+                // Mostrar mensaje de error específico
+                const fieldName = field.previousElementSibling?.textContent?.replace('*', '').trim() || 'Este campo';
+                showFieldError(field, `${fieldName} es obligatorio`);
             } else {
                 field.classList.remove('error');
+                hideFieldError(field);
             }
         });
-
-        // Validar que al menos un rol esté seleccionado
+    
+        // Validar que un rol esté seleccionado
         if (selectedRoles.length === 0) {
-            showNotification('Debe seleccionar al menos un rol para el usuario', 'error');
+            showNotification('Debe seleccionar un rol para el usuario', 'error');
             isValid = false;
         }
-
+    
+        // ✅ Validar ubicación
+        if (!validateLocation()) {
+            isValid = false;
+        }
+    
+        // ✅ Validar fecha de nacimiento
+        if (!validateFechaNacimiento()) {
+            isValid = false;
+        }
+    
+        // ✅ Validar campos específicos según el rol seleccionado
+        if (selectedRoles.length > 0) {
+            const rol = selectedRoles[0];
+            if (rol === 'ALUMNO') {
+                if (!validateAlumnoFields()) {
+                    isValid = false;
+                }
+            }
+            // Puedes agregar validaciones para DOCENTE aquí si es necesario
+        }
+    
+        return isValid;
+    }
+    
+    // ✅ NUEVA: Función para validar campos de alumno
+    function validateAlumnoFields() {
+        let isValid = true;
+        
+        const colegioEgreso = document.getElementById('colegioEgreso');
+        const añoEgreso = document.getElementById('añoEgreso');
+        const ultimosEstudios = document.getElementById('ultimosEstudios');
+        
+        if (colegioEgreso && !colegioEgreso.value.trim()) {
+            showFieldError(colegioEgreso, 'El colegio de egreso es obligatorio');
+            isValid = false;
+        } else if (colegioEgreso) {
+            hideFieldError(colegioEgreso);
+        }
+        
+        if (añoEgreso && !añoEgreso.value) {
+            showFieldError(añoEgreso, 'El año de egreso es obligatorio');
+            isValid = false;
+        } else if (añoEgreso) {
+            hideFieldError(añoEgreso);
+        }
+        
+        if (ultimosEstudios && !ultimosEstudios.value) {
+            showFieldError(ultimosEstudios, 'Los últimos estudios son obligatorios');
+            isValid = false;
+        } else if (ultimosEstudios) {
+            hideFieldError(ultimosEstudios);
+        }
+        
         return isValid;
     }
 
@@ -464,9 +1000,9 @@ document.addEventListener('DOMContentLoaded', function () {
         const formData = new FormData(form);
         
         // Agregar roles seleccionados
-        selectedRoles.forEach(role => {
-            formData.append('roles', role);
-        });
+        if (selectedRoles.length > 0) {
+            formData.append('rol', selectedRoles[0]); // Cambia de 'roles' a 'rol'
+        }
         
         // Agregar horarios de docente como string estructurada
         if (selectedRoles.includes('DOCENTE')) {
@@ -481,6 +1017,19 @@ document.addEventListener('DOMContentLoaded', function () {
             formData.append('horariosDisponibilidad', horariosArray.join(','));
         }
         
+        if (selectedRoles.includes('DOCENTE')) {
+            const horariosTable = document.getElementById('horarios-docente-table').getElementsByTagName('tbody')[0];
+            const horariosArray = [];
+            for (let i = 0; i < horariosTable.rows.length; i++) {
+                const row = horariosTable.rows[i];
+                const dia = row.cells[0].textContent;
+                const horario = row.cells[1].textContent;
+                horariosArray.push(`${dia}:${horario}`);
+            }
+            formData.append('horariosDisponibilidad', horariosArray.join(','));
+        }
+
+
         // Enviar al servidor
         fetch('/admin/usuarios/registrar', {
             method: 'POST',
