@@ -41,13 +41,26 @@
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label for="nombreCompleto">Nombre Completo *</label>
-                                    <input type="text" id="nombreCompleto" name="nombreCompleto" required class="form-control" 
-                                           placeholder="Ej: Juan Carlos Pérez">
+                                    <label for="nombre">Nombre/s *</label>
+                                    <input type="text" id="nombre" name="nombre" required class="form-control" 
+                                           placeholder="Ej: Juan Carlos">
+                                </div>
+                                <div class="form-group">
+                                    <label for="apellido">Apellido/s *</label>
+                                    <input type="text" id="apellido" name="apellido" required class="form-control" 
+                                           placeholder="Ej: Pérez Gómez">
                                 </div>
                                 <div class="form-group">
                                     <label for="fechaNacimiento">Fecha de Nacimiento *</label>
-                                    <input type="date" id="fechaNacimiento" name="fechaNacimiento" required class="form-control">
+                                    <input type="text" 
+                                           id="fechaNacimiento" 
+                                           name="fechaNacimientoStr" 
+                                           placeholder="DD/MM/AAAA"
+                                           maxlength="10"
+                                           required 
+                                           class="form-control">
+                                    <!-- Campo hidden para enviar la fecha en formato correcto al backend -->
+                                    <input type="hidden" id="fechaNacimientoBackend" name="fechaNacimiento">
                                 </div>
                                 <div class="form-group">
                                     <label for="genero">Género *</label>
@@ -56,7 +69,6 @@
                                         <option value="MASCULINO">Masculino</option>
                                         <option value="FEMENINO">Femenino</option>
                                         <option value="OTRO">Otro</option>
-                                        <option value="PREFIERO_NO_DECIR">Prefiero no decir</option>
                                     </select>
                                 </div>
                             </div>
@@ -66,35 +78,40 @@
                         <div class="form-section">
                             <h4><i class="fas fa-map-marker-alt"></i> Ubicación</h4>
                             <div class="form-grid">
+                                <!-- País -->
                                 <div class="form-group">
                                     <label for="pais">País *</label>
-                                    <select id="pais" name="pais" required class="form-control">
-                                        <option value="">Seleccione país</option>
-                                        <option value="ARGENTINA">Argentina</option>
-                                        <option value="BRASIL">Brasil</option>
-                                        <option value="CHILE">Chile</option>
-                                        <option value="URUGUAY">Uruguay</option>
-                                        <option value="PARAGUAY">Paraguay</option>
-                                        <option value="OTRO">Otro</option>
+                                    <select id="pais" name="pais" class="form-control" required>
+                                        <option value="">Selecciona un país</option>
+                                        <option th:each="pais : ${paises}" 
+                                                th:value="${pais.nombre}"
+                                                th:attr="data-codigo=${pais.codigo}"
+                                                th:text="${pais.nombre}">
+                                        </option>
                                     </select>
+                                    <input type="hidden" id="paisCodigo" name="paisCodigo">
                                 </div>
+                                
+                                <!-- Provincia -->
                                 <div class="form-group">
-                                    <label for="provincia">Provincia/Estado *</label>
-                                    <input type="text" id="provincia" name="provincia" required class="form-control" 
-                                           placeholder="Ej: Buenos Aires">
+                                    <label for="provincia">Provincia *</label>
+                                    <select id="provincia" name="provincia" class="form-control" required disabled>
+                                        <option value="">Primero selecciona un país</option>
+                                    </select>
+                                    <input type="hidden" id="provinciaCodigo" name="provinciaCodigo">
                                 </div>
+                                
+                                <!-- Ciudad -->
                                 <div class="form-group">
                                     <label for="ciudad">Ciudad *</label>
-                                    <input type="text" id="ciudad" name="ciudad" required class="form-control" 
-                                           placeholder="Ej: La Plata">
-                                </div>
-                                <div class="form-group">
-                                    <label for="domicilio">Domicilio *</label>
-                                    <input type="text" id="domicilio" name="domicilio" required class="form-control" 
-                                           placeholder="Ej: Av. 7 N° 1234">
+                                    <select id="ciudad" name="ciudad" class="form-control" required disabled>
+                                        <option value="">Primero selecciona una provincia</option>
+                                    </select>
+                                    <input type="hidden" id="ciudadId" name="ciudadId">
                                 </div>
                             </div>
                         </div>
+                        
 
                         <!-- Contacto -->
                         <div class="form-section">
@@ -110,14 +127,6 @@
                                     <input type="tel" id="telefono" name="telefono" class="form-control" 
                                            placeholder="Ej: +54 9 11 1234-5678">
                                 </div>
-                                <div class="form-group">
-                                    <label for="password">Contraseña Temporal *</label>
-                                    <input type="password" id="password" name="password" required class="form-control" 
-                                           placeholder="Mínimo 8 caracteres" minlength="8">
-                                    <div class="form-text">
-                                        <i class="fas fa-info-circle"></i> El usuario podrá cambiarla en su primer acceso
-                                    </div>
-                                </div>
                             </div>
                         </div>
 
@@ -128,22 +137,61 @@
                                 <label for="rol-select">Roles del Usuario *</label>
                                 <div class="field-description">
                                     <i class="fas fa-info-circle"></i> 
-                                    Seleccione uno o más roles para el usuario
+                                    Seleccione un rol para el usuario
                                 </div>
-                                <select id="rol-select" class="categoria-select form-control">
+                                <select id="rol-select" class="categoria-select form-control" required>
                                     <option value="">Seleccione un rol...</option>
                                     <option value="ALUMNO" data-icon="fas fa-user-graduate">Alumno</option>
                                     <option value="DOCENTE" data-icon="fas fa-chalkboard-teacher">Docente</option>
                                     <option value="ADMIN" data-icon="fas fa-user-shield">Administrador</option>
-                                    <option value="COORDINADOR" data-icon="fas fa-user-tie">Coordinador</option>
                                 </select>
                                 
                                 <div id="selected-roles" class="selected-categories">
                                     <div class="selected-label">
-                                        <i class="fas fa-user-tag"></i> Roles Seleccionados:
+                                        <i class="fas fa-user-tag"></i> Rol Seleccionado:
                                     </div>
                                     <div id="selected-roles-chips" class="selected-chips">
-                                        <!-- Los roles seleccionados aparecerán aquí como chips -->
+                                        <!-- El rol seleccionado aparecerá aquí como chip -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Campos específicos para Alumno -->
+                        <div id="fields-alumno" class="form-section tipo-specific" style="display: none;">
+                            <h4><i class="fas fa-user-graduate"></i> Información Académica (Alumno)</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="colegioEgreso">Colegio de Egreso *</label>
+                                    <input type="text" id="colegioEgreso" name="colegioEgreso" class="form-control" 
+                                        placeholder="Ej: Colegio Nacional de Buenos Aires" required
+                                        pattern="^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-\.\(\)]+$">
+                                    <div class="form-text">
+                                        <i class="fas fa-info-circle"></i> Nombre de la institución donde completó sus estudios secundarios
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="añoEgreso">Año de Egreso *</label>
+                                    <input type="number" id="añoEgreso" name="añoEgreso" class="form-control" 
+                                        min="1980" max="2025" placeholder="Ej: 2023" required>
+                                    <div class="form-text">
+                                        <i class="fas fa-info-circle"></i> Año en que finalizó sus estudios secundarios
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="ultimosEstudios">Últimos Estudios Realizados *</label>
+                                    <select id="ultimosEstudios" name="ultimosEstudios" class="form-control" required>
+                                        <option value="">Seleccione una opción...</option>
+                                        <option value="Secundario Completo">Secundario Completo</option>
+                                        <option value="Terciario Incompleto">Terciario Incompleto</option>
+                                        <option value="Terciario Completo">Terciario Completo</option>
+                                        <option value="Universitario Incompleto">Universitario Incompleto</option>
+                                        <option value="Universitario Completo">Universitario Completo</option>
+                                        <option value="Posgrado">Posgrado</option>
+                                    </select>
+                                    <div class="form-text">
+                                        <i class="fas fa-info-circle"></i> Nivel máximo de estudios alcanzado
                                     </div>
                                 </div>
                             </div>
@@ -251,13 +299,6 @@
                                     <input type="checkbox" id="notificacionesEmail" name="notificacionesEmail" class="form-checkbox" checked>
                                     <span class="checkmark"></span>
                                     Recibir notificaciones por email
-                                </label>
-                            </div>
-                            <div class="checkbox-container">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="cambiarPasswordPrimerAcceso" name="cambiarPasswordPrimerAcceso" class="form-checkbox" checked>
-                                    <span class="checkmark"></span>
-                                    Forzar cambio de contraseña en primer acceso
                                 </label>
                             </div>
                         </div>

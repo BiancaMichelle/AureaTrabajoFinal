@@ -1,18 +1,29 @@
 package com.example.demo.controller;
 
-import com.example.demo.model.*;
-import com.example.demo.repository.*;
-import com.example.demo.enums.*;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
-
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.example.demo.enums.EstadoOferta;
+import com.example.demo.enums.Modalidad;
+import com.example.demo.model.Categoria;
+import com.example.demo.model.OfertaAcademica;
+import com.example.demo.model.Pais;
+import com.example.demo.repository.CategoriaRepository;
+import com.example.demo.repository.OfertaAcademicaRepository;
+import com.example.demo.repository.UsuarioRepository;
+import com.example.demo.service.LocacionAPIService;
 
 @Controller
 public class AdminController {
@@ -22,9 +33,16 @@ public class AdminController {
     
     @Autowired
     private CategoriaRepository categoriaRepository;
+
+    @Autowired
+    private final LocacionAPIService locacionApiService;
     
     @Autowired
     private UsuarioRepository usuarioRepository;
+
+    public AdminController(LocacionAPIService locacionApiService) {
+        this.locacionApiService = locacionApiService;
+    }
 
     @GetMapping("/admin/dashboard")
     public String adminDashboard(Model model) {
@@ -49,11 +67,16 @@ public class AdminController {
         return "admin/gestionOfertas";
     }
 
+    
     @GetMapping("/admin/gestion-usuarios")
     public String gestionUsuarios(Model model) {
-        // Aquí podrías agregar datos necesarios para el formulario
-        // model.addAttribute("generos", Genero.values());
-        // model.addAttribute("estados", EstadoUsuario.values());
+
+        try {
+            List<Pais> paises = locacionApiService.obtenerTodosPaises();
+            model.addAttribute("paises", paises);
+        } catch (Exception e) {
+            model.addAttribute("paises", List.of());
+        }
         
         return "admin/gestionUsuarios";
     }
