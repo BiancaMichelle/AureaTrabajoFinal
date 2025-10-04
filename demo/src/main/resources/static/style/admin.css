@@ -41,7 +41,7 @@ body {
 .dashboard-container {
     display: flex;
     min-height: 100vh;
-    flex-direction: row-reverse; /* Sidebar a la derecha */
+    flex-direction: row; /* Sidebar a la izquierda */
     overflow-x: hidden;
     width: 100%;
 }
@@ -49,8 +49,8 @@ body {
 .main-content {
     flex: 1;
     padding: 2rem;
-    margin-right: var(--sidebar-width);
-    transition: margin-right 0.3s ease;
+    margin-left: var(--sidebar-width);
+    transition: margin-left 0.3s ease;
     background-color: var(--main-bg);
     max-width: calc(100vw - var(--sidebar-width));
     overflow-x: hidden;
@@ -58,7 +58,7 @@ body {
 }
 
 .main-content.sidebar-collapsed {
-    margin-right: var(--sidebar-width-collapsed);
+    margin-left: var(--sidebar-width-collapsed);
     max-width: calc(100vw - var(--sidebar-width-collapsed));
 }
 
@@ -69,7 +69,7 @@ body {
     height: 100vh;
     position: fixed;
     top: 0;
-    right: 0; /* Cambio de left a right */
+    left: 0; /* Cambio de right a left */
     display: flex;
     flex-direction: column;
     transition: width 0.3s ease;
@@ -137,7 +137,7 @@ body {
 .sidebar.collapsed .sidebar-logo::after {
     content: "Toggle Menu";
     position: absolute;
-    left: -120px;
+    right: -120px;
     top: 50%;
     transform: translateY(-50%);
     background: var(--text-primary);
@@ -178,15 +178,15 @@ body {
     color: rgba(255, 255, 255, 0.8);
     text-decoration: none;
     transition: all 0.3s ease;
-    border-radius: 50px 0 0 50px; /* Cambio de border-radius para sidebar derecha */
-    margin-left: 1rem; /* Cambio de margin-right a margin-left */
+    border-radius: 0 50px 50px 0; /* Cambio de border-radius para sidebar izquierda */
+    margin-right: 1rem; /* Cambio de margin-left a margin-right */
     position: relative;
 }
 
 .sidebar-nav a:hover {
     background-color: var(--sidebar-hover);
     color: white;
-    transform: translateX(-5px); /* Cambio de translateX(5px) a translateX(-5px) */
+    transform: translateX(5px); /* Cambio de translateX(-5px) a translateX(5px) */
 }
 
 .sidebar-nav a.active {
@@ -660,11 +660,11 @@ body {
         padding: 1rem;
     }
     
-    /* Estilos específicos para sidebar móvil derecha */
+    /* Estilos específicos para sidebar móvil izquierda */
     .sidebar.mobile {
-        right: 0;
-        left: auto;
-        transform: translateX(100%);
+        left: 0;
+        right: auto;
+        transform: translateX(-100%);
         transition: transform 0.3s ease;
     }
     
@@ -2027,4 +2027,352 @@ html, body {
     table-layout: auto;
     word-wrap: break-word;
     word-break: break-word;
+}
+
+/* =================   CONFIGURACIONES INSTITUCIONALES STYLES   ================= */
+
+/* Estado de configuración */
+.config-status {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.status-indicator.status-success {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success-color);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.status-indicator.status-error {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger-color);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.status-indicator.status-saving {
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--primary-color);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+/* Inputs de color */
+.color-input-container {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: white;
+    transition: all 0.3s ease;
+}
+
+.color-input-container:focus-within {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.color-input {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.color-input:hover {
+    transform: scale(1.05);
+}
+
+.color-text {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-primary);
+    outline: none;
+}
+
+/* Subsecciones de configuración */
+.config-subsection {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: rgba(59, 130, 246, 0.05);
+    border-radius: 8px;
+    border-left: 4px solid var(--primary-color);
+    transition: all 0.3s ease;
+}
+
+.config-subsection.show {
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        max-height: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+    to {
+        opacity: 1;
+        max-height: 200px;
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+    }
+}
+
+/* Vista previa de colores */
+.color-preview-container {
+    margin-top: 1rem;
+}
+
+.preview-card {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.3s ease;
+}
+
+.preview-header {
+    padding: 1rem;
+    background: var(--primary-color);
+    color: white;
+}
+
+.preview-header h5 {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+}
+
+.preview-content {
+    padding: 1rem;
+    background: var(--main-bg);
+}
+
+.preview-content p {
+    margin: 0 0 1rem 0;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.preview-button {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.preview-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Campos con error */
+.form-control.error {
+    border-color: var(--danger-color);
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.field-error {
+    color: var(--danger-color);
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.field-error::before {
+    content: '⚠';
+    font-size: 0.875rem;
+}
+
+/* Mejorar checkbox para configuraciones */
+.checkbox-container {
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: white;
+    transition: all 0.3s ease;
+}
+
+.checkbox-container:hover {
+    border-color: var(--primary-color);
+    background: rgba(59, 130, 246, 0.02);
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    margin: 0;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.checkbox-label .checkmark {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border-color);
+    border-radius: 4px;
+    margin-right: 0.75rem;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.form-checkbox:checked + .checkbox-label .checkmark {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.form-checkbox:checked + .checkbox-label .checkmark::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-weight: bold;
+    font-size: 0.75rem;
+}
+
+/* Área de upload mejorada */
+.image-upload-area {
+    border: 2px dashed var(--border-color);
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: rgba(59, 130, 246, 0.02);
+}
+
+.image-upload-area:hover {
+    border-color: var(--primary-color);
+    background: rgba(59, 130, 246, 0.05);
+    transform: translateY(-2px);
+}
+
+.upload-placeholder i {
+    font-size: 3rem;
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+}
+
+.upload-placeholder p {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.upload-placeholder span {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+/* Responsive para configuraciones */
+@media (max-width: 1024px) {
+    .color-input-container {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+    
+    .color-input {
+        width: 100%;
+        height: 50px;
+    }
+    
+    .config-subsection {
+        padding: 0.75rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .color-preview-container {
+        margin-top: 0.5rem;
+    }
+    
+    .preview-card {
+        font-size: 0.875rem;
+    }
+    
+    .checkbox-container {
+        padding: 0.5rem;
+    }
+    
+    .upload-placeholder i {
+        font-size: 2rem;
+    }
+    
+    .config-status {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+}
+
+/* Animaciones específicas para configuraciones */
+.form-section {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.form-section:nth-child(1) { animation-delay: 0.1s; }
+.form-section:nth-child(2) { animation-delay: 0.2s; }
+.form-section:nth-child(3) { animation-delay: 0.3s; }
+.form-section:nth-child(4) { animation-delay: 0.4s; }
+.form-section:nth-child(5) { animation-delay: 0.5s; }
+.form-section:nth-child(6) { animation-delay: 0.6s; }
+
+/* Mejoras para textareas */
+textarea.form-control {
+    resize: vertical;
+    min-height: 80px;
+    font-family: inherit;
+    line-height: 1.5;
+}
+
+textarea.form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Separadores visuales */
+.form-section + .form-section {
+    border-top: 1px solid var(--border-color);
+    padding-top: 2rem;
+    margin-top: 2rem;
+}
+
+.form-right-column .form-section + .form-section {
+    border-top: 1px solid var(--border-color);
+    padding-top: 1.5rem;
+    margin-top: 1.5rem;
 }

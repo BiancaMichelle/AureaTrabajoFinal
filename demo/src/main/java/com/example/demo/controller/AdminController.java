@@ -25,6 +25,9 @@ public class AdminController {
     
     @Autowired
     private UsuarioRepository usuarioRepository;
+    
+    @Autowired
+    private InstitutoRepository institutoRepository;
 
     @GetMapping("/admin/dashboard")
     public String adminDashboard(Model model) {
@@ -295,6 +298,158 @@ public class AdminController {
             response.put("success", false);
             response.put("message", "Error al obtener usuarios: " + e.getMessage());
             return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    // =================   CONFIGURACIONES INSTITUCIONALES   =================
+    
+    @GetMapping("/admin/configuracion")
+    public String configuracionInstitucional(Model model) {
+        // Obtener configuración actual del instituto
+        // Por ahora simulamos con datos de ejemplo
+        Map<String, Object> config = new HashMap<>();
+        config.put("nombreInstituto", "Instituto Aurea");
+        config.put("descripcion", "Instituto de formación profesional y técnica");
+        config.put("mision", "Brindar educación de calidad y formar profesionales competentes");
+        config.put("vision", "Ser referentes en educación profesional a nivel nacional");
+        config.put("direccion", "Av. Corrientes 1234, CABA");
+        config.put("telefono", "+54 11 1234-5678");
+        config.put("email", "contacto@institutoaurea.edu.ar");
+        config.put("facebook", "https://facebook.com/institutoaurea");
+        config.put("instagram", "https://instagram.com/institutoaurea");
+        config.put("x", "https://x.com/institutoaurea");
+        config.put("moneda", "ARS");
+        config.put("cuentaBancaria", "1234567890123456789012");
+        config.put("politicaPagos", "Pago en cuotas disponible. Descuentos por pago completo.");
+        config.put("colorPrimario", "#3b82f6");
+        config.put("colorSecundario", "#f8fafc");
+        config.put("colorTexto", "#1f2937");
+        config.put("permisoBajaAutomatica", true);
+        config.put("minimoAlumnoBaja", 5);
+        config.put("inactividadBaja", 30);
+        config.put("habilitarIA", true);
+        config.put("reportesAutomaticos", false);
+        
+        model.addAttribute("config", config);
+        return "admin/configuraciones";
+    }
+
+    @PostMapping("/admin/configuracion/guardar")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> guardarConfiguracion(
+            @RequestParam Map<String, String> params,
+            @RequestParam(value = "logo", required = false) org.springframework.web.multipart.MultipartFile logo) {
+        
+        try {
+            // Aquí se guardaría la configuración en la base de datos
+            // Por ahora simulamos el guardado
+            
+            Map<String, Object> response = new HashMap<>();
+            
+            // Validar campos requeridos
+            if (params.get("nombreInstituto") == null || params.get("nombreInstituto").trim().isEmpty()) {
+                response.put("success", false);
+                response.put("message", "El nombre del instituto es obligatorio");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            if (params.get("moneda") == null || params.get("moneda").trim().isEmpty()) {
+                response.put("success", false);
+                response.put("message", "La moneda es obligatoria");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            // Procesar logo si se subió
+            if (logo != null && !logo.isEmpty()) {
+                // Validar tipo de archivo
+                String contentType = logo.getContentType();
+                if (contentType == null || !contentType.startsWith("image/")) {
+                    response.put("success", false);
+                    response.put("message", "El logo debe ser una imagen válida");
+                    return ResponseEntity.badRequest().body(response);
+                }
+                
+                // Validar tamaño (5MB máximo)
+                if (logo.getSize() > 5 * 1024 * 1024) {
+                    response.put("success", false);
+                    response.put("message", "El logo debe ser menor a 5MB");
+                    return ResponseEntity.badRequest().body(response);
+                }
+                
+                // Aquí se guardaría el archivo
+                // String logoPath = saveLogoFile(logo);
+                // params.put("logoPath", logoPath);
+            }
+            
+            // Aquí se crearían/actualizarían las entidades en la base de datos
+            /*
+            Instituto instituto = institutoRepository.findTopByOrderByIdInstitutoAsc()
+                .orElse(new Instituto());
+            
+            instituto.setNombreInstituto(params.get("nombreInstituto"));
+            instituto.setDescripcion(params.get("descripcion"));
+            instituto.setMision(params.get("mision"));
+            instituto.setVision(params.get("vision"));
+            instituto.setDireccion(params.get("direccion"));
+            instituto.setTelefono(params.get("telefono"));
+            instituto.setEmail(params.get("email"));
+            instituto.setFacebook(params.get("facebook"));
+            instituto.setInstagram(params.get("instagram"));
+            instituto.setX(params.get("x"));
+            instituto.setMoneda(params.get("moneda"));
+            instituto.setCuentaBancaria(params.get("cuentaBancaria"));
+            instituto.setPoliticaPagos(params.get("politicaPagos"));
+            
+            // Colores
+            List<String> colores = Arrays.asList(
+                params.get("colorPrimario"),
+                params.get("colorSecundario"),
+                params.get("colorTexto")
+            );
+            instituto.setColores(colores);
+            
+            // Configuraciones automáticas
+            instituto.setPermisoBajaAutomatica("on".equals(params.get("permisoBajaAutomatica")));
+            if (params.get("minimoAlumnoBaja") != null) {
+                instituto.setMinimoAlumnoBaja(Integer.parseInt(params.get("minimoAlumnoBaja")));
+            }
+            if (params.get("inactividadBaja") != null) {
+                instituto.setInactividadBaja(Integer.parseInt(params.get("inactividadBaja")));
+            }
+            instituto.setHabilitarIA("on".equals(params.get("habilitarIA")));
+            instituto.setReportesAutomaticos("on".equals(params.get("reportesAutomaticos")));
+            
+            institutoRepository.save(instituto);
+            */
+            
+            response.put("success", true);
+            response.put("message", "Configuración guardada exitosamente");
+            response.put("data", params);
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Error al guardar la configuración: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+    
+    @GetMapping("/admin/configuracion/logo")
+    public ResponseEntity<byte[]> obtenerLogo() {
+        try {
+            // Aquí se obtendría el logo desde el archivo guardado
+            // byte[] logoBytes = Files.readAllBytes(Paths.get(logoPath));
+            // return ResponseEntity.ok()
+            //     .contentType(MediaType.IMAGE_PNG)
+            //     .body(logoBytes);
+            
+            // Por ahora retornamos un error 404
+            return ResponseEntity.notFound().build();
+            
+        } catch (Exception e) {
+            return ResponseEntity.notFound().build();
         }
     }
 }

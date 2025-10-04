@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/adminBase :: layout(~{::title}, ~{::main})}">
+<head>
+    <title>Configuraciones Institucionales</title>
+</head>
+<body>
+<main class="main-content">
+    <header class="main-header">
+        <h1><i class="fas fa-cogs"></i> Configuraciones Institucionales</h1>
+        <div class="header-actions">
+            <button id="btn-save-config" class="btn-primary">
+                <i class="fas fa-save"></i> Guardar Configuración
+            </button>
+        </div>
+    </header>
+
+    <!-- Formulario de Configuración -->
+    <div class="form-container show">
+        <div class="form-card">
+            <div class="form-header">
+                <h3><i class="fas fa-university"></i> Personalización del Instituto</h3>
+                <div class="config-status">
+                    <span id="save-status" class="status-indicator">
+                        <i class="fas fa-check-circle"></i> Configuración guardada
+                    </span>
+                </div>
+            </div>
+            
+            <form id="config-form" th:action="@{/admin/configuracion/guardar}" method="post" enctype="multipart/form-data">
+                <div class="form-content">
+                    <!-- Columna Izquierda: Información institucional -->
+                    <div class="form-left-column">
+                        <!-- Datos Institucionales -->
+                        <div class="form-section">
+                            <h4><i class="fas fa-university"></i> Información Institucional</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="nombreInstituto">Nombre del Instituto *</label>
+                                    <input type="text" id="nombreInstituto" name="nombreInstituto" 
+                                           class="form-control" placeholder="Ej: Instituto Aurea" 
+                                           th:value="${config?.nombreInstituto ?: 'Instituto Aurea'}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="descripcion">Descripción Breve</label>
+                                    <textarea id="descripcion" name="descripcion" class="form-control" 
+                                              rows="3" placeholder="Descripción del instituto..."
+                                              th:text="${config?.descripcion}"></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Misión y Visión -->
+                        <div class="form-section">
+                            <h4><i class="fas fa-eye"></i> Misión y Visión</h4>
+                            <div class="form-group">
+                                <label for="mision">Misión Institucional</label>
+                                <textarea id="mision" name="mision" class="form-control" 
+                                          rows="4" placeholder="Misión del instituto..."
+                                          th:text="${config?.mision}"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="vision">Visión Institucional</label>
+                                <textarea id="vision" name="vision" class="form-control" 
+                                          rows="4" placeholder="Visión del instituto..."
+                                          th:text="${config?.vision}"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Información de Contacto -->
+                        <div class="form-section">
+                            <h4><i class="fas fa-address-card"></i> Información de Contacto</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="direccion">Dirección</label>
+                                    <input type="text" id="direccion" name="direccion" 
+                                           class="form-control" placeholder="Dirección completa"
+                                           th:value="${config?.direccion}">
+                                </div>
+                                <div class="form-group">
+                                    <label for="telefono">Teléfono</label>
+                                    <input type="tel" id="telefono" name="telefono" 
+                                           class="form-control" placeholder="+54 11 1234-5678"
+                                           th:value="${config?.telefono}">
+                                </div>
+                                <div class="form-group">
+                                    <label for="email">Email Institucional</label>
+                                    <input type="email" id="email" name="email" 
+                                           class="form-control" placeholder="contacto@instituto.com"
+                                           th:value="${config?.email}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Redes Sociales -->
+                        <div class="form-section">
+                            <h4><i class="fas fa-share-alt"></i> Redes Sociales</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="facebook">Facebook</label>
+                                    <input type="url" id="facebook" name="facebook" 
+                                           class="form-control" placeholder="https://facebook.com/instituto"
+                                           th:value="${config?.facebook}">
+                                </div>
+                                <div class="form-group">
+                                    <label for="instagram">Instagram</label>
+                                    <input type="url" id="instagram" name="instagram" 
+                                           class="form-control" placeholder="https://instagram.com/instituto"
+                                           th:value="${config?.instagram}">
+                                </div>
+                                <div class="form-group">
+                                    <label for="x">X (Twitter)</label>
+                                    <input type="url" id="x" name="x" 
+                                           class="form-control" placeholder="https://x.com/instituto"
+                                           th:value="${config?.x}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Configuración de Pagos -->
+                        <div class="form-section">
+                            <h4><i class="fas fa-credit-card"></i> Configuración de Pagos</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="moneda">Moneda *</label>
+                                    <select id="moneda" name="moneda" class="form-control" required>
+                                        <option value="">Seleccionar moneda</option>
+                                        <option value="ARS" th:selected="${config?.moneda == 'ARS'}">Peso Argentino (ARS)</option>
+                                        <option value="USD" th:selected="${config?.moneda == 'USD'}">Dólar Estadounidense (USD)</option>
+                                        <option value="EUR" th:selected="${config?.moneda == 'EUR'}">Euro (EUR)</option>
+                                        <option value="BRL" th:selected="${config?.moneda == 'BRL'}">Real Brasileño (BRL)</option>
+                                        <option value="CLP" th:selected="${config?.moneda == 'CLP'}">Peso Chileno (CLP)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="cuentaBancaria">CBU / Cuenta Bancaria</label>
+                                    <input type="text" id="cuentaBancaria" name="cuentaBancaria" 
+                                           class="form-control" placeholder="1234567890123456789012"
+                                           th:value="${config?.cuentaBancaria}">
+                                    <div class="form-text">
+                                        <i class="fas fa-info-circle"></i> CBU para recibir pagos de inscripciones
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="politicaPagos">Política de Pagos</label>
+                                    <textarea id="politicaPagos" name="politicaPagos" class="form-control" 
+                                              rows="3" placeholder="Términos y condiciones de pago..."
+                                              th:text="${config?.politicaPagos}"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Columna Derecha: Logo y configuraciones avanzadas -->
+                    <div class="form-right-column">
+                        <!-- Logo del Instituto -->
+                        <div class="form-section">
+                            <h4><i class="fas fa-image"></i> Logo Institucional</h4>
+                            <div class="image-upload-container">
+                                <input type="file" id="logo-input" name="logo" accept="image/*" class="image-input">
+                                <div class="image-upload-area" onclick="document.getElementById('logo-input').click()">
+                                    <div class="upload-placeholder" id="logo-placeholder">
+                                        <i class="fas fa-cloud-upload-alt"></i>
+                                        <p>Haga clic para subir el logo</p>
+                                        <span>PNG, JPG hasta 5MB</span>
+                                    </div>
+                                    <img id="logo-preview" style="display: none; max-width: 100%; height: auto; border-radius: 8px;" alt="Logo preview">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Colores Institucionales -->
+                        <div class="form-section">
+                            <h4><i class="fas fa-palette"></i> Colores Institucionales</h4>
+                            <div class="form-group">
+                                <label for="colorPrimario">Color Primario</label>
+                                <div class="color-input-container">
+                                    <input type="color" id="colorPrimario" name="colorPrimario" 
+                                           class="color-input" th:value="${config?.colorPrimario ?: '#3b82f6'}">
+                                    <input type="text" class="color-text" readonly 
+                                           th:value="${config?.colorPrimario ?: '#3b82f6'}">
+                                </div>
+                                <div class="form-text">Color principal del instituto</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="colorSecundario">Color del Cuerpo</label>
+                                <div class="color-input-container">
+                                    <input type="color" id="colorSecundario" name="colorSecundario" 
+                                           class="color-input" th:value="${config?.colorSecundario ?: '#f8fafc'}">
+                                    <input type="text" class="color-text" readonly 
+                                           th:value="${config?.colorSecundario ?: '#f8fafc'}">
+                                </div>
+                                <div class="form-text">Color de fondo del sitio</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="colorTexto">Color del Texto</label>
+                                <div class="color-input-container">
+                                    <input type="color" id="colorTexto" name="colorTexto" 
+                                           class="color-input" th:value="${config?.colorTexto ?: '#1f2937'}">
+                                    <input type="text" class="color-text" readonly 
+                                           th:value="${config?.colorTexto ?: '#1f2937'}">
+                                </div>
+                                <div class="form-text">Color del texto principal</div>
+                            </div>
+                        </div>
+
+                        <!-- Configuraciones Automáticas -->
+                        <div class="form-section">
+                            <h4><i class="fas fa-robot"></i> Automatización</h4>
+                            
+                            <!-- Baja Automática -->
+                            <div class="checkbox-container">
+                                <input type="checkbox" id="permisoBajaAutomatica" name="permisoBajaAutomatica" 
+                                       class="form-checkbox" th:checked="${config?.permisoBajaAutomatica}">
+                                <label for="permisoBajaAutomatica" class="checkbox-label">
+                                    <span class="checkmark"></span>
+                                    Activar baja automática de cursos
+                                </label>
+                            </div>
+                            
+                            <div id="baja-automatica-config" class="config-subsection" style="display: none;">
+                                <div class="form-group">
+                                    <label for="minimoAlumnoBaja">Mínimo de alumnos</label>
+                                    <input type="number" id="minimoAlumnoBaja" name="minimoAlumnoBaja" 
+                                           class="form-control" min="1" placeholder="5"
+                                           th:value="${config?.minimoAlumnoBaja ?: 5}">
+                                    <div class="form-text">Cantidad mínima de alumnos para mantener un curso</div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="inactividadBaja">Días de inactividad</label>
+                                    <input type="number" id="inactividadBaja" name="inactividadBaja" 
+                                           class="form-control" min="1" placeholder="30"
+                                           th:value="${config?.inactividadBaja ?: 30}">
+                                    <div class="form-text">Días sin actividad antes de dar de baja</div>
+                                </div>
+                            </div>
+
+                            <!-- Asistente Virtual -->
+                            <div class="checkbox-container">
+                                <input type="checkbox" id="habilitarIA" name="habilitarIA" 
+                                       class="form-checkbox" th:checked="${config?.habilitarIA}">
+                                <label for="habilitarIA" class="checkbox-label">
+                                    <span class="checkmark"></span>
+                                    Habilitar asistente virtual
+                                </label>
+                            </div>
+
+                            <!-- Reportes Automáticos -->
+                            <div class="checkbox-container">
+                                <input type="checkbox" id="reportesAutomaticos" name="reportesAutomaticos" 
+                                       class="form-checkbox" th:checked="${config?.reportesAutomaticos}">
+                                <label for="reportesAutomaticos" class="checkbox-label">
+                                    <span class="checkmark"></span>
+                                    Generar reportes semanales automáticos
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Vista Previa de Colores -->
+                        <div class="form-section">
+                            <h4><i class="fas fa-eye"></i> Vista Previa</h4>
+                            <div class="color-preview-container">
+                                <div class="preview-card" id="color-preview">
+                                    <div class="preview-header">
+                                        <h5>Instituto Aurea</h5>
+                                    </div>
+                                    <div class="preview-content">
+                                        <p>Este es un ejemplo de cómo se verán los colores en el sitio web.</p>
+                                        <button class="preview-button">Botón de ejemplo</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn-submit">
+                        <i class="fas fa-save"></i> Guardar Configuración
+                    </button>
+                    <button type="button" id="btn-reset-config" class="btn-cancel">
+                        <i class="fas fa-undo"></i> Restablecer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script th:src="@{/js/configuraciones.js}"></script>
+</main>
+</body>
+</html>
