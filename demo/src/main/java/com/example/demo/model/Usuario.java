@@ -3,15 +3,20 @@ package com.example.demo.model;
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
 import javax.validation.constraints.AssertTrue;
 import javax.validation.constraints.Pattern;
 
+import com.example.demo.enums.TipoGenero;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.DiscriminatorColumn;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
@@ -21,6 +26,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -62,8 +68,9 @@ public class Usuario {
   @Past(message = "La fecha de nacimiento debe ser en el pasado")
   private LocalDate fechaNacimiento;
 
-  @NotBlank(message = "El género es obligatorio")
-  private String genero;
+  @NotNull(message = "El género es obligatorio")
+  @Enumerated(EnumType.STRING)
+  private TipoGenero genero;
 
   @NotBlank(message = "El correo es obligatorio")
   @Email(message = "El formato del correo electrónico no es válido")
@@ -101,6 +108,10 @@ public class Usuario {
       inverseJoinColumns = @JoinColumn(name = "rol_id", referencedColumnName = "id")
   )
   private Set<Rol> roles = new HashSet<>();
+  
+  // Relación con pagos según el diagrama
+  @OneToMany(mappedBy = "usuario")
+  private List<Pago> pagos;
 
   // Método de validación personalizado para la edad
   @AssertTrue(message = "Debes tener al menos 16 años")

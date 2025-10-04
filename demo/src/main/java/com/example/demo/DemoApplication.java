@@ -8,6 +8,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import com.example.demo.enums.TipoGenero;
 import com.example.demo.model.Rol;
 import com.example.demo.model.Usuario;
 import com.example.demo.repository.RolRepository;
@@ -51,7 +52,7 @@ public class DemoApplication implements CommandLineRunner {
             admin.setNombre("Super");
             admin.setApellido("Admin");
             admin.setFechaNacimiento(LocalDate.of(1990, 1, 1)); // Fecha que cumple +16 años
-            admin.setGenero("masculino");
+            admin.setGenero(TipoGenero.MASCULINO);
             admin.setCorreo("admin@demo.com");
             admin.setNumTelefono("1234567890"); // 10 dígitos
             admin.setContraseña(passwordEncoder.encode("Admin123")); // Cumple: 8 chars, mayúscula y minúscula

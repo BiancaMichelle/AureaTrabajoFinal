@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.example.demo.enums.EstadoOferta;
 import com.example.demo.enums.Modalidad;
+import com.example.demo.enums.TipoGenero;
 import com.example.demo.model.Categoria;
 import com.example.demo.model.OfertaAcademica;
 import com.example.demo.model.Pais;
@@ -292,9 +293,20 @@ public ResponseEntity<Map<String, Object>> registrarUsuario(
             }
         }
 
+        // Convertir género de String a TipoGenero enum
+        TipoGenero tipoGenero;
+        try {
+            tipoGenero = TipoGenero.valueOf(genero.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Género inválido. Use: MASCULINO, FEMENINO, OTRO, PREFIERO_NO_DECIR");
+            return ResponseEntity.badRequest().body(response);
+        }
+
             // Usar el servicio unificado
             Usuario nuevoUsuario = registroService.registrarUsuarioAdministrativo(
-                dni, nombre, apellido, fechaNacimiento, genero,
+                dni, nombre, apellido, fechaNacimiento, tipoGenero,
                 correo, telefono, password, paisCodigo, provinciaCodigo, 
                 Long.parseLong(ciudadId), rol, matricula,
                 experiencia, colegioEgreso, añoEgreso, ultimosEstudios

@@ -6,6 +6,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.demo.enums.TipoGenero;
 import com.example.demo.model.Alumno;
 import com.example.demo.model.Ciudad;
 import com.example.demo.model.Docente;
@@ -146,7 +147,7 @@ public class RegistroService {
             String nombre,
             String apellido,
             LocalDate fechaNacimiento,
-            String genero,
+            TipoGenero genero,
             String correo,
             String telefono,
             String contraseña,

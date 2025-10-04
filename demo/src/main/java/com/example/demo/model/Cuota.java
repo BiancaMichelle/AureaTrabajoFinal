@@ -1,16 +1,18 @@
 package com.example.demo.model;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
 
-import jakarta.persistence.CascadeType;
+import com.example.demo.enums.EstadoCuota;
+
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -21,28 +23,26 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class Inscripciones {
+public class Cuota {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long idInscripcion;
-
-    @ManyToOne
-    @JoinColumn(name = "alumno_dni")
-    private Alumno alumno;
+    private Long idCuota;
     
     @ManyToOne
-    @JoinColumn(name = "oferta_id")
-    private OfertaAcademica oferta;
+    @JoinColumn(name = "inscripcion_id")
+    private Inscripciones inscripcion;
     
-    private LocalDate fechaInscripcion;
-    private Boolean estadoInscripcion;
-    private String observaciones;
+    private Integer numeroCuota;
+    private BigDecimal monto;
+    private LocalDate fechaVencimiento;
+    
+    @Enumerated(EnumType.STRING)
+    private EstadoCuota estado = EstadoCuota.PENDIENTE;
+    
+    private BigDecimal montoPagado;
+    private LocalDate fechaPago;
     
     @ManyToOne
     @JoinColumn(name = "pago_id")
-    private Pago pagoInscripcion;
-    
-    // Relaciones según el diagrama
-    @OneToMany(mappedBy = "inscripcion", cascade = CascadeType.ALL)
-    private List<Cuota> cuotas;
+    private Pago pago;
 }
