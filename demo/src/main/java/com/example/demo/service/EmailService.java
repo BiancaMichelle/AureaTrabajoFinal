@@ -1,8 +1,10 @@
 package com.example.demo.service;
 
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+
+import jakarta.mail.internet.MimeMessage;
 
 @Service
 public class EmailService {
@@ -13,11 +15,21 @@ public class EmailService {
     }
 
     public void sendEmail(String to, String subject, String body) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(to);
-        message.setSubject(subject);
-        message.setText(body);
-        message.setFrom("EspacioVirtual.ICEP@gmail.com");
-        emailSender.send(message);
+        try {
+            MimeMessage message = emailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(body, false);
+            helper.setFrom("EspacioVirtual.ICEP@gmail.com");
+            
+            emailSender.send(message);
+            System.out.println("📧 Email enviado exitosamente a: " + to);
+            
+        } catch (Exception e) {
+            System.out.println("❌ Error enviando email: " + e.getMessage());
+            throw new RuntimeException("Error enviando email", e);
+        }
     }
 }

@@ -1,6 +1,9 @@
 package com.example.demo.service;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+import java.util.Random;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -33,6 +36,8 @@ public class RegistroService {
     private final CiudadRepository ciudadRepository;
     private final PasswordEncoder passwordEncoder;
     private final RolRepository rolRepository;
+    private final EmailService emailService; 
+    private final LocacionAPIService locacionApiService; // ✅ AGREGAR ESTO
 
     public RegistroService(UsuarioRepository usuarioRepository,
                           AlumnoRepository alumnoRepository,
@@ -41,7 +46,9 @@ public class RegistroService {
                           ProvinciaRepository provinciaRepository,
                           CiudadRepository ciudadRepository,
                           PasswordEncoder passwordEncoder,
-                          RolRepository rolRepository) {
+                          RolRepository rolRepository,
+                          EmailService emailService,
+                          LocacionAPIService locacionApiService) { // ✅ AGREGAR ESTE PARÁMETRO
         this.usuarioRepository = usuarioRepository;
         this.alumnoRepository = alumnoRepository;
         this.docenteRepository = docenteRepository;
@@ -50,11 +57,170 @@ public class RegistroService {
         this.ciudadRepository = ciudadRepository;
         this.passwordEncoder = passwordEncoder;
         this.rolRepository = rolRepository;
+        this.emailService = emailService; 
+        this.locacionApiService = locacionApiService; // ✅ INICIALIZAR
     }
 
-    /**
-     * Método unificado para registrar cualquier tipo de usuario
-     */
+    // 🔑 MÉTODO PARA GENERAR CONTRASEÑA (se mantiene igual)
+    private String generarContraseñaAleatoria() {
+        String caracteres = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%";
+        StringBuilder contraseña = new StringBuilder();
+        Random random = new Random();
+        
+        contraseña.append((char) (random.nextInt(26) + 'A'));
+        contraseña.append((char) (random.nextInt(26) + 'a'));
+        contraseña.append((char) (random.nextInt(10) + '0'));
+        contraseña.append("!@#$%".charAt(random.nextInt(5)));
+        
+        for (int i = 4; i < 12; i++) {
+            contraseña.append(caracteres.charAt(random.nextInt(caracteres.length())));
+        }
+        
+        char[] arrayContraseña = contraseña.toString().toCharArray();
+        for (int i = arrayContraseña.length - 1; i > 0; i--) {
+            int j = random.nextInt(i + 1);
+            char temp = arrayContraseña[i];
+            arrayContraseña[i] = arrayContraseña[j];
+            arrayContraseña[j] = temp;
+        }
+        
+        return new String(arrayContraseña);
+    }
+
+    // 📧 MÉTODO PARA ENVIAR EMAIL (se mantiene igual)
+    private void enviarCredencialesPorEmail(String correo, String nombre, String contraseña, String rol) {
+        try {
+            String subject = "Bienvenido a Espacio Virtual ICEP - Sus Credenciales de Acceso";
+            String body = String.format(
+                "Estimado/a %s,\n\n" +
+                "Le damos la bienvenida a Espacio Virtual ICEP.\n\n" +
+                "Sus credenciales de acceso son:\n" +
+                "Correo electrónico: %s\n" +
+                "Contraseña temporal: %s\n" +
+                "Rol: %s\n\n" +
+                "Por su seguridad, le recomendamos cambiar su contraseña después del primer acceso.\n\n" +
+                "Puede acceder al sistema en: http://localhost:8080/login\n\n" +
+                "Saludos cordiales,\n" +
+                "Equipo Espacio Virtual ICEP",
+                nombre, correo, contraseña, rol
+            );
+            
+            emailService.sendEmail(correo, subject, body);
+            System.out.println("✅ Email enviado a: " + correo);
+            
+        } catch (Exception e) {
+            System.out.println("❌ Error enviando email: " + e.getMessage());
+        }
+    }
+
+    // 🌍 MÉTODOS PARA BUSCAR O CREAR UBICACIONES (NUEVOS - DE LA SEGUNDA VERSIÓN)
+    private Pais buscarOCrearPais(String paisCodigo) {
+        Optional<Pais> paisExistente = paisRepository.findByCodigo(paisCodigo);
+        if (paisExistente.isPresent()) {
+            System.out.println("✅ País encontrado: " + paisExistente.get().getNombre());
+            return paisExistente.get();
+        } else {
+            System.out.println("🌎 Creando nuevo país: " + paisCodigo);
+            try {
+                List<Pais> paises = locacionApiService.obtenerTodosPaises();
+                for (Pais p : paises) {
+                    if (paisCodigo.equals(p.getCodigo())) {
+                        // ✅ CREAR NUEVA INSTANCIA en lugar de usar la de la API
+                        Pais nuevoPais = new Pais();
+                        nuevoPais.setCodigo(p.getCodigo());
+                        nuevoPais.setNombre(p.getNombre());
+                        nuevoPais = paisRepository.save(nuevoPais);
+                        System.out.println("✅ País creado desde API: " + nuevoPais.getNombre());
+                        return nuevoPais;
+                    }
+                }
+            } catch (Exception e) {
+                System.out.println("⚠️ Error obteniendo países de API: " + e.getMessage());
+            }
+            
+            // Fallback
+            Pais nuevoPais = new Pais();
+            nuevoPais.setCodigo(paisCodigo);
+            nuevoPais.setNombre("País " + paisCodigo);
+            nuevoPais = paisRepository.save(nuevoPais);
+            System.out.println("✅ País creado (fallback): " + nuevoPais.getNombre());
+            return nuevoPais;
+        }
+    }
+    
+    private Provincia buscarOCrearProvincia(String provinciaCodigo, Pais pais) {
+        Optional<Provincia> provinciaExistente = provinciaRepository.findByCodigo(provinciaCodigo);
+        if (provinciaExistente.isPresent()) {
+            System.out.println("✅ Provincia encontrada: " + provinciaExistente.get().getNombre());
+            return provinciaExistente.get();
+        } else {
+            System.out.println("🏙️ Creando nueva provincia: " + provinciaCodigo);
+            try {
+                List<Provincia> provincias = locacionApiService.obtenerProvinciasPorPais(pais.getCodigo());
+                for (Provincia p : provincias) {
+                    if (provinciaCodigo.equals(p.getCodigo())) {
+                        // ✅ CREAR NUEVA INSTANCIA
+                        Provincia nuevaProvincia = new Provincia();
+                        nuevaProvincia.setCodigo(p.getCodigo());
+                        nuevaProvincia.setNombre(p.getNombre());
+                        nuevaProvincia.setPais(pais); // Usar el pais de la transacción actual
+                        nuevaProvincia = provinciaRepository.save(nuevaProvincia);
+                        System.out.println("✅ Provincia creada desde API: " + nuevaProvincia.getNombre());
+                        return nuevaProvincia;
+                    }
+                }
+            } catch (Exception e) {
+                System.out.println("⚠️ Error obteniendo provincias de API: " + e.getMessage());
+            }
+            
+            // Fallback
+            Provincia nuevaProvincia = new Provincia();
+            nuevaProvincia.setCodigo(provinciaCodigo);
+            nuevaProvincia.setNombre("Provincia " + provinciaCodigo);
+            nuevaProvincia.setPais(pais);
+            nuevaProvincia = provinciaRepository.save(nuevaProvincia);
+            System.out.println("✅ Provincia creada (fallback): " + nuevaProvincia.getNombre());
+            return nuevaProvincia;
+        }
+    }
+    
+    private Ciudad buscarOCrearCiudad(Long ciudadId, Provincia provincia, String paisCodigo, String provinciaCodigo) {
+        Optional<Ciudad> ciudadExistente = ciudadRepository.findById(ciudadId);
+        if (ciudadExistente.isPresent()) {
+            System.out.println("✅ Ciudad encontrada: " + ciudadExistente.get().getNombre());
+            return ciudadExistente.get();
+        } else {
+            System.out.println("🏡 Creando nueva ciudad: " + ciudadId);
+            try {
+                List<Ciudad> ciudades = locacionApiService.obtenerCiudadesPorProvincia(paisCodigo, provinciaCodigo);
+                for (Ciudad c : ciudades) {
+                    if (ciudadId.equals(c.getId())) {
+                        // ✅ CREAR NUEVA INSTANCIA
+                        Ciudad nuevaCiudad = new Ciudad();
+                        nuevaCiudad.setId(c.getId());
+                        nuevaCiudad.setNombre(c.getNombre());
+                        nuevaCiudad.setProvincia(provincia); // Usar la provincia de la transacción actual
+                        nuevaCiudad = ciudadRepository.save(nuevaCiudad);
+                        System.out.println("✅ Ciudad creada desde API: " + nuevaCiudad.getNombre());
+                        return nuevaCiudad;
+                    }
+                }
+            } catch (Exception e) {
+                System.out.println("⚠️ Error obteniendo ciudades de API: " + e.getMessage());
+            }
+            
+            // Fallback
+            Ciudad nuevaCiudad = new Ciudad();
+            nuevaCiudad.setId(ciudadId);
+            nuevaCiudad.setNombre("Ciudad " + ciudadId);
+            nuevaCiudad.setProvincia(provincia);
+            nuevaCiudad = ciudadRepository.save(nuevaCiudad);
+            System.out.println("✅ Ciudad creada (fallback): " + nuevaCiudad.getNombre());
+            return nuevaCiudad;
+        }
+    }
+
+    // 👤 MÉTODO UNIFICADO PRINCIPAL (MEJORADO CON BUSCAR O CREAR)
     public Usuario registrarUsuario(Usuario usuario, 
                                    String paisCodigo, 
                                    String provinciaCodigo, 
@@ -75,15 +241,10 @@ public class RegistroService {
                 throw new RuntimeException("El correo electrónico ya está registrado");
             }
 
-            // 3. BUSCAR UBICACIONES
-            Pais pais = paisRepository.findByCodigo(paisCodigo)
-                .orElseThrow(() -> new RuntimeException("País no encontrado. Completa el paso de ubicación nuevamente."));
-            
-            Provincia provincia = provinciaRepository.findByCodigo(provinciaCodigo)
-                .orElseThrow(() -> new RuntimeException("Provincia no encontrada. Completa el paso de ubicación nuevamente."));
-            
-            Ciudad ciudad = ciudadRepository.findById(ciudadId)
-                .orElseThrow(() -> new RuntimeException("Ciudad no encontrada. Completa el paso de ubicación nuevamente."));
+            // ✅ 3. BUSCAR O CREAR UBICACIONES AUTOMÁTICAMENTE (MEJORADO)
+            Pais pais = buscarOCrearPais(paisCodigo);
+            Provincia provincia = buscarOCrearProvincia(provinciaCodigo, pais);
+            Ciudad ciudad = buscarOCrearCiudad(ciudadId, provincia, paisCodigo, provinciaCodigo);
 
             // 4. ASIGNAR UBICACIONES AL USUARIO
             usuario.setPais(pais);
@@ -95,17 +256,26 @@ public class RegistroService {
             System.out.println("   - Provincia: " + provincia.getNombre());
             System.out.println("   - Ciudad: " + ciudad.getNombre());
 
-            // 5. Encriptar contraseña
-            usuario.setContraseña(passwordEncoder.encode(usuario.getContraseña()));
+            // 5. GENERAR CONTRASEÑA ALEATORIA si no se proporciona una
+            String contraseñaPlana;
+            if (usuario.getContraseña() == null || usuario.getContraseña().trim().isEmpty()) {
+                contraseñaPlana = generarContraseñaAleatoria();
+                System.out.println("🔑 Contraseña generada: " + contraseñaPlana);
+            } else {
+                contraseñaPlana = usuario.getContraseña();
+            }
+            
+            // 6. Encriptar contraseña
+            usuario.setContraseña(passwordEncoder.encode(contraseñaPlana));
 
-            // 6. Establecer estado por defecto
+            // 7. Establecer estado por defecto
             usuario.setEstado(true);
             usuario.setEstadoCuenta(true);
 
-            // 7. ASIGNAR ROLES según el tipo de usuario
+            // 8. ASIGNAR ROLES según el tipo de usuario
             asignarRoles(usuario, rolPrincipal);
 
-            // 8. Guardar según el tipo de usuario
+            // 9. Guardar según el tipo de usuario
             Usuario usuarioGuardado;
             
             switch (rolPrincipal.toUpperCase()) {
@@ -123,6 +293,14 @@ public class RegistroService {
                     throw new RuntimeException("Rol no válido: " + rolPrincipal);
             }
 
+            // ✅ 10. ENVIAR CREDENCIALES POR EMAIL
+            enviarCredencialesPorEmail(
+                usuario.getCorreo(), 
+                usuario.getNombre() + " " + usuario.getApellido(),
+                contraseñaPlana,
+                rolPrincipal
+            );
+
             System.out.println("✅ Registro completado. ID: " + usuarioGuardado.getId() + " - Rol: " + rolPrincipal);
             return usuarioGuardado;
             
@@ -132,16 +310,12 @@ public class RegistroService {
         }
     }
 
-    /**
-     * Método específico para registro público de alumnos (mantener compatibilidad)
-     */
+    // 👨‍🎓 MÉTODO PARA REGISTRO PÚBLICO DE ALUMNOS (se mantiene)
     public void registrarUsuario(Alumno alumno, String paisCodigo, String provinciaCodigo, Long ciudadId) {
         registrarUsuario(alumno, paisCodigo, provinciaCodigo, ciudadId, "ALUMNO");
     }
 
-    /**
-     * Método para registro administrativo con todos los parámetros
-     */
+    // 👨‍💼 MÉTODO PARA REGISTRO ADMINISTRATIVO (CORREGIDO)
     public Usuario registrarUsuarioAdministrativo(
             String dni,
             String nombre,
@@ -150,7 +324,6 @@ public class RegistroService {
             TipoGenero genero,
             String correo,
             String telefono,
-            String contraseña,
             String paisCodigo,
             String provinciaCodigo,
             Long ciudadId,
@@ -160,6 +333,8 @@ public class RegistroService {
             String colegioEgreso,
             Integer añoEgreso,
             String ultimosEstudios) {
+        
+        System.out.println("👤 Registro administrativo para: " + nombre + " " + apellido);
         
         // Crear el usuario según el rol
         Usuario usuario;
@@ -197,13 +372,11 @@ public class RegistroService {
         usuario.setGenero(genero);
         usuario.setCorreo(correo);
         usuario.setNumTelefono(telefono);
-        usuario.setContraseña(contraseña);
-
         
         return registrarUsuario(usuario, paisCodigo, provinciaCodigo, ciudadId, rolPrincipal);
     }
 
-    // Métodos auxiliares privados
+    // 🔧 MÉTODOS AUXILIARES (se mantienen igual)
     private void asignarRoles(Usuario usuario, String rolPrincipal) {
         Rol rol = rolRepository.findByNombre(rolPrincipal.toUpperCase())
         .orElseThrow(() -> new RuntimeException("Rol no encontrado: " + rolPrincipal));
