@@ -72,9 +72,11 @@
                     </a>
                 </li>
                 <li>
-                    <a th:href="@{/logout}">
-                        <i class="fas fa-sign-out-alt"></i> 
-                        <span>Cerrar Sesión</span>
+                    <a>
+                        <form th:action="@{/logout}" method="post" style="display: inline;">
+                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                <button type="submit" class="btn-link">Cerrar Sesión</button>
+                        </form>
                     </a>
                 </li>
             </ul>

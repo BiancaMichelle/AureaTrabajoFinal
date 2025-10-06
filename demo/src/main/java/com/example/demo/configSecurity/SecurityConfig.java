@@ -55,7 +55,7 @@ public class SecurityConfig {
                            "/css/**", "/js/**", "/style/**", "/img/**","/api/**")
             .permitAll()
             .requestMatchers("/admin/**").hasAuthority("ADMIN")
-            .requestMatchers("/alumno/**").hasAuthority("ALUMNO")
+            .requestMatchers("/").hasAuthority("ALUMNO")
             .requestMatchers("/docente/**").hasAuthority("DOCENTE")
             .anyRequest().authenticated()
         )
@@ -70,7 +70,7 @@ public class SecurityConfig {
                 if (roles.contains("ADMIN")) {
                     response.sendRedirect("/admin/dashboard");
                 } else if (roles.contains("ALUMNO")) {
-                    response.sendRedirect("/alumno");
+                    response.sendRedirect("/");
                 } else if (roles.contains("DOCENTE")) {
                     response.sendRedirect("/docente");
                 } else {

@@ -225,10 +225,12 @@ public class RegistroService {
                                    String paisCodigo, 
                                    String provinciaCodigo, 
                                    Long ciudadId, 
-                                   String rolPrincipal) {
+                                   String rolPrincipal,
+                                   boolean esRegistroAdministrativo) {  // ✅ NUEVO PARÁMETRO
         
         System.out.println("🔍 Iniciando registro para: " + usuario.getNombre());
         System.out.println("🎯 Rol asignado: " + rolPrincipal);
+        System.out.println("👨‍💼 Registro administrativo: " + esRegistroAdministrativo);
         
         try {
             // 1. Verificar si el DNI ya existe
@@ -256,13 +258,16 @@ public class RegistroService {
             System.out.println("   - Provincia: " + provincia.getNombre());
             System.out.println("   - Ciudad: " + ciudad.getNombre());
 
-            // 5. GENERAR CONTRASEÑA ALEATORIA si no se proporciona una
+            // 5. LÓGICA DE CONTRASEÑA MODIFICADA
             String contraseñaPlana;
-            if (usuario.getContraseña() == null || usuario.getContraseña().trim().isEmpty()) {
+            if (esRegistroAdministrativo) {
+                // ✅ REGISTRO ADMINISTRATIVO: Generar contraseña aleatoria
                 contraseñaPlana = generarContraseñaAleatoria();
                 System.out.println("🔑 Contraseña generada: " + contraseñaPlana);
             } else {
+                // ✅ REGISTRO PÚBLICO: Usar la contraseña que el usuario ingresó
                 contraseñaPlana = usuario.getContraseña();
+                System.out.println("🔑 Contraseña proporcionada por usuario");
             }
             
             // 6. Encriptar contraseña
@@ -293,13 +298,18 @@ public class RegistroService {
                     throw new RuntimeException("Rol no válido: " + rolPrincipal);
             }
 
-            // ✅ 10. ENVIAR CREDENCIALES POR EMAIL
-            enviarCredencialesPorEmail(
-                usuario.getCorreo(), 
-                usuario.getNombre() + " " + usuario.getApellido(),
-                contraseñaPlana,
-                rolPrincipal
-            );
+            // ✅ 10. ENVIAR EMAIL SOLO EN REGISTRO ADMINISTRATIVO
+            if (esRegistroAdministrativo) {
+                enviarCredencialesPorEmail(
+                    usuario.getCorreo(), 
+                    usuario.getNombre() + " " + usuario.getApellido(),
+                    contraseñaPlana,
+                    rolPrincipal
+                );
+                System.out.println("📧 Email enviado al usuario");
+            } else {
+                System.out.println("📧 Email NO enviado - Registro público");
+            }
 
             System.out.println("✅ Registro completado. ID: " + usuarioGuardado.getId() + " - Rol: " + rolPrincipal);
             return usuarioGuardado;
@@ -310,12 +320,12 @@ public class RegistroService {
         }
     }
 
-    // 👨‍🎓 MÉTODO PARA REGISTRO PÚBLICO DE ALUMNOS (se mantiene)
+    // 👨‍🎓 MÉTODO PARA REGISTRO PÚBLICO DE ALUMNOS (MODIFICADO)
     public void registrarUsuario(Alumno alumno, String paisCodigo, String provinciaCodigo, Long ciudadId) {
-        registrarUsuario(alumno, paisCodigo, provinciaCodigo, ciudadId, "ALUMNO");
+        registrarUsuario(alumno, paisCodigo, provinciaCodigo, ciudadId, "ALUMNO", false); // ✅ NO es administrativo
     }
 
-    // 👨‍💼 MÉTODO PARA REGISTRO ADMINISTRATIVO (CORREGIDO)
+    // 👨‍💼 MÉTODO PARA REGISTRO ADMINISTRATIVO (MODIFICADO)
     public Usuario registrarUsuarioAdministrativo(
             String dni,
             String nombre,
@@ -373,7 +383,10 @@ public class RegistroService {
         usuario.setCorreo(correo);
         usuario.setNumTelefono(telefono);
         
-        return registrarUsuario(usuario, paisCodigo, provinciaCodigo, ciudadId, rolPrincipal);
+        // ✅ NO establecer contraseña - se generará automáticamente
+        usuario.setContraseña(null);
+        
+        return registrarUsuario(usuario, paisCodigo, provinciaCodigo, ciudadId, rolPrincipal, true); // ✅ SÍ es administrativo
     }
 
     // 🔧 MÉTODOS AUXILIARES (se mantienen igual)
