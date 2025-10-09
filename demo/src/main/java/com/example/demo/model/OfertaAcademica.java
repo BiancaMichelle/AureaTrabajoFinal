@@ -94,6 +94,13 @@ public class OfertaAcademica {
         if (this instanceof Charla) return "CHARLA";
         return "GENERAL";
     }
+    
+    /**
+     * Devuelve el tipo para consultas de base de datos
+     */
+    public String getTipo() {
+        return getTipoOferta();
+    }
 
 
 

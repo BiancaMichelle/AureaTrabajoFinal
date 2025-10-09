@@ -300,3 +300,59 @@ main {
         display: none; /* Oculta el dropdown en móvil, se puede integrar al menú hamburguesa si se desea */
     }
 }
+
+/* =================   SELECTORES DE COLOR   ================= */
+.color-picker-group {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.color-input-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 8px;
+    background: white;
+}
+
+.color-picker {
+    width: 50px;
+    height: 40px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    background: transparent;
+}
+
+.color-picker::-webkit-color-swatch {
+    border: none;
+    border-radius: 6px;
+}
+
+.color-picker::-webkit-color-swatch-wrapper {
+    padding: 0;
+    border: none;
+    border-radius: 6px;
+}
+
+.color-text {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    color: #666;
+    pointer-events: none;
+}
+
+.color-input-container:hover {
+    border-color: #007bff;
+}
+
+.color-input-container:focus-within {
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}

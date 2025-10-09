@@ -5,26 +5,42 @@ import java.time.Period;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.MediaType;
 
 import com.example.demo.enums.EstadoOferta;
 import com.example.demo.enums.Modalidad;
 import com.example.demo.enums.TipoGenero;
 import com.example.demo.model.Categoria;
+import com.example.demo.model.CarruselImagen;
+import com.example.demo.model.Instituto;
 import com.example.demo.model.OfertaAcademica;
 import com.example.demo.model.Pais;
 import com.example.demo.model.Usuario;
 import com.example.demo.repository.CategoriaRepository;
+import com.example.demo.repository.CarruselImagenRepository;
 import com.example.demo.repository.OfertaAcademicaRepository;
+import com.example.demo.service.ImagenService;
+import com.example.demo.service.InstitutoService;
 import com.example.demo.service.LocacionAPIService;
 import com.example.demo.service.RegistroService;
 
@@ -42,6 +58,15 @@ public class AdminController {
     
     @Autowired
     private RegistroService registroService;
+    
+    @Autowired
+    private InstitutoService institutoService;
+    
+    @Autowired
+    private CarruselImagenRepository carruselImagenRepository;
+    
+    @Autowired
+    private ImagenService imagenService;
 
     public AdminController(LocacionAPIService locacionApiService,
                            RegistroService registroService) {
@@ -384,31 +409,13 @@ public ResponseEntity<Map<String, Object>> registrarUsuario(
     @GetMapping("/admin/configuracion")
     public String configuracionInstitucional(Model model) {
         // Obtener configuración actual del instituto
-        // Por ahora simulamos con datos de ejemplo
-        Map<String, Object> config = new HashMap<>();
-        config.put("nombreInstituto", "Instituto Aurea");
-        config.put("descripcion", "Instituto de formación profesional y técnica");
-        config.put("mision", "Brindar educación de calidad y formar profesionales competentes");
-        config.put("vision", "Ser referentes en educación profesional a nivel nacional");
-        config.put("direccion", "Av. Corrientes 1234, CABA");
-        config.put("telefono", "+54 11 1234-5678");
-        config.put("email", "contacto@institutoaurea.edu.ar");
-        config.put("facebook", "https://facebook.com/institutoaurea");
-        config.put("instagram", "https://instagram.com/institutoaurea");
-        config.put("x", "https://x.com/institutoaurea");
-        config.put("moneda", "ARS");
-        config.put("cuentaBancaria", "1234567890123456789012");
-        config.put("politicaPagos", "Pago en cuotas disponible. Descuentos por pago completo.");
-        config.put("colorPrimario", "#3b82f6");
-        config.put("colorSecundario", "#f8fafc");
-        config.put("colorTexto", "#1f2937");
-        config.put("permisoBajaAutomatica", true);
-        config.put("minimoAlumnoBaja", 5);
-        config.put("inactividadBaja", 30);
-        config.put("habilitarIA", true);
-        config.put("reportesAutomaticos", false);
+        Instituto instituto = institutoService.obtenerInstituto();
         
-        model.addAttribute("config", config);
+        // Obtener imágenes del carrusel
+        List<CarruselImagen> imagenesCarrusel = carruselImagenRepository.findByInstitutoAndActivaTrueOrderByOrden(instituto);
+        
+        model.addAttribute("instituto", instituto);
+        model.addAttribute("imagenesCarrusel", imagenesCarrusel);
         return "admin/configuraciones";
     }
 
@@ -416,12 +423,9 @@ public ResponseEntity<Map<String, Object>> registrarUsuario(
     @ResponseBody
     public ResponseEntity<Map<String, Object>> guardarConfiguracion(
             @RequestParam Map<String, String> params,
-            @RequestParam(value = "logo", required = false) org.springframework.web.multipart.MultipartFile logo) {
+            @RequestParam(value = "logo", required = false) MultipartFile logo) {
         
         try {
-            // Aquí se guardaría la configuración en la base de datos
-            // Por ahora simulamos el guardado
-            
             Map<String, Object> response = new HashMap<>();
             
             // Validar campos requeridos
@@ -431,39 +435,10 @@ public ResponseEntity<Map<String, Object>> registrarUsuario(
                 return ResponseEntity.badRequest().body(response);
             }
             
-            if (params.get("moneda") == null || params.get("moneda").trim().isEmpty()) {
-                response.put("success", false);
-                response.put("message", "La moneda es obligatoria");
-                return ResponseEntity.badRequest().body(response);
-            }
+            // Obtener instituto actual
+            Instituto instituto = institutoService.obtenerInstituto();
             
-            // Procesar logo si se subió
-            if (logo != null && !logo.isEmpty()) {
-                // Validar tipo de archivo
-                String contentType = logo.getContentType();
-                if (contentType == null || !contentType.startsWith("image/")) {
-                    response.put("success", false);
-                    response.put("message", "El logo debe ser una imagen válida");
-                    return ResponseEntity.badRequest().body(response);
-                }
-                
-                // Validar tamaño (5MB máximo)
-                if (logo.getSize() > 5 * 1024 * 1024) {
-                    response.put("success", false);
-                    response.put("message", "El logo debe ser menor a 5MB");
-                    return ResponseEntity.badRequest().body(response);
-                }
-                
-                // Aquí se guardaría el archivo
-                // String logoPath = saveLogoFile(logo);
-                // params.put("logoPath", logoPath);
-            }
-            
-            // Aquí se crearían/actualizarían las entidades en la base de datos
-            /*
-            Instituto instituto = institutoRepository.findTopByOrderByIdInstitutoAsc()
-                .orElse(new Instituto());
-            
+            // Actualizar campos
             instituto.setNombreInstituto(params.get("nombreInstituto"));
             instituto.setDescripcion(params.get("descripcion"));
             instituto.setMision(params.get("mision"));
@@ -478,31 +453,36 @@ public ResponseEntity<Map<String, Object>> registrarUsuario(
             instituto.setCuentaBancaria(params.get("cuentaBancaria"));
             instituto.setPoliticaPagos(params.get("politicaPagos"));
             
-            // Colores
-            List<String> colores = Arrays.asList(
-                params.get("colorPrimario"),
-                params.get("colorSecundario"),
-                params.get("colorTexto")
-            );
-            instituto.setColores(colores);
-            
             // Configuraciones automáticas
             instituto.setPermisoBajaAutomatica("on".equals(params.get("permisoBajaAutomatica")));
-            if (params.get("minimoAlumnoBaja") != null) {
+            if (params.get("minimoAlumnoBaja") != null && !params.get("minimoAlumnoBaja").isEmpty()) {
                 instituto.setMinimoAlumnoBaja(Integer.parseInt(params.get("minimoAlumnoBaja")));
             }
-            if (params.get("inactividadBaja") != null) {
+            if (params.get("inactividadBaja") != null && !params.get("inactividadBaja").isEmpty()) {
                 instituto.setInactividadBaja(Integer.parseInt(params.get("inactividadBaja")));
             }
             instituto.setHabilitarIA("on".equals(params.get("habilitarIA")));
             instituto.setReportesAutomaticos("on".equals(params.get("reportesAutomaticos")));
             
-            institutoRepository.save(instituto);
-            */
+            // Guardar colores institucionales
+            List<String> colores = List.of(
+                params.get("colorPrimario") != null ? params.get("colorPrimario") : "#1f2937",
+                params.get("colorSecundario") != null ? params.get("colorSecundario") : "#f8fafc",
+                params.get("colorTexto") != null ? params.get("colorTexto") : "#374151"
+            );
+            instituto.setColores(colores);
+            
+            // Procesar logo si se subió
+            if (logo != null && !logo.isEmpty()) {
+                String logoPath = guardarLogo(logo);
+                instituto.setLogoPath(logoPath);
+            }
+            
+            // Guardar instituto
+            institutoService.guardarInstituto(instituto);
             
             response.put("success", true);
             response.put("message", "Configuración guardada exitosamente");
-            response.put("data", params);
             
             return ResponseEntity.ok(response);
             
@@ -514,20 +494,97 @@ public ResponseEntity<Map<String, Object>> registrarUsuario(
         }
     }
     
-    @GetMapping("/admin/configuracion/logo")
-    public ResponseEntity<byte[]> obtenerLogo() {
+    // ================= GESTIÓN WEB DEL CARRUSEL =================
+    
+    @PostMapping("/admin/configuracion/carrusel/subir")
+    public String subirImagenesCarruselWeb(
+            @RequestParam("imagenes") MultipartFile[] imagenes,
+            Model model) {
+        
+        System.out.println("=== INICIO SUBIDA DE IMÁGENES ===");
+        System.out.println("Número de imágenes recibidas: " + (imagenes != null ? imagenes.length : "null"));
+        
         try {
-            // Aquí se obtendría el logo desde el archivo guardado
-            // byte[] logoBytes = Files.readAllBytes(Paths.get(logoPath));
-            // return ResponseEntity.ok()
-            //     .contentType(MediaType.IMAGE_PNG)
-            //     .body(logoBytes);
+            // Validaciones
+            if (imagenes == null || imagenes.length == 0) {
+                System.out.println("ERROR: No se han seleccionado imágenes");
+                model.addAttribute("error", "No se han seleccionado imágenes");
+                return "redirect:/admin/configuracion?error=nofiles";
+            }
+
+            for (int i = 0; i < imagenes.length; i++) {
+                MultipartFile imagen = imagenes[i];
+                System.out.println("Imagen " + i + ": " + imagen.getOriginalFilename() + 
+                                 " - Tamaño: " + imagen.getSize() + " bytes");
+            }
+
+            Instituto instituto = institutoService.obtenerInstituto();
+            System.out.println("Instituto obtenido: " + (instituto != null ? "OK" : "null"));
             
-            // Por ahora retornamos un error 404
-            return ResponseEntity.notFound().build();
+            List<CarruselImagen> imagenesGuardadas = imagenService.guardarMultiplesImagenesCarrusel(imagenes, instituto);
+            System.out.println("Imágenes guardadas exitosamente: " + imagenesGuardadas.size());
+            
+            model.addAttribute("mensaje", "Imágenes subidas exitosamente: " + imagenesGuardadas.size());
+            return "redirect:/admin/configuracion?success=upload";
+            
+        } catch (IOException e) {
+            System.out.println("ERROR IOException: " + e.getMessage());
+            e.printStackTrace();
+            model.addAttribute("error", "Error al procesar las imágenes: " + e.getMessage());
+            return "redirect:/admin/configuracion?error=processing";
+        } catch (Exception e) {
+            System.out.println("ERROR Exception: " + e.getMessage());
+            e.printStackTrace();
+            model.addAttribute("error", "Error interno del servidor: " + e.getMessage());
+            return "redirect:/admin/configuracion?error=server";
+        }
+    }
+    
+    @PostMapping("/admin/configuracion/carrusel/eliminar/{id}")
+    public String eliminarImagenCarruselWeb(@PathVariable Long id, Model model) {
+        try {
+            Optional<CarruselImagen> imagen = imagenService.obtenerImagenCarrusel(id);
+            if (!imagen.isPresent()) {
+                return "redirect:/admin/configuracion?error=notfound";
+            }
+            
+            imagenService.eliminarImagenCarrusel(id);
+            return "redirect:/admin/configuracion?success=delete";
             
         } catch (Exception e) {
-            return ResponseEntity.notFound().build();
+            return "redirect:/admin/configuracion?error=deletefail";
+        }
+    }
+    
+    // ================= MÉTODOS AUXILIARES =================
+    
+    private String guardarLogo(MultipartFile logo) throws IOException {
+        // Crear directorio si no existe
+        Path directorioLogos = Paths.get("src/main/resources/static/img/logos");
+        if (!Files.exists(directorioLogos)) {
+            Files.createDirectories(directorioLogos);
+        }
+        
+        // Generar nombre único
+        String nombreOriginal = logo.getOriginalFilename();
+        String extension = nombreOriginal != null ? nombreOriginal.substring(nombreOriginal.lastIndexOf(".")) : ".jpg";
+        String nombreArchivo = "logo_" + UUID.randomUUID().toString() + extension;
+        
+        // Guardar archivo
+        Path rutaArchivo = directorioLogos.resolve(nombreArchivo);
+        Files.copy(logo.getInputStream(), rutaArchivo, StandardCopyOption.REPLACE_EXISTING);
+        
+        return "/img/logos/" + nombreArchivo;
+    }
+    
+    // MÉTODO TEMPORAL PARA CREAR ADMIN - ELIMINAR DESPUÉS DE USAR
+    @GetMapping("/crear-admin-temporal")
+    public ResponseEntity<String> crearAdminTemporal() {
+        try {
+            registroService.crearUsuarioAdminTemporal();
+            return ResponseEntity.ok("Usuario admin creado: DNI=admin, Password=admin123");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
         }
     }
 }

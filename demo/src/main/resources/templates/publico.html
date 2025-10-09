@@ -3,39 +3,179 @@
       layout:decorate="~{layout/base}">
 
 <head>
-    <title>Aurea</title>
+    <title th:text="${instituto?.nombreInstituto ?: 'Instituto Aurea'}">Instituto Aurea</title>
 </head>
 
 <body>
-
     <div layout:fragment="content">
-        <!-- =============================================================== -->
-        <!-- AQUI VA TODO EL CONTENIDO ESPECÍFICO DE TU PÁGINA PÚBLICA -->
-        <!-- =============================================================== -->
         
-        <h1 style="color: black; ">Bienvenido a la Página Pública</h1>
-        <p>Este es el contenido que se mostrará en el cuerpo de la página,
-            utilizando el encabezado y pie de página de base.html.</p>
-        <p>Este es el contenido que se mostrará en el cuerpo de la página,
-            utilizando el encabezado y pie de página de base.html.</p>
-        <p>Este es el contenido que se mostrará en el cuerpo de la página,
-            utilizando el encabezado y pie de página de base.html.</p>
-        <p>Este es el contenido que se mostrará en el cuerpo de la página,
-            utilizando el encabezado y pie de página de base.html.</p>
-        <p>Este es el contenido que se mostrará en el cuerpo de la página,
-            utilizando el encabezado y pie de página de base.html.</p>
-        <p>Este es el contenido que se mostrará en el cuerpo de la página,
-            utilizando el encabezado y pie de página de base.html.</p>
-        <p>Este es el contenido que se mostrará en el cuerpo de la página,
-            utilizando el encabezado y pie de página de base.html.</p>
-        <p>Este es el contenido que se mostrará en el cuerpo de la página,
-            utilizando el encabezado y pie de página de base.html.</p>
-        <p>Este es el contenido que se mostrará en el cuerpo de la página,
-            utilizando el encabezado y pie de página de base.html.</p>
-        <p>Este es el contenido que se mostrará en el cuerpo de la página,
-            utilizando el encabezado y pie de página de base.html.</p>
-        
-        <!-- Puedes agregar aquí tus secciones, tarjetas, etc. -->
+        <!-- Hero Section con Carrusel Bootstrap -->
+        <section class="hero-section">
+            <!-- Debug: Mostrar cantidad de imágenes -->
+            <div class="alert alert-info" th:if="${imagenesCarrusel != null}">
+                <p>Debug: Cantidad de imágenes en carrusel: <span th:text="${#lists.size(imagenesCarrusel)}">0</span></p>
+            </div>
+            <div class="alert alert-warning" th:if="${imagenesCarrusel == null}">
+                <p>Debug: imagenesCarrusel es null</p>
+            </div>
+            
+            <div id="heroCarousel" class="carousel slide" data-bs-ride="carousel" th:if="${imagenesCarrusel != null and not #lists.isEmpty(imagenesCarrusel)}">
+                <div class="carousel-indicators">
+                    <button th:each="imagen, iterStat : ${imagenesCarrusel}" 
+                            type="button" 
+                            data-bs-target="#heroCarousel" 
+                            th:data-bs-slide-to="${iterStat.index}"
+                            th:class="${iterStat.index == 0} ? 'active' : ''"
+                            th:aria-current="${iterStat.index == 0} ? 'true' : 'false'"
+                            th:aria-label="'Slide ' + ${iterStat.index + 1}"></button>
+                </div>
+                <div class="carousel-inner">
+                    <div th:each="imagen, iterStat : ${imagenesCarrusel}" 
+                         th:class="'carousel-item' + (${iterStat.index == 0} ? ' active' : '')">
+                        <img th:src="@{'/api/carrusel/imagen/' + ${imagen.id}}" 
+                             th:alt="${imagen.altText ?: 'Imagen del instituto'}"
+                             class="d-block w-100" style="height: 500px; object-fit: cover;">
+                        <div class="carousel-caption d-none d-md-block">
+                            <div class="container">
+                                <h1 class="display-4 fw-bold" th:text="${instituto?.nombreInstituto}">Instituto Aurea</h1>
+                                <p class="lead" th:text="${instituto?.descripcion}">Tu futuro profesional comienza aquí</p>
+                                <a href="#ofertas" class="btn btn-primary btn-lg">Ver Ofertas Académicas</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Previous</span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Next</span>
+                </button>
+            </div>
+            
+            <!-- Fallback Hero si no hay imágenes -->
+            <div th:if="${imagenesCarrusel == null or #lists.isEmpty(imagenesCarrusel)}" class="hero-fallback bg-dark text-white py-5">
+                <div class="container text-center">
+                    <h1 class="display-4 fw-bold" th:text="${instituto?.nombreInstituto}">Instituto Aurea</h1>
+                    <p class="lead" th:text="${instituto?.descripcion}">Tu futuro profesional comienza aquí</p>
+                    <a href="#ofertas" class="btn btn-light btn-lg">Ver Ofertas Académicas</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sección Misión y Visión -->
+        <section class="py-5 bg-light" id="mision-vision">
+            <div class="container">
+                <div class="row justify-content-center">
+                    <div class="col-lg-8 text-center mb-5">
+                        <h2 class="display-5 fw-bold text-primary">Nuestra Institución</h2>
+                        <p class="lead text-muted">Conoce más sobre nuestros valores y objetivos</p>
+                    </div>
+                </div>
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-body text-center p-4">
+                                <div class="mb-3">
+                                    <i class="fas fa-bullseye fa-3x text-primary"></i>
+                                </div>
+                                <h3 class="card-title h4 text-primary">Nuestra Misión</h3>
+                                <p class="card-text" th:text="${instituto?.mision}">
+                                    Brindar educación de calidad y formar profesionales competentes para el mercado laboral actual, 
+                                    desarrollando habilidades técnicas y humanas que contribuyan al crecimiento personal y profesional.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-body text-center p-4">
+                                <div class="mb-3">
+                                    <i class="fas fa-eye fa-3x text-primary"></i>
+                                </div>
+                                <h3 class="card-title h4 text-primary">Nuestra Visión</h3>
+                                <p class="card-text" th:text="${instituto?.vision}">
+                                    Ser referentes en educación profesional a nivel nacional, reconocidos por la excelencia académica 
+                                    y la innovación en metodologías de enseñanza.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sección Ofertas Académicas -->
+        <section class="py-5" id="ofertas">
+            <div class="container">
+                <div class="row justify-content-center">
+                    <div class="col-lg-8 text-center mb-5">
+                        <h2 class="display-5 fw-bold text-primary">Nuestras Ofertas Académicas</h2>
+                        <p class="lead text-muted">Descubre nuestros programas educativos diseñados para tu crecimiento profesional</p>
+                    </div>
+                </div>
+                
+                <div class="row g-4" th:if="${not #lists.isEmpty(ofertas)}">
+                    <div th:each="oferta : ${ofertas}" class="col-lg-4 col-md-6">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-header bg-primary text-white">
+                                <span class="badge bg-light text-primary me-2" th:text="${oferta.categorias?[0]?.nombre ?: 'General'}">Categoría</span>
+                                <h5 class="card-title mb-0" th:text="${oferta.nombre}">Título de la Oferta</h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-text" th:text="${oferta.descripcion}">
+                                    Descripción de la oferta académica que proporciona información detallada sobre el contenido y objetivos del programa.
+                                </p>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-6">
+                                        <small class="text-muted">
+                                            <i class="fas fa-calendar me-1"></i>
+                                            <span th:text="${oferta.modalidad}">Modalidad</span>
+                                        </small>
+                                    </div>
+                                    <div class="col-6" th:if="${oferta.duracion}">
+                                        <small class="text-muted">
+                                            <i class="fas fa-clock me-1"></i>
+                                            <span th:text="${oferta.duracion}">Duración</span>
+                                        </small>
+                                    </div>
+                                    <div class="col-6" th:if="${oferta.certificado}">
+                                        <small class="text-success">
+                                            <i class="fas fa-certificate me-1"></i>
+                                            Con Certificado
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-footer bg-transparent">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="h5 text-primary mb-0" th:if="${oferta.costoInscripcion != null and oferta.costoInscripcion > 0}">
+                                        $<span th:text="${#numbers.formatDecimal(oferta.costoInscripcion, 0, 'COMMA', 2, 'POINT')}">0</span>
+                                    </span>
+                                    <span class="h5 text-success mb-0" th:if="${oferta.costoInscripcion == null or oferta.costoInscripcion == 0}">
+                                        Gratuito
+                                    </span>
+                                    <button class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Más información
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Mensaje cuando no hay ofertas -->
+                <div th:if="${#lists.isEmpty(ofertas)}" class="text-center py-5">
+                    <div class="mb-4">
+                        <i class="fas fa-graduation-cap fa-4x text-muted"></i>
+                    </div>
+                    <h3 class="text-muted">Próximamente</h3>
+                    <p class="lead text-muted">Estamos preparando nuevas ofertas académicas. ¡Mantente atento!</p>
+                </div>
+            </div>
+        </section>
 
     </div>
 

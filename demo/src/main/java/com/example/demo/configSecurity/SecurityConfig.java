@@ -52,7 +52,7 @@ public class SecurityConfig {
         )
         .authorizeHttpRequests(auth -> auth
             .requestMatchers("/", "/publico", "/login", "/register","/register/**","/provincias/**","/ciudades/**", "/api/ubicaciones/**","/email/**",
-                           "/css/**", "/js/**", "/style/**", "/img/**","/api/**")
+                           "/css/**", "/js/**", "/style/**", "/img/**","/api/**", "/admin/configuracion/carrusel/**", "/crear-admin-temporal")
             .permitAll()
             .requestMatchers("/admin/**").hasAuthority("ADMIN")
             .requestMatchers("/alumno/**").hasAuthority("ALUMNO")

@@ -1,5 +1,51 @@
 // ================= ADMIN DASHBOARD PROFESSIONAL JAVASCRIPT =================
 
+// Función global para preview de imágenes
+function previewImages(input) {
+    const previewContainer = document.getElementById('preview-container');
+    const previewGrid = document.getElementById('preview-grid');
+    
+    if (!input.files || input.files.length === 0) {
+        previewContainer.style.display = 'none';
+        return;
+    }
+    
+    previewGrid.innerHTML = '';
+    
+    Array.from(input.files).forEach((file, index) => {
+        if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const previewItem = document.createElement('div');
+                previewItem.className = 'preview-item';
+                previewItem.innerHTML = `
+                    <img src="${e.target.result}" alt="Preview ${index + 1}">
+                    <div class="preview-info">
+                        <small>${file.name}</small><br>
+                        <small>${(file.size / 1024).toFixed(1)} KB</small>
+                    </div>
+                `;
+                previewGrid.appendChild(previewItem);
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+    
+    previewContainer.style.display = 'block';
+}
+
+// Función global para mostrar botón de subida
+function showUploadButton() {
+    const uploadBtn = document.getElementById('upload-btn');
+    const fileInput = document.getElementById('imageFiles');
+    
+    if (fileInput.files && fileInput.files.length > 0) {
+        uploadBtn.style.display = 'block';
+    } else {
+        uploadBtn.style.display = 'none';
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     
     // ================= SIDEBAR TOGGLE FUNCTIONALITY =================
