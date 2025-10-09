@@ -38,7 +38,7 @@
         }
     </style>
 </head>
-<body>
+<body> 
 
     <!-- =================   HEADER   ================= -->
     <header class="header">
@@ -80,7 +80,10 @@
                         <img src="https://i.pravatar.cc/40" alt="Foto de perfil" class="profile-pic" onclick="toggleDropdown()">
                         <div id="dropdownMenu" class="dropdown-menu">
                             <a th:href="@{/perfil}">Mi Perfil</a>
-                            <a th:href="@{/logout}">Cerrar Sesión</a>
+                            <form th:action="@{/logout}" method="post" style="display: inline;">
+                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                <button type="submit" class="btn-link">Cerrar Sesión</button>
+                            </form>
                         </div>
                     </div>
                 </li>

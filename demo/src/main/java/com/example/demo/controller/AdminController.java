@@ -260,86 +260,80 @@ public class AdminController {
 
     // =================== ENDPOINTS PARA USUARIOS ===================
 
-     @PostMapping("/admin/usuarios/registrar")
-@ResponseBody
-public ResponseEntity<Map<String, Object>> registrarUsuario(
-        @RequestParam String dni,
-        @RequestParam String nombre,        // ✅ Cambiado de nombreCompleto
-        @RequestParam String apellido,      // ✅ Nuevo parámetro
-        @RequestParam String fechaNacimientoStr,
-        @RequestParam String genero,
-        @RequestParam String paisCodigo,
-        @RequestParam String provinciaCodigo,
-        @RequestParam String ciudadId,
-        @RequestParam String correo,
-        @RequestParam(required = false) String telefono,
-        @RequestParam String password,
-        @RequestParam String rol,
-        @RequestParam(required = false) String matricula,
-        @RequestParam(required = false) Integer experiencia,
-        @RequestParam(required = false) String horariosDisponibilidad,
-        @RequestParam(required = false) String estado,
-        @RequestParam(required = false, defaultValue = "true") Boolean notificacionesEmail,
-        @RequestParam(required = false, defaultValue = "false") Boolean cambiarPasswordPrimerAcceso,
-        @RequestParam(required = false) String colegioEgreso,
-        @RequestParam(required = false) Integer añoEgreso,
-        @RequestParam(required = false) String ultimosEstudios) {
-    
-    try {
-        System.out.println("📝 Registrando usuario desde admin:");
-        System.out.println("   - DNI: " + dni);
-        System.out.println("   - Nombre: " + nombre);
-        System.out.println("   - Apellido: " + apellido);
-        System.out.println("   - Rol: " + rol);
+    @PostMapping("/admin/usuarios/registrar")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> registrarUsuario(
+            @RequestParam String dni,
+            @RequestParam String nombre,
+            @RequestParam String apellido,
+            @RequestParam String fechaNacimientoStr,
+            @RequestParam TipoGenero genero,
+            @RequestParam String paisCodigo,  // ✅ Cambiado de 'pais' a 'paisCodigo'
+            @RequestParam String provinciaCodigo,
+            @RequestParam String ciudadId,
+            @RequestParam String correo,
+            @RequestParam(required = false) String telefono,
+            @RequestParam String rol,
+            @RequestParam(required = false) String matricula,
+            @RequestParam(required = false) Integer experiencia,
+            @RequestParam(required = false) String horariosDisponibilidad,
+            @RequestParam(required = false) String estado,
+            @RequestParam(required = false, defaultValue = "true") Boolean notificacionesEmail,
+            @RequestParam(required = false, defaultValue = "false") Boolean cambiarPasswordPrimerAcceso,
+            @RequestParam(required = false) String colegioEgreso,
+            @RequestParam(required = false) Integer añoEgreso,
+            @RequestParam(required = false) String ultimosEstudios) {
+        
+        try {
+            System.out.println("📝 Registrando usuario desde admin:");
+            System.out.println("   - DNI: " + dni);
+            System.out.println("   - Nombre: " + nombre);
+            System.out.println("   - Apellido: " + apellido);
+            System.out.println("   - Rol: " + rol);
+            System.out.println("   - País Código: " + paisCodigo); // ✅ Debug
+            System.out.println("   - Provincia Código: " + provinciaCodigo); // ✅ Debug
+            System.out.println("   - Ciudad ID: " + ciudadId); // ✅ Debug
 
-        // Convertir fecha de DD/MM/AAAA a LocalDate
-        LocalDate fechaNacimiento = null;
-        if (fechaNacimientoStr != null && !fechaNacimientoStr.isEmpty()) {
-            String[] partes = fechaNacimientoStr.split("/");
-            if (partes.length == 3) {
-                int dia = Integer.parseInt(partes[0]);
-                int mes = Integer.parseInt(partes[1]);
-                int año = Integer.parseInt(partes[2]);
-                fechaNacimiento = LocalDate.of(año, mes, dia);
-                
-                // Validar edad mínima (16 años)
-                Period edad = Period.between(fechaNacimiento, LocalDate.now());
-                if (edad.getYears() < 16) {
+            // Convertir fecha de DD/MM/AAAA a LocalDate
+            LocalDate fechaNacimiento = null;
+            if (fechaNacimientoStr != null && !fechaNacimientoStr.isEmpty()) {
+                String[] partes = fechaNacimientoStr.split("/");
+                if (partes.length == 3) {
+                    int dia = Integer.parseInt(partes[0]);
+                    int mes = Integer.parseInt(partes[1]);
+                    int año = Integer.parseInt(partes[2]);
+                    fechaNacimiento = LocalDate.of(año, mes, dia);
+                    
+                    // Validar edad mínima (16 años)
+                    Period edad = Period.between(fechaNacimiento, LocalDate.now());
+                    if (edad.getYears() < 16) {
+                        Map<String, Object> response = new HashMap<>();
+                        response.put("success", false);
+                        response.put("message", "El usuario debe tener al menos 16 años");
+                        return ResponseEntity.badRequest().body(response);
+                    }
+                } else {
                     Map<String, Object> response = new HashMap<>();
                     response.put("success", false);
-                    response.put("message", "El usuario debe tener al menos 16 años");
+                    response.put("message", "Formato de fecha inválido. Use DD/MM/AAAA");
                     return ResponseEntity.badRequest().body(response);
                 }
-            } else {
-                Map<String, Object> response = new HashMap<>();
-                response.put("success", false);
-                response.put("message", "Formato de fecha inválido. Use DD/MM/AAAA");
-                return ResponseEntity.badRequest().body(response);
             }
-        }
 
-        // Convertir género de String a TipoGenero enum
-        TipoGenero tipoGenero;
-        try {
-            tipoGenero = TipoGenero.valueOf(genero.toUpperCase());
-        } catch (IllegalArgumentException e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "Género inválido. Use: MASCULINO, FEMENINO, OTRO, PREFIERO_NO_DECIR");
-            return ResponseEntity.badRequest().body(response);
-        }
+            // Convertir ciudadId a Long
+            Long ciudadIdLong = Long.valueOf(ciudadId);
 
             // Usar el servicio unificado
             Usuario nuevoUsuario = registroService.registrarUsuarioAdministrativo(
-                dni, nombre, apellido, fechaNacimiento, tipoGenero,
-                correo, telefono, password, paisCodigo, provinciaCodigo, 
-                Long.parseLong(ciudadId), rol, matricula,
+                dni, nombre, apellido, fechaNacimiento, genero,
+                correo, telefono, paisCodigo, provinciaCodigo,  // ✅ Ahora enviamos códigos
+                ciudadIdLong, rol, matricula,
                 experiencia, colegioEgreso, añoEgreso, ultimosEstudios
             );
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
-            response.put("message", "Usuario registrado exitosamente");
+            response.put("message", "Usuario registrado exitosamente. Las credenciales han sido enviadas al correo electrónico.");
             response.put("id", nuevoUsuario.getId());
             response.put("dni", nuevoUsuario.getDni());
             response.put("nombre", nuevoUsuario.getNombre() + " " + nuevoUsuario.getApellido());

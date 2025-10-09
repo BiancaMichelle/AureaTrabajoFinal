@@ -57,6 +57,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const hiddenCodigo = document.getElementById('paisCodigo');
             
             console.log("País seleccionado:", select.value);
+            console.log("Código del país:", selectedOption.getAttribute('data-codigo'));
             
             if (selectedOption.value && selectedOption.getAttribute('data-codigo')) {
                 const countryCode = selectedOption.getAttribute('data-codigo');
@@ -80,6 +81,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const hiddenCodigo = document.getElementById('provinciaCodigo');
             
             console.log("Provincia seleccionada:", select.value);
+            console.log("Código de provincia:", selectedOption.getAttribute('data-code'));
             
             if (selectedOption.value && selectedOption.getAttribute('data-code')) {
                 const provinceCode = selectedOption.getAttribute('data-code');

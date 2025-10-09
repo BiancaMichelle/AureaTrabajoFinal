@@ -45,16 +45,16 @@ public class DemoApplication implements CommandLineRunner {
             }
         }
 
-        if (usuarioRepository.findByDni("01234567").isEmpty()) {
+        if (usuarioRepository.findByDni("11111111").isEmpty()) {
             Usuario admin = new Usuario();
-            admin.setDni("01234567");
+            admin.setDni("11111111"); // 8 dígitos
             admin.setNombre("Super");
             admin.setApellido("Admin");
             admin.setFechaNacimiento(LocalDate.of(1990, 1, 1)); // Fecha que cumple +16 años
             admin.setGenero(TipoGenero.MASCULINO);
             admin.setCorreo("admin@demo.com");
             admin.setNumTelefono("1234567890"); // 10 dígitos
-            admin.setContraseña(passwordEncoder.encode("Admin123")); // Cumple: 8 chars, mayúscula y minúscula
+            admin.setContraseña(passwordEncoder.encode("123")); // Cumple: 8 chars, mayúscula y minúscula
             
             // Campos de estado
             admin.setEstado(true);
