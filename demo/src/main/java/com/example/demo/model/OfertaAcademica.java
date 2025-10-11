@@ -2,16 +2,18 @@ package com.example.demo.model;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
-import com.example.demo.enums.*;
+import com.example.demo.enums.EstadoOferta;
+import com.example.demo.enums.Modalidad;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -41,6 +43,11 @@ public class OfertaAcademica {
     private String descripcion;
     private String duracion;
     private Double costoInscripcion;
+    
+
+    @OneToMany(mappedBy = "ofertaAcademica", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Horario> horarios = new ArrayList<>();
+
     
     @Enumerated(EnumType.STRING)
     private Modalidad modalidad;

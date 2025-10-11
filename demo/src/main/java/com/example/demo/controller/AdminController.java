@@ -1,20 +1,20 @@
 package com.example.demo.controller;
 
-import java.time.LocalDate;
-import java.time.Period;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.LocalDate;
+import java.time.Period;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -25,24 +25,24 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.http.MediaType;
 
 import com.example.demo.enums.EstadoOferta;
 import com.example.demo.enums.Modalidad;
 import com.example.demo.enums.TipoGenero;
-import com.example.demo.model.Categoria;
 import com.example.demo.model.CarruselImagen;
+import com.example.demo.model.Categoria;
 import com.example.demo.model.Instituto;
 import com.example.demo.model.OfertaAcademica;
 import com.example.demo.model.Pais;
 import com.example.demo.model.Usuario;
-import com.example.demo.repository.CategoriaRepository;
 import com.example.demo.repository.CarruselImagenRepository;
+import com.example.demo.repository.CategoriaRepository;
 import com.example.demo.repository.OfertaAcademicaRepository;
 import com.example.demo.service.ImagenService;
 import com.example.demo.service.InstitutoService;
 import com.example.demo.service.LocacionAPIService;
 import com.example.demo.service.RegistroService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Controller
 public class AdminController {
@@ -268,7 +268,7 @@ public class AdminController {
             @RequestParam String apellido,
             @RequestParam String fechaNacimientoStr,
             @RequestParam TipoGenero genero,
-            @RequestParam String paisCodigo,  // ✅ Cambiado de 'pais' a 'paisCodigo'
+            @RequestParam String paisCodigo,
             @RequestParam String provinciaCodigo,
             @RequestParam String ciudadId,
             @RequestParam String correo,
@@ -276,7 +276,7 @@ public class AdminController {
             @RequestParam String rol,
             @RequestParam(required = false) String matricula,
             @RequestParam(required = false) Integer experiencia,
-            @RequestParam(required = false) String horariosDisponibilidad,
+            @RequestParam(required = false) String horariosDisponibilidad, // ✅ Recibimos los horarios como JSON
             @RequestParam(required = false) String estado,
             @RequestParam(required = false, defaultValue = "true") Boolean notificacionesEmail,
             @RequestParam(required = false, defaultValue = "false") Boolean cambiarPasswordPrimerAcceso,
@@ -290,9 +290,7 @@ public class AdminController {
             System.out.println("   - Nombre: " + nombre);
             System.out.println("   - Apellido: " + apellido);
             System.out.println("   - Rol: " + rol);
-            System.out.println("   - País Código: " + paisCodigo); // ✅ Debug
-            System.out.println("   - Provincia Código: " + provinciaCodigo); // ✅ Debug
-            System.out.println("   - Ciudad ID: " + ciudadId); // ✅ Debug
+            System.out.println("   - Horarios: " + horariosDisponibilidad); // ✅ Debug horarios
 
             // Convertir fecha de DD/MM/AAAA a LocalDate
             LocalDate fechaNacimiento = null;
@@ -323,12 +321,32 @@ public class AdminController {
             // Convertir ciudadId a Long
             Long ciudadIdLong = Long.valueOf(ciudadId);
 
-            // Usar el servicio unificado
+            // ✅ Procesar horarios si es docente y hay horarios
+            List<Map<String, String>> horariosList = new ArrayList<>();
+            if ("DOCENTE".equals(rol) && horariosDisponibilidad != null && !horariosDisponibilidad.isEmpty()) {
+                try {
+                    // Parsear el JSON de horarios
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    horariosList = objectMapper.readValue(horariosDisponibilidad, 
+                        objectMapper.getTypeFactory().constructCollectionType(List.class, Map.class));
+                    
+                    System.out.println("📅 Horarios procesados: " + horariosList.size());
+                    for (Map<String, String> horario : horariosList) {
+                        System.out.println("   - " + horario.get("diaSemana") + ": " + 
+                                        horario.get("horaInicio") + " - " + horario.get("horaFin"));
+                    }
+                } catch (Exception e) {
+                    System.out.println("⚠️ Error parseando horarios: " + e.getMessage());
+                }
+            }
+
+            // Usar el servicio unificado - MODIFICAR EL SERVICIO PARA ACEPTAR HORARIOS
             Usuario nuevoUsuario = registroService.registrarUsuarioAdministrativo(
                 dni, nombre, apellido, fechaNacimiento, genero,
-                correo, telefono, paisCodigo, provinciaCodigo,  // ✅ Ahora enviamos códigos
+                correo, telefono, paisCodigo, provinciaCodigo,
                 ciudadIdLong, rol, matricula,
-                experiencia, colegioEgreso, añoEgreso, ultimosEstudios
+                experiencia, colegioEgreso, añoEgreso, ultimosEstudios,
+                horariosList // ✅ Pasar los horarios al servicio
             );
 
             Map<String, Object> response = new HashMap<>();
@@ -397,6 +415,8 @@ public class AdminController {
             return ResponseEntity.badRequest().body(response);
         }
     }
+
+    
 
     // =================   CONFIGURACIONES INSTITUCIONALES   =================
     

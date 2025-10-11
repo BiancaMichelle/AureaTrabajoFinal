@@ -700,6 +700,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     const row = e.target.closest('tr');
                     if (row) {
                         row.remove();
+                        actualizarContadorHorarios(); // ✅ Actualizar contador al eliminar
                     }
                 }
             });
@@ -707,6 +708,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     
+    // ✅ FUNCIÓN addHorarioDocente MEJORADA
     function addHorarioDocente() {
         const dia = diaSelect.value;
         const horaDesde = horaDesdeInput.value;
@@ -719,6 +721,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (horaDesde >= horaHasta) {
             showNotification('La hora de inicio debe ser anterior a la hora de fin', 'error');
+            return;
+        }
+
+        // ✅ VERIFICAR HORARIOS SOLAPADOS
+        if (existeHorarioSolapado(dia, horaDesde, horaHasta)) {
+            showNotification('Ya existe un horario para este día en el mismo rango de horas', 'error');
             return;
         }
 
@@ -738,13 +746,50 @@ document.addEventListener('DOMContentLoaded', function () {
         diaSelect.value = '';
         horaDesdeInput.value = '';
         horaHastaInput.value = '';
+        
+        // ✅ ACTUALIZAR CONTADOR
+        actualizarContadorHorarios();
     }
 
-    function clearHorariosDocenteTable() {
-        if (horariosDocenteTableBody) {
-            horariosDocenteTableBody.innerHTML = '';
+        // ✅ NUEVA: Función para verificar horarios solapados
+        function existeHorarioSolapado(dia, nuevaHoraDesde, nuevaHoraHasta) {
+            const filas = horariosDocenteTableBody.querySelectorAll('tr');
+            
+            for (let fila of filas) {
+                const diaExistente = fila.cells[0].textContent;
+                const horarioExistente = fila.cells[1].textContent;
+                const [horaDesdeExistente, horaHastaExistente] = horarioExistente.split(' - ');
+                
+                if (diaExistente === dia) {
+                    // Verificar solapamiento
+                    if ((nuevaHoraDesde >= horaDesdeExistente && nuevaHoraDesde < horaHastaExistente) ||
+                        (nuevaHoraHasta > horaDesdeExistente && nuevaHoraHasta <= horaHastaExistente) ||
+                        (nuevaHoraDesde <= horaDesdeExistente && nuevaHoraHasta >= horaHastaExistente)) {
+                        return true;
+                    }
+                }
+            }
+            
+            return false;
         }
-    }
+    
+        // ✅ NUEVA: Función para actualizar contador de horarios
+        function actualizarContadorHorarios() {
+            const contador = document.getElementById('contador-horarios');
+            const filas = horariosDocenteTableBody.querySelectorAll('tr').length;
+            
+            if (contador) {
+                contador.textContent = `(${filas} horarios agregados)`;
+                contador.style.display = filas > 0 ? 'inline-block' : 'none';
+            }
+        }
+    
+        function clearHorariosDocenteTable() {
+            if (horariosDocenteTableBody) {
+                horariosDocenteTableBody.innerHTML = '';
+                actualizarContadorHorarios(); // ✅ Actualizar contador al limpiar
+            }
+        }
 
     // Filtros y búsqueda
     function initializeFilters() {
@@ -1003,32 +1048,19 @@ document.addEventListener('DOMContentLoaded', function () {
         
         // Agregar roles seleccionados
         if (selectedRoles.length > 0) {
-            formData.append('rol', selectedRoles[0]); // Cambia de 'roles' a 'rol'
-        }
-        
-        // Agregar horarios de docente como string estructurada
-        if (selectedRoles.includes('DOCENTE')) {
-            const horariosTable = document.getElementById('horarios-docente-table').getElementsByTagName('tbody')[0];
-            const horariosArray = [];
-            for (let i = 0; i < horariosTable.rows.length; i++) {
-                const row = horariosTable.rows[i];
-                const dia = row.cells[0].textContent;
-                const horario = row.cells[1].textContent;
-                horariosArray.push(`${dia}:${horario}`);
-            }
-            formData.append('horariosDisponibilidad', horariosArray.join(','));
+            formData.append('rol', selectedRoles[0]);
         }
         
         if (selectedRoles.includes('DOCENTE')) {
-            const horariosTable = document.getElementById('horarios-docente-table').getElementsByTagName('tbody')[0];
-            const horariosArray = [];
-            for (let i = 0; i < horariosTable.rows.length; i++) {
-                const row = horariosTable.rows[i];
-                const dia = row.cells[0].textContent;
-                const horario = row.cells[1].textContent;
-                horariosArray.push(`${dia}:${horario}`);
+            const horarios = obtenerHorariosDeTabla();
+            if (horarios.length > 0) {
+                formData.append('horariosDisponibilidad', JSON.stringify(horarios));
+                console.log('📅 Enviando horarios como JSON:', horarios);
+            } else {
+                console.log('📅 Docente sin horarios asignados');
+                // Opcional: puedes eliminar esta línea si no quieres enviar el campo vacío
+                // formData.append('horariosDisponibilidad', '[]');
             }
-            formData.append('horariosDisponibilidad', horariosArray.join(','));
         }
 
 
@@ -1040,7 +1072,7 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                showNotification('✅ Usuario registrado exitosamente', 'success');
+                showNotification('✅ ' + data.message, 'success');
                 resetForm();
                 hideForm();
                 loadUsuarios(); // Recargar tabla
@@ -1192,6 +1224,67 @@ document.addEventListener('DOMContentLoaded', function () {
             clearTimeout(timeout);
             timeout = setTimeout(later, wait);
         };
+    }
+
+    function obtenerHorariosDeTabla() {
+        const horarios = [];
+        const horariosTable = document.getElementById('horarios-docente-table').getElementsByTagName('tbody')[0];
+        
+        for (let i = 0; i < horariosTable.rows.length; i++) {
+            const row = horariosTable.rows[i];
+            let dia = row.cells[0].textContent;
+            const horarioTexto = row.cells[1].textContent;
+            
+            // ✅ NORMALIZAR NOMBRES DE DÍAS (quitar acentos)
+            dia = normalizarNombreDia(dia);
+            
+            // Parsear horario (formato: "08:00 - 12:00")
+            const [horaInicio, horaFin] = horarioTexto.split(' - ');
+            
+            horarios.push({
+                diaSemana: dia,
+                horaInicio: horaInicio,
+                horaFin: horaFin
+            });
+        }
+        
+        return horarios;
+    }
+
+    // ✅ FUNCIÓN: Normalizar nombres de días para el backend
+    function normalizarNombreDia(dia) {
+        const normalizaciones = {
+            'Lunes': 'LUNES',
+            'Martes': 'MARTES',
+            'Miércoles': 'MIERCOLES',
+            'Miercoles': 'MIERCOLES',
+            'Jueves': 'JUEVES',
+            'Viernes': 'VIERNES',
+            'Sábado': 'SABADO',
+            'Sabado': 'SABADO',
+            'Domingo': 'DOMINGO'
+        };
+        
+        return normalizaciones[dia] || dia.toUpperCase();
+    }
+
+    // ✅ AGREGAR al resetForm para limpiar contador
+    function resetForm() {
+        document.getElementById('user-form').reset();
+        resetFotoUpload();
+        clearHorariosDocenteTable();
+        hideDocenteFields();
+        hideAlumnoFields();
+        resetRoles();
+        resetLocation();
+        resetFechaNacimiento();
+        removeAllSpecificRequired();
+        
+        // ✅ Asegurar que el contador se oculte
+        const contador = document.getElementById('contador-horarios');
+        if (contador) {
+            contador.style.display = 'none';
+        }
     }
 
     console.log('Gestión de Usuarios inicializada correctamente');

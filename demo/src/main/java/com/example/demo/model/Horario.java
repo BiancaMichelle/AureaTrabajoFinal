@@ -7,6 +7,7 @@ import com.example.demo.enums.Dias;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -33,7 +34,11 @@ public class Horario {
     private Time horaInicio;
     private Time horaFin;
     
-    @ManyToOne
-    @JoinColumn(name = "curso_id")
-    private Curso curso;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "docente_id")
+    private Docente docente;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "oferta_id")
+    private OfertaAcademica ofertaAcademica;
 }
