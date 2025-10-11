@@ -46,6 +46,10 @@ document.addEventListener('DOMContentLoaded', function () {
         COORDINADOR: 'fas fa-user-tie'
     };
 
+    let currentPage = 1;
+    let totalPages = 1;
+    let pageSize = 10;
+
     // Inicialización
     initializeFormHandlers();
     initializeFotoUpload();
@@ -945,25 +949,25 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 });
             }
-    
-            // Cargar usuarios al inicializar
-            loadUsuarios();
+        
+            // Cargar usuarios al inicializar (página 1)
+            loadUsuarios(1);
         }
     
-        function editUsuario(id, nombre) {
-            console.log(`Editar usuario ${id}: ${nombre}`);
-            // Implementar lógica de edición
+        function editUsuario(dni, nombre) {
+            console.log(`Editar usuario DNI ${dni}: ${nombre}`);
+            // Implementar lógica de edición usando DNI
         }
     
-        function viewUsuario(id, nombre) {
-            console.log(`Ver usuario ${id}: ${nombre}`);
-            // Implementar lógica de visualización
+        function viewUsuario(dni, nombre) {
+            console.log(`Ver usuario DNI ${dni}: ${nombre}`);
+            // Implementar lógica de visualización usando DNI
         }
     
-        function deleteUsuario(id, nombre) {
-            if (confirm(`¿Está seguro de que desea eliminar el usuario "${nombre}"?`)) {
-                console.log(`Eliminar usuario ${id}: ${nombre}`);
-                // Implementar lógica de eliminación
+        function deleteUsuario(dni, nombre) {
+            if (confirm(`¿Está seguro de que desea eliminar el usuario "${nombre}" (DNI: ${dni})?`)) {
+                console.log(`Eliminar usuario DNI ${dni}: ${nombre}`);
+                // Implementar lógica de eliminación usando DNI
             }
         }
     
@@ -1286,8 +1290,10 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     
         // Función para cargar usuarios en la tabla
-        function loadUsuarios() {
-            console.log('🔄 Cargando usuarios desde el servidor...');
+        function loadUsuarios(page = 1) {
+            console.log(`🔄 Cargando usuarios página ${page}...`);
+            
+            currentPage = page;
             
             // Mostrar loading en la tabla
             const tableBody = document.querySelector('#usuarios-table tbody');
@@ -1303,8 +1309,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 `;
             }
             
-            fetch('/admin/usuarios/listar', {
-                method: 'GET'
+            fetch(`/admin/usuarios/listar?page=${page}&size=${pageSize}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
             })
             .then(response => {
                 if (!response.ok) {
@@ -1313,9 +1322,25 @@ document.addEventListener('DOMContentLoaded', function () {
                 return response.json();
             })
             .then(data => {
-                console.log('📊 Datos recibidos:', data);
+                console.log('📊 RESPUESTA COMPLETA:', data);
+                
                 if (data.success) {
                     populateUsuariosTable(data.data);
+                    
+                    // ✅ MANEJO MÁS ROBUSTO DE LA PAGINACIÓN
+                    if (data.pagination) {
+                        updatePagination(data.pagination);
+                    } else {
+                        // Si no viene pagination, crear uno con valores por defecto
+                        const defaultPagination = {
+                            totalElements: data.data?.totalElements || 0,
+                            totalPages: data.data?.totalPages || 1,
+                            currentPage: page,
+                            pageSize: pageSize
+                        };
+                        updatePagination(defaultPagination);
+                        console.log("⚠️ Usando paginación por defecto:", defaultPagination);
+                    }
                 } else {
                     console.error('Error del servidor:', data.message);
                     showNotification('❌ Error al cargar usuarios: ' + data.message, 'error', 10000);
@@ -1324,6 +1349,7 @@ document.addEventListener('DOMContentLoaded', function () {
             .catch(error => {
                 console.error('Error cargando usuarios:', error);
                 showNotification('❌ Error al cargar usuarios desde el servidor', 'error', 10000);
+                
                 // Mostrar mensaje de error en la tabla
                 if (tableBody) {
                     tableBody.innerHTML = `
@@ -1336,62 +1362,161 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             });
         }
+
+        function updatePagination(pagination) {
+            // ✅ HACER EL CÓDIGO MÁS ROBUSTO
+            const totalElements = pagination?.totalElements || 0;
+            totalPages = pagination?.totalPages || 1;
+            
+            console.log("📊 Actualizando paginación:", pagination);
+            
+            // Actualizar información de paginación
+            const paginationInfo = document.querySelector('.pagination-info');
+            if (paginationInfo) {
+                const startItem = ((currentPage - 1) * pageSize) + 1;
+                const endItem = Math.min(currentPage * pageSize, totalElements);
+                paginationInfo.textContent = `Mostrando ${startItem}-${endItem} de ${totalElements} usuarios`;
+            }
+            
+            // Actualizar controles de paginación
+            updatePaginationControls();
+        }
+        
+        function updatePaginationControls() {
+            const prevBtn = document.querySelector('.btn-pagination:first-child');
+            const nextBtn = document.querySelector('.btn-pagination:last-child');
+            const pagesContainer = document.querySelector('.pagination-pages');
+            
+            if (!prevBtn || !nextBtn || !pagesContainer) return;
+            
+            // Botones anterior/siguiente
+            prevBtn.disabled = currentPage <= 1;
+            nextBtn.disabled = currentPage >= totalPages;
+            
+            // Agregar event listeners a los botones
+            prevBtn.onclick = () => loadUsuarios(currentPage - 1);
+            nextBtn.onclick = () => loadUsuarios(currentPage + 1);
+            
+            // Generar números de página
+            pagesContainer.innerHTML = '';
+            
+            // Mostrar máximo 5 páginas alrededor de la actual
+            const startPage = Math.max(1, currentPage - 2);
+            const endPage = Math.min(totalPages, currentPage + 2);
+            
+            for (let i = startPage; i <= endPage; i++) {
+                const pageBtn = document.createElement('button');
+                pageBtn.className = `btn-page ${i === currentPage ? 'active' : ''}`;
+                pageBtn.textContent = i;
+                pageBtn.onclick = () => loadUsuarios(i);
+                pagesContainer.appendChild(pageBtn);
+            }
+        }
+
+        function applyFilters() {
+            // Volver a la primera página cuando se aplican filtros
+            loadUsuarios(1);
+        }
+
+        function clearFilters() {
+            if (searchInput) searchInput.value = '';
+            if (filtroRol) filtroRol.value = '';
+            if (filtroEstado) filtroEstado.value = '';
+            if (filtroGenero) filtroGenero.value = '';
+            
+            // Volver a la primera página cuando se limpian filtros
+            loadUsuarios(1);
+        }
+
+        function getCurrentFilters() {
+            const filters = {};
+            
+            if (searchInput && searchInput.value) {
+                filters.search = searchInput.value;
+            }
+            if (filtroRol && filtroRol.value) {
+                filters.rol = filtroRol.value;
+            }
+            if (filtroEstado && filtroEstado.value) {
+                filters.estado = filtroEstado.value;
+            }
+            if (filtroGenero && filtroGenero.value) {
+                filters.genero = filtroGenero.value;
+            }
+            
+            return filters;
+        }
     
         // Función para poblar la tabla con datos
-        function populateUsuariosTable(usuarios) {
-            console.log('📋 Poblando tabla con', usuarios.length, 'usuarios');
+        function populateUsuariosTable(responseData) {
+            console.log('📋 Poblando tabla con', responseData.content.length, 'usuarios');
             
             const tableBody = document.querySelector('#usuarios-table tbody');
             if (!tableBody) {
                 console.error('No se encontró el tbody de la tabla de usuarios');
                 return;
             }
-    
+        
+            let usuarios = [];
+            let totalElements = 0;
+        
+            if (responseData && responseData.content) {
+                usuarios = responseData.content;
+                totalElements = responseData.totalElements || usuarios.length;
+            } else if (Array.isArray(responseData)) {
+                usuarios = responseData;
+                totalElements = usuarios.length;
+            } else {
+                console.error('Estructura de datos no reconocida:', responseData);
+            }
+        
+            console.log('👥 Usuarios a mostrar:', usuarios.length);
+        
             // Limpiar tabla existente
             tableBody.innerHTML = '';
-    
+        
             if (usuarios.length === 0) {
                 tableBody.innerHTML = `
                     <tr>
-                        <td colspan="9" class="text-center">No hay usuarios registrados</td>
+                        <td colspan="8" class="text-center">No hay usuarios registrados</td> <!-- ✅ CAMBIAR A 8 COLUMNAS -->
                     </tr>
                 `;
                 updateTableStats(0);
                 return;
             }
-    
+        
             // Crear filas para cada usuario
             usuarios.forEach(usuario => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${usuario.id || 'N/A'}</td>
+                    <!-- ✅ NUEVO ORDEN: DNI primero, sin ID -->
+                    <td>${usuario.dni || 'N/A'}</td>
                     <td>
                         ${usuario.foto ? 
                             `<img src="${usuario.foto}" alt="Foto" class="user-photo-small">` : 
                             '<i class="fas fa-user-circle user-icon"></i>'}
                     </td>
                     <td>${usuario.nombreCompleto || 'Sin nombre'}</td>
-                    <td>${usuario.dni || 'N/A'}</td>
                     <td>${usuario.correo || 'N/A'}</td>
                     <td>${formatRoles(usuario.roles || [])}</td>
                     <td><span class="status-badge status-${(usuario.estado || 'activo').toLowerCase()}">${usuario.estado || 'ACTIVO'}</span></td>
                     <td>${usuario.fechaRegistro ? new Date(usuario.fechaRegistro).toLocaleDateString() : 'N/A'}</td>
                     <td class="actions">
-                        <button class="btn-icon btn-view" onclick="viewUsuario(${usuario.id}, '${usuario.nombreCompleto}')" title="Ver">
+                        <button class="btn-icon btn-view" onclick="viewUsuario('${usuario.dni}', '${usuario.nombreCompleto}')" title="Ver">
                             <i class="fas fa-eye"></i>
                         </button>
-                        <button class="btn-icon btn-edit" onclick="editUsuario(${usuario.id}, '${usuario.nombreCompleto}')" title="Editar">
+                        <button class="btn-icon btn-edit" onclick="editUsuario('${usuario.dni}', '${usuario.nombreCompleto}')" title="Editar">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="btn-icon btn-delete" onclick="deleteUsuario(${usuario.id}, '${usuario.nombreCompleto}')" title="Eliminar">
+                        <button class="btn-icon btn-delete" onclick="deleteUsuario('${usuario.dni}', '${usuario.nombreCompleto}')" title="Eliminar">
                             <i class="fas fa-trash"></i>
                         </button>
                     </td>
                 `;
                 tableBody.appendChild(row);
             });
-    
-            updateTableStats(usuarios.length);
+        
+            updateTableStats(totalElements);
         }
     
         function formatRoles(roles) {

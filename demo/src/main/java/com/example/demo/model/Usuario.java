@@ -1,6 +1,7 @@
 package com.example.demo.model;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.Period;
 import java.util.HashSet;
 import java.util.List;
@@ -27,6 +28,7 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -64,6 +66,12 @@ public class Usuario {
   @Pattern(regexp = "^[a-zA-ZáéíóúÁÉÍÓÚñÑ\\s]+$", message = "El apellido solo puede contener letras y espacios")
   private String apellido;
 
+  @Column(name = "foto")
+    private String foto;
+
+    @Column(name = "fecha_registro")
+    private LocalDateTime fechaRegistro;
+
   @NotNull(message = "La fecha de nacimiento es obligatoria")
   @Past(message = "La fecha de nacimiento debe ser en el pasado")
   private LocalDate fechaNacimiento;
@@ -99,7 +107,16 @@ public class Usuario {
   private Ciudad ciudad;
 
   private boolean estado = true;
+
   private boolean estadoCuenta;
+
+    public String getEstado() {
+        return estado ? "ACTIVO" : "INACTIVO";
+    }
+
+    public boolean isEstado() {
+        return estado;
+    }
 
   @ManyToMany(fetch = FetchType.EAGER)
   @JoinTable(
@@ -121,4 +138,11 @@ public class Usuario {
       }
       return Period.between(fechaNacimiento, LocalDate.now()).getYears() >= 16;
   }
+
+  @PrePersist
+    protected void onCreate() {
+        if (fechaRegistro == null) {
+            fechaRegistro = LocalDateTime.now();
+        }
+    }
 }

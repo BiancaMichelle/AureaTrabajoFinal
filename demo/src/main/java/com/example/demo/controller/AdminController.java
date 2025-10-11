@@ -34,10 +34,12 @@ import com.example.demo.model.Categoria;
 import com.example.demo.model.Instituto;
 import com.example.demo.model.OfertaAcademica;
 import com.example.demo.model.Pais;
+import com.example.demo.model.Rol;
 import com.example.demo.model.Usuario;
 import com.example.demo.repository.CarruselImagenRepository;
 import com.example.demo.repository.CategoriaRepository;
 import com.example.demo.repository.OfertaAcademicaRepository;
+import com.example.demo.repository.UsuarioRepository;
 import com.example.demo.service.ImagenService;
 import com.example.demo.service.InstitutoService;
 import com.example.demo.service.LocacionAPIService;
@@ -67,6 +69,10 @@ public class AdminController {
     
     @Autowired
     private ImagenService imagenService;
+
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+
 
     public AdminController(LocacionAPIService locacionApiService,
                            RegistroService registroService) {
@@ -374,41 +380,94 @@ public class AdminController {
 
     @GetMapping("/admin/usuarios/listar")
     @ResponseBody
-    public ResponseEntity<Map<String, Object>> listarUsuarios() {
+    public ResponseEntity<Map<String, Object>> listarUsuarios(
+            @RequestParam(defaultValue = "0") int page,  // ✅ CAMBIAR A 0 POR DEFECTO
+            @RequestParam(defaultValue = "10") int size) {
+        
         try {
-            // Por ahora devolvemos datos de ejemplo
-            List<Map<String, Object>> usuarios = new java.util.ArrayList<>();
+            System.out.println("📋 Solicitando usuarios REALES - página: " + page + ", tamaño: " + size);
             
-            // Datos de ejemplo
-            Map<String, Object> usuario1 = new HashMap<>();
-            usuario1.put("id", 1);
-            usuario1.put("nombreCompleto", "Juan Pérez");
-            usuario1.put("dni", "12345678");
-            usuario1.put("correo", "juan.perez@ejemplo.com");
-            usuario1.put("roles", java.util.Arrays.asList("ALUMNO"));
-            usuario1.put("estado", "ACTIVO");
-            usuario1.put("fechaRegistro", LocalDate.now().toString());
-            usuarios.add(usuario1);
+            // OBTENER USUARIOS REALES DE LA BASE DE DATOS
+            List<Usuario> todosUsuarios = usuarioRepository.findAll();
+            System.out.println("👥 Usuarios encontrados en BD: " + todosUsuarios.size());
             
-            Map<String, Object> usuario2 = new HashMap<>();
-            usuario2.put("id", 2);
-            usuario2.put("nombreCompleto", "María García");
-            usuario2.put("dni", "87654321");
-            usuario2.put("correo", "maria.garcia@ejemplo.com");
-            usuario2.put("roles", java.util.Arrays.asList("DOCENTE"));
-            usuario2.put("estado", "ACTIVO");
-            usuario2.put("fechaRegistro", LocalDate.now().toString());
-            usuarios.add(usuario2);
+            // ✅ CORREGIR PAGINACIÓN - VERIFICAR LÍMITES
+            int start = page * size;
+            int end = Math.min(start + size, todosUsuarios.size());
             
-            // Aquí irían los datos reales de la base de datos
-            // List<Usuario> usuarios = usuarioRepository.findAll();
+            // ✅ EVITAR ERROR CUANDO START ES MAYOR QUE EL TAMAÑO DE LA LISTA
+            if (start >= todosUsuarios.size()) {
+                start = 0; // Volver a la primera página
+                page = 0;
+            }
             
+            List<Usuario> usuariosPagina = todosUsuarios.subList(start, end);
+            
+            System.out.println("📄 Usuarios en esta página: " + usuariosPagina.size() + " (start: " + start + ", end: " + end + ")");
+            
+            // Convertir usuarios reales a formato para frontend
+            List<Map<String, Object>> usuariosResponse = new ArrayList<>();
+            
+            for (Usuario usuario : usuariosPagina) {
+                Map<String, Object> usuarioMap = new HashMap<>();
+                usuarioMap.put("dni", usuario.getDni());
+                usuarioMap.put("nombreCompleto", usuario.getNombre() + " " + usuario.getApellido());
+                usuarioMap.put("correo", usuario.getCorreo());
+                usuarioMap.put("foto", null);
+                usuarioMap.put("estado", usuario.isEstado() ? "ACTIVO" : "INACTIVO");
+                if (usuario.getFechaRegistro() != null) {
+                    usuarioMap.put("fechaRegistro", usuario.getFechaRegistro().toString());
+                } else {
+                    // Si no existe, usar fecha por defecto o campo alternativo
+                    usuarioMap.put("fechaRegistro", "Fecha no disponible");
+                }
+                
+                // Obtener roles reales
+                List<String> roles = new ArrayList<>();
+                if (usuario.getRoles() != null) {
+                    for (Rol rol : usuario.getRoles()) {
+                        if (rol != null && rol.getNombre() != null) {
+                            String nombreRol = convertirRolALegible(rol.getNombre());
+                            roles.add(nombreRol);
+                        }
+                    }
+                }
+                usuarioMap.put("roles", roles);
+                
+                usuariosResponse.add(usuarioMap);
+                
+                System.out.println("✅ Usuario real: " + usuario.getNombre() + " " + usuario.getApellido() + 
+                                " - DNI: " + usuario.getDni() + " - Roles: " + roles);
+            }
+            
+            // Crear respuesta
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
-            response.put("data", usuarios);
             
+            Map<String, Object> data = new HashMap<>();
+            data.put("content", usuariosResponse);
+            data.put("totalElements", todosUsuarios.size());
+            data.put("totalPages", Math.max(1, (int) Math.ceil((double) todosUsuarios.size() / size))); // ✅ Mínimo 1 página
+            data.put("size", size);
+            data.put("number", page);
+            
+            response.put("data", data);
+            
+            Map<String, Object> pagination = new HashMap<>();
+            pagination.put("currentPage", page);
+            pagination.put("totalPages", Math.max(1, (int) Math.ceil((double) todosUsuarios.size() / size)));
+            pagination.put("totalElements", todosUsuarios.size());
+            pagination.put("pageSize", size);
+            
+            response.put("pagination", pagination);
+            
+            System.out.println("✅ Respuesta enviada - " + usuariosResponse.size() + " usuarios reales");
             return ResponseEntity.ok(response);
+            
         } catch (Exception e) {
+            System.out.println("❌ Error obteniendo usuarios reales: " + e.getMessage());
+            e.printStackTrace();
+            
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", "Error al obtener usuarios: " + e.getMessage());
@@ -416,6 +475,19 @@ public class AdminController {
         }
     }
 
+    // Método auxiliar para convertir roles a nombres legibles
+    private String convertirRolALegible(String rol) {
+        if (rol == null) return "Sin rol";
+        
+        switch(rol.toUpperCase()) {
+            case "ALUMNO": return "Alumno";
+            case "DOCENTE": return "Docente"; 
+            case "ADMIN": return "Administrador";
+            case "COORDINADOR": return "Coordinador";
+            default: return rol;
+        }
+    }
+    
     
 
     // =================   CONFIGURACIONES INSTITUCIONALES   =================
