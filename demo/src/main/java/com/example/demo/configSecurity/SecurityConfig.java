@@ -71,7 +71,7 @@ public class SecurityConfig {
                 if (roles.contains("ADMIN")) {
                     response.sendRedirect("/admin/dashboard");
                 } else if (roles.contains("ALUMNO")) {
-                    response.sendRedirect("/");
+                    response.sendRedirect("/alumno");
                 } else if (roles.contains("DOCENTE")) {
                     response.sendRedirect("/docente");
                 } else {

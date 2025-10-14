@@ -44,7 +44,7 @@ public class LoginController {
         boolean solicitudExitosa = passwordRecoveryService.iniciarRecuperacionPassword(dniOCorreo);
         
         if (solicitudExitosa) {
-            return "redirect:/login?mensaje=Se ha enviado un correo con instrucciones para recuperar tu contraseña.&tipo=success";
+            return "redirect:/login?mensaje=Se ha enviado un correo con instrucciones para recuperar tu clave de acceso.&tipo=success";
         } else {
             // Por seguridad, mostramos el mismo mensaje aunque no exista
             return "redirect:/login?mensaje=Si el DNI o correo existen, recibirás un email con instrucciones.&tipo=info";
