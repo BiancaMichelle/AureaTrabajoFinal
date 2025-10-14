@@ -491,29 +491,4 @@ public class RegistroService {
         return usuarioRepository.save(usuario);
     }
     
-    // MÉTODO TEMPORAL PARA CREAR ADMIN
-    public void crearUsuarioAdminTemporal() {
-        // Verificar si ya existe
-        if (usuarioRepository.findByDni("admin").isPresent()) {
-            throw new RuntimeException("Usuario admin ya existe");
-        }
-        
-        Usuario admin = new Usuario();
-        admin.setDni("admin");
-        admin.setNombre("Admin");
-        admin.setApellido("Temporal");
-        admin.setCorreo("admin@test.com");
-        admin.setContraseña(passwordEncoder.encode("admin123"));
-        admin.setFechaNacimiento(LocalDate.of(1990, 1, 1));
-        admin.setGenero(TipoGenero.MASCULINO);
-        admin.setNumTelefono("123456789");
-        
-        // Buscar rol ADMIN
-        Rol rolAdmin = rolRepository.findByNombre("ADMIN")
-            .orElseThrow(() -> new RuntimeException("Rol ADMIN no encontrado"));
-        
-        admin.getRoles().add(rolAdmin);
-        
-        usuarioRepository.save(admin);
-    }
 }

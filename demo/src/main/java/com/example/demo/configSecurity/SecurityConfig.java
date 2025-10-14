@@ -52,7 +52,8 @@ public class SecurityConfig {
         )
         .authorizeHttpRequests(auth -> auth
             .requestMatchers("/", "/publico", "/login", "/register","/register/**","/provincias/**","/ciudades/**", "/api/ubicaciones/**","/email/**",
-                           "/css/**", "/js/**", "/style/**", "/img/**","/api/**", "/admin/configuracion/carrusel/**", "/crear-admin-temporal")
+                        "/css/**", "/js/**", "/style/**", "/img/**","/api/**", "/admin/configuracion/carrusel/**", "/crear-admin-temporal",
+                        "/forgot-password", "/recuperacion/**") // ← AGREGAR ESTAS RUTAS
             .permitAll()
             .requestMatchers("/admin/**").hasAuthority("ADMIN")
             .requestMatchers("/").hasAuthority("ALUMNO")

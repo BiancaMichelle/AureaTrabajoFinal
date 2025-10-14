@@ -663,14 +663,4 @@ public class AdminController {
         return "/img/logos/" + nombreArchivo;
     }
     
-    // MÉTODO TEMPORAL PARA CREAR ADMIN - ELIMINAR DESPUÉS DE USAR
-    @GetMapping("/crear-admin-temporal")
-    public ResponseEntity<String> crearAdminTemporal() {
-        try {
-            registroService.crearUsuarioAdminTemporal();
-            return ResponseEntity.ok("Usuario admin creado: DNI=admin, Password=admin123");
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
-        }
-    }
 }

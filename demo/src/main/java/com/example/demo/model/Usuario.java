@@ -94,6 +94,15 @@ public class Usuario {
   @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z]).+$", message = "La contraseña debe contener al menos una mayúscula y una minúscula")
   private String contraseña;
 
+    @Column(name = "password_temp")
+    private String passwordTemporal;  // Contraseña generada temporalmente
+    
+    @Column(name = "token_recuperacion")
+    private String tokenRecuperacion; // Token único para confirmación
+    
+    @Column(name = "expiracion_token")
+    private LocalDateTime expiracionToken; // Fecha de expiración del token
+
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "pais_codigo")
   private Pais pais;

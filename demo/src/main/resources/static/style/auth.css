@@ -1,4 +1,131 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap');
+/* ===== NOTIFICACIONES MEJORADAS ===== */
+
+/* Loading inline para tabla */
+.loading-inline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 20px;
+    color: #6b7280;
+}
+
+.error-message {
+    color: #ef4444;
+    padding: 20px;
+}
+
+
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    min-width: 300px;
+    max-width: 400px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border-left: 4px solid #ccc;
+    z-index: 10000;
+    transform: translateX(400px);
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.notification.show {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.notification-success {
+    border-left-color: #10b981;
+}
+
+.notification-error {
+    border-left-color: #ef4444;
+}
+
+.notification-warning {
+    border-left-color: #f59e0b;
+}
+
+.notification-info {
+    border-left-color: #3b82f6;
+}
+
+.notification-content {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    position: relative;
+}
+
+.notification-icon {
+    margin-right: 12px;
+    font-size: 1.2em;
+}
+
+.notification-success .notification-icon {
+    color: #10b981;
+}
+
+.notification-error .notification-icon {
+    color: #ef4444;
+}
+
+.notification-warning .notification-icon {
+    color: #f59e0b;
+}
+
+.notification-info .notification-icon {
+    color: #3b82f6;
+}
+
+.notification-message {
+    flex: 1;
+    font-size: 0.9em;
+    line-height: 1.4;
+    color: #374151;
+}
+
+.notification-close {
+    background: none;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    padding: 4px;
+    margin-left: 8px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.notification-close:hover {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.notification-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    background: currentColor;
+    width: 100%;
+    transform: scaleX(0);
+    transform-origin: left;
+    opacity: 0.3;
+}
+
+@keyframes progress {
+    to {
+        transform: scaleX(1);
+    }
+}
+
+
+
+
 
 :root {
 	--dark-blue: #0d1b2a;

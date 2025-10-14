@@ -13,4 +13,6 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID>, JpaSpec
     boolean existsByCorreo(String correo);
     Optional<Usuario> findByDni(String dni);
     Optional<Usuario> findByCorreo(String correo);
+    Optional<Usuario> findByDniOrCorreo(String dni, String correo);
+    Optional<Usuario> findByTokenRecuperacion(String token);
 }

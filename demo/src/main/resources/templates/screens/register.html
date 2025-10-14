@@ -28,6 +28,13 @@
 
         <!-- Lado derecho: formulario -->
         <div class="auth-right">
+            <div th:if="${mensaje}" th:classappend="${tipo == 'error'} ? 'alert alert-error' : 
+                                                ${tipo == 'success'} ? 'alert alert-success' : 
+                                                'alert alert-info'"
+                style="margin-bottom: 20px;">
+                <span th:text="${mensaje}"></span>
+            </div>
+
             <div class="form-wrapper">
                 <h1>Registro de Estudiante</h1>
 
