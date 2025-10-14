@@ -127,18 +127,33 @@ public class RegistroService {
     }
 
     // 🌍 MÉTODOS PARA BUSCAR O CREAR UBICACIONES (NUEVOS - DE LA SEGUNDA VERSIÓN)
+    // 🌍 MÉTODOS PARA BUSCAR O CREAR UBICACIONES (SIEMPRE DESDE API)
     private Pais buscarOCrearPais(String paisCodigo) {
-        Optional<Pais> paisExistente = paisRepository.findByCodigo(paisCodigo);
-        if (paisExistente.isPresent()) {
-            System.out.println("✅ País encontrado: " + paisExistente.get().getNombre());
-            return paisExistente.get();
-        } else {
-            System.out.println("🌎 Creando nuevo país: " + paisCodigo);
-            try {
-                List<Pais> paises = locacionApiService.obtenerTodosPaises();
-                for (Pais p : paises) {
-                    if (paisCodigo.equals(p.getCodigo())) {
-                        // ✅ CREAR NUEVA INSTANCIA en lugar de usar la de la API
+        System.out.println("🌎 Buscando/creando país desde API con código: " + paisCodigo);
+        
+        try {
+            List<Pais> paises = locacionApiService.obtenerTodosPaises();
+            System.out.println("📋 Países obtenidos de API: " + paises.size());
+            
+            // Buscar el país en la API
+            for (Pais p : paises) {
+                if (paisCodigo.equals(p.getCodigo())) {
+                    System.out.println("🎯 País encontrado en API: " + p.getNombre() + " (" + p.getCodigo() + ")");
+                    
+                    // Verificar si ya existe en BD con el mismo código
+                    Optional<Pais> paisExistente = paisRepository.findByCodigo(paisCodigo);
+                    if (paisExistente.isPresent()) {
+                        // Actualizar el nombre si es diferente
+                        Pais paisBD = paisExistente.get();
+                        if (!paisBD.getNombre().equals(p.getNombre())) {
+                            System.out.println("🔄 Actualizando nombre del país: " + paisBD.getNombre() + " → " + p.getNombre());
+                            paisBD.setNombre(p.getNombre());
+                            paisBD = paisRepository.save(paisBD);
+                        }
+                        System.out.println("✅ País encontrado/actualizado en BD: " + paisBD.getNombre());
+                        return paisBD;
+                    } else {
+                        // Crear nuevo país
                         Pais nuevoPais = new Pais();
                         nuevoPais.setCodigo(p.getCodigo());
                         nuevoPais.setNombre(p.getNombre());
@@ -147,89 +162,105 @@ public class RegistroService {
                         return nuevoPais;
                     }
                 }
-            } catch (Exception e) {
-                System.out.println("⚠️ Error obteniendo países de API: " + e.getMessage());
             }
             
-            // Fallback
-            Pais nuevoPais = new Pais();
-            nuevoPais.setCodigo(paisCodigo);
-            nuevoPais.setNombre("País " + paisCodigo);
-            nuevoPais = paisRepository.save(nuevoPais);
-            System.out.println("✅ País creado (fallback): " + nuevoPais.getNombre());
-            return nuevoPais;
+            throw new RuntimeException("❌ País con código '" + paisCodigo + "' no encontrado en API");
+            
+        } catch (Exception e) {
+            System.out.println("❌ Error obteniendo/creando país: " + e.getMessage());
+            throw new RuntimeException("Error al obtener país desde API: " + e.getMessage(), e);
         }
     }
-    
+
     private Provincia buscarOCrearProvincia(String provinciaCodigo, Pais pais) {
-        Optional<Provincia> provinciaExistente = provinciaRepository.findByCodigo(provinciaCodigo);
-        if (provinciaExistente.isPresent()) {
-            System.out.println("✅ Provincia encontrada: " + provinciaExistente.get().getNombre());
-            return provinciaExistente.get();
-        } else {
-            System.out.println("🏙️ Creando nueva provincia: " + provinciaCodigo);
-            try {
-                List<Provincia> provincias = locacionApiService.obtenerProvinciasPorPais(pais.getCodigo());
-                for (Provincia p : provincias) {
-                    if (provinciaCodigo.equals(p.getCodigo())) {
-                        // ✅ CREAR NUEVA INSTANCIA
+        System.out.println("🏙️ Buscando/creando provincia desde API con código: " + provinciaCodigo + " para país: " + pais.getCodigo());
+        
+        try {
+            List<Provincia> provincias = locacionApiService.obtenerProvinciasPorPais(pais.getCodigo());
+            System.out.println("📋 Provincias obtenidas de API: " + provincias.size());
+            
+            // Buscar la provincia en la API
+            for (Provincia p : provincias) {
+                if (provinciaCodigo.equals(p.getCodigo())) {
+                    System.out.println("🎯 Provincia encontrada en API: " + p.getNombre() + " (" + p.getCodigo() + ")");
+                    
+                    // Verificar si ya existe en BD con el mismo código
+                    Optional<Provincia> provinciaExistente = provinciaRepository.findByCodigo(provinciaCodigo);
+                    if (provinciaExistente.isPresent()) {
+                        // Actualizar el nombre si es diferente
+                        Provincia provinciaBD = provinciaExistente.get();
+                        if (!provinciaBD.getNombre().equals(p.getNombre())) {
+                            System.out.println("🔄 Actualizando nombre de la provincia: " + provinciaBD.getNombre() + " → " + p.getNombre());
+                            provinciaBD.setNombre(p.getNombre());
+                            provinciaBD.setPais(pais); // Asegurar la relación
+                            provinciaBD = provinciaRepository.save(provinciaBD);
+                        }
+                        System.out.println("✅ Provincia encontrada/actualizada en BD: " + provinciaBD.getNombre());
+                        return provinciaBD;
+                    } else {
+                        // Crear nueva provincia
                         Provincia nuevaProvincia = new Provincia();
                         nuevaProvincia.setCodigo(p.getCodigo());
                         nuevaProvincia.setNombre(p.getNombre());
-                        nuevaProvincia.setPais(pais); // Usar el pais de la transacción actual
+                        nuevaProvincia.setPais(pais);
                         nuevaProvincia = provinciaRepository.save(nuevaProvincia);
                         System.out.println("✅ Provincia creada desde API: " + nuevaProvincia.getNombre());
                         return nuevaProvincia;
                     }
                 }
-            } catch (Exception e) {
-                System.out.println("⚠️ Error obteniendo provincias de API: " + e.getMessage());
             }
             
-            // Fallback
-            Provincia nuevaProvincia = new Provincia();
-            nuevaProvincia.setCodigo(provinciaCodigo);
-            nuevaProvincia.setNombre("Provincia " + provinciaCodigo);
-            nuevaProvincia.setPais(pais);
-            nuevaProvincia = provinciaRepository.save(nuevaProvincia);
-            System.out.println("✅ Provincia creada (fallback): " + nuevaProvincia.getNombre());
-            return nuevaProvincia;
+            throw new RuntimeException("❌ Provincia con código '" + provinciaCodigo + "' no encontrada en API para país " + pais.getCodigo());
+            
+        } catch (Exception e) {
+            System.out.println("❌ Error obteniendo/creando provincia: " + e.getMessage());
+            throw new RuntimeException("Error al obtener provincia desde API: " + e.getMessage(), e);
         }
     }
-    
+
     private Ciudad buscarOCrearCiudad(Long ciudadId, Provincia provincia, String paisCodigo, String provinciaCodigo) {
-        Optional<Ciudad> ciudadExistente = ciudadRepository.findById(ciudadId);
-        if (ciudadExistente.isPresent()) {
-            System.out.println("✅ Ciudad encontrada: " + ciudadExistente.get().getNombre());
-            return ciudadExistente.get();
-        } else {
-            System.out.println("🏡 Creando nueva ciudad: " + ciudadId);
-            try {
-                List<Ciudad> ciudades = locacionApiService.obtenerCiudadesPorProvincia(paisCodigo, provinciaCodigo);
-                for (Ciudad c : ciudades) {
-                    if (ciudadId.equals(c.getId())) {
-                        // ✅ CREAR NUEVA INSTANCIA
+        System.out.println("🏡 Buscando/creando ciudad desde API con ID: " + ciudadId + " para provincia: " + provincia.getCodigo());
+        
+        try {
+            List<Ciudad> ciudades = locacionApiService.obtenerCiudadesPorProvincia(paisCodigo, provinciaCodigo);
+            System.out.println("📋 Ciudades obtenidas de API: " + ciudades.size());
+            
+            // Buscar la ciudad en la API
+            for (Ciudad c : ciudades) {
+                if (ciudadId.equals(c.getId())) {
+                    System.out.println("🎯 Ciudad encontrada en API: " + c.getNombre() + " (ID: " + c.getId() + ")");
+                    
+                    // Verificar si ya existe en BD con el mismo ID
+                    Optional<Ciudad> ciudadExistente = ciudadRepository.findById(ciudadId);
+                    if (ciudadExistente.isPresent()) {
+                        // Actualizar el nombre si es diferente
+                        Ciudad ciudadBD = ciudadExistente.get();
+                        if (!ciudadBD.getNombre().equals(c.getNombre())) {
+                            System.out.println("🔄 Actualizando nombre de la ciudad: " + ciudadBD.getNombre() + " → " + c.getNombre());
+                            ciudadBD.setNombre(c.getNombre());
+                            ciudadBD.setProvincia(provincia); // Asegurar la relación
+                            ciudadBD = ciudadRepository.save(ciudadBD);
+                        }
+                        System.out.println("✅ Ciudad encontrada/actualizada en BD: " + ciudadBD.getNombre());
+                        return ciudadBD;
+                    } else {
+                        // Crear nueva ciudad
                         Ciudad nuevaCiudad = new Ciudad();
                         nuevaCiudad.setId(c.getId());
                         nuevaCiudad.setNombre(c.getNombre());
-                        nuevaCiudad.setProvincia(provincia); // Usar la provincia de la transacción actual
+                        nuevaCiudad.setProvincia(provincia);
                         nuevaCiudad = ciudadRepository.save(nuevaCiudad);
                         System.out.println("✅ Ciudad creada desde API: " + nuevaCiudad.getNombre());
                         return nuevaCiudad;
                     }
                 }
-            } catch (Exception e) {
-                System.out.println("⚠️ Error obteniendo ciudades de API: " + e.getMessage());
             }
             
-            // Fallback
-            Ciudad nuevaCiudad = new Ciudad();
-            nuevaCiudad.setId(ciudadId);
-            nuevaCiudad.setNombre("Ciudad " + ciudadId);
-            nuevaCiudad.setProvincia(provincia);
-            nuevaCiudad = ciudadRepository.save(nuevaCiudad);
-            System.out.println("✅ Ciudad creada (fallback): " + nuevaCiudad.getNombre());
-            return nuevaCiudad;
+            throw new RuntimeException("❌ Ciudad con ID '" + ciudadId + "' no encontrada en API para provincia " + provinciaCodigo);
+            
+        } catch (Exception e) {
+            System.out.println("❌ Error obteniendo/creando ciudad: " + e.getMessage());
+            throw new RuntimeException("Error al obtener ciudad desde API: " + e.getMessage(), e);
         }
     }
 
