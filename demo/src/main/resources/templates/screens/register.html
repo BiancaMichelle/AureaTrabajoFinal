@@ -97,11 +97,11 @@
             
             <div class="field-group">
                 <label for="fechaNacimiento">Fecha de nacimiento</label>
-                <input type="text" id="fechaNacimiento" 
-                       name="fechaNacimientoStr" 
-                       placeholder="DD/MM/AAAA"
-                       maxlength="10"
+                <input type="date" id="fechaNacimiento" 
+                       th:field="*{fechaNacimiento}"
+                       max="2009-10-21"
                        required />
+                <small>Debes tener al menos 16 años para registrarte</small>
             </div>
             
             <div class="field-group">

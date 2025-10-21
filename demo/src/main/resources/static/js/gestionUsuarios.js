@@ -57,6 +57,19 @@ document.addEventListener('DOMContentLoaded', function () {
     initializeHorariosDocente();
     initializeFilters();
     initializeTable();
+    initializeDateInput(); // ✅ Nueva función para configurar el input de fecha
+
+    // ✅ Configurar fecha máxima para el input de fecha (16 años atrás desde hoy)
+    function initializeDateInput() {
+        const fechaInput = document.getElementById('fechaNacimiento');
+        if (fechaInput) {
+            const hoy = new Date();
+            const hace16Anos = new Date(hoy.getFullYear() - 16, hoy.getMonth(), hoy.getDate());
+            const fechaMaxima = hace16Anos.toISOString().split('T')[0];
+            fechaInput.setAttribute('max', fechaMaxima);
+            console.log('📅 Fecha máxima configurada:', fechaMaxima);
+        }
+    }
 
     function initializeLocationSystem() {
         console.log("📍 Inicializando sistema de ubicación...");
@@ -308,7 +321,10 @@ document.addEventListener('DOMContentLoaded', function () {
         setTimeout(() => {
             formContainer.classList.add('show');
             initializeLocationSystem();
-            initializeDateMask();
+            // Configurar fecha máxima del input de fecha al abrir el formulario
+            if (typeof initializeDateInput === 'function') {
+                initializeDateInput();
+            }
         }, 10);
     }
 
@@ -328,7 +344,6 @@ document.addEventListener('DOMContentLoaded', function () {
         hideAlumnoFields();
         resetRoles();
         resetLocation();
-        resetFechaNacimiento();
         removeAllSpecificRequired();
         
         clearFieldErrors();
@@ -336,13 +351,6 @@ document.addEventListener('DOMContentLoaded', function () {
         const contador = document.getElementById('contador-horarios');
         if (contador) {
             contador.style.display = 'none';
-        }
-    }
-
-    function resetFechaNacimiento() {
-        const fechaBackendField = document.getElementById('fechaNacimientoBackend');
-        if (fechaBackendField) {
-            fechaBackendField.value = '';
         }
     }
     
@@ -361,128 +369,24 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('ciudadId').value = '';
     }
 
-    function initializeDateMask() {
-        const fechaInput = document.getElementById('fechaNacimiento');
-        
-        if (fechaInput) {
-            // Aplicar máscara para formato DD/MM/AAAA
-            fechaInput.addEventListener('input', function(e) {
-                let value = e.target.value.replace(/\D/g, '');
-                
-                // Aplicar formato DD/MM/AAAA
-                if (value.length > 2 && value.length <= 4) {
-                    value = value.substring(0, 2) + '/' + value.substring(2);
-                } else if (value.length > 4) {
-                    value = value.substring(0, 2) + '/' + value.substring(2, 4) + '/' + value.substring(4, 8);
-                }
-                
-                e.target.value = value;
-            });
-    
-            // Validar fecha al perder foco
-            fechaInput.addEventListener('blur', function(e) {
-                const value = e.target.value;
-                if (value && !isValidDate(value)) {
-                    showFieldError(fechaInput, 'Fecha inválida. Usa el formato DD/MM/AAAA');
-                } else {
-                    hideFieldError(fechaInput);
-                    // Actualizar campo hidden para backend
-                    updateBackendDateField(value);
-                }
-            });
-    
-            // También validar al cambiar
-            fechaInput.addEventListener('change', function(e) {
-                const value = e.target.value;
-                if (value && isValidDate(value)) {
-                    updateBackendDateField(value);
-                }
-            });
-        }
-    }
-    function isValidDate(dateString) {
-        if (!dateString) return false;
-        
-        const pattern = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
-        const match = dateString.match(pattern);
-        
-        if (!match) return false;
-        
-        const dia = parseInt(match[1], 10);
-        const mes = parseInt(match[2], 10);
-        const año = parseInt(match[3], 10);
-        
-        // Validar rangos básicos
-        if (mes < 1 || mes > 12) return false;
-        if (dia < 1 || dia > 31) return false;
-        
-        // Validar febrero y meses con 30 días
-        const fecha = new Date(año, mes - 1, dia);
-        return fecha.getDate() === dia && 
-               fecha.getMonth() === mes - 1 && 
-               fecha.getFullYear() === año;
-    }
-
-    
-    
-    // ✅ Función para convertir DD/MM/AAAA a yyyy-MM-dd (formato backend)
-    function convertirFechaParaBackend(fechaDDMMAAAA) {
-        if (!fechaDDMMAAAA) return null;
-        
-        const partes = fechaDDMMAAAA.split('/');
-        if (partes.length === 3) {
-            const dia = partes[0].padStart(2, '0');
-            const mes = partes[1].padStart(2, '0');
-            const año = partes[2];
-            return `${año}-${mes}-${dia}`;
-        }
-        return null;
-    }
-    
-    // ✅ Función para actualizar el campo hidden del backend
-    function updateBackendDateField(fechaDDMMAAAA) {
-        const backendField = document.getElementById('fechaNacimientoBackend');
-        if (backendField && fechaDDMMAAAA) {
-            const fechaBackend = convertirFechaParaBackend(fechaDDMMAAAA);
-            backendField.value = fechaBackend;
-            console.log("📅 Fecha para backend:", fechaBackend);
-        }
-    }
-    
     // ✅ Función para validar la fecha en el formulario
     function validateFechaNacimiento() {
         const fechaInput = document.getElementById('fechaNacimiento');
         let isValid = true;
     
-        if (!fechaInput.value.trim()) {
+        if (!fechaInput.value) {
             showFieldError(fechaInput, 'La fecha de nacimiento es obligatoria');
             isValid = false;
-        } else if (!isValidDate(fechaInput.value)) {
-            showFieldError(fechaInput, 'Fecha inválida. Usa el formato DD/MM/AAAA');
-            isValid = false;
         } else {
-            // ✅ Validar edad mínima (16 años)
-            const partes = fechaInput.value.split('/');
-            const dia = parseInt(partes[0], 10);
-            const mes = parseInt(partes[1], 10);
-            const año = parseInt(partes[2], 10);
-            const fechaNac = new Date(año, mes - 1, dia);
+            const fechaSeleccionada = new Date(fechaInput.value);
             const hoy = new Date();
-            let edad = hoy.getFullYear() - fechaNac.getFullYear();
-            const mesActual = hoy.getMonth();
-            const diaActual = hoy.getDate();
+            const hace16Anos = new Date(hoy.getFullYear() - 16, hoy.getMonth(), hoy.getDate());
             
-            if (mesActual < (mes - 1) || (mesActual === (mes - 1) && diaActual < dia)) {
-                edad--;
-            }
-            
-            if (edad < 16) {
+            if (fechaSeleccionada > hace16Anos) {
                 showFieldError(fechaInput, 'El usuario debe tener al menos 16 años');
                 isValid = false;
             } else {
                 hideFieldError(fechaInput);
-                // Asegurar que el campo hidden esté actualizado
-                updateBackendDateField(fechaInput.value);
             }
         }
     
@@ -1599,7 +1503,6 @@ document.addEventListener('DOMContentLoaded', function () {
             hideAlumnoFields();
             resetRoles();
             resetLocation();
-            resetFechaNacimiento();
             removeAllSpecificRequired();
             
             // ✅ Asegurar que el contador se oculte

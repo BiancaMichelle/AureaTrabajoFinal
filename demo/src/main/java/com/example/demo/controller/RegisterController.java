@@ -98,7 +98,6 @@ public class RegisterController {
                             @RequestParam(value = "provinciaCodigo", required = false) String provinciaCodigo,
                             @RequestParam(value = "ciudadId", required = false) Long ciudadId,
                             @RequestParam("confirmPassword") String confirmPassword,
-                            @RequestParam("fechaNacimientoStr") String fechaNacimientoStr,
                             Model model) {
         
         System.out.println("✅ FORMULARIO RECIBIDO - Iniciando validaciones");
@@ -119,25 +118,10 @@ public class RegisterController {
             System.out.println("❌ Correo ya existe: " + alumno.getCorreo());
         }
 
-
-        try {
-        if (fechaNacimientoStr != null && !fechaNacimientoStr.isEmpty()) {
-            String[] partes = fechaNacimientoStr.split("/");
-            if (partes.length == 3) {
-                int dia = Integer.parseInt(partes[0]);
-                int mes = Integer.parseInt(partes[1]);
-                int año = Integer.parseInt(partes[2]);
-                LocalDate fecha = LocalDate.of(año, mes, dia);
-                alumno.setFechaNacimiento(fecha);
-                System.out.println("📅 Fecha convertida a LocalDate: " + fecha);
-            } else {
-                result.rejectValue("fechaNacimiento", "error.alumno", "Formato de fecha inválido. Use DD/MM/AAAA");
-            }
+        // ✅ Validar que se haya proporcionado una fecha de nacimiento
+        if (alumno.getFechaNacimiento() == null) {
+            result.rejectValue("fechaNacimiento", "error.alumno", "La fecha de nacimiento es obligatoria");
         }
-    } catch (Exception e) {
-        System.out.println("❌ Error convirtiendo fecha: " + e.getMessage());
-        result.rejectValue("fechaNacimiento", "error.alumno", "Formato de fecha inválido. Use DD/MM/AAAA");
-    }
         
         // Validar que las contraseñas coincidan
         if (!alumno.getContraseña().equals(confirmPassword)) {
