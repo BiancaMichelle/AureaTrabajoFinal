@@ -103,24 +103,32 @@
                     
                     <!-- SECCIÓN PERFIL PÚBLICO -->
                     <div id="perfil" class="section-content">
-                        <div class="border-b border-gray-200 pb-6">
-                            <h1 class="text-3xl font-bold text-gray-900">Perfil público</h1>
-                            <p class="mt-1 text-gray-500">Añade información sobre ti para que los demás puedan conocerte.</p>
+                        <div class="border-b border-gray-200 pb-6 flex items-start justify-between">
+                            <div>
+                                <h1 class="text-3xl font-bold text-gray-900">Perfil público</h1>
+                                <p class="mt-1 text-gray-500">Añade información sobre ti para que los demás puedan conocerte.</p>
+                            </div>
+                            <button type="button" id="btn-edit" class="inline-flex items-center px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500" title="Editar">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
+                                Editar
+                            </button>
                         </div>
 
                         <!-- Formulario de Perfil -->
-                        <form id="perfil-form" class="mt-8 space-y-8" onsubmit="event.preventDefault(); guardarPerfil();">
+                        <form id="perfil-form" class="mt-8 space-y-8" th:action="@{/perfil/actualizar}" method="post">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                            <input type="hidden" name="idUsuario" th:value="${usuario.id}" />
                             <!-- Nombres y Apellidos -->
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label for="first-name" class="block text-sm font-medium text-gray-700">Nombre</label>
-                                    <input type="text" id="first-name" th:value="${usuario.nombre}" 
-                                           class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm" readonly>
+                                    <input type="text" id="first-name" name="nombre" th:value="${usuario.nombre}" 
+                                           class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm" readonly required pattern="^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$" title="Solo letras y espacios">
                                 </div>
                                 <div>
                                     <label for="last-name" class="block text-sm font-medium text-gray-700">Apellidos</label>
-                                    <input type="text" id="last-name" th:value="${usuario.apellido}" 
-                                           class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm" readonly>
+                                    <input type="text" id="last-name" name="apellido" th:value="${usuario.apellido}" 
+                                           class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm" readonly required pattern="^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$" title="Solo letras y espacios">
                                 </div>
                             </div>
 
@@ -128,13 +136,13 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700">Correo electrónico</label>
-                                    <input type="text" th:value="${usuario.correo}" 
-                                           class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm sm:text-sm" readonly>
+                                    <input type="email" name="correo" th:value="${usuario.correo}" 
+                                           class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm sm:text-sm" readonly required>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700">Teléfono</label>
-                                    <input type="text" th:value="${usuario.numTelefono}" 
-                                           class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm sm:text-sm" readonly>
+                                    <input type="tel" name="numTelefono" th:value="${usuario.numTelefono}" 
+                                           class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm sm:text-sm" readonly required pattern="^[\d\s\-\(\)\+]{10,}$" title="Debe tener al menos 10 dígitos">
                                 </div>
                             </div>
 
@@ -142,13 +150,17 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700">Fecha de Nacimiento</label>
-                                    <input type="text" th:value="${#temporals.format(usuario.fechaNacimiento, 'dd/MM/yyyy')}" 
-                                           class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm sm:text-sm" readonly>
+                                    <input type="date" name="fechaNacimiento" th:value="${#temporals.format(usuario.fechaNacimiento, 'yyyy-MM-dd')}" 
+                                           class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm sm:text-sm" readonly required>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700">Género</label>
-                                    <input type="text" th:value="${usuario.genero}" 
-                                           class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm sm:text-sm" readonly>
+                                    <select name="genero" id="genero" class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm sm:text-sm" disabled required>
+                                        <option value="MASCULINO" th:selected="${usuario.genero?.name() == 'MASCULINO'}">Masculino</option>
+                                        <option value="FEMENINO" th:selected="${usuario.genero?.name() == 'FEMENINO'}">Femenino</option>
+                                        <option value="OTRO" th:selected="${usuario.genero?.name() == 'OTRO'}">Otro</option>
+                                        <option value="PREFIERO_NO_DECIR" th:selected="${usuario.genero?.name() == 'PREFIERO_NO_DECIR'}">Prefiero no decir</option>
+                                    </select>
                                 </div>
                             </div>
 
@@ -197,11 +209,10 @@
                                 </div>
                             </div>
                             
-                            <!-- Botón de Guardar -->
-                            <div class="pt-5 text-right">
-                                <button type="submit" class="inline-flex justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-slate-800 hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500">
-                                    Guardar
-                                </button>
+                            <!-- Botones de acción -->
+                            <div class="pt-5 flex justify-end gap-3">
+                                <button type="button" id="btn-cancel" class="hidden inline-flex justify-center py-2 px-6 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500">Cancelar</button>
+                                <button type="submit" id="btn-save" class="hidden inline-flex justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-slate-800 hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500">Guardar</button>
                             </div>
                         </form>
                     </div>
@@ -394,19 +405,79 @@
                     }
                 }
 
-                // Prevenir el envío del formulario por defecto
-                document.getElementById('perfil-form').addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    guardarPerfil();
+                // Configurar date max (16 años)
+                const fechaInput = document.querySelector('input[name="fechaNacimiento"]');
+                if (fechaInput) {
+                    const hoy = new Date();
+                    const hace16 = new Date(hoy.getFullYear() - 16, hoy.getMonth(), hoy.getDate());
+                    const maxDate = hace16.toISOString().split('T')[0];
+                    fechaInput.setAttribute('max', maxDate);
+                }
+
+                // Toggle edición
+                const btnEdit = document.getElementById('btn-edit');
+                const btnSave = document.getElementById('btn-save');
+                const btnCancel = document.getElementById('btn-cancel');
+                const form = document.getElementById('perfil-form');
+
+                // Campos editables
+                const editableFields = [
+                    document.getElementById('first-name'),
+                    document.getElementById('last-name'),
+                    form.querySelector('input[name="correo"]'),
+                    form.querySelector('input[name="numTelefono"]'),
+                    form.querySelector('input[name="fechaNacimiento"]'),
+                    document.getElementById('genero')
+                ];
+
+                let initialValues = {};
+
+                function setEditMode(editing) {
+                    editableFields.forEach(el => {
+                        if (!el) return;
+                        if (el.tagName === 'SELECT') {
+                            el.disabled = !editing;
+                        } else {
+                            el.readOnly = !editing;
+                        }
+                        el.classList.toggle('bg-white', editing);
+                        el.classList.toggle('bg-gray-50', !editing);
+                    });
+                    btnSave.classList.toggle('hidden', !editing);
+                    btnCancel.classList.toggle('hidden', !editing);
+                    btnEdit.classList.toggle('hidden', editing);
+                }
+
+                function captureInitialValues() {
+                    initialValues = {};
+                    editableFields.forEach(el => {
+                        if (!el) return;
+                        initialValues[el.name || el.id] = el.value;
+                    });
+                }
+
+                btnEdit?.addEventListener('click', () => {
+                    captureInitialValues();
+                    setEditMode(true);
+                });
+
+                btnCancel?.addEventListener('click', () => {
+                    // Restaurar valores iniciales
+                    editableFields.forEach(el => {
+                        if (!el) return;
+                        const key = el.name || el.id;
+                        if (initialValues[key] !== undefined) {
+                            el.value = initialValues[key];
+                        }
+                    });
+                    setEditMode(false);
+                });
+
+                // Envío normal del formulario (POST), sin AJAX, para respetar CSRF y validaciones
+                form.addEventListener('submit', function(e) {
+                    // Permitir submit normal; el backend redirige de vuelta a /perfil
                 });
             });
-
-            // Función para guardar el perfil (placeholder)
-            function guardarPerfil() {
-                console.log('Guardando perfil...');
-                // Aquí irá la lógica para guardar los cambios
-                alert('Perfil guardado exitosamente');
-            }
         </script>
     </div>
 </body>
