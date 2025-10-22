@@ -28,6 +28,13 @@
 
         <!-- Lado derecho: formulario -->
         <div class="auth-right">
+            <div th:if="${mensaje}" th:classappend="${tipo == 'error'} ? 'alert alert-error' : 
+                                                ${tipo == 'success'} ? 'alert alert-success' : 
+                                                'alert alert-info'"
+                style="margin-bottom: 20px;">
+                <span th:text="${mensaje}"></span>
+            </div>
+
             <div class="form-wrapper">
                 <h1>Registro de Estudiante</h1>
 
@@ -93,6 +100,7 @@
                 <input type="date" id="fechaNacimiento" 
                        name="fechaNacimientoStr" 
                        required />
+                <small>Debes tener al menos 16 años para registrarte</small>
             </div>
             
             <div class="field-group">
@@ -155,14 +163,10 @@
                 <label for="ultimosEstudios">Últimos Estudios Alcanzados</label>
                 <select id="ultimosEstudios" th:field="*{ultimosEstudios}" required>
                     <option value="">Seleccionar nivel de estudios</option>
-                    <option value="primaria-completa">Primaria Completa</option>
-                    <option value="primaria-incompleta">Primaria Incompleta</option>
-                    <option value="secundaria-completa">Secundaria Completa</option>
-                    <option value="secundaria-incompleta">Secundaria Incompleta</option>
-                    <option value="terciario-completo">Terciario Completo</option>
-                    <option value="terciario-incompleto">Terciario Incompleto</option>
-                    <option value="universitario-completo">Universitario Completo</option>
-                    <option value="universitario-incompleto">Universitario Incompleta</option>
+                    <option value="primaria-completa">Primaria</option>
+                    <option value="secundaria-completa">Secundaria</option>
+                    <option value="terciario-completo">Terciario</option>
+                    <option value="universitario-completo">Universitario</option>
                     <option value="posgrado">Posgrado</option>
                 </select>
             </div>

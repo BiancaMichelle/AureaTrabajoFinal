@@ -1,20 +1,20 @@
 package com.example.demo.controller;
 
-import java.time.LocalDate;
-import java.time.Period;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.LocalDate;
+import java.time.Period;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -25,25 +25,27 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.http.MediaType;
 
 import com.example.demo.enums.EstadoOferta;
 import com.example.demo.enums.Modalidad;
 import com.example.demo.enums.TipoGenero;
-import com.example.demo.model.Categoria;
 import com.example.demo.model.CarruselImagen;
+import com.example.demo.model.Categoria;
 import com.example.demo.model.Instituto;
 import com.example.demo.model.OfertaAcademica;
 import com.example.demo.model.Pais;
+import com.example.demo.model.Rol;
 import com.example.demo.model.Usuario;
-import com.example.demo.repository.CategoriaRepository;
 import com.example.demo.repository.CarruselImagenRepository;
+import com.example.demo.repository.CategoriaRepository;
 import com.example.demo.repository.OfertaAcademicaRepository;
 import com.example.demo.service.CategoriaService;
+import com.example.demo.repository.UsuarioRepository;
 import com.example.demo.service.ImagenService;
 import com.example.demo.service.InstitutoService;
 import com.example.demo.service.LocacionAPIService;
 import com.example.demo.service.RegistroService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Controller
 public class AdminController {
@@ -71,6 +73,10 @@ public class AdminController {
     
     @Autowired
     private ImagenService imagenService;
+
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+
 
     public AdminController(LocacionAPIService locacionApiService,
                            RegistroService registroService) {
@@ -270,9 +276,9 @@ public class AdminController {
             @RequestParam String dni,
             @RequestParam String nombre,
             @RequestParam String apellido,
-            @RequestParam String fechaNacimientoStr,
+            @RequestParam LocalDate fechaNacimiento,
             @RequestParam TipoGenero genero,
-            @RequestParam String paisCodigo,  // ✅ Cambiado de 'pais' a 'paisCodigo'
+            @RequestParam String paisCodigo,
             @RequestParam String provinciaCodigo,
             @RequestParam String ciudadId,
             @RequestParam String correo,
@@ -280,7 +286,7 @@ public class AdminController {
             @RequestParam String rol,
             @RequestParam(required = false) String matricula,
             @RequestParam(required = false) Integer experiencia,
-            @RequestParam(required = false) String horariosDisponibilidad,
+            @RequestParam(required = false) String horariosDisponibilidad, // ✅ Recibimos los horarios como JSON
             @RequestParam(required = false) String estado,
             @RequestParam(required = false, defaultValue = "true") Boolean notificacionesEmail,
             @RequestParam(required = false, defaultValue = "false") Boolean cambiarPasswordPrimerAcceso,
@@ -293,46 +299,56 @@ public class AdminController {
             System.out.println("   - DNI: " + dni);
             System.out.println("   - Nombre: " + nombre);
             System.out.println("   - Apellido: " + apellido);
+            System.out.println("   - Fecha Nacimiento: " + fechaNacimiento);
             System.out.println("   - Rol: " + rol);
-            System.out.println("   - País Código: " + paisCodigo); // ✅ Debug
-            System.out.println("   - Provincia Código: " + provinciaCodigo); // ✅ Debug
-            System.out.println("   - Ciudad ID: " + ciudadId); // ✅ Debug
+            System.out.println("   - Horarios: " + horariosDisponibilidad); // ✅ Debug horarios
 
-            // Convertir fecha de DD/MM/AAAA a LocalDate
-            LocalDate fechaNacimiento = null;
-            if (fechaNacimientoStr != null && !fechaNacimientoStr.isEmpty()) {
-                String[] partes = fechaNacimientoStr.split("/");
-                if (partes.length == 3) {
-                    int dia = Integer.parseInt(partes[0]);
-                    int mes = Integer.parseInt(partes[1]);
-                    int año = Integer.parseInt(partes[2]);
-                    fechaNacimiento = LocalDate.of(año, mes, dia);
-                    
-                    // Validar edad mínima (16 años)
-                    Period edad = Period.between(fechaNacimiento, LocalDate.now());
-                    if (edad.getYears() < 16) {
-                        Map<String, Object> response = new HashMap<>();
-                        response.put("success", false);
-                        response.put("message", "El usuario debe tener al menos 16 años");
-                        return ResponseEntity.badRequest().body(response);
-                    }
-                } else {
-                    Map<String, Object> response = new HashMap<>();
-                    response.put("success", false);
-                    response.put("message", "Formato de fecha inválido. Use DD/MM/AAAA");
-                    return ResponseEntity.badRequest().body(response);
-                }
+            // Validar fecha de nacimiento
+            if (fechaNacimiento == null) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "La fecha de nacimiento es obligatoria");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            // Validar edad mínima (16 años)
+            Period edad = Period.between(fechaNacimiento, LocalDate.now());
+            if (edad.getYears() < 16) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "El usuario debe tener al menos 16 años");
+                return ResponseEntity.badRequest().body(response);
             }
 
             // Convertir ciudadId a Long
             Long ciudadIdLong = Long.valueOf(ciudadId);
 
-            // Usar el servicio unificado
+            // ✅ Procesar horarios si es docente y hay horarios
+            List<Map<String, String>> horariosList = new ArrayList<>();
+            if ("DOCENTE".equals(rol) && horariosDisponibilidad != null && !horariosDisponibilidad.isEmpty()) {
+                try {
+                    // Parsear el JSON de horarios
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    horariosList = objectMapper.readValue(horariosDisponibilidad, 
+                        objectMapper.getTypeFactory().constructCollectionType(List.class, Map.class));
+                    
+                    System.out.println("📅 Horarios procesados: " + horariosList.size());
+                    for (Map<String, String> horario : horariosList) {
+                        System.out.println("   - " + horario.get("diaSemana") + ": " + 
+                                        horario.get("horaInicio") + " - " + horario.get("horaFin"));
+                    }
+                } catch (Exception e) {
+                    System.out.println("⚠️ Error parseando horarios: " + e.getMessage());
+                }
+            }
+
+            // Usar el servicio unificado - MODIFICAR EL SERVICIO PARA ACEPTAR HORARIOS
             Usuario nuevoUsuario = registroService.registrarUsuarioAdministrativo(
                 dni, nombre, apellido, fechaNacimiento, genero,
-                correo, telefono, paisCodigo, provinciaCodigo,  // ✅ Ahora enviamos códigos
+                correo, telefono, paisCodigo, provinciaCodigo,
                 ciudadIdLong, rol, matricula,
-                experiencia, colegioEgreso, añoEgreso, ultimosEstudios
+                experiencia, colegioEgreso, añoEgreso, ultimosEstudios,
+                horariosList // ✅ Pasar los horarios al servicio
             );
 
             Map<String, Object> response = new HashMap<>();
@@ -360,47 +376,115 @@ public class AdminController {
 
     @GetMapping("/admin/usuarios/listar")
     @ResponseBody
-    public ResponseEntity<Map<String, Object>> listarUsuarios() {
+    public ResponseEntity<Map<String, Object>> listarUsuarios(
+            @RequestParam(defaultValue = "0") int page,  // ✅ CAMBIAR A 0 POR DEFECTO
+            @RequestParam(defaultValue = "10") int size) {
+        
         try {
-            // Por ahora devolvemos datos de ejemplo
-            List<Map<String, Object>> usuarios = new java.util.ArrayList<>();
+            System.out.println("📋 Solicitando usuarios REALES - página: " + page + ", tamaño: " + size);
             
-            // Datos de ejemplo
-            Map<String, Object> usuario1 = new HashMap<>();
-            usuario1.put("id", 1);
-            usuario1.put("nombreCompleto", "Juan Pérez");
-            usuario1.put("dni", "12345678");
-            usuario1.put("correo", "juan.perez@ejemplo.com");
-            usuario1.put("roles", java.util.Arrays.asList("ALUMNO"));
-            usuario1.put("estado", "ACTIVO");
-            usuario1.put("fechaRegistro", LocalDate.now().toString());
-            usuarios.add(usuario1);
+            // OBTENER USUARIOS REALES DE LA BASE DE DATOS
+            List<Usuario> todosUsuarios = usuarioRepository.findAll();
+            System.out.println("👥 Usuarios encontrados en BD: " + todosUsuarios.size());
             
-            Map<String, Object> usuario2 = new HashMap<>();
-            usuario2.put("id", 2);
-            usuario2.put("nombreCompleto", "María García");
-            usuario2.put("dni", "87654321");
-            usuario2.put("correo", "maria.garcia@ejemplo.com");
-            usuario2.put("roles", java.util.Arrays.asList("DOCENTE"));
-            usuario2.put("estado", "ACTIVO");
-            usuario2.put("fechaRegistro", LocalDate.now().toString());
-            usuarios.add(usuario2);
+            // ✅ CORREGIR PAGINACIÓN - VERIFICAR LÍMITES
+            int start = page * size;
+            int end = Math.min(start + size, todosUsuarios.size());
             
-            // Aquí irían los datos reales de la base de datos
-            // List<Usuario> usuarios = usuarioRepository.findAll();
+            // ✅ EVITAR ERROR CUANDO START ES MAYOR QUE EL TAMAÑO DE LA LISTA
+            if (start >= todosUsuarios.size()) {
+                start = 0; // Volver a la primera página
+                page = 0;
+            }
             
+            List<Usuario> usuariosPagina = todosUsuarios.subList(start, end);
+            
+            System.out.println("📄 Usuarios en esta página: " + usuariosPagina.size() + " (start: " + start + ", end: " + end + ")");
+            
+            // Convertir usuarios reales a formato para frontend
+            List<Map<String, Object>> usuariosResponse = new ArrayList<>();
+            
+            for (Usuario usuario : usuariosPagina) {
+                Map<String, Object> usuarioMap = new HashMap<>();
+                usuarioMap.put("dni", usuario.getDni());
+                usuarioMap.put("nombreCompleto", usuario.getNombre() + " " + usuario.getApellido());
+                usuarioMap.put("correo", usuario.getCorreo());
+                usuarioMap.put("foto", null);
+                usuarioMap.put("estado", usuario.isEstado() ? "ACTIVO" : "INACTIVO");
+                if (usuario.getFechaRegistro() != null) {
+                    usuarioMap.put("fechaRegistro", usuario.getFechaRegistro().toString());
+                } else {
+                    // Si no existe, usar fecha por defecto o campo alternativo
+                    usuarioMap.put("fechaRegistro", "Fecha no disponible");
+                }
+                
+                // Obtener roles reales
+                List<String> roles = new ArrayList<>();
+                if (usuario.getRoles() != null) {
+                    for (Rol rol : usuario.getRoles()) {
+                        if (rol != null && rol.getNombre() != null) {
+                            String nombreRol = convertirRolALegible(rol.getNombre());
+                            roles.add(nombreRol);
+                        }
+                    }
+                }
+                usuarioMap.put("roles", roles);
+                
+                usuariosResponse.add(usuarioMap);
+                
+                System.out.println("✅ Usuario real: " + usuario.getNombre() + " " + usuario.getApellido() + 
+                                " - DNI: " + usuario.getDni() + " - Roles: " + roles);
+            }
+            
+            // Crear respuesta
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
-            response.put("data", usuarios);
             
+            Map<String, Object> data = new HashMap<>();
+            data.put("content", usuariosResponse);
+            data.put("totalElements", todosUsuarios.size());
+            data.put("totalPages", Math.max(1, (int) Math.ceil((double) todosUsuarios.size() / size))); // ✅ Mínimo 1 página
+            data.put("size", size);
+            data.put("number", page);
+            
+            response.put("data", data);
+            
+            Map<String, Object> pagination = new HashMap<>();
+            pagination.put("currentPage", page);
+            pagination.put("totalPages", Math.max(1, (int) Math.ceil((double) todosUsuarios.size() / size)));
+            pagination.put("totalElements", todosUsuarios.size());
+            pagination.put("pageSize", size);
+            
+            response.put("pagination", pagination);
+            
+            System.out.println("✅ Respuesta enviada - " + usuariosResponse.size() + " usuarios reales");
             return ResponseEntity.ok(response);
+            
         } catch (Exception e) {
+            System.out.println("❌ Error obteniendo usuarios reales: " + e.getMessage());
+            e.printStackTrace();
+            
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", "Error al obtener usuarios: " + e.getMessage());
             return ResponseEntity.badRequest().body(response);
         }
     }
+
+    // Método auxiliar para convertir roles a nombres legibles
+    private String convertirRolALegible(String rol) {
+        if (rol == null) return "Sin rol";
+        
+        switch(rol.toUpperCase()) {
+            case "ALUMNO": return "Alumno";
+            case "DOCENTE": return "Docente"; 
+            case "ADMIN": return "Administrador";
+            case "COORDINADOR": return "Coordinador";
+            default: return rol;
+        }
+    }
+    
+    
 
     // =================   CONFIGURACIONES INSTITUCIONALES   =================
     
@@ -575,252 +659,4 @@ public class AdminController {
         return "/img/logos/" + nombreArchivo;
     }
     
-    // ================= GESTIÓN DE CATEGORÍAS =================
-    
-    /**
-     * Obtener todas las categorías para la tabla
-     */
-    @GetMapping("/admin/categorias/listar")
-    @ResponseBody
-    public ResponseEntity<Map<String, Object>> listarCategorias() {
-        try {
-            List<Categoria> categorias = categoriaRepository.findAll();
-            
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("categorias", categorias);
-            response.put("total", categorias.size());
-            
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("success", false);
-            errorResponse.put("message", "Error al obtener categorías: " + e.getMessage());
-            
-            return ResponseEntity.status(500).body(errorResponse);
-        }
-    }
-    
-    /**
-     * Crear una nueva categoría
-     */
-    @PostMapping("/admin/categorias/crear")
-    @ResponseBody
-    public ResponseEntity<Map<String, Object>> crearCategoria(@RequestBody Map<String, String> request) {
-        Map<String, Object> response = new HashMap<>();
-        
-        try {
-            String nombre = request.get("nombre");
-            String descripcion = request.get("descripcion");
-            
-            // Validaciones básicas
-            if (nombre == null || nombre.trim().isEmpty()) {
-                response.put("success", false);
-                response.put("message", "El nombre de la categoría es obligatorio");
-                return ResponseEntity.badRequest().body(response);
-            }
-            
-            if (descripcion == null || descripcion.trim().isEmpty()) {
-                response.put("success", false);
-                response.put("message", "La descripción de la categoría es obligatoria");
-                return ResponseEntity.badRequest().body(response);
-            }
-            
-            // Verificar duplicados
-            String nombreLimpio = nombre.trim();
-            String descripcionLimpia = descripcion.trim();
-            
-            if (categoriaRepository.existsByNombreIgnoreCase(nombreLimpio)) {
-                response.put("success", false);
-                response.put("message", "Ya existe una categoría con el nombre: " + nombreLimpio);
-                return ResponseEntity.badRequest().body(response);
-            }
-            
-            if (categoriaRepository.existsByDescripcionIgnoreCase(descripcionLimpia)) {
-                response.put("success", false);
-                response.put("message", "Ya existe una categoría con esa descripción");
-                return ResponseEntity.badRequest().body(response);
-            }
-            
-            // Crear nueva categoría
-            Categoria nuevaCategoria = new Categoria(nombreLimpio, descripcionLimpia);
-            
-            // Validar usando métodos del modelo
-            if (!nuevaCategoria.esValida()) {
-                response.put("success", false);
-                response.put("message", "Los datos de la categoría no son válidos. Verifique que el nombre tenga entre 2 y 100 caracteres y la descripción entre 5 y 500 caracteres.");
-                return ResponseEntity.badRequest().body(response);
-            }
-            
-            // Guardar en base de datos
-            Categoria categoriaGuardada = categoriaRepository.save(nuevaCategoria);
-            
-            response.put("success", true);
-            response.put("message", "Categoría creada exitosamente");
-            response.put("categoria", categoriaGuardada);
-            
-            return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            response.put("success", false);
-            response.put("message", "Error interno del servidor: " + e.getMessage());
-            return ResponseEntity.status(500).body(response);
-        }
-    }
-    
-    /**
-     * Editar una categoría existente
-     */
-    @PostMapping("/admin/categorias/editar/{id}")
-    @ResponseBody
-    public ResponseEntity<Map<String, Object>> editarCategoria(@PathVariable Long id, @RequestBody Map<String, String> request) {
-        Map<String, Object> response = new HashMap<>();
-        
-        try {
-            // Buscar la categoría
-            Optional<Categoria> categoriaOpt = categoriaRepository.findById(id);
-            if (!categoriaOpt.isPresent()) {
-                response.put("success", false);
-                response.put("message", "No se encontró la categoría con ID: " + id);
-                return ResponseEntity.badRequest().body(response);
-            }
-            
-            Categoria categoria = categoriaOpt.get();
-            String nombre = request.get("nombre");
-            String descripcion = request.get("descripcion");
-            
-            // Validaciones básicas
-            if (nombre == null || nombre.trim().isEmpty()) {
-                response.put("success", false);
-                response.put("message", "El nombre de la categoría es obligatorio");
-                return ResponseEntity.badRequest().body(response);
-            }
-            
-            if (descripcion == null || descripcion.trim().isEmpty()) {
-                response.put("success", false);
-                response.put("message", "La descripción de la categoría es obligatoria");
-                return ResponseEntity.badRequest().body(response);
-            }
-            
-            String nombreLimpio = nombre.trim();
-            String descripcionLimpia = descripcion.trim();
-            
-            // Verificar duplicados (excluyendo la categoría actual)
-            Optional<Categoria> categoriaConMismoNombre = categoriaRepository.findByNombreIgnoreCase(nombreLimpio);
-            if (categoriaConMismoNombre.isPresent() && !categoriaConMismoNombre.get().getIdCategoria().equals(id)) {
-                response.put("success", false);
-                response.put("message", "Ya existe otra categoría con el nombre: " + nombreLimpio);
-                return ResponseEntity.badRequest().body(response);
-            }
-            
-            // Verificar duplicados por descripción (más complejo porque no hay método directo)
-            List<Categoria> todasCategorias = categoriaRepository.findAll();
-            boolean descripcionDuplicada = todasCategorias.stream()
-                .anyMatch(c -> c.getDescripcion() != null && 
-                             c.getDescripcion().equalsIgnoreCase(descripcionLimpia) &&
-                             !c.getIdCategoria().equals(id));
-            
-            if (descripcionDuplicada) {
-                response.put("success", false);
-                response.put("message", "Ya existe otra categoría con esa descripción");
-                return ResponseEntity.badRequest().body(response);
-            }
-            
-            // Actualizar la categoría
-            categoria.modificarar(nombreLimpio, descripcionLimpia);
-            
-            // Validar después de modificar
-            if (!categoria.esValida()) {
-                response.put("success", false);
-                response.put("message", "Los datos actualizados no son válidos. Verifique que el nombre tenga entre 2 y 100 caracteres y la descripción entre 5 y 500 caracteres.");
-                return ResponseEntity.badRequest().body(response);
-            }
-            
-            // Guardar cambios
-            Categoria categoriaActualizada = categoriaRepository.save(categoria);
-            
-            response.put("success", true);
-            response.put("message", "Categoría actualizada exitosamente");
-            response.put("categoria", categoriaActualizada);
-            
-            return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            response.put("success", false);
-            response.put("message", "Error interno del servidor: " + e.getMessage());
-            return ResponseEntity.status(500).body(response);
-        }
-    }
-    
-    /**
-     * Eliminar una categoría
-     */
-    @PostMapping("/admin/categorias/eliminar/{id}")
-    @ResponseBody
-    public ResponseEntity<Map<String, Object>> eliminarCategoria(@PathVariable Long id) {
-        Map<String, Object> response = new HashMap<>();
-        
-        try {
-            // Verificar que la categoría existe
-            Optional<Categoria> categoriaOpt = categoriaRepository.findById(id);
-            if (!categoriaOpt.isPresent()) {
-                response.put("success", false);
-                response.put("message", "No se encontró la categoría con ID: " + id);
-                return ResponseEntity.badRequest().body(response);
-            }
-            
-            // TODO: Verificar si la categoría está siendo usada por ofertas educativas
-            // antes de eliminarla (implementar cuando exista la relación)
-            
-            // Eliminar la categoría
-            categoriaRepository.deleteById(id);
-            
-            response.put("success", true);
-            response.put("message", "Categoría eliminada exitosamente");
-            
-            return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            response.put("success", false);
-            response.put("message", "Error interno del servidor: " + e.getMessage());
-            return ResponseEntity.status(500).body(response);
-        }
-    }
-    
-    /**
-     * Verificar si existe una categoría con el nombre dado
-     */
-    @GetMapping("/admin/categorias/verificar-nombre")
-    @ResponseBody
-    public ResponseEntity<Map<String, Object>> verificarNombreCategoria(@RequestParam String nombre) {
-        Map<String, Object> response = new HashMap<>();
-        
-        try {
-            if (nombre == null || nombre.trim().isEmpty()) {
-                response.put("existe", false);
-                return ResponseEntity.ok(response);
-            }
-            
-            boolean existe = categoriaRepository.existsByNombreIgnoreCase(nombre.trim());
-            response.put("existe", existe);
-            
-            return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            response.put("existe", false);
-            response.put("error", "Error al verificar nombre: " + e.getMessage());
-            return ResponseEntity.status(500).body(response);
-        }
-    }
-    
-    // MÉTODO TEMPORAL PARA CREAR ADMIN - ELIMINAR DESPUÉS DE USAR
-    @GetMapping("/crear-admin-temporal")
-    public ResponseEntity<String> crearAdminTemporal() {
-        try {
-            registroService.crearUsuarioAdminTemporal();
-            return ResponseEntity.ok("Usuario admin creado: DNI=admin, Password=admin123");
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
-        }
-    }
 }

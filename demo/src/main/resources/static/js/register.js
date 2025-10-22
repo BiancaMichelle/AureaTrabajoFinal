@@ -575,7 +575,7 @@ document.addEventListener("DOMContentLoaded", function () {
             const nombre = document.getElementById('nombre');
             const apellido = document.getElementById('apellido');
     
-            // ✅ Validar fecha
+            // ✅ Validar fecha de nacimiento (input tipo date)
             if (fechaNacimiento.value) {
                 // El input type="date" ya viene en formato YYYY-MM-DD, perfecto para el backend
                 const fechaValue = fechaNacimiento.value;

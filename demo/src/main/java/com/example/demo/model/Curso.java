@@ -1,6 +1,6 @@
 package com.example.demo.model;
 
-import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -20,9 +20,6 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class Curso extends OfertaAcademica {
-    
-    @OneToMany(mappedBy = "curso")
-    private List<Horario> horarios;
     
     private String temario;
     
@@ -81,15 +78,11 @@ public class Curso extends OfertaAcademica {
     /**
      * Información de horarios condensada
      */
-    public String getHorariosTexto() {
-        if (horarios == null || horarios.isEmpty()) {
-            return "Sin horarios";
-        }
-        if (horarios.size() == 1) {
-            Horario h = horarios.get(0);
-            return h.getDia() + " " + h.getHoraInicio() + "-" + h.getHoraFin();
-        }
-        return horarios.size() + " horarios";
+    public List<Horario> getHorariosCurso() {
+        // Esto dependerá de cómo implementes la relación en OfertaAcademica
+        // Si agregas la relación en OfertaAcademica, sería:
+        // return this.getHorarios();
+        return Collections.emptyList(); // temporal
     }
     /**
      * Información de cuotas para mostrar
