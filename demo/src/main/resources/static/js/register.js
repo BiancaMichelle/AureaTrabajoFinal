@@ -8,29 +8,39 @@ document.addEventListener("DOMContentLoaded", function () {
     const formSteps = document.querySelectorAll(".form-step");
     let currentStep = 0;
 
-    // ✅ MÁSCARA PARA FECHA - Formato DD/MM/AAAA
+    // ✅ CONFIGURACIÓN PARA CAMPO DE FECHA
     const fechaInput = document.getElementById('fechaNacimiento');
     if (fechaInput) {
-        fechaInput.addEventListener('input', function(e) {
-            let value = e.target.value.replace(/\D/g, '');
-            
-            // Aplicar formato DD/MM/AAAA
-            if (value.length > 2 && value.length <= 4) {
-                value = value.substring(0, 2) + '/' + value.substring(2);
-            } else if (value.length > 4) {
-                value = value.substring(0, 2) + '/' + value.substring(2, 4) + '/' + value.substring(4, 8);
+        // Establecer fecha por defecto 18 años atrás (formato YYYY-MM-DD para input date)
+        const fechaSugerida = obtenerFecha18AñosAtrasISO();
+        fechaInput.value = fechaSugerida;
+        
+        console.log(`📅 Fecha sugerida establecida: ${fechaSugerida}`);
+        
+        // Validar fecha al cambiar
+        fechaInput.addEventListener('change', function(e) {
+            const fechaSeleccionada = e.target.value;
+            if (fechaSeleccionada) {
+                // Validar que la persona tenga al menos 16 años
+                const hoy = new Date();
+                const fechaNacimiento = new Date(fechaSeleccionada);
+                const edad = calcularEdad(fechaNacimiento, hoy);
+                
+                if (edad < 16) {
+                    showFieldError(fechaInput, 'Debes tener al menos 16 años para registrarte');
+                } else if (edad > 100) {
+                    showFieldError(fechaInput, 'Por favor verifica la fecha, parece ser demasiado antigua');
+                } else {
+                    hideFieldError(fechaInput);
+                    console.log(`✅ Edad válida: ${edad} años`);
+                }
             }
-            
-            e.target.value = value;
         });
-
-        // Validar fecha al perder foco
+        
+        // Validar al perder foco
         fechaInput.addEventListener('blur', function(e) {
-            const value = e.target.value;
-            if (value && !isValidDate(value)) {
-                showFieldError(fechaInput, 'Fecha inválida. Usa el formato DD/MM/AAAA');
-            } else {
-                hideFieldError(fechaInput);
+            if (!e.target.value) {
+                showFieldError(fechaInput, 'La fecha de nacimiento es obligatoria');
             }
         });
     }
@@ -57,6 +67,47 @@ document.addEventListener("DOMContentLoaded", function () {
         return fecha.getDate() === dia && 
                fecha.getMonth() === mes - 1 && 
                fecha.getFullYear() === año;
+    }
+
+    // ✅ Función para obtener fecha 18 años atrás de la fecha actual (formato DD/MM/AAAA)
+    function obtenerFecha18AñosAtras() {
+        const hoy = new Date();
+        const año18AñosAtras = hoy.getFullYear() - 18;
+        const mes = hoy.getMonth() + 1; // getMonth() devuelve 0-11, necesitamos 1-12
+        const dia = hoy.getDate();
+        
+        // Formatear con ceros a la izquierda si es necesario
+        const diaFormateado = dia.toString().padStart(2, '0');
+        const mesFormateado = mes.toString().padStart(2, '0');
+        
+        return `${diaFormateado}/${mesFormateado}/${año18AñosAtras}`;
+    }
+
+    // ✅ Función para obtener fecha 18 años atrás en formato ISO (YYYY-MM-DD) para input date
+    function obtenerFecha18AñosAtrasISO() {
+        const hoy = new Date();
+        const año18AñosAtras = hoy.getFullYear() - 18;
+        const mes = hoy.getMonth() + 1; // getMonth() devuelve 0-11, necesitamos 1-12
+        const dia = hoy.getDate();
+        
+        // Formatear con ceros a la izquierda si es necesario
+        const diaFormateado = dia.toString().padStart(2, '0');
+        const mesFormateado = mes.toString().padStart(2, '0');
+        
+        return `${año18AñosAtras}-${mesFormateado}-${diaFormateado}`;
+    }
+
+    // ✅ Función para calcular edad en años
+    function calcularEdad(fechaNacimiento, fechaActual = new Date()) {
+        let edad = fechaActual.getFullYear() - fechaNacimiento.getFullYear();
+        const mesActual = fechaActual.getMonth();
+        const mesNacimiento = fechaNacimiento.getMonth();
+        
+        if (mesActual < mesNacimiento || (mesActual === mesNacimiento && fechaActual.getDate() < fechaNacimiento.getDate())) {
+            edad--;
+        }
+        
+        return edad;
     }
 
     // ✅ Función para convertir DD/MM/AAAA a yyyy-MM-dd
@@ -526,11 +577,18 @@ document.addEventListener("DOMContentLoaded", function () {
     
             // ✅ Validar fecha
             if (fechaNacimiento.value) {
-                if (!isValidDate(fechaNacimiento.value)) {
-                    showFieldError(fechaNacimiento, 'Fecha inválida. Usa el formato DD/MM/AAAA');
+                // El input type="date" ya viene en formato YYYY-MM-DD, perfecto para el backend
+                const fechaValue = fechaNacimiento.value;
+                
+                // Validar que la fecha no sea futura
+                const fechaSeleccionada = new Date(fechaValue);
+                const hoy = new Date();
+                
+                if (fechaSeleccionada > hoy) {
+                    showFieldError(fechaNacimiento, 'La fecha de nacimiento no puede ser futura');
                     isValid = false;
                 } else {
-                    // ✅ Crear campo hidden con el formato correcto para el backend
+                    // ✅ Crear campo hidden con el formato correcto para el backend (ya está en YYYY-MM-DD)
                     let hiddenFecha = document.getElementById('fechaNacimientoBackend');
                     if (!hiddenFecha) {
                         hiddenFecha = document.createElement('input');
@@ -539,29 +597,20 @@ document.addEventListener("DOMContentLoaded", function () {
                         hiddenFecha.name = 'fechaNacimiento';
                         fechaNacimiento.parentNode.appendChild(hiddenFecha);
                     }
-                    const fechaConvertida = convertirFechaParaBackend(fechaNacimiento.value);
-                    hiddenFecha.value = fechaConvertida;
+                    hiddenFecha.value = fechaValue; // Ya está en formato YYYY-MM-DD
                     
                     // ✅ Validar edad mínima (16 años)
-                    const partes = fechaNacimiento.value.split('/');
-                    const dia = parseInt(partes[0], 10);
-                    const mes = parseInt(partes[1], 10);
-                    const año = parseInt(partes[2], 10);
-                    const fechaNac = new Date(año, mes - 1, dia);
-                    const hoy = new Date();
-                    let edad = hoy.getFullYear() - fechaNac.getFullYear();
-                    const mesActual = hoy.getMonth();
-                    const diaActual = hoy.getDate();
-                    
-                    if (mesActual < (mes - 1) || (mesActual === (mes - 1) && diaActual < dia)) {
-                        edad--;
-                    }
+                    const edad = calcularEdad(fechaSeleccionada, hoy);
                     
                     if (edad < 16) {
                         showFieldError(fechaNacimiento, 'Debes tener al menos 16 años para registrarte');
                         isValid = false;
+                    } else if (edad > 100) {
+                        showFieldError(fechaNacimiento, 'Por favor verifica la fecha, parece ser demasiado antigua');
+                        isValid = false;
                     } else {
                         hideFieldError(fechaNacimiento);
+                        console.log(`✅ Edad válida: ${edad} años`);
                     }
                 }
             } else {

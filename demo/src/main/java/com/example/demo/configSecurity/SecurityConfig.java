@@ -44,7 +44,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-        
+        .csrf(csrf -> csrf.disable()) // Deshabilitar CSRF temporalmente para debug
         .cors(cors -> cors.configurationSource(corsConfigurationSource())) // ← AÑADE ESTO
         .userDetailsService(usuarioJpaService)
         .sessionManagement(session -> session

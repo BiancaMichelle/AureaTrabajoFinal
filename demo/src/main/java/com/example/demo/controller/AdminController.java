@@ -39,6 +39,7 @@ import com.example.demo.model.Usuario;
 import com.example.demo.repository.CategoriaRepository;
 import com.example.demo.repository.CarruselImagenRepository;
 import com.example.demo.repository.OfertaAcademicaRepository;
+import com.example.demo.service.CategoriaService;
 import com.example.demo.service.ImagenService;
 import com.example.demo.service.InstitutoService;
 import com.example.demo.service.LocacionAPIService;
@@ -64,6 +65,9 @@ public class AdminController {
     
     @Autowired
     private CarruselImagenRepository carruselImagenRepository;
+    
+    @Autowired
+    private CategoriaService categoriaService;
     
     @Autowired
     private ImagenService imagenService;
@@ -569,6 +573,244 @@ public class AdminController {
         Files.copy(logo.getInputStream(), rutaArchivo, StandardCopyOption.REPLACE_EXISTING);
         
         return "/img/logos/" + nombreArchivo;
+    }
+    
+    // ================= GESTIÓN DE CATEGORÍAS =================
+    
+    /**
+     * Obtener todas las categorías para la tabla
+     */
+    @GetMapping("/admin/categorias/listar")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> listarCategorias() {
+        try {
+            List<Categoria> categorias = categoriaRepository.findAll();
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("categorias", categorias);
+            response.put("total", categorias.size());
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Error al obtener categorías: " + e.getMessage());
+            
+            return ResponseEntity.status(500).body(errorResponse);
+        }
+    }
+    
+    /**
+     * Crear una nueva categoría
+     */
+    @PostMapping("/admin/categorias/crear")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> crearCategoria(@RequestBody Map<String, String> request) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            String nombre = request.get("nombre");
+            String descripcion = request.get("descripcion");
+            
+            // Validaciones básicas
+            if (nombre == null || nombre.trim().isEmpty()) {
+                response.put("success", false);
+                response.put("message", "El nombre de la categoría es obligatorio");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            if (descripcion == null || descripcion.trim().isEmpty()) {
+                response.put("success", false);
+                response.put("message", "La descripción de la categoría es obligatoria");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            // Verificar duplicados
+            String nombreLimpio = nombre.trim();
+            String descripcionLimpia = descripcion.trim();
+            
+            if (categoriaRepository.existsByNombreIgnoreCase(nombreLimpio)) {
+                response.put("success", false);
+                response.put("message", "Ya existe una categoría con el nombre: " + nombreLimpio);
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            if (categoriaRepository.existsByDescripcionIgnoreCase(descripcionLimpia)) {
+                response.put("success", false);
+                response.put("message", "Ya existe una categoría con esa descripción");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            // Crear nueva categoría
+            Categoria nuevaCategoria = new Categoria(nombreLimpio, descripcionLimpia);
+            
+            // Validar usando métodos del modelo
+            if (!nuevaCategoria.esValida()) {
+                response.put("success", false);
+                response.put("message", "Los datos de la categoría no son válidos. Verifique que el nombre tenga entre 2 y 100 caracteres y la descripción entre 5 y 500 caracteres.");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            // Guardar en base de datos
+            Categoria categoriaGuardada = categoriaRepository.save(nuevaCategoria);
+            
+            response.put("success", true);
+            response.put("message", "Categoría creada exitosamente");
+            response.put("categoria", categoriaGuardada);
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "Error interno del servidor: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+    
+    /**
+     * Editar una categoría existente
+     */
+    @PostMapping("/admin/categorias/editar/{id}")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> editarCategoria(@PathVariable Long id, @RequestBody Map<String, String> request) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            // Buscar la categoría
+            Optional<Categoria> categoriaOpt = categoriaRepository.findById(id);
+            if (!categoriaOpt.isPresent()) {
+                response.put("success", false);
+                response.put("message", "No se encontró la categoría con ID: " + id);
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            Categoria categoria = categoriaOpt.get();
+            String nombre = request.get("nombre");
+            String descripcion = request.get("descripcion");
+            
+            // Validaciones básicas
+            if (nombre == null || nombre.trim().isEmpty()) {
+                response.put("success", false);
+                response.put("message", "El nombre de la categoría es obligatorio");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            if (descripcion == null || descripcion.trim().isEmpty()) {
+                response.put("success", false);
+                response.put("message", "La descripción de la categoría es obligatoria");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            String nombreLimpio = nombre.trim();
+            String descripcionLimpia = descripcion.trim();
+            
+            // Verificar duplicados (excluyendo la categoría actual)
+            Optional<Categoria> categoriaConMismoNombre = categoriaRepository.findByNombreIgnoreCase(nombreLimpio);
+            if (categoriaConMismoNombre.isPresent() && !categoriaConMismoNombre.get().getIdCategoria().equals(id)) {
+                response.put("success", false);
+                response.put("message", "Ya existe otra categoría con el nombre: " + nombreLimpio);
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            // Verificar duplicados por descripción (más complejo porque no hay método directo)
+            List<Categoria> todasCategorias = categoriaRepository.findAll();
+            boolean descripcionDuplicada = todasCategorias.stream()
+                .anyMatch(c -> c.getDescripcion() != null && 
+                             c.getDescripcion().equalsIgnoreCase(descripcionLimpia) &&
+                             !c.getIdCategoria().equals(id));
+            
+            if (descripcionDuplicada) {
+                response.put("success", false);
+                response.put("message", "Ya existe otra categoría con esa descripción");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            // Actualizar la categoría
+            categoria.modificarar(nombreLimpio, descripcionLimpia);
+            
+            // Validar después de modificar
+            if (!categoria.esValida()) {
+                response.put("success", false);
+                response.put("message", "Los datos actualizados no son válidos. Verifique que el nombre tenga entre 2 y 100 caracteres y la descripción entre 5 y 500 caracteres.");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            // Guardar cambios
+            Categoria categoriaActualizada = categoriaRepository.save(categoria);
+            
+            response.put("success", true);
+            response.put("message", "Categoría actualizada exitosamente");
+            response.put("categoria", categoriaActualizada);
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "Error interno del servidor: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+    
+    /**
+     * Eliminar una categoría
+     */
+    @PostMapping("/admin/categorias/eliminar/{id}")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> eliminarCategoria(@PathVariable Long id) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            // Verificar que la categoría existe
+            Optional<Categoria> categoriaOpt = categoriaRepository.findById(id);
+            if (!categoriaOpt.isPresent()) {
+                response.put("success", false);
+                response.put("message", "No se encontró la categoría con ID: " + id);
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            // TODO: Verificar si la categoría está siendo usada por ofertas educativas
+            // antes de eliminarla (implementar cuando exista la relación)
+            
+            // Eliminar la categoría
+            categoriaRepository.deleteById(id);
+            
+            response.put("success", true);
+            response.put("message", "Categoría eliminada exitosamente");
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "Error interno del servidor: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+    
+    /**
+     * Verificar si existe una categoría con el nombre dado
+     */
+    @GetMapping("/admin/categorias/verificar-nombre")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> verificarNombreCategoria(@RequestParam String nombre) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            if (nombre == null || nombre.trim().isEmpty()) {
+                response.put("existe", false);
+                return ResponseEntity.ok(response);
+            }
+            
+            boolean existe = categoriaRepository.existsByNombreIgnoreCase(nombre.trim());
+            response.put("existe", existe);
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            response.put("existe", false);
+            response.put("error", "Error al verificar nombre: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
     }
     
     // MÉTODO TEMPORAL PARA CREAR ADMIN - ELIMINAR DESPUÉS DE USAR

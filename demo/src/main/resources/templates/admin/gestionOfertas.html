@@ -141,24 +141,18 @@
 
                         <!-- Categorías -->
                         <div class="form-section">
-                            <h4><i class="fas fa-tags"></i> Categorías</h4>
+                            <div class="categoria-header">
+                                <h4><i class="fas fa-tags"></i> Categorías</h4>
+                                <button type="button" id="btn-gestionar-categorias" class="btn-secondary btn-sm">
+                                    <i class="fas fa-cog"></i> Gestionar Categorías
+                                </button>
+                            </div>
                             <div class="form-group">
                                 <label for="categoria-select">Seleccionar Categorías</label>
                                 <p class="field-description">Seleccione una o más categorías que describan esta oferta académica</p>
                                 <select id="categoria-select" class="form-control categoria-select">
                                     <option value="">-- Seleccione una categoría --</option>
-                                    <option value="programacion" data-icon="fas fa-code">Programación</option>
-                                    <option value="diseno" data-icon="fas fa-palette">Diseño</option>
-                                    <option value="marketing" data-icon="fas fa-chart-line">Marketing</option>
-                                    <option value="administracion" data-icon="fas fa-briefcase">Administración</option>
-                                    <option value="idiomas" data-icon="fas fa-language">Idiomas</option>
-                                    <option value="oficios" data-icon="fas fa-tools">Oficios</option>
-                                    <option value="salud" data-icon="fas fa-heartbeat">Salud</option>
-                                    <option value="tecnologia" data-icon="fas fa-microchip">Tecnología</option>
-                                    <option value="finanzas" data-icon="fas fa-dollar-sign">Finanzas</option>
-                                    <option value="educacion" data-icon="fas fa-graduation-cap">Educación</option>
-                                    <option value="arte" data-icon="fas fa-paint-brush">Arte</option>
-                                    <option value="gastronomia" data-icon="fas fa-utensils">Gastronomía</option>
+                                    <!-- Las categorías se cargarán dinámicamente desde la base de datos -->
                                 </select>
                                 <div class="selected-categories" id="selected-categories">
                                     <span class="selected-label">Categorías seleccionadas:</span>
@@ -533,7 +527,107 @@
         </div>
     </div>
 
+    <!-- Modal de Gestión de Categorías -->
+    <div id="categoriaModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h3 id="categoriaModalLabel">Gestión de Categorías</h3>
+                <button type="button" class="btn-close" aria-label="Cerrar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Alertas -->
+                <div id="categoriaAlert"></div>
+                
+                <!-- Sección para agregar nueva categoría -->
+                <div class="categoria-form-section">
+                    <h4><i class="fas fa-plus"></i> Nueva Categoría</h4>
+                    <form id="categoriaForm">
+                        <input type="hidden" id="categoriaId" name="categoriaId">
+                        
+                        <div class="form-group">
+                            <label for="categoriaNombre">
+                                <i class="fas fa-tag"></i> Nombre de la Categoría *
+                            </label>
+                            <input type="text" 
+                                   id="categoriaNombre" 
+                                   name="categoriaNombre" 
+                                   class="form-control" 
+                                   placeholder="Ej: Tecnología, Idiomas, Arte..."
+                                   maxlength="100"
+                                   required>
+                            <small class="form-text text-muted">Entre 2 y 100 caracteres</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="categoriaDescripcion">
+                                <i class="fas fa-align-left"></i> Descripción *
+                            </label>
+                            <textarea id="categoriaDescripcion" 
+                                      name="categoriaDescripcion" 
+                                      class="form-control" 
+                                      rows="3"
+                                      placeholder="Descripción detallada de la categoría..."
+                                      maxlength="500"
+                                      required></textarea>
+                            <small class="form-text text-muted">Entre 5 y 500 caracteres</small>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="button" id="btnGuardarCategoria" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Crear Categoría
+                            </button>
+                            <button type="button" id="btnCancelarCategoria" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancelar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Separador -->
+                <hr class="modal-separator">
+                
+                <!-- Sección de categorías existentes -->
+                <div class="categorias-table-section">
+                    <div class="table-header">
+                        <h4><i class="fas fa-list"></i> Categorías Existentes</h4>
+                        <div class="table-stats">
+                            <span id="contadorCategorias">Total: 0 categorías</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Loading y error messages -->
+                    <div id="categoriasLoading" class="text-center" style="display: none;">
+                        <i class="fas fa-spinner fa-spin"></i> Cargando categorías...
+                    </div>
+                    <div id="categoriasError" class="alert alert-danger" style="display: none;"></div>
+                    
+                    <!-- Tabla de categorías -->
+                    <div class="table-responsive">
+                        <table id="categoriasTable" class="table table-striped">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Descripción</th>
+                                    <th>Fecha Creación</th>
+                                    <th width="120">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Las categorías se cargan dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script th:src="@{/js/gestionOfertas.js}"></script>
+    <script th:src="@{/js/categorias.js}"></script>
+    <script th:src="@{/js/categoria-debug.js}"></script>
 </main>
 </body>
 </html>
