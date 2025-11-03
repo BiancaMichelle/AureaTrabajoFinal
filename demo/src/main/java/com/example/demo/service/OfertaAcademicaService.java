@@ -1,12 +1,20 @@
 package com.example.demo.service;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.example.demo.model.*;
-import com.example.demo.repository.*;
+import com.example.demo.model.Charla;
+import com.example.demo.model.Curso;
+import com.example.demo.model.Formacion;
+import com.example.demo.model.OfertaAcademica;
+import com.example.demo.model.Seminario;
+import com.example.demo.repository.CharlaRepository;
+import com.example.demo.repository.CursoRepository;
+import com.example.demo.repository.FormacionRepository;
+import com.example.demo.repository.SeminarioRepository;
 
 @Service
 public class OfertaAcademicaService {
@@ -45,7 +53,8 @@ public class OfertaAcademicaService {
     public void eliminar(Long id, String tipo) {
         switch (tipo.toUpperCase()) {
             case "CURSO":
-                cursoRepository.deleteById(id);
+                Long cursoId = Long.valueOf(id);
+                cursoRepository.deleteById(cursoId);
                 break;
             case "FORMACION":
                 formacionRepository.deleteById(id);

@@ -1,10 +1,13 @@
 package com.example.demo.model;
 
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
@@ -42,13 +45,13 @@ public class Curso extends OfertaAcademica {
     private Double costoCuota;
     private Double costoMora;
     private Integer nrCuotas;
-   // private LocalDate vencimientoCuota;
+   private LocalDate vencimientoCuota;
     private Integer diaVencimiento; // Día del mes límite para pago sin mora
     
     @OneToMany(mappedBy = "curso")
     private List<Modulo> modulos;
     
-    @OneToMany(mappedBy = "curso")
+    @OneToMany(mappedBy = "curso", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Clase> clases;
 
     /**

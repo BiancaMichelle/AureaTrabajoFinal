@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" layout:decorate="~{layout/base}">
+<head>
+    <title th:text="${curso.nombre + ' - Aula del Curso'}">Aula del Curso</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        customGrayLight: '#f8f9fa',
+                        customGrayDark: '#343a40', 
+                        customGrayText: '#212529',
+                        customBlue: '#007bff',
+                        customGreen: '#28a745'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            background-color: #f8f9fa;
+        }
+        #overlay {
+            transition: opacity 0.3s ease-in-out;
+        }
+        #sidebar {
+            transition: transform 0.3s ease-in-out;
+        }
+        .no-scroll {
+            overflow: hidden;
+        }
+        
+        /* Estilos específicos para la navegación */
+        .nav-tab-active {
+            border-bottom-color: white;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .nav-tab-inactive {
+            border-bottom-color: transparent;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 500;
+        }
+        
+        .nav-tab-inactive:hover {
+            border-bottom-color: rgba(255, 255, 255, 0.3);
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-customGrayLight font-sans text-customGrayText" layout:fragment="content">
+    
+    <!-- Botón para modificar el curso (solo para admin/docente) -->
+    <button th:if="${puedeModificar}" id="modifyCourseButton" 
+            class="fixed top-4 left-4 bg-customBlue text-white py-2 px-4 rounded shadow hover:bg-blue-700 transition-colors duration-200 z-50">
+        Modificar Curso
+    </button>
+
+    <!-- Panel Lateral Izquierdo (Herramientas de Modificación) -->
+    <aside id="toolsSidebar" class="fixed top-0 left-0 h-full w-72 bg-white border-r border-gray-200 shadow-xl transform -translate-x-full z-40 overflow-y-auto">
+        <div class="p-4 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-800">Herramientas</h2>
+            <button id="closeToolsButton" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        <nav class="p-4">
+            <ul class="space-y-2">
+                <li>
+                    <button id="createModuleButton" class="w-full text-left py-2 px-3 rounded-md bg-customGreen text-white hover:bg-green-700 transition-colors duration-150">
+                        Crear Módulo
+                    </button>
+                </li>
+                <li>
+                    <button id="createActivityButton" class="w-full text-left py-2 px-3 rounded-md bg-customGreen text-white hover:bg-green-700 transition-colors duration-150">
+                        Crear Actividad
+                    </button>
+                </li>
+                <li>
+                    <button id="createClassButton" class="w-full text-left py-2 px-3 rounded-md bg-customGreen text-white hover:bg-green-700 transition-colors duration-150">
+                        Crear Clase
+                    </button>
+                </li>
+            </ul>
+        </nav>
+    </aside>
+
+    <!-- Modal para crear módulo -->
+    <div id="moduleModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg p-6 w-96">
+            <h3 class="text-lg font-semibold mb-4">Crear Nuevo Módulo</h3>
+            <form th:action="@{/crearModulo}" method="post">
+                <input type="hidden" name="cursoId" th:value="${curso.idOferta}">
+                <input type="hidden" name="_csrf" th:value="${_csrf.token}">
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">Nombre del módulo</label>
+                    <input type="text" name="nombre" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2" required>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">Descripción</label>
+                    <textarea name="descripcion" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2" rows="3"></textarea>
+                </div>
+                <div class="flex justify-end space-x-2">
+                    <button type="button" onclick="closeModuleModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-customGreen text-white rounded-md hover:bg-green-700">Crear Módulo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Contenido principal -->
+    <div id="main-container" class="relative min-h-screen">
+        
+        <!-- Cabecera del Curso -->
+        <header class="bg-customGrayDark text-white p-4 py-8 shadow-md relative z-10">
+            <div class="max-w-7xl mx-auto flex justify-between items-center relative">
+                <h1 class="text-3xl font-bold tracking-wider mx-auto" th:text="${curso.nombre}">IMAGEN DEL CURSO</h1>
+                
+                <!-- Botón para abrir el índice -->
+                <button id="openButton" class="absolute right-0 top-1/2 -translate-y-1/2 bg-customBlue hover:bg-blue-700 text-white py-2 pl-3 pr-2 rounded-l-lg flex items-center transition-colors duration-200 shadow z-20">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    <span class="ml-1 text-sm whitespace-nowrap">Contenido del curso</span>
+                </button>
+            </div>
+        </header>
+
+        <div th:if="${puedeModificar}" class="alert alert-info mt-3">
+            <i class="fas fa-chalkboard-teacher me-2"></i>
+            <strong>Modo Docente:</strong> Tienes permisos para modificar este curso.
+            <span th:if="${docente != null}">
+                Bienvenido, <span th:text="${docente.nombre + ' ' + docente.apellido}"></span>
+            </span>
+        </div>
+
+        <!-- Barra de Navegación -->
+        <nav class="bg-customGreen border-b border-gray-200 shadow-sm relative z-10">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center space-x-6">
+                    <!-- Ícono de búsqueda -->
+                    <div class="py-3 px-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                    
+                    <!-- Pestañas -->
+                    <a href="#" class="py-3 px-1 border-b-2 border-white text-white font-semibold text-sm nav-tab-active">
+                        Contenido
+                    </a>
+                    <a href="#" class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
+                        Descripción
+                    </a>
+                    <a href="#" class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
+                        Anuncios
+                    </a>
+                    <a href="#" class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
+                        Participantes
+                    </a>
+                    <a href="#" class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
+                        Calificaciones
+                    </a>
+                    <a href="#" class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
+                        Calendario
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Contenido Principal del Curso -->
+        <main class="p-8">
+            <div class="max-w-4xl mx-auto" id="courseContent">
+                <!-- Módulos cargados desde la base de datos -->
+                <div th:each="modulo : ${modulos}" class="mb-8 bg-white p-6 rounded-lg shadow">
+                    <h2 class="text-gray-500 text-xs font-semibold uppercase mb-1">
+                        <span th:text="${#temporals.format(modulo.fechaInicioModulo, 'dd/MM/yyyy')} + ' - ' + ${#temporals.format(modulo.fechaFinModulo, 'dd/MM/yyyy')}">
+                            Fechas
+                        </span>
+                    </h2>
+                    <h3 class="text-2xl font-bold tracking-wide mb-4" th:text="${modulo.nombre}">MÓDULO</h3>
+                    <p class="text-gray-600 mb-4" th:text="${modulo.descripcion}">Descripción del módulo</p>
+                    
+                    <!-- Clases del módulo -->
+                    <div th:if="${not #lists.isEmpty(modulo.clases)}" class="ml-4 mb-4">
+                        <h4 class="text-lg font-semibold text-gray-700 mb-2">Clases:</h4>
+                        <div th:each="clase : ${modulo.clases}" class="bg-gray-50 p-4 rounded-lg mb-2 border">
+                            <h5 class="font-medium text-customBlue" th:text="${clase.titulo}">Título de la clase</h5>
+                            <p class="text-sm text-gray-600 mt-1" th:text="${clase.descripcion}">Descripción de la clase</p>
+                            <p class="text-xs text-gray-500 mt-2" th:text="${#temporals.format(clase.inicio, 'dd/MM/yyyy HH:mm')}">Fecha</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Actividades del módulo -->
+                    <div th:if="${not #lists.isEmpty(modulo.actividades)}" class="ml-4">
+                        <h4 class="text-lg font-semibold text-gray-700 mb-2">Actividades:</h4>
+                        <div th:each="actividad : ${modulo.actividades}" class="bg-gray-50 p-4 rounded-lg mb-2 border">
+                            <h5 class="font-medium text-customGreen" th:text="${actividad.titulo}">Título de la actividad</h5>
+                            <p class="text-sm text-gray-600 mt-1" th:text="${actividad.descripcion}">Descripción de la actividad</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Mensaje si no hay contenido -->
+                    <div th:if="${#lists.isEmpty(modulo.clases) and #lists.isEmpty(modulo.actividades)}" class="ml-4">
+                        <p class="text-gray-500 text-sm">No hay clases o actividades en este módulo.</p>
+                    </div>
+                </div>
+                
+                <!-- Mensaje si no hay módulos -->
+                <div th:if="${#lists.isEmpty(modulos)}" class="text-center text-gray-500 py-8 bg-white rounded-lg shadow">
+                    <p class="text-lg">No hay módulos disponibles para este curso.</p>
+                    <p class="text-sm mt-2" th:if="${puedeModificar}">Usa el botón "Modificar Curso" para agregar módulos.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Fondo Oscuro (Overlay) -->
+    <div id="overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 opacity-0 pointer-events-none"></div>
+
+    <!-- Panel Lateral Derecho (Índice del Curso) -->
+    <aside id="sidebar" class="fixed top-0 right-0 h-full w-72 bg-white border-l border-gray-200 shadow-xl transform translate-x-full z-40 overflow-y-auto">
+        
+        <!-- Cabecera del Panel -->
+        <div class="flex justify-between items-center p-4 border-b border-gray-200 sticky top-0 bg-white">
+            <h2 class="text-lg font-semibold text-gray-800">ÍNDICE DEL CURSO</h2>
+            <button id="closeButton" class="text-gray-500 hover:text-gray-800 transition-colors duration-200">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Contenido del Índice -->
+        <nav class="p-4">
+            <ul class="space-y-1">
+                <li>
+                    <a href="#" class="block py-2 px-3 rounded-md text-gray-700 hover:bg-gray-100 transition-colors duration-150">
+                        Inicio
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="block py-2 px-3 rounded-md text-gray-700 hover:bg-gray-100 transition-colors duration-150">
+                        Anuncios
+                    </a>
+                </li>
+                <!-- Módulos en el índice -->
+                <li th:each="modulo : ${modulos}">
+                    <a href="#" class="block py-2 px-3 rounded-md text-gray-700 hover:bg-gray-100 transition-colors duration-150"
+                       th:class="${moduloStat.first} ? 'text-customBlue bg-blue-50 font-semibold' : 'text-gray-700 hover:bg-gray-100'"
+                       th:text="${'Módulo ' + moduloStat.count + ': ' + modulo.nombre}">
+                        Módulo
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="block py-2 px-3 rounded-md text-gray-700 hover:bg-gray-100 transition-colors duration-150">
+                        Examen
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="block py-2 px-3 rounded-md text-gray-700 hover:bg-gray-100 transition-colors duration-150">
+                        Calificaciones
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="block py-2 px-3 rounded-md text-gray-700 hover:bg-gray-100 transition-colors duration-150">
+                        Foro de Dudas
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </aside>
+
+    <script>
+        // Obtener elementos del DOM
+        const modifyCourseButton = document.getElementById('modifyCourseButton');
+        const toolsSidebar = document.getElementById('toolsSidebar');
+        const closeToolsButton = document.getElementById('closeToolsButton');
+        const createModuleButton = document.getElementById('createModuleButton');
+        const moduleModal = document.getElementById('moduleModal');
+
+        // Mostrar/ocultar panel de herramientas
+        if (modifyCourseButton) {
+            modifyCourseButton.addEventListener('click', () => {
+                toolsSidebar.classList.remove('-translate-x-full');
+                toolsSidebar.classList.add('translate-x-0');
+            });
+        }
+
+        // Cerrar panel de herramientas
+        if (closeToolsButton) {
+            closeToolsButton.addEventListener('click', () => {
+                toolsSidebar.classList.add('-translate-x-full');
+                toolsSidebar.classList.remove('translate-x-0');
+            });
+        }
+
+        // Abrir modal para crear módulo
+        if (createModuleButton) {
+            createModuleButton.addEventListener('click', () => {
+                moduleModal.classList.remove('hidden');
+            });
+        }
+
+        // Cerrar modal
+        function closeModuleModal() {
+            moduleModal.classList.add('hidden');
+        }
+
+        // Cerrar modal al hacer clic fuera
+        moduleModal.addEventListener('click', (e) => {
+            if (e.target === moduleModal) {
+                closeModuleModal();
+            }
+        });
+
+        // Tu código existente para el sidebar derecho
+        const sidebar = document.getElementById('sidebar');
+        const openButton = document.getElementById('openButton');
+        const closeButton = document.getElementById('closeButton');
+        const overlay = document.getElementById('overlay');
+
+        function openSidebar() {
+            sidebar.classList.remove('translate-x-full');
+            sidebar.classList.add('translate-x-0');
+            overlay.classList.remove('pointer-events-none', 'opacity-0');
+            overlay.classList.add('opacity-50');
+            document.body.classList.add('no-scroll');
+        }
+
+        function closeSidebar() {
+            sidebar.classList.add('translate-x-full');
+            sidebar.classList.remove('translate-x-0');
+            overlay.classList.add('opacity-0');
+            overlay.classList.remove('opacity-50');
+            setTimeout(() => {
+                overlay.classList.add('pointer-events-none');
+            }, 300);
+            document.body.classList.remove('no-scroll');
+        }
+
+        openButton.addEventListener('click', openSidebar);
+        closeButton.addEventListener('click', closeSidebar);
+        overlay.addEventListener('click', closeSidebar);
+    </script>
+</body>
+</html>

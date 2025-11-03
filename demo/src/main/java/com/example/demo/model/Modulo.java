@@ -1,13 +1,17 @@
 package com.example.demo.model;
 
-import java.sql.Date;
+
+
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
 import org.hibernate.annotations.GenericGenerator;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -31,19 +35,19 @@ public class Modulo {
     private UUID idModulo;
     private String nombre;
     private String descripcion;
-    private Date fechaInicioModulo;
-    private Date fechaFinModulo;
+    private LocalDate fechaInicioModulo;
+    private LocalDate fechaFinModulo;
     private String objetivos;
     
-    @OneToMany(mappedBy = "modulo")
+    @OneToMany(mappedBy = "modulo", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Clase> clases;
     
     private Boolean visibilidad;
     
-    @OneToMany(mappedBy = "modulo")
+    @OneToMany(mappedBy = "modulo", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Actividad> actividades;
     
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "curso_id")
     private Curso curso;
 }

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" 
+      layout:decorate="~{layout/base}">
+<head>
+    <title>Mis Ofertas Académicas</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body layout:fragment="content">
+    <div class="container mt-4">
+        <!-- Debug info -->
+        <div class="alert alert-info">
+            <strong>DEBUG:</strong> 
+            Docente: <span th:text="${docente.nombre + ' ' + docente.apellido}"></span> | 
+            Cursos: <span th:text="${cursos.size()}"></span>
+        </div>
+
+        <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h1 class="h3 text-primary mb-1">Mis Cursos Asignados</h1>
+                    <p class="text-muted mb-0">
+                        Cursos donde eres docente - 
+                        <span th:text="${docente.nombre + ' ' + docente.apellido}"></span>
+                    </p>
+                </div>
+                <a th:href="@{/}" class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-left me-1"></i>
+                    Volver al Inicio
+                </a>
+            </div>
+        </div>
+
+        <!-- CONTENIDO PARA DOCENTES -->
+        <div th:if="${not #lists.isEmpty(cursos)}" class="row g-4">
+            <div th:each="curso : ${cursos}" class="col-lg-4 col-md-6">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="card-title mb-0" th:text="${curso.nombre}">Nombre del Curso</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text text-muted" th:text="${curso.descripcion}">
+                            Descripción del curso
+                        </p>
+                        
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-clock text-muted me-2"></i>
+                                <small class="text-muted" th:text="${curso.duracion}">Duración</small>
+                            </div>
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-chalkboard-teacher text-muted me-2"></i>
+                                <small class="text-muted" th:text="${curso.modalidad}">Modalidad</small>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-users text-muted me-2"></i>
+                                <small class="text-muted">
+                                    <span th:if="${curso.inscripciones != null}" 
+                                          th:text="${curso.inscripciones.size() + ' alumnos'}">
+                                    </span>
+                                    <span th:unless="${curso.inscripciones != null}">0 alumnos</span>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="badge bg-success" th:text="${curso.estado}">Estado</span>
+                            <a th:href="@{/docente/aula/{id}(id=${curso.idOferta})}" 
+                            class="btn btn-success btn-sm">
+                                <i class="fas fa-door-open me-1"></i>
+                                Ir al Aula
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mensaje cuando no hay cursos -->
+        <div th:if="${#lists.isEmpty(cursos)}" class="text-center py-5">
+            <div class="mb-4">
+                <i class="fas fa-chalkboard-teacher fa-4x text-muted"></i>
+            </div>
+            <h3 class="text-muted mb-3">No tienes cursos asignados</h3>
+            <p class="text-muted">Actualmente no estás asignado como docente en ningún curso.</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

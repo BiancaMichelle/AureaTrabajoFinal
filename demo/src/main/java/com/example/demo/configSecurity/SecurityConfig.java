@@ -52,9 +52,13 @@ public class SecurityConfig {
             .invalidSessionUrl("/login?timeout")
         )
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/", "/login", "/publico").permitAll()
-            .requestMatchers("/register", "/register/**", "/forgot-password", "/recuperacion/**").permitAll()
-            .requestMatchers("/css/**", "/js/**", "/style/**", "/img/**").permitAll()
+        .requestMatchers("/", "/publico", "/login", "/register","/register/**",
+            "/provincias/**","/ciudades/**", "/api/ubicaciones/**",
+            "/email/**", "/css/**", "/js/**", "/style/**", "/img/**",
+            "/api/**", "/admin/configuracion/carrusel/**", 
+            "/crear-admin-temporal", "/forgot-password", "/recuperacion/**",
+            "/api/usuarios/**")
+            .permitAll()
             .requestMatchers("/admin/**").hasAuthority("ADMIN")
             .requestMatchers("/alumno/**").hasAuthority("ALUMNO")
             .requestMatchers("/docente/**").hasAuthority("DOCENTE")
