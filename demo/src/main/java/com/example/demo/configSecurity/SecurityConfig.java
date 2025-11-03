@@ -13,6 +13,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -44,24 +45,23 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-        .csrf(csrf -> csrf.disable()) // Deshabilitar CSRF temporalmente para debug
-        .cors(cors -> cors.configurationSource(corsConfigurationSource())) // ← AÑADE ESTO
+        .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
+        .cors(cors -> cors.configurationSource(corsConfigurationSource()))
         .userDetailsService(usuarioJpaService)
         .sessionManagement(session -> session
-              .invalidSessionUrl("/?timeout")
+            .invalidSessionUrl("/login?timeout")
         )
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/", "/publico", "/login", "/register","/register/**","/provincias/**","/ciudades/**", "/api/ubicaciones/**","/email/**",
-                        "/css/**", "/js/**", "/style/**", "/img/**","/api/**", "/admin/configuracion/carrusel/**", "/crear-admin-temporal",
-                        "/forgot-password", "/recuperacion/**") // ← AGREGAR ESTAS RUTAS
-            .permitAll()
+            .requestMatchers("/", "/login", "/publico").permitAll()
+            .requestMatchers("/register", "/register/**", "/forgot-password", "/recuperacion/**").permitAll()
+            .requestMatchers("/css/**", "/js/**", "/style/**", "/img/**").permitAll()
             .requestMatchers("/admin/**").hasAuthority("ADMIN")
-            .requestMatchers("/").hasAuthority("ALUMNO")
+            .requestMatchers("/alumno/**").hasAuthority("ALUMNO")
             .requestMatchers("/docente/**").hasAuthority("DOCENTE")
             .anyRequest().authenticated()
         )
         .formLogin(form -> form
-            .loginPage("/login") // Usar nuestra nueva página de login
+            .loginPage("/login")
             .failureUrl("/login?error=true") 
             .successHandler((request, response, authentication) -> {
                 var roles = authentication.getAuthorities()
@@ -71,9 +71,9 @@ public class SecurityConfig {
                 if (roles.contains("ADMIN")) {
                     response.sendRedirect("/admin/dashboard");
                 } else if (roles.contains("ALUMNO")) {
-                    response.sendRedirect("/alumno");
+                    response.sendRedirect("/alumno/dashboard");
                 } else if (roles.contains("DOCENTE")) {
-                    response.sendRedirect("/docente");
+                    response.sendRedirect("/docente/dashboard");
                 } else {
                     response.sendRedirect("/");  
                 }
@@ -81,7 +81,7 @@ public class SecurityConfig {
             .permitAll()
         )
         .logout(logout -> logout
-            .logoutSuccessUrl("/login?logout=true") // Redirigir a la página de login después del logout
+            .logoutSuccessUrl("/login?logout=true")
             .permitAll()
         );
         return http.build();
