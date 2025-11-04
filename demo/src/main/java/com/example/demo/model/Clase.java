@@ -1,15 +1,11 @@
 package com.example.demo.model;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 
 import org.hibernate.annotations.GenericGenerator;
 
-import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
-import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
@@ -32,12 +28,15 @@ public class Clase {
     @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
     @Column(name = "id_clase", updatable = false, nullable = false, columnDefinition = "uuid")
     private UUID idClase;
+    
     private String titulo;
     private String descripcion;
     private LocalDateTime inicio;
-    //temporalmente
-    private String permisos;
+    private LocalDateTime fin;
     
+    // Campos para la videoconferencia
+    private String roomName;
+    private String meetingUrl;
     private Boolean asistenciaAutomatica;
     private Boolean preguntasAleatorias;
     private Integer cantidadPreguntas;
@@ -53,4 +52,14 @@ public class Clase {
     @ManyToOne
     @JoinColumn(name = "modulo_id")
     private Modulo modulo;
+    
+    // Método para generar automáticamente el roomName si no existe
+    public void generateRoomName() {
+        if (this.roomName == null && this.titulo != null) {
+            String baseName = this.titulo.toLowerCase()
+                    .replace(" ", "-")
+                    .replaceAll("[^a-z0-9-]", "");
+            this.roomName = "clase-" + baseName + "-" + UUID.randomUUID().toString().substring(0, 8);
+        }
+    }
 }

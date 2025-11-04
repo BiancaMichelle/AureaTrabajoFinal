@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" layout:decorate="~{layout/base}">
+<head>
+    <title th:text="${clase?.titulo ?: 'Videoconferencia'}">Videoconferencia</title>
+    
+    <!-- Enlace a Font Awesome (ya presente en tu código) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- *** AÑADIDO: Cargar Tailwind CSS *** -->
+    <!-- Esta línea es necesaria para que todas las clases de estilo (bg-blue-500, text-3xl, etc.) funcionen -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Estilos CSS en línea para el contenedor del video y la carga -->
+    <style>
+        .video-container {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 aspect ratio */
+            height: 0;
+            overflow: hidden;
+            background: #f3f4f6; /* Fondo gris claro en lugar de negro */
+            border-radius: 12px; /* Coincide con rounded-xl de Tailwind */
+            border: 1px solid #e5e7eb; /* Borde sutil */
+        }
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        /* Estilo mejorado para el mensaje de carga */
+        .loading-message {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(255, 255, 255, 0.7); /* Fondo blanco semitransparente */
+            backdrop-filter: blur(4px); /* Efecto de desenfoque moderno */
+            color: #1f2937; /* Texto gris oscuro */
+            border-radius: 12px;
+            z-index: 10;
+        }
+        .loading-message i {
+            color: #3b82f6; /* Icono de spinner azul */
+        }
+    </style>
+</head>
+<body layout:fragment="content" class="bg-gray-50"> <!-- Fondo de página gris muy claro -->
+
+    <div class="container mx-auto p-4 md:p-6 max-w-6xl">
+        
+        <!-- Encabezado -->
+        <div class="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900" th:text="${clase?.titulo ?: 'Clase en vivo'}"></h1>
+                <p class="text-lg text-gray-600 mt-1" th:if="${clase?.descripcion}" th:text="${clase.descripcion}"></p>
+            </div>
+            <div class="flex gap-3 flex-shrink-0">
+                <!-- Botón para abrir en nueva pestaña (Estilo Primario) -->
+                <a th:href="${meetingUrl}" 
+                   target="_blank"
+                   class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-5 py-2.5 rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2 font-medium">
+                    <i class="fas fa-external-link-alt"></i>
+                    <span>Abrir en nueva pestaña</span>
+                </a>
+                <!-- Botón volver al aula (Estilo Secundario) -->
+                <a th:href="@{/docente/aula/} + ${clase?.modulo?.curso?.idOferta}"
+                   class="bg-white text-gray-700 px-5 py-2.5 rounded-lg border border-gray-300 hover:bg-gray-100 transition-colors duration-200 flex items-center gap-2 font-medium">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Volver al aula</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Información de la clase -->
+        <div th:if="${clase}" class="bg-blue-50 border border-blue-200 rounded-xl p-5 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-clock text-blue-600 text-lg"></i>
+                    <span class="text-gray-700"><strong>Inicio:</strong> <span th:text="${#temporals.format(clase.inicio, 'dd/MM/yyyy HH:mm')}"></span></span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-hourglass-end text-blue-600 text-lg"></i>
+                    <span class="text-gray-700"><strong>Fin:</strong> <span th:text="${#temporals.format(clase.fin, 'dd/MM/yyyy HH:mm')}"></span></span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-user-check text-blue-600 text-lg"></i>
+                    <span class="text-gray-700"><strong>Asistencia:</strong> <span th:text="${clase.asistenciaAutomatica ? 'Automática' : 'Manual'}"></span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mensaje de error -->
+        <div th:if="${error}" class="bg-red-50 border border-red-300 text-red-800 px-5 py-4 rounded-xl mb-6">
+            <div class="flex items-center">
+                <i class="fas fa-exclamation-triangle me-3 text-red-500 text-xl"></i>
+                <div>
+                    <strong class="font-bold">Error: </strong>
+                    <span th:text="${error}"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Videoconferencia integrada -->
+        <div th:if="${meetingUrl}" class="bg-white rounded-xl shadow-xl p-4 md:p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-gray-900 flex items-center">
+                    <i class="fas fa-video me-2 text-blue-600"></i>
+                    Sala de videoconferencia
+                </h2>
+                <!-- Indicador "Conectado" mejorado -->
+                <div class="flex items-center bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">
+                    <i class="fas fa-circle text-xs me-2 animate-pulse"></i>
+                    <span>Conectado</span>
+                </div>
+            </div>
+            
+            <!-- Iframe de la videoconferencia -->
+            <div class="video-container mb-6">
+                <!-- Mensaje de carga mejorado -->
+                <div class="loading-message" id="loadingMessage">
+                    <i class="fas fa-spinner fa-spin text-3xl mb-3"></i>
+                    <p class="font-medium text-lg">Cargando sala de videoconferencia...</p>
+                    <p class="text-sm">Esto puede tomar un momento.</p>
+                </div>
+                <iframe th:src="${meetingUrl}" 
+                        allow="camera; microphone; fullscreen; speaker; display-capture"
+                        title="Sala de videoconferencia">
+                </iframe>
+            </div>
+
+            <!-- Recomendaciones (Estilo mejorado con iconos) -->
+            <div class="bg-gray-50 rounded-xl p-5 border border-gray-200">
+                <h3 class="font-semibold text-gray-800 mb-3 flex items-center text-md">
+                    <i class="fas fa-lightbulb me-2 text-yellow-500"></i>
+                    Recomendaciones para una mejor experiencia
+                </h3>
+                <ul class="text-gray-700 text-sm space-y-2">
+                    <li class="flex items-center"><i class="fas fa-check-circle text-green-500 w-5 me-2"></i> <strong>Permite el acceso</strong> a cámara y micrófono cuando el navegador lo solicite.</li>
+                    <li class="flex items-center"><i class="fas fa-headphones text-blue-500 w-5 me-2"></i> Usa <strong>auriculares</strong> para evitar ecos y mejorar la calidad de audio.</li>
+                    <li class="flex items-center"><i class="fas fa-wifi text-blue-500 w-5 me-2"></i> Asegúrate de tener una <strong>conexión estable</strong> a internet.</li>
+                    <li class="flex items-center"><i class="fas fa-exclamation-triangle text-orange-500 w-5 me-2"></i> Si experimentas problemas, usa el botón <strong>"Abrir en nueva pestaña"</strong>.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Mensaje si no hay meeting URL (Estilo de "Estado Vacío" mejorado) -->
+        <div th:unless="${meetingUrl}" class="bg-white border border-gray-200 text-gray-700 px-6 py-12 rounded-xl text-center">
+            <i class="fas fa-video-slash text-5xl mb-5 text-gray-400"></i>
+            <h2 class="text-2xl font-semibold mb-2 text-gray-800">Sala no disponible</h2>
+            <p class="mb-6 text-gray-600">No se pudo cargar la sala de videoconferencia para esta clase.</p>
+            <a th:if="${clase?.modulo?.curso}" 
+               th:href="@{/docente/aula/} + ${clase.modulo.curso.idOferta}"
+               class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-2.5 rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 inline-flex items-center gap-2 font-medium">
+                <i class="fas fa-arrow-left me-2"></i>
+                <span>Volver al aula</span>
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Ocultar mensaje de carga cuando el iframe se cargue
+        document.addEventListener('DOMContentLoaded', function() {
+            const iframe = document.querySelector('iframe');
+            const loadingMessage = document.getElementById('loadingMessage');
+            
+            if (iframe && loadingMessage) {
+                let loaded = false;
+                
+                iframe.addEventListener('load', function() {
+                    loaded = true;
+                    // Desvanecer suavemente
+                    loadingMessage.style.transition = 'opacity 0.5s ease';
+                    loadingMessage.style.opacity = '0';
+                    setTimeout(() => {
+                        loadingMessage.style.display = 'none';
+                    }, 500); // Espera a que termine la transición
+                });
+                
+                // Ocultar después de 7 segundos (aumentado) aunque no cargue
+                // A veces el evento 'load' no se dispara si hay redirecciones
+                setTimeout(function() {
+                    if (!loaded) {
+                        loadingMessage.style.transition = 'opacity 0.5s ease';
+                        loadingMessage.style.opacity = '0';
+                        setTimeout(() => {
+                            loadingMessage.style.display = 'none';
+                        }, 500);
+                    }
+                }, 7000);
+            }
+        });
+    </script>
+</body>
+</html>
+

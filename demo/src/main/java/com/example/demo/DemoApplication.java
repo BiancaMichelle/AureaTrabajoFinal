@@ -23,13 +23,10 @@ import com.example.demo.model.Modulo;
 import com.example.demo.model.Rol;
 import com.example.demo.model.Usuario;
 import com.example.demo.repository.CategoriaRepository;
-import com.example.demo.repository.ClaseRepository;
 import com.example.demo.repository.CursoRepository;
 import com.example.demo.repository.DocenteRepository;
 import com.example.demo.repository.InscripcionRepository;
-import com.example.demo.repository.InstitutoRepository;
 import com.example.demo.repository.ModuloRepository;
-import com.example.demo.repository.OfertaAcademicaRepository;
 import com.example.demo.repository.RolRepository;
 import com.example.demo.repository.UsuarioRepository;
 
@@ -43,11 +40,8 @@ public class DemoApplication implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final CursoRepository cursoRepository;
     private final ModuloRepository moduloRepository;
-    private final ClaseRepository claseRepository;
     private final InscripcionRepository inscripcionRepository;
-    private final InstitutoRepository institutoRepository;
     private final CategoriaRepository categoriaRepository;
-    private final OfertaAcademicaRepository ofertaAcademicaRepository;
     private final DocenteRepository docenteRepository;
 
     public DemoApplication(RolRepository roleRepository,
@@ -55,22 +49,16 @@ public class DemoApplication implements CommandLineRunner {
                            PasswordEncoder passwordEncoder,
                            CursoRepository cursoRepository,
                            ModuloRepository moduloRepository,
-                           ClaseRepository claseRepository,
                            InscripcionRepository inscripcionRepository,
-                           InstitutoRepository institutoRepository,
                            CategoriaRepository categoriaRepository,
-                           OfertaAcademicaRepository ofertaAcademicaRepository,
                            DocenteRepository docenteRepository) {
         this.roleRepository = roleRepository;
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
         this.cursoRepository = cursoRepository;
         this.moduloRepository = moduloRepository;
-        this.claseRepository = claseRepository;
         this.inscripcionRepository = inscripcionRepository;
-        this.institutoRepository = institutoRepository;
         this.categoriaRepository = categoriaRepository;
-        this.ofertaAcademicaRepository = ofertaAcademicaRepository;
         this.docenteRepository = docenteRepository;
     }
 

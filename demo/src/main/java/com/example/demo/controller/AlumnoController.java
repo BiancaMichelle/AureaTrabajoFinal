@@ -1,8 +1,10 @@
 package com.example.demo.controller;
 
+import java.security.Principal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.Authentication;
@@ -97,15 +99,38 @@ public class AlumnoController {
 
     // Ver mis ofertas académicas (inscripciones)
     @GetMapping("/mis-ofertas")
-    public String verMisOfertas(Authentication authentication, Model model) {
-        String dni = authentication.getName();
-        Usuario alumno = usuarioRepository.findByDni(dni)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-        
-        List<Inscripciones> inscripciones = inscripcionRepository.findByAlumno(alumno);
-        model.addAttribute("inscripciones", inscripciones);
-        
-        return "misOfertasAcademicas"; // Asegúrate de que este template existe
+    public String misOfertasAcademicas(Principal principal, Model model) {
+        try {
+            String dni = principal.getName();
+            System.out.println("🎓 Alumno accediendo a mis ofertas: " + dni);
+            
+            Usuario alumno = usuarioRepository.findByDni(dni)
+                    .orElseThrow(() -> new RuntimeException("Alumno no encontrado"));
+            
+            // ✅ CORREGIDO: Buscar inscripciones del alumno
+            List<Inscripciones> inscripciones = inscripcionRepository.findByAlumnoDni(dni);
+            
+            // Extraer los cursos de las inscripciones
+            List<Curso> cursos = inscripciones.stream()
+                    .filter(insc -> insc.getOferta() instanceof Curso)
+                    .map(insc -> (Curso) insc.getOferta())
+                    .collect(Collectors.toList());
+            
+            System.out.println("📊 Inscripciones encontradas: " + inscripciones.size());
+            System.out.println("📊 Cursos encontrados: " + cursos.size());
+            
+            model.addAttribute("alumno", alumno);
+            model.addAttribute("cursos", cursos);
+            model.addAttribute("inscripciones", inscripciones); // Para debug
+            
+            return "misOfertasAcademicas";
+            
+        } catch (Exception e) {
+            System.out.println("❌ Error en misOfertasAcademicas (alumno): " + e.getMessage());
+            e.printStackTrace();
+            model.addAttribute("error", "Error al cargar tus cursos: " + e.getMessage());
+            return "misOfertasAcademicas";
+        }
     }
 
     // Acceder al aula de un curso - VERSIÓN CORREGIDA
@@ -159,7 +184,7 @@ public class AlumnoController {
                 System.out.println("👤 Puede modificar: " + puedeModificar);
                 
                 System.out.println("✅ Redirigiendo a template: aula");
-                return "aula"; // Esto busca templates/aula.html
+                return "aula"; 
                 
             } else {
                 // Para otros tipos de ofertas académicas

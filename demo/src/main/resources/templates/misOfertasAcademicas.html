@@ -8,8 +8,8 @@
 </head>
 <body layout:fragment="content">
     <div class="container mt-4">
-        <!-- Debug info -->
-        <div class="alert alert-info">
+        <!-- Debug info (solo mostrar si docente existe) -->
+        <div th:if="${docente != null}" class="alert alert-info">
             <strong>DEBUG:</strong> 
             Docente: <span th:text="${docente.nombre + ' ' + docente.apellido}"></span> | 
             Cursos: <span th:text="${cursos.size()}"></span>
@@ -18,10 +18,24 @@
         <div class="mb-4">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <div>
-                    <h1 class="h3 text-primary mb-1">Mis Cursos Asignados</h1>
+                    <h1 class="h3 text-primary mb-1">
+                        <span th:if="${docente != null}">Mis Cursos Asignados</span>
+                        <span th:if="${alumno != null}">Mis Cursos Inscritos</span>
+                        <span th:if="${docente == null and alumno == null}">Mis Cursos</span>
+                    </h1>
                     <p class="text-muted mb-0">
-                        Cursos donde eres docente - 
-                        <span th:text="${docente.nombre + ' ' + docente.apellido}"></span>
+                        <!-- Mostrar nombre solo si existe -->
+                        <span th:if="${docente != null}">
+                            Cursos donde eres docente - 
+                            <span th:text="${docente.nombre + ' ' + docente.apellido}"></span>
+                        </span>
+                        <span th:if="${alumno != null}">
+                            Cursos donde estás inscrito - 
+                            <span th:text="${alumno.nombre + ' ' + alumno.apellido}"></span>
+                        </span>
+                        <span th:if="${docente == null and alumno == null}">
+                            Mis cursos
+                        </span>
                     </p>
                 </div>
                 <a th:href="@{/}" class="btn btn-outline-primary">
@@ -31,12 +45,12 @@
             </div>
         </div>
 
-        <!-- CONTENIDO PARA DOCENTES -->
+        <!-- CONTENIDO PARA DOCENTES Y ALUMNOS -->
         <div th:if="${not #lists.isEmpty(cursos)}" class="row g-4">
             <div th:each="curso : ${cursos}" class="col-lg-4 col-md-6">
                 <div class="card h-100 border-0 shadow-sm">
-                    <div class="card-header bg-success text-white">
-                        <h5 class="card-title mb-0" th:text="${curso.nombre}">Nombre del Curso</h5>
+                    <div class="card-header" th:classappend="${docente != null} ? 'bg-success' : 'bg-primary'">
+                        <h5 class="card-title mb-0 text-white" th:text="${curso.nombre}">Nombre del Curso</h5>
                     </div>
                     <div class="card-body">
                         <p class="card-text text-muted" th:text="${curso.descripcion}">
@@ -65,9 +79,20 @@
                     </div>
                     <div class="card-footer bg-transparent">
                         <div class="d-flex justify-content-between align-items-center">
-                            <span class="badge bg-success" th:text="${curso.estado}">Estado</span>
-                            <a th:href="@{/docente/aula/{id}(id=${curso.idOferta})}" 
-                            class="btn btn-success btn-sm">
+                            <span class="badge" 
+                                  th:classappend="${curso.estado == 'ACTIVO'} ? 'bg-success' : 'bg-secondary'"
+                                  th:text="${curso.estado}">Estado</span>
+                            
+                            <!-- Botón diferente para docente vs alumno -->
+                            <a th:if="${docente != null}" 
+                               th:href="@{/docente/aula/{id}(id=${curso.idOferta})}" 
+                               class="btn btn-success btn-sm">
+                                <i class="fas fa-door-open me-1"></i>
+                                Ir al Aula
+                            </a>
+                            <a th:if="${alumno != null}" 
+                               th:href="@{/alumno/aula/{id}(id=${curso.idOferta})}" 
+                               class="btn btn-primary btn-sm">
                                 <i class="fas fa-door-open me-1"></i>
                                 Ir al Aula
                             </a>
@@ -82,8 +107,15 @@
             <div class="mb-4">
                 <i class="fas fa-chalkboard-teacher fa-4x text-muted"></i>
             </div>
-            <h3 class="text-muted mb-3">No tienes cursos asignados</h3>
-            <p class="text-muted">Actualmente no estás asignado como docente en ningún curso.</p>
+            <h3 class="text-muted mb-3">
+                <span th:if="${docente != null}">No tienes cursos asignados</span>
+                <span th:if="${alumno != null}">No estás inscrito en ningún curso</span>
+                <span th:if="${docente == null and alumno == null}">No tienes cursos</span>
+            </h3>
+            <p class="text-muted">
+                <span th:if="${docente != null}">Actualmente no estás asignado como docente en ningún curso.</span>
+                <span th:if="${alumno != null}">No te has inscrito en ningún curso aún.</span>
+            </p>
         </div>
     </div>
 

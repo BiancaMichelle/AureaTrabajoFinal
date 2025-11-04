@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    <!-- Modal para crear clase -->
+    <div id="classModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg p-6 w-96 max-h-[90vh] overflow-y-auto">
+            <h3 class="text-lg font-semibold mb-4">
+                <i class="fas fa-video me-2"></i>Crear Nueva Clase
+            </h3>
+            <form id="createClassForm" th:action="@{/clase/crear}" method="post">
+                <input type="hidden" name="moduloId" id="moduloIdInput">
+                <input type="hidden" name="_csrf" th:value="${_csrf.token}">
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">Título de la clase</label>
+                    <input type="text" name="titulo" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2" 
+                           required placeholder="Ej: Introducción a Java">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">Descripción</label>
+                    <textarea name="descripcion" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2" 
+                              rows="3" placeholder="Descripción de la clase..."></textarea>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">Fecha y hora de inicio</label>
+                    <input type="datetime-local" name="inicio" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                        th:value="${#dates.format(#dates.createNow(), 'yyyy-MM-dd''T''HH:mm')}">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">Duración (horas)</label>
+                    <select name="duracion" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2">
+                        <option value="1">1 hora</option>
+                        <option value="2">2 horas</option>
+                        <option value="3">3 horas</option>
+                    </select>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="flex items-center">
+                        <input type="checkbox" name="asistenciaAutomatica" class="rounded border-gray-300 text-customBlue focus:ring-customBlue" value="true">
+                        <span class="ml-2 text-sm text-gray-700">Asistencia automática</span>
+                    </label>
+                </div>
+                
+                <div class="flex justify-end space-x-2">
+                    <button type="button" onclick="closeClassModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-customGreen text-white rounded-md hover:bg-green-700">
+                        <i class="fas fa-plus me-1"></i>Crear Clase
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Funciones para el modal de clase
+        function openClassModal(moduloId) {
+            // Usar el modal que ya está incluido en la página
+            document.getElementById('moduloIdInput').value = moduloId;
+            document.getElementById('classModal').classList.remove('hidden');
+            
+            // Establecer fecha y hora actual por defecto
+            const now = new Date();
+            const localDateTime = now.toISOString().slice(0, 16);
+            document.querySelector('input[name="inicio"]').value = localDateTime;
+        }
+
+        function closeClassModal() {
+            document.getElementById('classModal').classList.add('hidden');
+        }
+
+        // Cerrar modal al hacer clic fuera
+        document.addEventListener('click', (e) => {
+            const classModal = document.getElementById('classModal');
+            if (e.target === classModal) {
+                closeClassModal();
+            }
+        });
+
+        // Manejar envío del formulario
+        document.getElementById('createClassForm')?.addEventListener('submit', function(e) {
+            const inicioInput = document.querySelector('input[name="inicio"]');
+            const duracionSelect = document.querySelector('select[name="duracion"]');
+            
+            if (!inicioInput.value) {
+                e.preventDefault();
+                alert('Por favor, selecciona una fecha y hora de inicio');
+                return;
+            }
+            
+            if (!duracionSelect.value) {
+                e.preventDefault();
+                alert('Por favor, selecciona una duración');
+                return;
+            }
+        });
+    </script>
+</body>
+</html>
