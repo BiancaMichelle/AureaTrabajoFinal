@@ -13,9 +13,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -98,13 +100,170 @@ public class AdminController {
 
     @GetMapping("/admin/gestion-ofertas")
     public String gestionOfertas(Model model) {
-        List<Categoria> categorias = categoriaRepository.findAll();
+        try {
+            List<Categoria> categorias = categoriaService.obtenerTodasLasCategorias();
+            
+            model.addAttribute("categorias", categorias);
+            model.addAttribute("modalidades", Modalidad.values());
+            model.addAttribute("estados", EstadoOferta.values());
+            
+            return "admin/gestionOfertas";
+        } catch (Exception e) {
+            // En caso de error, enviar lista vacía
+            model.addAttribute("categorias", List.of());
+            model.addAttribute("modalidades", Modalidad.values());
+            model.addAttribute("estados", EstadoOferta.values());
+            model.addAttribute("error", "Error al cargar categorías");
+            return "admin/gestionOfertas";
+        }
+    }
+
+    // =================== ENDPOINTS PARA CATEGORÍAS ===================
+
+    @GetMapping("/admin/categorias/listar")
+@ResponseBody
+public ResponseEntity<Map<String, Object>> listarCategoriasAdmin() {
+    System.out.println("=== LLAMANDO ENDPOINT /admin/categorias/listar ===");
+    try {
+        List<Categoria> categorias = categoriaService.obtenerTodasLasCategorias();
+        System.out.println("Categorías encontradas: " + categorias.size());
         
-        model.addAttribute("categorias", categorias);
-        model.addAttribute("modalidades", Modalidad.values());
-        model.addAttribute("estados", EstadoOferta.values());
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("categorias", categorias);
+        response.put("total", categorias.size());
         
-        return "admin/gestionOfertas";
+        return ResponseEntity.ok(response);
+    } catch (Exception e) {
+        System.err.println("ERROR en /admin/categorias/listar: " + e.getMessage());
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("message", "Error al obtener categorías: " + e.getMessage());
+        return ResponseEntity.badRequest().body(response);
+    }
+}
+
+@PostMapping("/admin/categorias/crear")
+@ResponseBody
+public ResponseEntity<Map<String, Object>> crearCategoria(@RequestBody Map<String, String> datos) {
+    System.out.println("=== LLAMANDO ENDPOINT /admin/categorias/crear ===");
+    System.out.println("Datos recibidos: " + datos);
+    
+    try {
+        String nombre = datos.get("nombre");
+        String descripcion = datos.get("descripcion");
+        
+        System.out.println("Nombre: " + nombre + ", Descripción: " + descripcion);
+        
+        if (nombre == null || nombre.trim().isEmpty()) {
+            throw new IllegalArgumentException("El nombre de la categoría es obligatorio");
+        }
+        
+        Categoria nuevaCategoria = categoriaService.crearCategoria(nombre, descripcion);
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "Categoría creada exitosamente");
+        response.put("categoria", nuevaCategoria);
+        
+        return ResponseEntity.ok(response);
+        
+    } catch (Exception e) {
+        System.err.println("ERROR en /admin/categorias/crear: " + e.getMessage());
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("message", "Error al crear categoría: " + e.getMessage());
+        return ResponseEntity.badRequest().body(response);
+    }
+}
+
+    @PostMapping("/admin/categorias/editar/{id}")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> editarCategoriaAdmin(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> datos) {
+        try {
+            String nombre = datos.get("nombre");
+            String descripcion = datos.get("descripcion");
+            
+            if (nombre == null || nombre.trim().isEmpty()) {
+                throw new IllegalArgumentException("El nombre de la categoría es obligatorio");
+            }
+            
+            Categoria categoriaActualizada = categoriaService.actualizarCategoria(id, nombre, descripcion);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Categoría actualizada exitosamente");
+            response.put("categoria", categoriaActualizada);
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Error al actualizar categoría: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @PostMapping("/admin/categorias/eliminar/{id}")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> eliminarCategoriaAdmin(@PathVariable Long id) {
+        try {
+            categoriaService.eliminarCategoria(id);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Categoría eliminada exitosamente");
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Error al eliminar categoría: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @GetMapping("/admin/categorias/verificar-nombre")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> verificarNombreCategoria(@RequestParam String nombre) {
+        try {
+            boolean existe = categoriaService.existeCategoriaPorNombre(nombre);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("existe", existe);
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("existe", false);
+            response.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+
+    @GetMapping("/admin/categorias")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> listarCategorias() {
+        try {
+            List<Categoria> categorias = categoriaService.obtenerTodasLasCategorias();
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", categorias);
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Error al obtener categorías: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
     }
 
 

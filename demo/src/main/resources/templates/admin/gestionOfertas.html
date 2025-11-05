@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/adminBase :: layout(~{::title}, ~{::main})}">
 <head>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
     <title>Gestión de Ofertas Académicas</title>
 </head>
 <body>
@@ -139,29 +141,71 @@
                             </div>
                         </div>
 
-                        <!-- Categorías -->
-                        <div class="form-section">
-                            <div class="categoria-header">
-                                <h4><i class="fas fa-tags"></i> Categorías</h4>
-                                <button type="button" id="btn-gestionar-categorias" class="btn-secondary btn-sm">
-                                    <i class="fas fa-cog"></i> Gestionar Categorías
-                                </button>
-                            </div>
-                            <div class="form-group">
-                                <label for="categoria-select">Seleccionar Categorías</label>
-                                <p class="field-description">Seleccione una o más categorías que describan esta oferta académica</p>
-                                <select id="categoria-select" class="form-control categoria-select">
-                                    <option value="">-- Seleccione una categoría --</option>
-                                    <!-- Las categorías se cargarán dinámicamente desde la base de datos -->
-                                </select>
-                                <div class="selected-categories" id="selected-categories">
-                                    <span class="selected-label">Categorías seleccionadas:</span>
-                                    <div class="selected-chips" id="selected-chips">
-                                        <!-- Las categorías seleccionadas aparecerán aquí como chips -->
+                        <!-- Modal de Gestión de Categorías -->
+                            <div class="modal fade" id="categoriaModal" tabindex="-1" aria-labelledby="categoriaModalLabel" aria-hidden="true">
+                                <div class="modal-dialog modal-lg">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="categoriaModalLabel">Gestión de Categorías</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <!-- Alertas -->
+                                            <div id="categoriaAlert"></div>
+                                            
+                                            <!-- Formulario -->
+                                            <form id="categoriaForm">
+                                                <input type="hidden" id="categoriaId" name="id">
+                                                
+                                                <div class="mb-3">
+                                                    <label for="categoriaNombre" class="form-label">Nombre de la categoría *</label>
+                                                    <input type="text" class="form-control" id="categoriaNombre" name="nombre" 
+                                                        placeholder="Ingrese el nombre de la categoría" required>
+                                                </div>
+                                                
+                                                <div class="mb-3">
+                                                    <label for="categoriaDescripcion" class="form-label">Descripción *</label>
+                                                    <textarea class="form-control" id="categoriaDescripcion" name="descripcion" 
+                                                            rows="4" placeholder="Ingrese una descripción para la categoría" required></textarea>
+                                                </div>
+                                            </form>
+                                            
+                                            <!-- Tabla de categorías existentes -->
+                                            <div class="mt-4">
+                                                <h6>Categorías Existentes</h6>
+                                                <div id="categoriasLoading" class="text-center">
+                                                    <div class="spinner-border spinner-border-sm"></div> Cargando categorías...
+                                                </div>
+                                                <div id="categoriasError" class="alert alert-danger" style="display: none;"></div>
+                                                
+                                                <div class="table-responsive">
+                                                    <table class="table table-sm table-hover" id="categoriasTable">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Nombre</th>
+                                                                <th>Descripción</th>
+                                                                <th class="text-center">Fecha Creación</th>
+                                                                <th class="text-center">Acciones</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <!-- Las categorías se cargarán aquí -->
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" id="btnCancelarCategoria" data-bs-dismiss="modal">
+                                                <i class="fas fa-times"></i> Cancelar
+                                            </button>
+                                            <button type="button" class="btn btn-primary" id="btnGuardarCategoria">
+                                                <i class="fas fa-save"></i> Crear Categoría
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
                         <!-- Horarios -->
                         <div class="form-section">

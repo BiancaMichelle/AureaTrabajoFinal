@@ -57,7 +57,7 @@ public class SecurityConfig {
             "/email/**", "/css/**", "/js/**", "/style/**", "/img/**",
             "/api/**", "/admin/configuracion/carrusel/**", 
             "/crear-admin-temporal", "/forgot-password", "/recuperacion/**",
-            "/api/usuarios/**")
+            "/api/usuarios/**","/admin/debug-user")
             .permitAll()
             .requestMatchers("/admin/**").hasAuthority("ADMIN")
             .requestMatchers("/alumno/**").hasAuthority("ALUMNO")
