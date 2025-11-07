@@ -3,23 +3,21 @@
 <head>
     <title th:text="${clase?.titulo ?: 'Videoconferencia'}">Videoconferencia</title>
     
-    <!-- Enlace a Font Awesome (ya presente en tu código) -->
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- *** AÑADIDO: Cargar Tailwind CSS *** -->
-    <!-- Esta línea es necesaria para que todas las clases de estilo (bg-blue-500, text-3xl, etc.) funcionen -->
+
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Estilos CSS en línea para el contenedor del video y la carga -->
+
     <style>
         .video-container {
             position: relative;
-            padding-bottom: 56.25%; /* 16:9 aspect ratio */
+            padding-bottom: 56.25%; 
             height: 0;
             overflow: hidden;
-            background: #f3f4f6; /* Fondo gris claro en lugar de negro */
-            border-radius: 12px; /* Coincide con rounded-xl de Tailwind */
-            border: 1px solid #e5e7eb; /* Borde sutil */
+            background: #f3f4f6; 
+            border-radius: 12px; 
+            border: 1px solid #e5e7eb; 
         }
         .video-container iframe {
             position: absolute;
@@ -129,9 +127,10 @@
                     <p class="font-medium text-lg">Cargando sala de videoconferencia...</p>
                     <p class="text-sm">Esto puede tomar un momento.</p>
                 </div>
-                <iframe th:src="${meetingUrl}" 
-                        allow="camera; microphone; fullscreen; speaker; display-capture"
-                        title="Sala de videoconferencia">
+                <iframe th:src="${meetingUrl + '#config.prejoinPageEnabled=false&config.startWithAudioMuted=true&config.startWithVideoMuted=false'}" 
+                        allow="camera; microphone; fullscreen; speaker; display-capture; autoplay"
+                        title="Sala de Jitsi Meet"
+                        style="border-radius: 8px;">
                 </iframe>
             </div>
 
@@ -139,13 +138,14 @@
             <div class="bg-gray-50 rounded-xl p-5 border border-gray-200">
                 <h3 class="font-semibold text-gray-800 mb-3 flex items-center text-md">
                     <i class="fas fa-lightbulb me-2 text-yellow-500"></i>
-                    Recomendaciones para una mejor experiencia
+                    Recomendaciones para Jitsi Meet
                 </h3>
                 <ul class="text-gray-700 text-sm space-y-2">
                     <li class="flex items-center"><i class="fas fa-check-circle text-green-500 w-5 me-2"></i> <strong>Permite el acceso</strong> a cámara y micrófono cuando el navegador lo solicite.</li>
                     <li class="flex items-center"><i class="fas fa-headphones text-blue-500 w-5 me-2"></i> Usa <strong>auriculares</strong> para evitar ecos y mejorar la calidad de audio.</li>
                     <li class="flex items-center"><i class="fas fa-wifi text-blue-500 w-5 me-2"></i> Asegúrate de tener una <strong>conexión estable</strong> a internet.</li>
-                    <li class="flex items-center"><i class="fas fa-exclamation-triangle text-orange-500 w-5 me-2"></i> Si experimentas problemas, usa el botón <strong>"Abrir en nueva pestaña"</strong>.</li>
+                    <li class="flex items-center"><i class="fas fa-mobile-alt text-purple-500 w-5 me-2"></i> <strong>Jitsi funciona mejor</strong> en Chrome, Firefox o Edge.</li>
+                    <!-- Eliminado el punto sobre "Abrir en nueva pestaña" ya que Jitsi es más estable -->
                 </ul>
             </div>
         </div>

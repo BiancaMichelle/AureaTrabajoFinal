@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class JitsiClaseService {
     
-    @Value("${jitsi.meet.url:https://meet.jit.si}")
+    @Value("${jitsi.meet.url:http://localhost:8000}")
     private String jitsiMeetUrl;
     
     @Value("${jitsi.room.prefix:aula-}")

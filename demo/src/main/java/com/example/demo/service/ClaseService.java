@@ -1,5 +1,8 @@
 package com.example.demo.service;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -17,34 +20,48 @@ public class ClaseService {
     
     private final ClaseRepository claseRepository;
     private final ModuloRepository moduloRepository;
-    private final DocenteRepository docenteRepository; // Agregar este repositorio
+    private final DocenteRepository docenteRepository;
+    private final JitsiClaseService jitsiClaseService; // Cambiar esto
     
-    public ClaseService(ClaseRepository claseRepository, ModuloRepository moduloRepository,
-                    DocenteRepository docenteRepository) {
+    public ClaseService(ClaseRepository claseRepository, 
+                       ModuloRepository moduloRepository,
+                       DocenteRepository docenteRepository,
+                       JitsiClaseService jitsiClaseService) { // Cambiar esto
         this.claseRepository = claseRepository;
         this.moduloRepository = moduloRepository;
         this.docenteRepository = docenteRepository;
+        this.jitsiClaseService = jitsiClaseService; // Cambiar esto
+    }
+
+    public Optional<Clase> findById(UUID claseId) {
+        return claseRepository.findById(claseId);
     }
     
     public Clase crearClase(Clase clase, UUID moduloId, String dniDocente) {
         Modulo modulo = moduloRepository.findById(moduloId)
                 .orElseThrow(() -> new RuntimeException("Módulo no encontrado"));
         
-        // Buscar el Docente en lugar del Usuario
         Docente docente = docenteRepository.findByDni(dniDocente)
                 .orElseThrow(() -> new RuntimeException("Docente no encontrado"));
         
         // Establecer relaciones
         clase.setModulo(modulo);
-        clase.setDocente(docente); // Ahora sí funciona porque es tipo Docente
+        clase.setDocente(docente);
+        clase.setCurso(modulo.getCurso());
         
-        // Generar meeting URL
-        String meetingUrl = generarMeetingUrlPublica();
+        // Generar roomName si no existe
+        if (clase.getRoomName() == null) {
+            clase.generateRoomName();
+        }
+        
+        // ✅ CAMBIO IMPORTANTE: Crear URL de Jitsi en lugar de BigBlueButton
+        String meetingUrl = jitsiClaseService.generateRoomUrl(clase.getRoomName());
         clase.setMeetingUrl(meetingUrl);
         
-        System.out.println("🎯 Creando clase:");
+        System.out.println("🎯 Clase creada con Jitsi:");
         System.out.println("   - Título: " + clase.getTitulo());
         System.out.println("   - Meeting URL: " + meetingUrl);
+        System.out.println("   - Room Name: " + clase.getRoomName());
         System.out.println("   - Módulo: " + modulo.getNombre());
         System.out.println("   - Docente: " + docente.getNombre());
         
@@ -53,61 +70,44 @@ public class ClaseService {
     
     public String unirseAClase(UUID claseId, String dniUsuario) {
         try {
-            Clase clase = claseRepository.findById(claseId)
+            Clase clase = findById(claseId)
                     .orElseThrow(() -> new RuntimeException("Clase no encontrada"));
             
-            System.out.println("🎯 Unirse a clase:");
+            System.out.println("🎯 Unirse a clase Jitsi:");
             System.out.println("   - Clase ID: " + claseId);
             System.out.println("   - Título: " + clase.getTitulo());
-            System.out.println("   - Meeting URL en BD: " + clase.getMeetingUrl());
+            System.out.println("   - Meeting URL: " + clase.getMeetingUrl());
             System.out.println("   - Usuario: " + dniUsuario);
             
-            String meetingUrl;
+            // ✅ CAMBIO: Con Jitsi, todos usan la misma URL
+            // Puedes personalizar configuraciones si necesitas
+            Map<String, String> config = new HashMap<>();
+            config.put("prejoinPageEnabled", "false");
+            config.put("startWithAudioMuted", "true");
+            config.put("startWithVideoMuted", "false");
             
-            if (clase.getMeetingUrl() == null || clase.getMeetingUrl().isEmpty()) {
-                // Generar nueva URL pública de prueba
-                meetingUrl = generarMeetingUrlPublica();
-                clase.setMeetingUrl(meetingUrl);
-                claseRepository.save(clase);
-                System.out.println("   - Nueva Meeting URL pública generada: " + meetingUrl);
-            } else {
-                meetingUrl = clase.getMeetingUrl();
-                System.out.println("   - Usando Meeting URL existente: " + meetingUrl);
-            }
+            String meetingUrl = jitsiClaseService.generateRoomUrlWithConfig(
+                clase.getRoomName(), config);
             
-            // Verificar si la URL es accesible
-            System.out.println("   - ¿URL pública?: " + esUrlPublica(meetingUrl));
+            System.out.println("   - URL Jitsi final: " + meetingUrl);
             
             return meetingUrl;
             
         } catch (Exception e) {
-            System.out.println("❌ Error al unirse a clase: " + e.getMessage());
+            System.out.println("❌ Error al unirse a clase Jitsi: " + e.getMessage());
             throw new RuntimeException("Error al unirse a la clase: " + e.getMessage());
         }
     }
     
-
-    private boolean esUrlPublica(String url) {
-        return url != null && 
-               (url.contains("meet.jit.si") || 
-                url.contains("8x8.vc") || 
-                url.contains("zoom.us") ||
-                url.contains("meet.google.com"));
+    // ✅ ELIMINAR métodos específicos de BigBlueButton
+    // Ya no necesitas unirseComoEstudiante o unirseComoModerador
+    // Con Jitsi todos usan la misma URL
+    
+    public List<Clase> findByModulo(UUID moduloId) {
+        return claseRepository.findByModuloIdModulo(moduloId);
     }
     
-    public Optional<Clase> findById(UUID claseId) {
-        return claseRepository.findById(claseId);
-    }
-    
-    private String generarMeetingUrlPublica() {
-        // Siempre usar Jitsi Meet público
-        String roomId = "aula-" + System.currentTimeMillis() + "-" + 
-                       UUID.randomUUID().toString().substring(0, 4);
-        String meetingUrl = "https://meet.jit.si/" + roomId;
-        
-        System.out.println("✅ Meeting URL pública generada: " + meetingUrl);
-        System.out.println("✅ Esta URL debería funcionar desde cualquier lugar");
-        
-        return meetingUrl;
+    public List<Clase> findByDocente(String dniDocente) {
+        return claseRepository.findByDocenteDni(dniDocente);
     }
 }
