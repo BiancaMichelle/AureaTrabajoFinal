@@ -45,7 +45,10 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-        .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
+        .csrf(csrf -> csrf
+            .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+            .ignoringRequestMatchers("/api/**")  // ← IGNORAR CSRF para APIs
+        )
         .cors(cors -> cors.configurationSource(corsConfigurationSource()))
         .userDetailsService(usuarioJpaService)
         .sessionManagement(session -> session
@@ -57,7 +60,7 @@ public class SecurityConfig {
             "/email/**", "/css/**", "/js/**", "/style/**", "/img/**",
             "/api/**", "/admin/configuracion/carrusel/**", 
             "/crear-admin-temporal", "/forgot-password", "/recuperacion/**",
-            "/api/usuarios/**","/admin/debug-user")
+            "/api/usuarios/**","/admin/debug-user","/api/categorias/**")
             .permitAll()
             .requestMatchers("/admin/**").hasAuthority("ADMIN")
             .requestMatchers("/alumno/**").hasAuthority("ALUMNO")

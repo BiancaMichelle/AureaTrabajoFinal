@@ -63,13 +63,13 @@ public class OfertaAcademica {
     private Integer cupos;
     private Boolean visibilidad;
     
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.EAGER) // Cambié a EAGER para facilitar
     @JoinTable(
         name = "oferta_categoria",
         joinColumns = @JoinColumn(name = "oferta_id"),
         inverseJoinColumns = @JoinColumn(name = "categoria_id")
     )
-    private List<Categoria> categorias;
+    private List<Categoria> categorias = new ArrayList<>(); // Inicializa la lista
     
     @ManyToOne
     @JoinColumn(name = "instituto_id")

@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Categorías</title>
+    <style>
+        /* Estilos específicos para el modal de categorías */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 800px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-lg {
+            max-width: 900px;
+        }
+
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: #374151;
+            font-size: 1.5rem;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .modal-separator {
+            margin: 2rem 0;
+            border: none;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .categoria-form-section {
+            background: #f8fafc;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+
+        .categoria-form-section h4 {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            color: #374151;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .table th,
+        .table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .table th {
+            background: #374151;
+            color: white;
+            font-weight: 600;
+        }
+
+        .table-striped tbody tr:nth-child(odd) {
+            background: #f9fafb;
+        }
+
+        .alert {
+            padding: 0.75rem 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .alert-danger {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .alert-warning {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-muted {
+            color: #6b7280;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            transition: border-color 0.2s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .form-text {
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
+        }
+
+        .btn-close {
+            background: none;
+            border: none;
+            font-size: 1.25rem;
+            cursor: pointer;
+            color: #6b7280;
+            padding: 0.25rem;
+        }
+
+        .btn-close:hover {
+            color: #374151;
+        }
+
+        .actions-cell {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        .category-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .category-blue { background: #dbeafe; color: #1e40af; }
+        .category-purple { background: #e9d5ff; color: #7e22ce; }
+        .category-cyan { background: #cffafe; color: #0e7490; }
+        .category-green { background: #dcfce7; color: #166534; }
+        .category-orange { background: #fed7aa; color: #9a3412; }
+        .category-red { background: #fecaca; color: #991b1b; }
+        .category-pink { background: #fbcfe8; color: #be185d; }
+        .category-gray { background: #f3f4f6; color: #374151; }
+        .category-teal { background: #ccfbf1; color: #0f766e; }
+        .category-indigo { background: #e0e7ff; color: #3730a3; }
+        .category-brown { background: #f5e8d5; color: #92400e; }
+        .category-default { background: #f3f4f6; color: #374151; }
+    </style>
+</head>
+<body>
+    <!-- Modal de Gestión de Categorías -->
+    <div id="categoriaModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h3 id="categoriaModalLabel">
+                    <i class="fas fa-tags"></i> Gestión de Categorías
+                </h3>
+                <button type="button" class="btn-close" aria-label="Cerrar" onclick="categoriaModal.hide()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Alertas -->
+                <div id="categoriaAlert"></div>
+                
+                <!-- Sección para agregar nueva categoría -->
+                <div class="categoria-form-section">
+                    <h4><i class="fas fa-plus"></i> Nueva Categoría</h4>
+                    <form id="categoriaForm">
+                        <input type="hidden" id="categoriaId" name="categoriaId">
+                        
+                        <div class="form-group">
+                            <label for="categoriaNombre">
+                                <i class="fas fa-tag"></i> Nombre de la Categoría *
+                            </label>
+                            <input type="text" 
+                                   id="categoriaNombre" 
+                                   name="categoriaNombre" 
+                                   class="form-control" 
+                                   placeholder="Ej: Tecnología, Idiomas, Arte..."
+                                   maxlength="100"
+                                   required>
+                            <small class="form-text text-muted">Entre 2 y 100 caracteres</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="categoriaDescripcion">
+                                <i class="fas fa-align-left"></i> Descripción *
+                            </label>
+                            <textarea id="categoriaDescripcion" 
+                                      name="categoriaDescripcion" 
+                                      class="form-control" 
+                                      rows="3"
+                                      placeholder="Descripción detallada de la categoría..."
+                                      maxlength="500"
+                                      required></textarea>
+                            <small class="form-text text-muted">Entre 5 y 500 caracteres</small>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="button" id="btnGuardarCategoria" class="btn btn-primary" onclick="categoriaController.guardarCategoria()">
+                                <i class="fas fa-save"></i> <span id="btnGuardarText">Crear Categoría</span>
+                            </button>
+                            <button type="button" id="btnCancelarCategoria" class="btn btn-secondary" onclick="categoriaController.cancelarEdicion()">
+                                <i class="fas fa-times"></i> Cancelar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Separador -->
+                <hr class="modal-separator">
+                
+                <!-- Sección de categorías existentes -->
+                <div class="categorias-table-section">
+                    <div class="table-header">
+                        <h4><i class="fas fa-list"></i> Categorías Existentes</h4>
+                        <div class="table-stats">
+                            <span id="contadorCategorias">Total: 0 categorías</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Loading y error messages -->
+                    <div id="categoriasLoading" class="text-center">
+                        <i class="fas fa-spinner fa-spin"></i> Cargando categorías...
+                    </div>
+                    <div id="categoriasError" class="alert alert-danger" style="display: none;"></div>
+                    
+                    <!-- Tabla de categorías -->
+                    <div class="table-responsive">
+                        <table id="categoriasTable" class="table table-striped" style="display: none;">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Descripción</th>
+                                    <th>Fecha Creación</th>
+                                    <th width="120">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="categoriasTableBody">
+                                <!-- Las categorías se cargan dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Controlador del modal de categorías
+        const categoriaModal = {
+            element: document.getElementById('categoriaModal'),
+            currentOfertaId: null,
+            selectedCategories: new Set(),
+
+            show(ofertaId = null) {
+                this.currentOfertaId = ofertaId;
+                this.element.style.display = 'flex';
+                this.loadCategorias();
+                document.body.style.overflow = 'hidden';
+            },
+
+            hide() {
+                this.element.style.display = 'none';
+                this.currentOfertaId = null;
+                document.body.style.overflow = 'auto';
+                categoriaController.cancelarEdicion();
+            },
+
+            loadCategorias() {
+                categoriaController.cargarCategorias();
+            }
+        };
+
+        // Controlador de categorías
+        const categoriaController = {
+            isEditing: false,
+            currentCategoriaId: null,
+
+            async cargarCategorias() {
+                try {
+                    this.mostrarLoading(true);
+                    
+                    const response = await fetch('/api/categorias');
+                    if (!response.ok) throw new Error('Error al cargar categorías');
+                    
+                    const categorias = await response.json();
+                    this.mostrarCategorias(categorias);
+                    
+                } catch (error) {
+                    this.mostrarError('Error al cargar las categorías: ' + error.message);
+                } finally {
+                    this.mostrarLoading(false);
+                }
+            },
+
+            mostrarCategorias(categorias) {
+                const tbody = document.getElementById('categoriasTableBody');
+                const table = document.getElementById('categoriasTable');
+                const contador = document.getElementById('contadorCategorias');
+                
+                tbody.innerHTML = '';
+                
+                if (categorias.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="4" class="text-center text-muted">
+                                <i class="fas fa-inbox"></i> No hay categorías registradas
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    categorias.forEach(categoria => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>
+                                <div class="category-badge ${categoria.colorCSS || 'category-default'}">
+                                    <i class="${categoria.iconoCSS || 'fas fa-folder'}"></i>
+                                    ${categoria.nombreCapitalizado || categoria.nombre}
+                                </div>
+                            </td>
+                            <td>${categoria.descripcionCorta || categoria.descripcion || 'Sin descripción'}</td>
+                            <td>${new Date().toLocaleDateString()}</td>
+                            <td class="actions-cell">
+                                <button class="btn btn-primary btn-sm" onclick="categoriaController.editarCategoria(${categoria.idCategoria}, '${categoria.nombre}', '${categoria.descripcion || ''}')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-danger btn-sm" onclick="categoriaController.eliminarCategoria(${categoria.idCategoria})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+                
+                contador.textContent = `Total: ${categorias.length} categorías`;
+                table.style.display = 'table';
+            },
+
+            mostrarLoading(mostrar) {
+                const loading = document.getElementById('categoriasLoading');
+                const table = document.getElementById('categoriasTable');
+                
+                if (mostrar) {
+                    loading.style.display = 'block';
+                    table.style.display = 'none';
+                } else {
+                    loading.style.display = 'none';
+                }
+            },
+
+            mostrarError(mensaje) {
+                const errorDiv = document.getElementById('categoriasError');
+                errorDiv.textContent = mensaje;
+                errorDiv.style.display = 'block';
+                
+                setTimeout(() => {
+                    errorDiv.style.display = 'none';
+                }, 5000);
+            },
+
+            mostrarAlerta(mensaje, tipo = 'success') {
+                const alertDiv = document.getElementById('categoriaAlert');
+                alertDiv.innerHTML = `
+                    <div class="alert alert-${tipo}">
+                        <i class="fas fa-${tipo === 'success' ? 'check' : 'exclamation'}-circle"></i>
+                        ${mensaje}
+                    </div>
+                `;
+                
+                setTimeout(() => {
+                    alertDiv.innerHTML = '';
+                }, 5000);
+            },
+
+            async guardarCategoria() {
+                const nombre = document.getElementById('categoriaNombre').value.trim();
+                const descripcion = document.getElementById('categoriaDescripcion').value.trim();
+                const id = document.getElementById('categoriaId').value;
+
+                // Validaciones
+                if (!this.validarCategoria(nombre, descripcion)) {
+                    return;
+                }
+
+                try {
+                    const categoriaData = { nombre, descripcion };
+                    let url = '/api/categorias';
+                    let method = 'POST';
+
+                    if (this.isEditing && id) {
+                        url += `/${id}`;
+                        method = 'PUT';
+                        categoriaData.idCategoria = parseInt(id);
+                    }
+
+                    const response = await fetch(url, {
+                        method: method,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="_csrf"]').content
+                        },
+                        body: JSON.stringify(categoriaData)
+                    });
+
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.message || 'Error al guardar la categoría');
+                    }
+
+                    const categoriaGuardada = await response.json();
+                    this.mostrarAlerta(
+                        `Categoría ${this.isEditing ? 'actualizada' : 'creada'} correctamente`
+                    );
+                    
+                    this.cancelarEdicion();
+                    this.cargarCategorias();
+
+                } catch (error) {
+                    this.mostrarError('Error al guardar la categoría: ' + error.message);
+                }
+            },
+
+            validarCategoria(nombre, descripcion) {
+                if (nombre.length < 2 || nombre.length > 100) {
+                    this.mostrarError('El nombre debe tener entre 2 y 100 caracteres');
+                    return false;
+                }
+                
+                if (descripcion.length < 5 || descripcion.length > 500) {
+                    this.mostrarError('La descripción debe tener entre 5 y 500 caracteres');
+                    return false;
+                }
+                
+                return true;
+            },
+
+            editarCategoria(id, nombre, descripcion) {
+                this.isEditing = true;
+                this.currentCategoriaId = id;
+                
+                document.getElementById('categoriaId').value = id;
+                document.getElementById('categoriaNombre').value = nombre;
+                document.getElementById('categoriaDescripcion').value = descripcion;
+                document.getElementById('btnGuardarText').textContent = 'Actualizar Categoría';
+                
+                // Scroll al formulario
+                document.querySelector('.categoria-form-section').scrollIntoView({ 
+                    behavior: 'smooth' 
+                });
+            },
+
+            cancelarEdicion() {
+                this.isEditing = false;
+                this.currentCategoriaId = null;
+                
+                document.getElementById('categoriaForm').reset();
+                document.getElementById('categoriaId').value = '';
+                document.getElementById('btnGuardarText').textContent = 'Crear Categoría';
+            },
+
+            async eliminarCategoria(id) {
+                if (!confirm('¿Estás seguro de que deseas eliminar esta categoría?')) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/api/categorias/${id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="_csrf"]').content
+                        }
+                    });
+
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.message || 'Error al eliminar la categoría');
+                    }
+
+                    this.mostrarAlerta('Categoría eliminada correctamente');
+                    this.cargarCategorias();
+
+                } catch (error) {
+                    this.mostrarError('Error al eliminar la categoría: ' + error.message);
+                }
+            }
+        };
+
+        // Cerrar modal al hacer clic fuera
+        document.getElementById('categoriaModal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('categoriaModal')) {
+                categoriaModal.hide();
+            }
+        });
+
+        // Inicializar cuando el DOM esté listo
+        document.addEventListener('DOMContentLoaded', function() {
+            // Ya está inicializado por defecto
+        });
+    </script>
+</body>
+</html>

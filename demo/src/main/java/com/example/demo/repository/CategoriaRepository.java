@@ -1,18 +1,24 @@
 package com.example.demo.repository;
 
-import com.example.demo.model.Categoria;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
-
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
-@Repository
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import com.example.demo.model.Categoria;
+
 public interface CategoriaRepository extends JpaRepository<Categoria, Long> {
-    boolean existsByNombreIgnoreCase(String nombre);
-    boolean existsByDescripcionIgnoreCase(String descripcion);
     
-    Optional<Categoria> findByNombreIgnoreCase(String nombre);
     List<Categoria> findByNombreContainingIgnoreCase(String nombre);
+    
+    boolean existsByNombreIgnoreCase(String nombre);
+    
+    // Opcional: Para contar ofertas por categoría
+    @Query("SELECT COUNT(o) FROM OfertaAcademica o JOIN o.categorias c WHERE c.idCategoria = :categoriaId")
+    Optional<Long> countOfertasByCategoriaId(@Param("categoriaId") Long categoriaId);
+    
+    // Encontrar categorías por nombre exacto (case insensitive)
+    Optional<Categoria> findByNombreIgnoreCase(String nombre);
 }
