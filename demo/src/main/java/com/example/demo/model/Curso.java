@@ -45,7 +45,6 @@ public class Curso extends OfertaAcademica {
     private Double costoCuota;
     private Double costoMora;
     private Integer nrCuotas;
-   private LocalDate vencimientoCuota;
     private Integer diaVencimiento; // Día del mes límite para pago sin mora
     
     @OneToMany(mappedBy = "curso")

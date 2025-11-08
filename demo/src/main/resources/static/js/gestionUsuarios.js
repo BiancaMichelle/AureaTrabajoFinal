@@ -1204,7 +1204,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (tableBody) {
                 tableBody.innerHTML = `
                     <tr>
-                        <td colspan="9" class="text-center">
+                        <td colspan="7" class="text-center">
                             <div class="loading-inline">
                                 <i class="fas fa-spinner fa-spin"></i> Cargando usuarios...
                             </div>
@@ -1258,7 +1258,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (tableBody) {
                     tableBody.innerHTML = `
                         <tr>
-                            <td colspan="9" class="text-center error-message">
+                            <td colspan="7" class="text-center error-message">
                                 <i class="fas fa-exclamation-triangle"></i> Error al cargar usuarios
                             </td>
                         </tr>
@@ -1382,7 +1382,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (usuarios.length === 0) {
                 tableBody.innerHTML = `
                     <tr>
-                        <td colspan="8" class="text-center">No hay usuarios registrados</td> <!-- ✅ CAMBIAR A 8 COLUMNAS -->
+                        <td colspan="7" class="text-center">No hay usuarios registrados</td> <!-- ✅ 7 COLUMNAS: DNI, Nombre, Correo, Roles, Estado, Fecha, Acciones -->
                     </tr>
                 `;
                 updateTableStats(0);
@@ -1395,11 +1395,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 row.innerHTML = `
                     <!-- ✅ NUEVO ORDEN: DNI primero, sin ID -->
                     <td>${usuario.dni || 'N/A'}</td>
-                    <td>
-                        ${usuario.foto ? 
-                            `<img src="${usuario.foto}" alt="Foto" class="user-photo-small">` : 
-                            '<i class="fas fa-user-circle user-icon"></i>'}
-                    </td>
                     <td>${usuario.nombreCompleto || 'Sin nombre'}</td>
                     <td>${usuario.correo || 'N/A'}</td>
                     <td>${formatRoles(usuario.roles || [])}</td>

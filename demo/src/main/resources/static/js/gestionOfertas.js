@@ -1,8 +1,21 @@
+// ================================================
+// GESTIÓN DE OFERTAS ACADÉMICAS - REPLICANDO LÓGICA DE GESTIÓN USUARIOS
+// ================================================
+
+console.log('🔥 SCRIPT GESTION OFERTAS CARGADO');
+
 document.addEventListener('DOMContentLoaded', function () {
+    console.log('✅ DOM CARGADO - Iniciando gestión de ofertas');
+    
     // Referencias a elementos principales
     const btnShowForm = document.getElementById('btn-show-form');
     const formContainer = document.getElementById('form-container');
     const btnCloseForm = document.getElementById('btn-close-form');
+    
+    console.log('🔍 Elementos encontrados:');
+    console.log('- btnShowForm:', btnShowForm);
+    console.log('- formContainer:', formContainer);
+    console.log('- btnCloseForm:', btnCloseForm);
     const btnCancelForm = document.getElementById('btn-cancel-form');
     const tipoOfertaSelect = document.getElementById('tipoOferta');
     const otorgaCertificadoCheckbox = document.getElementById('otorgaCertificado');
@@ -31,342 +44,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const btnApplyFilters = document.getElementById('btn-apply-filters');
     const btnClearFilters = document.getElementById('btn-clear-filters');
 
-    // Elemento para categorías
-    const btnAsignarCategorias = document.getElementById('btn-asignar-categorias');
-
-    // ========== MODAL DE CATEGORÍAS ==========
-    
-    const categoriaModal = {
-        element: document.getElementById('categoriaModal'),
-        
-        show() {
-            if (this.element) {
-                this.element.style.display = 'flex';
-                document.body.style.overflow = 'hidden';
-                // Cargar categorías cuando se abre el modal
-                console.log('📂 Abriendo modal, cargando categorías...');
-                categoriaController.cargarCategorias();
-            } else {
-                console.error('Modal de categorías no encontrado');
-            }
-        },
-        
-        hide() {
-            if (this.element) {
-                this.element.style.display = 'none';
-                document.body.style.overflow = 'auto';
-                categoriaController.cancelarEdicion();
-            }
-        }
-    };
-
-    const categoriaController = {
-        isEditing: false,
-        
-
-        async cargarCategorias() {
-            try {
-                console.log('📡 Iniciando carga de categorías...');
-                this.mostrarLoading(true);
-                
-                const response = await fetch('/api/categorias', {
-                    credentials: 'include'
-                });
-                
-                console.log('📨 Respuesta de /api/categorias:', response.status, response.statusText);
-                
-                if (!response.ok) {
-                    throw new Error(`Error ${response.status}: ${response.statusText}`);
-                }
-                
-                const categorias = await response.json();
-                console.log('✅ Categorías recibidas:', categorias);
-                
-                this.mostrarCategorias(categorias);
-                
-            } catch (error) {
-                console.error('💥 Error cargando categorías:', error);
-                this.mostrarError('Error al cargar las categorías: ' + error.message);
-            } finally {
-                this.mostrarLoading(false);
-            }
-        },
-
-        mostrarCategorias(categorias) {
-            console.log('🎨 Mostrando categorías en la tabla...');
-            
-            const tbody = document.getElementById('categoriasTableBody');
-            const table = document.getElementById('categoriasTable');
-            const loading = document.getElementById('categoriasLoading');
-            const contador = document.getElementById('contadorCategorias');
-            
-            if (!tbody) {
-                console.error('❌ No se encontró categoriasTableBody');
-                return;
-            }
-            
-            // Ocultar loading
-            if (loading) {
-                loading.style.display = 'none';
-            }
-            
-            tbody.innerHTML = '';
-            
-            if (!categorias || categorias.length === 0) {
-                console.log('📭 No hay categorías para mostrar');
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="3" class="text-center text-muted">
-                            <i class="fas fa-inbox"></i> No hay categorías registradas
-                        </td>
-                    </tr>
-                `;
-            } else {
-                console.log(`📊 Mostrando ${categorias.length} categorías`);
-                categorias.forEach((categoria) => {
-                    const tr = document.createElement('tr');
-                    // Escapar comillas para evitar errores
-                    const nombreEscapado = (categoria.nombre || '').replace(/'/g, "\\'");
-                    const descripcionEscapada = (categoria.descripcion || '').replace(/'/g, "\\'");
-                    
-                    tr.innerHTML = `
-                        <td>
-                            <strong>${categoria.nombre || 'Sin nombre'}</strong>
-                        </td>
-                        <td>${categoria.descripcion || 'Sin descripción'}</td>
-                        <td class="text-center">
-                            <div class="btn-group btn-group-sm" role="group">
-                                <button type="button" class="btn btn-outline-primary" 
-                                        onclick="categoriaController.editarCategoria(${categoria.idCategoria}, '${nombreEscapado}', '${descripcionEscapada}')"
-                                        title="Editar categoría">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button type="button" class="btn btn-outline-danger" 
-                                        onclick="categoriaController.eliminarCategoria(${categoria.idCategoria})"
-                                        title="Eliminar categoría">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            }
-            
-            if (contador) {
-                contador.textContent = `Total: ${categorias ? categorias.length : 0} categorías`;
-            }
-            
-            if (table) {
-                table.style.display = 'table';
-                console.log('✅ Tabla de categorías mostrada');
-            }
-        },
-
-        mostrarLoading(mostrar) {
-            const loading = document.getElementById('categoriasLoading');
-            const table = document.getElementById('categoriasTable');
-            
-            if (loading) {
-                loading.style.display = mostrar ? 'block' : 'none';
-            }
-            if (table && !mostrar) {
-                table.style.display = 'table';
-            }
-        },
-
-        mostrarError(mensaje) {
-            const errorDiv = document.getElementById('categoriasError');
-            if (errorDiv) {
-                errorDiv.textContent = mensaje;
-                errorDiv.style.display = 'block';
-                
-                setTimeout(() => {
-                    errorDiv.style.display = 'none';
-                }, 5000);
-            }
-        },
-
-        mostrarAlerta(mensaje, tipo = 'success') {
-            const alertDiv = document.getElementById('categoriaAlert');
-            if (alertDiv) {
-                const alertClass = tipo === 'success' ? 'alert-success' : 'alert-danger';
-                const icon = tipo === 'success' ? 'check' : 'exclamation';
-                
-                alertDiv.innerHTML = `
-                    <div class="alert ${alertClass}">
-                        <i class="fas fa-${icon}-circle"></i>
-                        ${mensaje}
-                    </div>
-                `;
-                alertDiv.style.display = 'block';
-                
-                console.log(`📢 Alerta [${tipo}]: ${mensaje}`);
-                
-                // Auto-ocultar después de 5 segundos
-                setTimeout(() => {
-                    alertDiv.innerHTML = '';
-                    alertDiv.style.display = 'none';
-                }, 5000);
-            } else {
-                console.error('No se encontró el contenedor de alertas');
-                // Fallback: usar alert nativo
-                alert(mensaje);
-            }
-        },
-
-        
-        async guardarCategoria() {
-            console.log('💾 Guardando categoría...');
-            
-            const nombre = document.getElementById('categoriaNombre').value.trim();
-            const descripcion = document.getElementById('categoriaDescripcion').value.trim();
-            const id = document.getElementById('categoriaId').value;
-        
-            if (!nombre || !descripcion) {
-                alert('Por favor completa todos los campos');
-                return;
-            }
-        
-            try {
-                const categoriaData = { nombre, descripcion };
-                let url = '/api/categorias';
-                let method = 'POST';
-        
-                // SI hay ID, es una edición
-                if (id) {
-                    url = `/api/categorias/${id}`;
-                    method = 'PUT';
-                    categoriaData.idCategoria = parseInt(id);
-                    console.log('✏️ Editando categoría existente ID:', id);
-                } else {
-                    console.log('🆕 Creando nueva categoría');
-                }
-                
-                const headers = {
-                    'Content-Type': 'application/json'
-                };
-                
-                const response = await fetch(url, {
-                    method: method,
-                    headers: headers,
-                    credentials: 'include',
-                    body: JSON.stringify(categoriaData)
-                });
-        
-                if (response.ok) {
-                    const categoriaGuardada = await response.json();
-                    
-                    if (id) {
-                        alert('✅ Categoría actualizada correctamente!');
-                        console.log('✅ Categoría actualizada:', categoriaGuardada);
-                    } else {
-                        alert('✅ Categoría creada correctamente!');
-                        console.log('✅ Categoría creada:', categoriaGuardada);
-                    }
-                    
-                    // LIMPIAR FORMULARIO Y RESTABLECER BOTÓN
-                    this.cancelarEdicion();
-                    
-                    // Recargar la lista
-                    this.cargarCategorias();
-                } else {
-                    throw new Error('Error del servidor: ' + response.status);
-                }
-        
-            } catch (error) {
-                console.error('Error:', error);
-                alert('❌ Error: ' + error.message);
-            }
-        },
-
-        editarCategoria(id, nombre, descripcion) {
-            console.log('✏️ Iniciando edición de categoría ID:', id);
-            this.isEditing = true;
-            
-            // Establecer valores en el formulario
-            document.getElementById('categoriaId').value = id;
-            document.getElementById('categoriaNombre').value = nombre || '';
-            document.getElementById('categoriaDescripcion').value = descripcion || '';
-            
-            // Cambiar texto del botón
-            document.getElementById('btnGuardarText').textContent = 'Actualizar Categoría';
-            
-            // Cambiar título de la sección
-            const tituloSeccion = document.querySelector('.categoria-form-section h4');
-            if (tituloSeccion) {
-                tituloSeccion.innerHTML = '<i class="fas fa-edit"></i> Editando Categoría';
-            }
-            
-            // Hacer scroll al formulario para mejor UX
-            document.querySelector('.categoria-form-section').scrollIntoView({ 
-                behavior: 'smooth' 
-            });
-            
-            console.log('📝 Formulario listo para edición');
-        },
-
-        cancelarEdicion() {
-            console.log('↩️ Cancelando edición y limpiando formulario');
-            this.isEditing = false;
-            
-            // Limpiar formulario
-            document.getElementById('categoriaForm').reset();
-            document.getElementById('categoriaId').value = '';
-            
-            // Restablecer texto del botón
-            document.getElementById('btnGuardarText').textContent = 'Crear Categoría';
-            
-            // Opcional: Restablecer el título de la sección
-            const tituloSeccion = document.querySelector('.categoria-form-section h4');
-            if (tituloSeccion) {
-                tituloSeccion.innerHTML = '<i class="fas fa-plus"></i> Nueva Categoría';
-            }
-        },
-
-        async eliminarCategoria(id) {
-            if (!confirm('¿Estás seguro de que deseas eliminar esta categoría?')) {
-                return;
-            }
-
-            try {
-                const response = await fetch(`/api/categorias/${id}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="_csrf"]')?.content || ''
-                    }
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.error || `Error ${response.status}`);
-                }
-
-                this.mostrarAlerta('Categoría eliminada correctamente');
-                this.cargarCategorias();
-
-            } catch (error) {
-                console.error('Error eliminando categoría:', error);
-                this.mostrarError('Error al eliminar la categoría: ' + error.message);
-            }
-        }
-    };
-
-    // Cerrar modal al hacer clic fuera
-    document.addEventListener('click', (e) => {
-        if (e.target === document.getElementById('categoriaModal')) {
-            categoriaModal.hide();
-        }
-    });
-    
-
-    // Manejo del botón de asignar categorías
-    if (btnAsignarCategorias) {
-        btnAsignarCategorias.addEventListener('click', function() {
-            categoriaModal.show();
-        });
-    }
-
     // Inicialización
     initializeFormHandlers();
     initializeImageUpload();
@@ -379,10 +56,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Mostrar/ocultar formulario
     function initializeFormHandlers() {
+        console.log('🔧 Inicializando form handlers');
+        
         if (btnShowForm) {
+            console.log('✅ btnShowForm encontrado, agregando event listener');
             btnShowForm.addEventListener('click', function () {
+                console.log('👆 CLICK EN BOTÓN NUEVA OFERTA DETECTADO!');
                 showForm();
             });
+        } else {
+            console.error('❌ btnShowForm NO ENCONTRADO!');
         }
 
         if (btnCloseForm) {
@@ -399,9 +82,16 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function showForm() {
+        console.log('🚀 EJECUTANDO showForm()');
+        console.log('- formContainer antes:', formContainer.style.display);
+        
         formContainer.style.display = 'block';
+        console.log('- formContainer después de display block:', formContainer.style.display);
+        
         setTimeout(() => {
             formContainer.classList.add('show');
+            console.log('- Clase "show" agregada');
+            console.log('- Classes actuales:', formContainer.className);
         }, 10);
     }
 
@@ -924,44 +614,92 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // Actualizar la función submitForm para enviar datos correctamente
+    function submitForm() {
+        console.log('🚀 Enviando formulario...');
+        
+        const form = document.getElementById('oferta-form');
+        const formData = new FormData(form);
+        
+        // Agregar categorías seleccionadas
+        const categoriasSeleccionadas = Array.from(selectedCategories);
+        categoriasSeleccionadas.forEach(categoria => {
+            formData.append('categorias', categoria);
+        });
+        
+        // Agregar docentes seleccionados (IDs separados por coma)
+        const docentesTable = document.getElementById('docentes-table');
+        if (docentesTable) {
+            const docentesIds = [];
+            const rows = docentesTable.getElementsByTagName('tbody')[0].rows;
+            for (let i = 0; i < rows.length; i++) {
+                const docenteId = rows[i].dataset.docenteId;
+                if (docenteId) {
+                    docentesIds.push(docenteId);
+                }
+            }
+            formData.append('docentesIds', docentesIds.join(','));
+        }
+        
+        // Agregar horarios como string estructurada
+        const horariosTable = document.getElementById('horarios-table').getElementsByTagName('tbody')[0];
+        const horariosArray = [];
+        for (let i = 0; i < horariosTable.rows.length; i++) {
+            const row = horariosTable.rows[i];
+            const dia = row.cells[0].textContent;
+            const horario = row.cells[1].textContent; // "08:00 - 10:00"
+            const partes = horario.split(' - ');
+            horariosArray.push(dia + ':' + partes[0] + '-' + partes[1]);
+        }
+        formData.append('horariosJson', horariosArray.join(','));
+        
+        // Enviar al servidor
+        fetch('/admin/ofertas/registrar', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('✅ Oferta registrada exitosamente', 'success');
+                resetForm();
+                hideForm();
+                loadOfertas(); // Recargar tabla
+            } else {
+                showNotification('❌ Error: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('💥 Error:', error);
+            showNotification('❌ Error al registrar la oferta', 'error');
+        });
+    }
+
     // Función para cargar ofertas en la tabla
     function loadOfertas() {
         console.log('🔄 Cargando ofertas desde el servidor...');
         
-        fetch('/admin/ofertas/listar')
+        fetch('/admin/ofertas/listar', {
+            method: 'GET'
+        })
         .then(response => {
             if (!response.ok) {
-                throw new Error(`Error ${response.status}: ${response.statusText}`);
+                throw new Error('Error en la respuesta del servidor');
             }
             return response.json();
         })
         .then(data => {
             console.log('📊 Datos recibidos:', data);
-            
-            // Manejar diferentes estructuras de respuesta
-            if (Array.isArray(data)) {
-                // Si la respuesta es directamente un array
-                populateTable(data);
-            } else if (data.data && Array.isArray(data.data)) {
-                // Si la respuesta tiene estructura {data: [...]}
-                populateTable(data.data);
-            } else if (data.ofertas && Array.isArray(data.ofertas)) {
-                // Si la respuesta tiene estructura {ofertas: [...]}
-                populateTable(data.ofertas);
-            } else if (data.success !== undefined) {
-                // Si la respuesta tiene estructura {success: true, data: [...]}
-                if (data.success && data.data) {
-                    populateTable(data.data);
-                } else {
-                    throw new Error(data.message || 'Error en la respuesta del servidor');
-                }
+            if (data.success) {
+                populateTable(data.data); // Corregido: usar data.data en lugar de data.ofertas
             } else {
-                throw new Error('Formato de respuesta no reconocido');
+                console.error('Error del servidor:', data.message);
+                showNotification('Error al cargar ofertas: ' + data.message, 'error');
             }
         })
         .catch(error => {
             console.error('Error cargando ofertas:', error);
-            showNotification('Error al cargar ofertas: ' + error.message, 'error');
+            showNotification('Error al cargar ofertas desde el servidor', 'error');
         });
     }
 
@@ -1055,12 +793,5 @@ document.addEventListener('DOMContentLoaded', function () {
     // Cargar ofertas existentes al inicializar la página
     loadOfertas();
 
-    window.categoriaModal = categoriaModal;
-    window.categoriaController = categoriaController;
-    
-    console.log('✅ categoríaModal definido:', typeof categoriaModal);
-    console.log('✅ categoríaController definido:', typeof categoriaController);
-
     console.log('Gestión de Ofertas inicializada correctamente');
-
 });

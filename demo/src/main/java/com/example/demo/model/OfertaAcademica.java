@@ -42,6 +42,7 @@ public class OfertaAcademica {
     private String nombre;
     private String descripcion;
     private String duracion;
+    private Integer duracionMeses; // Duración calculada en meses
     private Double costoInscripcion;
     
 
@@ -54,7 +55,6 @@ public class OfertaAcademica {
     
     private LocalDate fechaInicio;
     private LocalDate fechaFin;
-    private String objetivo;
     private Boolean certificado;
     
     @Enumerated(EnumType.STRING)
@@ -174,6 +174,31 @@ public class OfertaAcademica {
         if (fechaInicio == null || fechaFin == null) return null;
         return ChronoUnit.DAYS.between(fechaInicio, fechaFin) + 1;
     }
+    
+    /**
+     * Duración calculada en meses (aproximada)
+     */
+    public Long getDuracionMeses() {
+        // Si ya tenemos el valor calculado, usarlo
+        if (duracionMeses != null) {
+            return duracionMeses.longValue();
+        }
+        
+        // Calcular basado en fechas
+        Long dias = getDuracionDias();
+        if (dias == null) return null;
+        return Math.max(1, Math.round(dias / 30.0)); // Mínimo 1 mes
+    }
+    
+    /**
+     * Calcula y establece la duración en meses
+     */
+    public void calcularDuracionMeses() {
+        Long meses = getDuracionMeses();
+        if (meses != null) {
+            this.duracionMeses = meses.intValue();
+        }
+    }
     /**
      * Verifica si la oferta puede ser editada
      */
@@ -185,7 +210,14 @@ public class OfertaAcademica {
      * Verifica si puede ser eliminada
      */
     public Boolean puedeSerEliminada() {
+        // Lógica defensiva por si algo es null
+        if (this.estado == null) {
+            return false; // Si no hay estado definido, no se puede eliminar por seguridad
+        }
+        
         int inscriptos = inscripciones != null ? inscripciones.size() : 0;
+        
+        // Puede ser eliminada solo si no hay inscriptos y no está finalizada
         return inscriptos == 0 && estado != EstadoOferta.FINALIZADA;
     }
     

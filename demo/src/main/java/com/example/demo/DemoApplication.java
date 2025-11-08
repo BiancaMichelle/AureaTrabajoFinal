@@ -213,7 +213,6 @@ private void crearUsuarioAlumno(String dni, String nombre, String apellido, Stri
                 Modalidad.VIRTUAL,
                 LocalDate.now(),
                 LocalDate.now().plusMonths(3),
-                "Dominar los conceptos fundamentales de Java y POO",
                 true,
                 EstadoOferta.ACTIVA,
                 50,
@@ -237,7 +236,6 @@ private void crearUsuarioAlumno(String dni, String nombre, String apellido, Stri
                 Modalidad.VIRTUAL,
                 LocalDate.now(),
                 LocalDate.now().plusMonths(2),
-                "Crear aplicaciones empresariales con Spring Boot",
                 true,
                 EstadoOferta.ACTIVA,
                 30,
@@ -261,7 +259,6 @@ private void crearUsuarioAlumno(String dni, String nombre, String apellido, Stri
                 Modalidad.VIRTUAL,
                 LocalDate.now().plusDays(7),
                 LocalDate.now().plusMonths(4),
-                "Diseñar interfaces centradas en el usuario",
                 true,
                 EstadoOferta.ACTIVA,
                 25,
@@ -347,7 +344,7 @@ private void crearUsuarioAlumno(String dni, String nombre, String apellido, Stri
 
     private Curso crearCurso(String nombre, String descripcion, String duracion, 
                        Double costoInscripcion, Modalidad modalidad, 
-                       LocalDate fechaInicio, LocalDate fechaFin, String objetivo,
+                       LocalDate fechaInicio, LocalDate fechaFin,
                        Boolean certificado, EstadoOferta estado, Integer cupos,
                        Boolean visibilidad, Instituto instituto, List<Categoria> categorias,
                        List<Usuario> docentes, String temario, Double costoCuota,
@@ -363,7 +360,6 @@ private void crearUsuarioAlumno(String dni, String nombre, String apellido, Stri
     curso.setModalidad(modalidad);
     curso.setFechaInicio(fechaInicio);
     curso.setFechaFin(fechaFin);
-    curso.setObjetivo(objetivo);
     curso.setCertificado(certificado);
     curso.setEstado(estado);
     curso.setCupos(cupos);

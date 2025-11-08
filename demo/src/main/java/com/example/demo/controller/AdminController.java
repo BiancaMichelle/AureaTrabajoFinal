@@ -5,12 +5,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.sql.Time;
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -29,27 +31,61 @@ import org.springframework.web.multipart.MultipartFile;
 import com.example.demo.enums.EstadoOferta;
 import com.example.demo.enums.Modalidad;
 import com.example.demo.enums.TipoGenero;
+import com.example.demo.enums.Dias;
 import com.example.demo.model.CarruselImagen;
+import com.example.demo.model.Categoria;
+import com.example.demo.model.Charla;
+import com.example.demo.model.Curso;
+import com.example.demo.model.Docente;
+import com.example.demo.model.Formacion;
+import com.example.demo.model.Horario;
 import com.example.demo.model.Instituto;
 import com.example.demo.model.OfertaAcademica;
 import com.example.demo.model.Pais;
 import com.example.demo.model.Rol;
+import com.example.demo.model.Seminario;
 import com.example.demo.model.Usuario;
 import com.example.demo.repository.CarruselImagenRepository;
+import com.example.demo.repository.CategoriaRepository;
+import com.example.demo.repository.CharlaRepository;
+import com.example.demo.repository.CursoRepository;
+import com.example.demo.repository.DocenteRepository;
+import com.example.demo.repository.FormacionRepository;
+import com.example.demo.repository.HorarioRepository;
 import com.example.demo.repository.OfertaAcademicaRepository;
+import com.example.demo.repository.SeminarioRepository;
 import com.example.demo.repository.UsuarioRepository;
 import com.example.demo.service.ImagenService;
 import com.example.demo.service.InstitutoService;
 import com.example.demo.service.LocacionAPIService;
+import com.example.demo.service.OfertaAcademicaService;
 import com.example.demo.service.RegistroService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Controller
+@SuppressWarnings("unused") // Los repositorios se usan en métodos privados
 public class AdminController {
 
     @Autowired
     private OfertaAcademicaRepository ofertaAcademicaRepository;
     
+    @Autowired
+    private CategoriaRepository categoriaRepository;
+    
+    @Autowired
+    private CursoRepository cursoRepository;
+    
+    @Autowired
+    private FormacionRepository formacionRepository;
+    
+    @Autowired
+    private CharlaRepository charlaRepository;
+    
+    @Autowired
+    private SeminarioRepository seminarioRepository;
+    
+    @Autowired
+    private OfertaAcademicaService ofertaAcademicaService;
 
     @Autowired
     private final LocacionAPIService locacionApiService;
@@ -69,6 +105,12 @@ public class AdminController {
 
     @Autowired
     private UsuarioRepository usuarioRepository;
+
+    @Autowired
+    private DocenteRepository docenteRepository;
+
+    @Autowired
+    private HorarioRepository horarioRepository;
 
 
     public AdminController(LocacionAPIService locacionApiService,
@@ -90,18 +132,221 @@ public class AdminController {
     @GetMapping("/admin/gestion-ofertas")
     public String gestionOfertas(Model model) {
         try {
+            System.out.println("🔍 Iniciando gestionOfertas...");
+            
+            // RESTAURADO: Cargar ofertas desde la base de datos con validación de nulos
+            List<OfertaAcademica> ofertas = ofertaAcademicaService.obtenerTodas();
+            
+            // Validación defensiva: eliminar ofertas nulas
+            if (ofertas != null) {
+                ofertas.removeIf(Objects::isNull);
+                System.out.println("📊 Ofertas válidas encontradas: " + ofertas.size());
+            } else {
+                ofertas = new ArrayList<>();
+                System.out.println("⚠️ Lista de ofertas era null, inicializando vacía");
+            }
+            
+            model.addAttribute("ofertas", ofertas);
+            model.addAttribute("modalidades", Modalidad.values());
+            model.addAttribute("estados", EstadoOferta.values());
+            
+            // Objeto vacío para formulario de edición
+            OfertaAcademica ofertaEditar = new OfertaAcademica();
+            model.addAttribute("ofertaEditar", ofertaEditar);
+            
+            System.out.println("✅ gestionOfertas completado exitosamente");
+            return "admin/gestionOfertas";
+        } catch (Exception e) {
+            System.err.println("❌ Error en gestionOfertas: " + e.getMessage());
+            e.printStackTrace();
+            
+            // En caso de error, pasamos datos mínimos
+            model.addAttribute("ofertas", new ArrayList<>());
+            model.addAttribute("modalidades", Modalidad.values());
+            model.addAttribute("estados", EstadoOferta.values());
+            model.addAttribute("ofertaEditar", new OfertaAcademica());
+            model.addAttribute("error", "Error al cargar ofertas académicas: " + e.getMessage());
+            
+            return "admin/gestionOfertas";
+        }
+    }
 
-
+    // =================== ENDPOINTS PARA GESTIÓN DE OFERTAS ===================
+    
+    /**
+     * Endpoint para obtener los detalles de una oferta específica (para el modal)
+     */
+    @GetMapping("/admin/ofertas/{id}")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> obtenerDetalleOferta(@PathVariable Long id) {
+        try {
+            Optional<OfertaAcademica> ofertaOpt = ofertaAcademicaRepository.findById(id);
+            
+            if (ofertaOpt.isEmpty()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "Oferta no encontrada");
+                return ResponseEntity.notFound().build();
+            }
+            
+            OfertaAcademica oferta = ofertaOpt.get();
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("oferta", mapearOfertaAResponse(oferta));
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Error al obtener los detalles de la oferta: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
+    
+    /**
+     * Endpoint para el formulario de edición (carga los datos en el formulario)
+     */
+    @GetMapping("/admin/ofertas/editar/{id}")
+    public String editarOferta(@PathVariable Long id, Model model) {
+        try {
+            Optional<OfertaAcademica> ofertaOpt = ofertaAcademicaRepository.findById(id);
+            
+            if (ofertaOpt.isEmpty()) {
+                model.addAttribute("error", "Oferta no encontrada");
+                return "redirect:/admin/gestion-ofertas";
+            }
+            
+            OfertaAcademica oferta = ofertaOpt.get();
+            
+            // Agregar la oferta al modelo para pre-poblar el formulario
+            model.addAttribute("ofertaEditar", oferta);
+            model.addAttribute("esEdicion", true);
+            
+            // Obtener todas las ofertas para la tabla
+            List<OfertaAcademica> ofertas = ofertaAcademicaService.obtenerTodas();
+            model.addAttribute("ofertas", ofertas);
+            
             model.addAttribute("modalidades", Modalidad.values());
             model.addAttribute("estados", EstadoOferta.values());
             
             return "admin/gestionOfertas";
         } catch (Exception e) {
+            model.addAttribute("error", "Error al cargar la oferta para edición: " + e.getMessage());
+            return "redirect:/admin/gestion-ofertas";
+        }
+    }
+    
+    /**
+     * Endpoint para eliminar una oferta
+     */
+    @PostMapping("/admin/ofertas/eliminar/{id}")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> eliminarOferta(@PathVariable Long id) {
+        try {
+            Optional<OfertaAcademica> ofertaOpt = ofertaAcademicaRepository.findById(id);
+            
+            if (ofertaOpt.isEmpty()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "Oferta no encontrada");
+                return ResponseEntity.notFound().build();
+            }
+            
+            OfertaAcademica oferta = ofertaOpt.get();
+            
+            // Verificar si puede ser eliminada
+            if (!oferta.puedeSerEliminada()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "No se puede eliminar esta oferta porque tiene inscripciones o ya finalizó");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            // Eliminar usando el servicio
+            ofertaAcademicaService.eliminar(id, oferta.getTipoOferta());
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Oferta eliminada correctamente");
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Error al eliminar la oferta: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
+    
+    /**
+     * Método auxiliar para mapear una oferta a un objeto de respuesta con validaciones defensivas
+     */
+    private Map<String, Object> mapearOfertaAResponse(OfertaAcademica oferta) {
+        Map<String, Object> map = new HashMap<>();
+        
+        // Validación defensiva: verificar que la oferta no sea null
+        if (oferta == null) {
+            map.put("error", "Oferta nula");
+            return map;
+        }
+        
+        // Mapear campos básicos con validaciones defensivas
+        map.put("id", oferta.getIdOferta() != null ? oferta.getIdOferta() : 0L);
+        map.put("nombre", oferta.getNombre() != null ? oferta.getNombre() : "");
+        map.put("descripcion", oferta.getDescripcion() != null ? oferta.getDescripcion() : "");
+        map.put("tipo", oferta.getTipoOferta() != null ? oferta.getTipoOferta() : "");
+        map.put("modalidad", oferta.getModalidad() != null ? oferta.getModalidad() : "");
+        map.put("cupos", oferta.getCupos() != null ? oferta.getCupos() : 0);
+        map.put("infoCupos", oferta.getInfoCupos() != null ? oferta.getInfoCupos() : "");
+        map.put("fechaInicio", oferta.getFechaInicio());
+        map.put("fechaFin", oferta.getFechaFin());
+        map.put("estado", oferta.getEstado() != null ? oferta.getEstado() : "");
+        map.put("duracion", oferta.getDuracion() != null ? oferta.getDuracion() : "");
+        map.put("certificado", oferta.getCertificado() != null ? oferta.getCertificado() : "");
+        map.put("costoFormateado", oferta.getCostoFormateado() != null ? oferta.getCostoFormateado() : "$0");
+        map.put("costoInscripcion", oferta.getCostoInscripcion() != null ? oferta.getCostoInscripcion() : 0.0);
+        map.put("categoriasTexto", oferta.getCategoriasTexto() != null ? oferta.getCategoriasTexto() : "");
+        map.put("duracionTexto", oferta.getDuracionTexto() != null ? oferta.getDuracionTexto() : "");
+        
+        // Validaciones defensivas para métodos que pueden fallar
+        try {
+            map.put("puedeSerEditada", oferta.puedeSerEditada() != null ? oferta.puedeSerEditada() : false);
+        } catch (Exception e) {
+            map.put("puedeSerEditada", false);
+        }
+        
+        try {
+            map.put("puedeSerEliminada", oferta.puedeSerEliminada() != null ? oferta.puedeSerEliminada() : false);
+        } catch (Exception e) {
+            map.put("puedeSerEliminada", false);
+        }
+        
+        map.put("visibilidad", oferta.getVisibilidad() != null ? oferta.getVisibilidad() : "");
+        return map;
+    }
 
-            model.addAttribute("modalidades", Modalidad.values());
-            model.addAttribute("estados", EstadoOferta.values());
-            model.addAttribute("error", "Error al cargar categorías");
-            return "admin/gestionOfertas";
+    // =================== ENDPOINTS PARA DOCENTES ===================
+    
+    @GetMapping("/admin/docentes/buscar")
+    @ResponseBody
+    public ResponseEntity<List<Map<String, Object>>> buscarDocentes(@RequestParam("q") String query) {
+        try {
+            List<Docente> docentes = docenteRepository.buscarPorNombreApellidoOMatricula(query);
+            
+            List<Map<String, Object>> resultado = new ArrayList<>();
+            
+            for (Docente docente : docentes) {
+                Map<String, Object> docenteMap = new HashMap<>();
+                docenteMap.put("id", docente.getId());
+                docenteMap.put("nombre", docente.getNombre() + " " + docente.getApellido());
+                
+                resultado.add(docenteMap);
+            }
+            
+            return ResponseEntity.ok(resultado);
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new ArrayList<>());
         }
     }
 
@@ -175,51 +420,171 @@ public class AdminController {
 
     @PostMapping("/admin/ofertas/registrar")
     @ResponseBody
-    public ResponseEntity<Map<String, Object>> registrarOferta(@RequestParam String tipoOferta,
-                                 @RequestParam String nombre,
-                                 @RequestParam(required = false) String descripcion,
-                                 @RequestParam(required = false) Integer cupos,
-                                 @RequestParam(required = false) Double costo,
-                                 @RequestParam(required = false) String fechaInicio,
-                                 @RequestParam(required = false) String fechaFin,
-                                 @RequestParam(required = false) String modalidad) {
+    public ResponseEntity<Map<String, Object>> registrarOferta(
+            @RequestParam String tipoOferta,
+            @RequestParam String nombre,
+            @RequestParam(required = false) String descripcion,
+            @RequestParam(required = false) Integer cupos,
+            @RequestParam(required = false) Double costoInscripcion,
+            @RequestParam(required = false) String fechaInicio,
+            @RequestParam(required = false) String fechaFin,
+            @RequestParam(required = false) String modalidad,
+            @RequestParam(required = false) String otorgaCertificado,
+            @RequestParam(required = false) MultipartFile imagen,
+            @RequestParam(required = false) String categorias, // IDs de categorías separados por coma
+            @RequestParam(required = false) String horarios, // JSON con datos de horarios
+            // Campos específicos para CURSO
+            @RequestParam(required = false) String temario,
+            @RequestParam(required = false) String docentesCurso, // IDs de docentes separados por coma
+            @RequestParam(required = false) Double costoCuota,
+            @RequestParam(required = false) Double costoMora,
+            @RequestParam(required = false) Integer nrCuotas,
+            @RequestParam(required = false) Integer diaVencimiento,
+            // Campos específicos para FORMACION
+            @RequestParam(required = false) String planFormacion,
+            @RequestParam(required = false) String docentesFormacion, // IDs de docentes separados por coma
+            @RequestParam(required = false) Double costoCuotaFormacion,
+            @RequestParam(required = false) Double costoMoraFormacion,
+            @RequestParam(required = false) Integer nrCuotasFormacion,
+            @RequestParam(required = false) Integer diaVencimientoFormacion,
+            // Campos específicos para CHARLA
+            @RequestParam(required = false) String lugarCharla,
+            @RequestParam(required = false) String enlaceCharla,
+            @RequestParam(required = false) Integer duracionEstimada,
+            @RequestParam(required = false) String disertantesCharla,
+            @RequestParam(required = false) String publicoObjetivoCharla,
+            // Campos específicos para SEMINARIO
+            @RequestParam(required = false) String lugarSeminario,
+            @RequestParam(required = false) String enlaceSeminario,
+            @RequestParam(required = false) Integer duracionMinutos,
+            @RequestParam(required = false) String disertantesSeminario,
+            @RequestParam(required = false) String publicoObjetivoSeminario) {
+        
         try {
-            // Crear nueva oferta académica
-            OfertaAcademica oferta = new OfertaAcademica();
-            oferta.setNombre(nombre);
-            oferta.setDescripcion(descripcion);
+            System.out.println("🔥 REGISTRO DE OFERTA INICIADO");
+            System.out.println("Tipo: " + tipoOferta);
+            System.out.println("Nombre: " + nombre);
+            System.out.println("Descripción: " + descripcion);
+            System.out.println("Cupos: " + cupos);
+            System.out.println("Costo Inscripción: " + costoInscripcion);
+            System.out.println("Modalidad: " + modalidad);
+            System.out.println("Otorga Certificado: " + otorgaCertificado);
+            System.out.println("Categorías: " + categorias);
+            System.out.println("Horarios: " + horarios);
             
-            if (cupos != null) {
-                oferta.setCupos(cupos);
+            // Validación obligatoria de fechas
+            if (fechaInicio == null || fechaInicio.trim().isEmpty()) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("success", false);
+                errorResponse.put("message", "La fecha de inicio es obligatoria");
+                return ResponseEntity.badRequest().body(errorResponse);
             }
             
-            if (costo != null) {
-                oferta.setCostoInscripcion(costo);
+            if (fechaFin == null || fechaFin.trim().isEmpty()) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("success", false);
+                errorResponse.put("message", "La fecha de fin es obligatoria");
+                return ResponseEntity.badRequest().body(errorResponse);
             }
             
-            if (fechaInicio != null && !fechaInicio.isEmpty()) {
-                oferta.setFechaInicio(LocalDate.parse(fechaInicio));
+            // Validar formato de fechas
+            LocalDate fechaInicioDate, fechaFinDate;
+            try {
+                fechaInicioDate = LocalDate.parse(fechaInicio);
+                fechaFinDate = LocalDate.parse(fechaFin);
+                
+                // Validar que fecha de inicio no sea posterior a fecha de fin
+                if (fechaInicioDate.isAfter(fechaFinDate)) {
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("success", false);
+                    errorResponse.put("message", "La fecha de inicio no puede ser posterior a la fecha de fin");
+                    return ResponseEntity.badRequest().body(errorResponse);
+                }
+            } catch (Exception e) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("success", false);
+                errorResponse.put("message", "Formato de fecha inválido. Use el formato YYYY-MM-DD");
+                return ResponseEntity.badRequest().body(errorResponse);
             }
             
-            if (fechaFin != null && !fechaFin.isEmpty()) {
-                oferta.setFechaFin(LocalDate.parse(fechaFin));
+            // Normalizar costos: convertir null a 0
+            if (costoInscripcion == null) costoInscripcion = 0.0;
+            if (costoCuota == null) costoCuota = 0.0;
+            if (costoMora == null) costoMora = 0.0;
+            if (costoCuotaFormacion == null) costoCuotaFormacion = 0.0;
+            if (costoMoraFormacion == null) costoMoraFormacion = 0.0;
+            
+            OfertaAcademica oferta;
+            
+            // Crear la instancia específica según el tipo
+            switch (tipoOferta.toUpperCase()) {
+                case "CURSO":
+                    oferta = crearCurso(nombre, descripcion, cupos, costoInscripcion, fechaInicio, fechaFin, modalidad,
+                                      temario, docentesCurso, costoCuota, costoMora, nrCuotas, diaVencimiento);
+                    break;
+                case "FORMACION":
+                    oferta = crearFormacion(nombre, descripcion, cupos, costoInscripcion, fechaInicio, fechaFin, modalidad,
+                                          planFormacion, docentesFormacion, costoCuotaFormacion, costoMoraFormacion, 
+                                          nrCuotasFormacion, diaVencimientoFormacion);
+                    break;
+                case "CHARLA":
+                    oferta = crearCharla(nombre, descripcion, cupos, costoInscripcion, fechaInicio, fechaFin, modalidad,
+                                       lugarCharla, enlaceCharla, duracionEstimada, disertantesCharla, 
+                                       publicoObjetivoCharla);
+                    break;
+                case "SEMINARIO":
+                    oferta = crearSeminario(nombre, descripcion, cupos, costoInscripcion, fechaInicio, fechaFin, modalidad,
+                                          lugarSeminario, enlaceSeminario, duracionMinutos, disertantesSeminario,
+                                          publicoObjetivoSeminario);
+                    break;
+                default:
+                    throw new IllegalArgumentException("Tipo de oferta no válido: " + tipoOferta);
             }
             
-            // Configurar modalidad
-            if (modalidad != null && !modalidad.isEmpty()) {
-                oferta.setModalidad(Modalidad.valueOf(modalidad.toUpperCase()));
+            // Asociar categorías si se proporcionaron
+            if (categorias != null && !categorias.trim().isEmpty()) {
+                asociarCategorias(oferta, categorias);
             }
             
-            // Configurar estado por defecto
-            oferta.setEstado(EstadoOferta.ACTIVA);
-            oferta.setVisibilidad(true);
+            // Calcular duración en meses antes de guardar
+            oferta.calcularDuracionMeses();
             
+            // Establecer valor del certificado
+            if (otorgaCertificado != null && !otorgaCertificado.trim().isEmpty()) {
+                boolean certificado = "true".equalsIgnoreCase(otorgaCertificado.trim());
+                oferta.setCertificado(certificado);
+                System.out.println("Certificado establecido: " + certificado + " (desde string: '" + otorgaCertificado + "')");
+            } else {
+                oferta.setCertificado(false);
+                System.out.println("Certificado establecido por defecto: false");
+            }
+            
+            // Manejar imagen si existe (por ahora comentado hasta implementar el servicio)
+            /*
+            if (imagen != null && !imagen.isEmpty()) {
+                try {
+                    String rutaImagen = imagenService.guardarImagen(imagen, "ofertas");
+                    oferta.setImagenPresentacion(rutaImagen);
+                } catch (Exception e) {
+                    // Log error pero continuar sin imagen
+                    System.err.println("Error al guardar imagen: " + e.getMessage());
+                }
+            }
+            */
+            
+            // Guardar en la base de datos
             OfertaAcademica nuevaOferta = ofertaAcademicaRepository.save(oferta);
+            
+            // Asociar horarios si se proporcionaron
+            if (horarios != null && !horarios.trim().isEmpty()) {
+                asociarHorarios(nuevaOferta, horarios);
+            }
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
-            response.put("message", "Oferta registrada exitosamente");
+            response.put("message", "Oferta académica registrada exitosamente");
             response.put("id", nuevaOferta.getIdOferta());
+            response.put("tipo", tipoOferta);
             
             return ResponseEntity.ok(response);
             
@@ -230,6 +595,139 @@ public class AdminController {
             return ResponseEntity.badRequest().body(response);
         }
     }
+    
+    // Métodos auxiliares para crear cada tipo de oferta específica
+    
+    private Curso crearCurso(String nombre, String descripcion, Integer cupos, Double costo,
+                           String fechaInicio, String fechaFin, String modalidad,
+                           String temario, String docentesIds, Double costoCuota, Double costoMora, 
+                           Integer nrCuotas, Integer diaVencimiento) {
+        Curso curso = new Curso();
+        configurarOfertaBase(curso, nombre, descripcion, cupos, costo, fechaInicio, fechaFin, modalidad);
+        
+        // Campos específicos del curso
+        curso.setTemario(temario);
+        if (costoCuota != null) curso.setCostoCuota(costoCuota);
+        if (costoMora != null) curso.setCostoMora(costoMora);
+        if (nrCuotas != null) curso.setNrCuotas(nrCuotas);
+        if (diaVencimiento != null) curso.setDiaVencimiento(diaVencimiento);
+        
+        // Asociar docentes si se proporcionaron
+        if (docentesIds != null && !docentesIds.trim().isEmpty()) {
+            List<Docente> docentes = obtenerDocentesPorIds(docentesIds);
+            curso.setDocentes(docentes);
+        }
+        
+        return curso;
+    }
+    
+    private Formacion crearFormacion(String nombre, String descripcion, Integer cupos, Double costo,
+                                   String fechaInicio, String fechaFin, String modalidad,
+                                   String plan, String docentesIds, Double costoCuota, Double costoMora,
+                                   Integer nrCuotas, Integer diaVencimiento) {
+        Formacion formacion = new Formacion();
+        configurarOfertaBase(formacion, nombre, descripcion, cupos, costo, fechaInicio, fechaFin, modalidad);
+        
+        // Campos específicos de la formación
+        formacion.setPlan(plan);
+        if (costoCuota != null) formacion.setCostoCuota(costoCuota);
+        if (costoMora != null) formacion.setCostoMora(costoMora);
+        if (nrCuotas != null) formacion.setNrCuotas(nrCuotas);
+        if (diaVencimiento != null) formacion.setDiaVencimiento(diaVencimiento);
+        
+        // Asociar docentes si se proporcionaron
+        if (docentesIds != null && !docentesIds.trim().isEmpty()) {
+            List<Docente> docentes = obtenerDocentesPorIds(docentesIds);
+            formacion.setDocentes(docentes);
+        }
+        
+        return formacion;
+    }
+    
+    private Charla crearCharla(String nombre, String descripcion, Integer cupos, Double costo,
+                             String fechaInicio, String fechaFin, String modalidad,
+                             String lugar, String enlace, Integer duracionEstimada,
+                             String disertantesStr, String publicoObjetivo) {
+        Charla charla = new Charla();
+        configurarOfertaBase(charla, nombre, descripcion, cupos, costo, fechaInicio, fechaFin, modalidad);
+        
+        // Campos específicos de la charla
+        charla.setLugar(lugar);
+        charla.setEnlace(enlace);
+        if (duracionEstimada != null) charla.setDuracionEstimada(duracionEstimada);
+        charla.setPublicoObjetivo(publicoObjetivo);
+        
+        // Procesar disertantes (separados por coma)
+        if (disertantesStr != null && !disertantesStr.trim().isEmpty()) {
+            List<String> disertantes = new ArrayList<>();
+            String[] partes = disertantesStr.split(",");
+            for (String parte : partes) {
+                String disertante = parte.trim();
+                if (!disertante.isEmpty()) {
+                    disertantes.add(disertante);
+                }
+            }
+            charla.setDisertantes(disertantes);
+        }
+        
+        return charla;
+    }
+    
+    private Seminario crearSeminario(String nombre, String descripcion, Integer cupos, Double costo,
+                                   String fechaInicio, String fechaFin, String modalidad,
+                                   String lugar, String enlace, Integer duracionMinutos,
+                                   String disertantesStr, String publicoObjetivo) {
+        Seminario seminario = new Seminario();
+        configurarOfertaBase(seminario, nombre, descripcion, cupos, costo, fechaInicio, fechaFin, modalidad);
+        
+        // Campos específicos del seminario
+        seminario.setLugar(lugar);
+        seminario.setEnlace(enlace);
+        if (duracionMinutos != null) seminario.setDuracionMinutos(duracionMinutos);
+        seminario.setPublicoObjetivo(publicoObjetivo);
+        
+        // Procesar disertantes (separados por coma)
+        if (disertantesStr != null && !disertantesStr.trim().isEmpty()) {
+            List<String> disertantes = new ArrayList<>();
+            String[] partes = disertantesStr.split(",");
+            for (String parte : partes) {
+                String disertante = parte.trim();
+                if (!disertante.isEmpty()) {
+                    disertantes.add(disertante);
+                }
+            }
+            seminario.setDisertantes(disertantes);
+        }
+        
+        return seminario;
+    }
+    
+    private void configurarOfertaBase(OfertaAcademica oferta, String nombre, String descripcion,
+                                    Integer cupos, Double costo, String fechaInicio, 
+                                    String fechaFin, String modalidad) {
+        oferta.setNombre(nombre);
+        oferta.setDescripcion(descripcion);
+        
+        if (cupos != null) oferta.setCupos(cupos);
+        if (costo != null) oferta.setCostoInscripcion(costo);
+        
+        if (fechaInicio != null && !fechaInicio.isEmpty()) {
+            oferta.setFechaInicio(LocalDate.parse(fechaInicio));
+        }
+        
+        if (fechaFin != null && !fechaFin.isEmpty()) {
+            oferta.setFechaFin(LocalDate.parse(fechaFin));
+        }
+        
+        // Configurar modalidad
+        if (modalidad != null && !modalidad.isEmpty()) {
+            oferta.setModalidad(Modalidad.valueOf(modalidad.toUpperCase()));
+        }
+        
+        // Configurar estado por defecto
+        oferta.setEstado(EstadoOferta.ACTIVA);
+        oferta.setVisibilidad(true);
+    }
 
     @GetMapping("/admin/ofertas")
     @ResponseBody
@@ -237,10 +735,22 @@ public class AdminController {
         try {
             List<OfertaAcademica> ofertas = ofertaAcademicaRepository.findAll();
             
+            // Validación defensiva: eliminar ofertas nulas
+            if (ofertas != null) {
+                ofertas.removeIf(Objects::isNull);
+            }
+
+            List<Map<String, Object>> ofertasResponse = new ArrayList<>();
+            for (OfertaAcademica oferta : ofertas) {
+                if (oferta != null) { // Validación adicional
+                    ofertasResponse.add(mapearOfertaAResponse(oferta));
+                }
+            }
+
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
-            response.put("data", ofertas);
-            
+            response.put("data", ofertasResponse);
+
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             Map<String, Object> response = new HashMap<>();
@@ -256,10 +766,22 @@ public class AdminController {
         try {
             List<OfertaAcademica> ofertas = ofertaAcademicaRepository.findAll();
             
+            // Validación defensiva: eliminar ofertas nulas
+            if (ofertas != null) {
+                ofertas.removeIf(Objects::isNull);
+            }
+
+            List<Map<String, Object>> ofertasResponse = new ArrayList<>();
+            for (OfertaAcademica oferta : ofertas) {
+                if (oferta != null) { // Validación adicional
+                    ofertasResponse.add(mapearOfertaAResponse(oferta));
+                }
+            }
+
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
-            response.put("data", ofertas);
-            
+            response.put("data", ofertasResponse);
+
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             Map<String, Object> response = new HashMap<>();
@@ -658,6 +1180,171 @@ public class AdminController {
         Files.copy(logo.getInputStream(), rutaArchivo, StandardCopyOption.REPLACE_EXISTING);
         
         return "/img/logos/" + nombreArchivo;
+    }
+    
+    // ================= MÉTODOS AUXILIARES PARA OFERTAS =================
+    
+    /**
+     * Asocia categorías a una oferta académica
+     */
+    private void asociarCategorias(OfertaAcademica oferta, String categoriasIds) {
+        if (categoriasIds == null || categoriasIds.trim().isEmpty()) {
+            return;
+        }
+        
+        List<Categoria> categorias = new ArrayList<>();
+        String[] ids = categoriasIds.split(",");
+        
+        for (String idStr : ids) {
+            try {
+                Long id = Long.parseLong(idStr.trim());
+                Optional<Categoria> categoria = categoriaRepository.findById(id);
+                if (categoria.isPresent()) {
+                    categorias.add(categoria.get());
+                }
+            } catch (NumberFormatException e) {
+                System.err.println("Error al parsear ID de categoría: " + idStr);
+            }
+        }
+        
+        oferta.setCategorias(categorias);
+    }
+    
+    /**
+     * Obtiene lista de docentes por IDs separados por coma
+     */
+    private List<Docente> obtenerDocentesPorIds(String docentesIds) {
+        List<Docente> docentes = new ArrayList<>();
+        
+        if (docentesIds == null || docentesIds.trim().isEmpty()) {
+            return docentes;
+        }
+        
+        String[] ids = docentesIds.split(",");
+        
+        for (String idStr : ids) {
+            try {
+                UUID id = UUID.fromString(idStr.trim());
+                Optional<Docente> docente = docenteRepository.findById(id);
+                if (docente.isPresent()) {
+                    docentes.add(docente.get());
+                }
+            } catch (IllegalArgumentException e) {
+                System.err.println("Error al parsear UUID de docente: " + idStr);
+            }
+        }
+        
+        return docentes;
+    }
+    
+    /**
+     * Asocia horarios a una oferta académica
+     * @param oferta La oferta académica guardada
+     * @param horariosJson JSON con los horarios en formato: [{"dia":"LUNES","horaInicio":"09:00","horaFin":"11:00","docenteId":"1"}]
+     */
+    private void asociarHorarios(OfertaAcademica oferta, String horariosJson) {
+        try {
+            // Parsear JSON manualmente (implementación simple)
+            List<Map<String, String>> horariosData = parseHorariosJson(horariosJson);
+            
+            for (Map<String, String> horarioData : horariosData) {
+                Horario horario = new Horario();
+                
+                // Configurar día
+                String diaStr = horarioData.get("dia");
+                if (diaStr != null && !diaStr.isEmpty()) {
+                    horario.setDia(Dias.valueOf(diaStr.toUpperCase()));
+                }
+                
+                // Configurar horas
+                String horaInicioStr = horarioData.get("horaInicio");
+                String horaFinStr = horarioData.get("horaFin");
+                
+                if (horaInicioStr != null && !horaInicioStr.isEmpty()) {
+                    horario.setHoraInicio(Time.valueOf(horaInicioStr + ":00"));
+                }
+                
+                if (horaFinStr != null && !horaFinStr.isEmpty()) {
+                    horario.setHoraFin(Time.valueOf(horaFinStr + ":00"));
+                }
+                
+                // Asociar docente si se especifica
+                String docenteIdStr = horarioData.get("docenteId");
+                if (docenteIdStr != null && !docenteIdStr.isEmpty()) {
+                    try {
+                        UUID docenteId = UUID.fromString(docenteIdStr);
+                        Optional<Docente> docente = docenteRepository.findById(docenteId);
+                        if (docente.isPresent()) {
+                            horario.setDocente(docente.get());
+                        }
+                    } catch (IllegalArgumentException e) {
+                        System.err.println("Error al parsear UUID de docente: " + docenteIdStr);
+                    }
+                }
+                
+                // Asociar oferta
+                horario.setOfertaAcademica(oferta);
+                
+                // Guardar horario
+                horarioRepository.save(horario);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("Error al procesar horarios: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Parsea JSON de horarios de forma simple
+     */
+    private List<Map<String, String>> parseHorariosJson(String json) {
+        List<Map<String, String>> horarios = new ArrayList<>();
+        
+        if (json == null || json.trim().isEmpty() || json.equals("[]")) {
+            return horarios;
+        }
+        
+        try {
+            // Remover corchetes
+            json = json.trim();
+            if (json.startsWith("[")) json = json.substring(1);
+            if (json.endsWith("]")) json = json.substring(0, json.length() - 1);
+            
+            if (json.trim().isEmpty()) {
+                return horarios;
+            }
+            
+            // Dividir por objetos (asumiendo formato simple)
+            String[] objetos = json.split("\\},\\s*\\{");
+            
+            for (String objeto : objetos) {
+                objeto = objeto.trim();
+                if (objeto.startsWith("{")) objeto = objeto.substring(1);
+                if (objeto.endsWith("}")) objeto = objeto.substring(0, objeto.length() - 1);
+                
+                Map<String, String> horario = new HashMap<>();
+                String[] pares = objeto.split(",");
+                
+                for (String par : pares) {
+                    String[] keyValue = par.split(":");
+                    if (keyValue.length == 2) {
+                        String key = keyValue[0].trim().replaceAll("\"", "");
+                        String value = keyValue[1].trim().replaceAll("\"", "");
+                        horario.put(key, value);
+                    }
+                }
+                
+                if (!horario.isEmpty()) {
+                    horarios.add(horario);
+                }
+            }
+            
+        } catch (Exception e) {
+            System.err.println("Error al parsear JSON de horarios: " + e.getMessage());
+        }
+        
+        return horarios;
     }
     
 }

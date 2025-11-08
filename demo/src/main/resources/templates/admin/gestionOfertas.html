@@ -1,8 +1,6 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/adminBase :: layout(~{::title}, ~{::main})}">
 <head>
-    <meta name="_csrf" th:content="${_csrf.token}"/>
-    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
     <title>Gestión de Ofertas Académicas</title>
 </head>
 <body>
@@ -16,6 +14,17 @@
         </div>
     </header>
 
+    <!-- Área de notificaciones -->
+    <div id="notification-area" class="notification-area" style="display: none;">
+        <div id="notification" class="notification">
+            <i id="notification-icon" class="fas fa-check-circle"></i>
+            <span id="notification-message">Mensaje de notificación</span>
+            <button type="button" id="notification-close" class="notification-close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+
     <!-- Formulario de Registro (colapsable) -->
     <div id="form-container" class="form-container" style="display: none;">
         <div class="form-card">
@@ -26,7 +35,7 @@
                 </button>
             </div>
             
-            <form th:action="@{/admin/ofertas/registrar}" method="post" id="oferta-form" enctype="multipart/form-data">
+            <form th:action="@{/admin/ofertas/registrar}" method="post" id="oferta-form" enctype="multipart/form-data" th:object="${ofertaEditar}">
                 <div class="form-content">
                     <!-- Columna Izquierda: Campos principales -->
                     <div class="form-left-column">
@@ -54,7 +63,7 @@
                                     <select id="modalidad" name="modalidad" required class="form-control">
                                         <option value="">Seleccione modalidad</option>
                                         <option value="PRESENCIAL">Presencial</option>
-                                        <option value="ONLINE">Online</option>
+                                        <option value="VIRTUAL">Virtual</option>
                                         <option value="HIBRIDA">Híbrida</option>
                                     </select>
                                 </div>
@@ -64,12 +73,12 @@
                                            placeholder="Número máximo de estudiantes">
                                 </div>
                                 <div class="form-group">
-                                    <label for="fechaInicio">Fecha de Inicio</label>
-                                    <input type="date" id="fechaInicio" name="fechaInicio" class="form-control">
+                                    <label for="fechaInicio">Fecha de Inicio *</label>
+                                    <input type="date" id="fechaInicio" name="fechaInicio" class="form-control" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="fechaFin">Fecha de Fin</label>
-                                    <input type="date" id="fechaFin" name="fechaFin" class="form-control">
+                                    <label for="fechaFin">Fecha de Fin *</label>
+                                    <input type="date" id="fechaFin" name="fechaFin" class="form-control" required>
                                 </div>
                             </div>
                             
@@ -77,19 +86,6 @@
                                 <label for="descripcion">Descripción *</label>
                                 <textarea id="descripcion" name="descripcion" rows="3" required class="form-control" 
                                           placeholder="Descripción detallada de la oferta académica"></textarea>
-                            </div>
-                        
-                            <!-- AQUÍ AGREGA EL NUEVO CAMPO DE CATEGORÍAS -->
-                            <div class="form-group">
-                                <label for="categorias">Categorías</label>
-                                <div class="categorias-asignadas-container">
-                                    <div id="categorias-seleccionadas" class="categorias-chips">
-                                        <div class="no-categories">No hay categorías seleccionadas</div>
-                                    </div>
-                                    <button type="button" id="btn-asignar-categorias" class="btn-secondary">
-                                        <i class="fas fa-tags"></i> Asignar Categorías
-                                    </button>
-                                </div>
                             </div>
                         </div>
 
@@ -134,7 +130,7 @@
                             <h4><i class="fas fa-certificate"></i> Certificación</h4>
                             <div class="checkbox-container">
                                 <label class="checkbox-label">
-                                    <input type="checkbox" id="otorgaCertificado" name="otorgaCertificado" class="form-checkbox">
+                                    <input type="checkbox" id="otorgaCertificado" class="form-checkbox">
                                     <span class="checkmark"></span>
                                     Otorga Certificado
                                 </label>
@@ -154,52 +150,33 @@
                             </div>
                         </div>
 
-                        <!-- Horarios -->
+                        <!-- Categorías -->
                         <div class="form-section">
-                            <h4><i class="fas fa-clock"></i> Horarios</h4>
-                            <div class="horarios-container">
-                                <div class="horario-controls">
-                                    <div class="form-grid-3">
-                                        <div class="form-group">
-                                            <label for="dia-semana">Día</label>
-                                            <select id="dia-semana" class="form-control">
-                                                <option value="">Seleccionar día</option>
-                                                <option value="LUNES">Lunes</option>
-                                                <option value="MARTES">Martes</option>
-                                                <option value="MIERCOLES">Miércoles</option>
-                                                <option value="JUEVES">Jueves</option>
-                                                <option value="VIERNES">Viernes</option>
-                                                <option value="SABADO">Sábado</option>
-                                                <option value="DOMINGO">Domingo</option>
-                                            </select>
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="hora-desde">Desde</label>
-                                            <input type="time" id="hora-desde" class="form-control">
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="hora-hasta">Hasta</label>
-                                            <input type="time" id="hora-hasta" class="form-control">
-                                        </div>
-                                    </div>
-                                    <button type="button" id="btn-add-horario" class="btn-secondary">
-                                        <i class="fas fa-plus"></i> Agregar Horario
+                            <div class="categoria-header">
+                                <h4><i class="fas fa-tags"></i> Categorías</h4>
+                                <button type="button" id="btn-gestionar-categorias" class="btn-secondary btn-xs">
+                                    <i class="fas fa-cog"></i> Gestionar
+                                </button>
+                            </div>
+                            <div class="form-group">
+                                <label for="categoria-select">Seleccionar Categorías</label>
+                                <p class="field-description">Seleccione una o más categorías que describan esta oferta académica</p>
+                                <div class="categoria-input-group">
+                                    <select id="categoria-select" class="form-control categoria-select">
+                                        <option value="">-- Seleccione una categoría --</option>
+                                        <!-- Las categorías se cargarán dinámicamente desde la base de datos -->
+                                    </select>
+                                    <button type="button" id="btn-add-categoria" class="btn-add-categoria">
+                                        <i class="fas fa-plus"></i> Añadir
                                     </button>
                                 </div>
                                 
-                                <div class="horarios-table-container">
-                                    <table id="horarios-table" class="data-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Día</th>
-                                                <th>Horario</th>
-                                                <th>Acción</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <!-- Horarios dinámicos -->
-                                        </tbody>
-                                    </table>
+                                <!-- Categorías seleccionadas como chips -->
+                                <div class="selected-categories" id="selected-categories" style="display: none;">
+                                    <span class="selected-label">Categorías seleccionadas:</span>
+                                    <div class="selected-chips" id="selected-chips">
+                                        <!-- Las categorías seleccionadas aparecerán aquí como chips -->
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -257,7 +234,6 @@
                                         <thead>
                                             <tr>
                                                 <th>Docente</th>
-                                                <th>Especialidad</th>
                                                 <th>Acción</th>
                                             </tr>
                                         </thead>
@@ -306,7 +282,6 @@
                                         <thead>
                                             <tr>
                                                 <th>Docente</th>
-                                                <th>Especialidad</th>
                                                 <th>Acción</th>
                                             </tr>
                                         </thead>
@@ -323,8 +298,15 @@
                             <h4><i class="fas fa-microphone"></i> Información de la Charla</h4>
                             <div class="form-group">
                                 <label for="disertantesCharla">Disertantes</label>
-                                <input type="text" id="disertantesCharla" name="disertantesCharla" class="form-control" 
-                                       placeholder="Nombres de los disertantes separados por coma">
+                                <div class="input-with-button">
+                                    <input type="text" id="disertantesCharlaInput" class="form-control" 
+                                           placeholder="Nombre del disertante">
+                                    <button type="button" class="btn-add-item" onclick="agregarDisertante('charla')">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                                <div id="disertantes-charla-list" class="chips-container"></div>
+                                <input type="hidden" id="disertantesCharlaHidden" name="disertantesCharla" value="">
                             </div>
                             <div class="form-group">
                                 <label for="duracionEstimada">Duración Estimada</label>
@@ -353,8 +335,15 @@
                             <h4><i class="fas fa-users"></i> Información del Seminario</h4>
                             <div class="form-group">
                                 <label for="disertantesSeminario">Disertantes</label>
-                                <input type="text" id="disertantesSeminario" name="disertantesSeminario" class="form-control" 
-                                       placeholder="Nombres de los disertantes separados por coma">
+                                <div class="input-with-button">
+                                    <input type="text" id="disertantesSeminarioInput" class="form-control" 
+                                           placeholder="Nombre del disertante">
+                                    <button type="button" class="btn-add-item" onclick="agregarDisertante('seminario')">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                                <div id="disertantes-seminario-list" class="chips-container"></div>
+                                <input type="hidden" id="disertantesSeminarioHidden" name="disertantesSeminario" value="">
                             </div>
                             <div class="form-group">
                                 <label for="fechaSeminario">Fecha del Seminario</label>
@@ -382,6 +371,57 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Sección de Horarios (para cursos y formaciones) -->
+                <div id="seccion-horarios" class="form-section" style="display: none;">
+                    <h4><i class="fas fa-clock"></i> Horarios</h4>
+                    <div class="horarios-container">
+                        <div class="horario-form">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="dia-horario">Día de la semana</label>
+                                    <select id="dia-horario" class="form-control">
+                                        <option value="">Seleccionar día</option>
+                                        <option value="LUNES">Lunes</option>
+                                        <option value="MARTES">Martes</option>
+                                        <option value="MIERCOLES">Miércoles</option>
+                                        <option value="JUEVES">Jueves</option>
+                                        <option value="VIERNES">Viernes</option>
+                                        <option value="SABADO">Sábado</option>
+                                        <option value="DOMINGO">Domingo</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="hora-inicio">Hora de inicio</label>
+                                    <input type="time" id="hora-inicio" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label for="hora-fin">Hora de fin</label>
+                                    <input type="time" id="hora-fin" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <button type="button" class="btn-add-horario" onclick="agregarHorario()">
+                                        <i class="fas fa-plus"></i> Agregar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="horarios-list">
+                            <h5>Horarios programados:</h5>
+                            <div id="lista-horarios" class="horarios-chips">
+                                <p class="no-horarios">No hay horarios programados</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Campos ocultos para datos del formulario -->
+                <input type="hidden" id="categorias" name="categorias" value="">
+                <input type="hidden" id="docentesCurso" name="docentesCurso" value="">
+                <input type="hidden" id="docentesFormacion" name="docentesFormacion" value="">
+                <input type="hidden" id="horarios" name="horarios" value="">
+                <input type="hidden" id="otorgaCertificadoHidden" name="otorgaCertificado" value="false">
                 
                 <div class="form-actions">
                     <button type="submit" class="btn-submit">
@@ -419,7 +459,7 @@
                     <select id="filtro-modalidad" class="filter-select">
                         <option value="">Todas las modalidades</option>
                         <option value="PRESENCIAL">Presencial</option>
-                        <option value="ONLINE">Online</option>
+                        <option value="VIRTUAL">Virtual</option>
                         <option value="HIBRIDA">Híbrida</option>
                     </select>
                     <select id="filtro-estado" class="filter-select">
@@ -451,48 +491,61 @@
             <div class="table-header">
                 <h3><i class="fas fa-list"></i> Lista de Ofertas Académicas</h3>
                 <div class="table-stats">
-                    <span class="stats-text">Total: <strong id="total-ofertas">1</strong> ofertas</span>
+                    <span class="stats-text">Total: <strong id="total-ofertas" th:text="${#lists.size(ofertas ?: {})}">0</strong> ofertas</span>
                 </div>
             </div>
             
             <div class="table-container">
-                <table id="ofertas-table" class="data-table">
+                <table id="ofertas-table" class="ofertas-table">
                     <thead>
                         <tr>
-                            <th>ID</th>
                             <th>Nombre</th>
                             <th>Tipo</th>
                             <th>Modalidad</th>
                             <th>Cupos</th>
                             <th>Fecha Inicio</th>
-                            <th>Costo</th>
-                            <th>Certificado</th>
+                            <th>Fecha Fin</th>
                             <th>Estado</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <!-- Ejemplo de datos -->
-                        <tr>
-                            <td>001</td>
-                            <td>Curso de Java Avanzado</td>
-                            <td><span class="status-badge status-curso">CURSO</span></td>
-                            <td><span class="status-badge status-online">ONLINE</span></td>
-                            <td>25</td>
-                            <td>15/10/2025</td>
-                            <td>$1,500</td>
-                            <td><i class="fas fa-check-circle text-success"></i></td>
-                            <td><span class="status-badge status-activa">ACTIVA</span></td>
-                            <td class="actions">
-                                <button class="btn-icon btn-edit" title="Editar">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn-icon btn-view" title="Ver detalles">
+                        <tr th:each="oferta : ${ofertas}" th:if="${ofertas != null and !ofertas.isEmpty()}">
+                            <td th:text="${oferta.nombre}">Nombre de la oferta</td>
+                            <td th:text="${oferta.tipoOferta}">CURSO</td>
+                            <td th:text="${oferta.modalidad}">PRESENCIAL</td>
+                            <td class="cupos-cell">
+                                <span th:if="${oferta.cupos != null}" 
+                                      th:class="${oferta.tieneCuposDisponibles() ? 'cupos-disponibles' : 'cupos-agotados'}"
+                                      th:text="${oferta.cupos}">30</span>
+                                <span th:if="${oferta.cupos == null}" class="cupos-ilimitados">∞</span>
+                            </td>
+                            <td th:text="${#temporals.format(oferta.fechaInicio, 'dd/MM/yyyy')}">01/01/2024</td>
+                            <td th:text="${#temporals.format(oferta.fechaFin, 'dd/MM/yyyy')}">31/12/2024</td>
+                            <td>
+                                <span class="estado-badge" th:text="${oferta.estado}">ACTIVA</span>
+                            </td>
+                            <td class="acciones-cell">
+                                <button class="btn-accion btn-ver" 
+                                        title="Ver información"
+                                        th:data-id="${oferta.idOferta}"
+                                        onclick="verOferta(this)">
                                     <i class="fas fa-eye"></i>
                                 </button>
-                                <button class="btn-icon btn-delete" title="Eliminar">
-                                    <i class="fas fa-trash"></i>
+                                <button class="btn-accion btn-modificar" 
+                                        title="Modificar"
+                                        th:data-id="${oferta.idOferta}"
+                                        onclick="modificarOferta(this)">
+                                    <i class="fas fa-edit"></i>
                                 </button>
+                            </td>
+                        </tr>
+                        
+                        <!-- Mensaje cuando no hay ofertas -->
+                        <tr th:if="${ofertas == null or ofertas.isEmpty()}">
+                            <td colspan="8" class="text-center text-muted py-4">
+                                <i class="fas fa-inbox fa-2x mb-2"></i><br>
+                                No hay ofertas académicas registradas
                             </td>
                         </tr>
                     </tbody>
@@ -615,7 +668,1588 @@
         </div>
     </div>
 
-    <script th:src="@{/js/gestionOfertas.js}"></script>
+    <!-- Modal de Detalle de Oferta -->
+    <div id="detalleOfertaModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h3><i class="fas fa-info-circle"></i> Detalles de la Oferta Académica</h3>
+                <button type="button" class="btn-close" aria-label="Cerrar" onclick="cerrarModalDetalle()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Información principal -->
+                <div class="detalle-section">
+                    <h4><i class="fas fa-graduation-cap"></i> Información General</h4>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="detalle-item">
+                                <label>Nombre:</label>
+                                <span id="detalle-nombre">-</span>
+                            </div>
+                            <div class="detalle-item">
+                                <label>Tipo:</label>
+                                <span id="detalle-tipo" class="status-badge">-</span>
+                            </div>
+                            <div class="detalle-item">
+                                <label>Modalidad:</label>
+                                <span id="detalle-modalidad" class="status-badge">-</span>
+                            </div>
+                            <div class="detalle-item">
+                                <label>Estado:</label>
+                                <span id="detalle-estado" class="status-badge">-</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="detalle-item">
+                                <label>Cupos:</label>
+                                <span id="detalle-cupos">-</span>
+                            </div>
+                            <div class="detalle-item">
+                                <label>Costo:</label>
+                                <span id="detalle-costo">-</span>
+                            </div>
+                            <div class="detalle-item">
+                                <label>Certificado:</label>
+                                <span id="detalle-certificado">-</span>
+                            </div>
+                            <div class="detalle-item">
+                                <label>Duración:</label>
+                                <span id="detalle-duracion">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fechas -->
+                <div class="detalle-section">
+                    <h4><i class="fas fa-calendar"></i> Fechas</h4>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="detalle-item">
+                                <label>Fecha de Inicio:</label>
+                                <span id="detalle-fecha-inicio">-</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="detalle-item">
+                                <label>Fecha de Fin:</label>
+                                <span id="detalle-fecha-fin">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Descripción -->
+                <div class="detalle-section">
+                    <h4><i class="fas fa-align-left"></i> Descripción</h4>
+                    <div class="detalle-item">
+                        <p id="detalle-descripcion" class="text-muted">-</p>
+                    </div>
+                </div>
+
+                <!-- Categorías -->
+                <div class="detalle-section">
+                    <h4><i class="fas fa-tags"></i> Categorías</h4>
+                    <div class="detalle-item">
+                        <span id="detalle-categorias" class="text-muted">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="cerrarModalDetalle()">
+                    <i class="fas fa-times"></i> Cerrar
+                </button>
+                <a id="btn-editar-oferta" href="#" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> Editar Oferta
+                </a>
+                <button id="btn-eliminar-oferta" type="button" class="btn btn-danger" onclick="eliminarOfertaDesdeModal()">
+                    <i class="fas fa-trash"></i> Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Ver Oferta Completa -->
+    <div id="modal-ver-oferta" class="modal-overlay" style="display: none;">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3><i class="fas fa-eye"></i> Detalles de la Oferta Académica</h3>
+                <button type="button" class="btn-close" onclick="cerrarModalVerOferta()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="oferta-details-container">
+                    <!-- Información Principal -->
+                    <div class="detail-section">
+                        <h4><i class="fas fa-info-circle"></i> Información General</h4>
+                        <div class="detail-grid">
+                            <div class="detail-item">
+                                <label>Nombre:</label>
+                                <span id="modal-nombre">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>Tipo:</label>
+                                <span id="modal-tipo">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>Modalidad:</label>
+                                <span id="modal-modalidad">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>Estado:</label>
+                                <span id="modal-estado" class="estado-badge">-</span>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-item full-width">
+                            <label>Descripción:</label>
+                            <p id="modal-descripcion">-</p>
+                        </div>
+                    </div>
+
+                    <!-- Fechas y Duración -->
+                    <div class="detail-section">
+                        <h4><i class="fas fa-calendar"></i> Fechas y Duración</h4>
+                        <div class="detail-grid">
+                            <div class="detail-item">
+                                <label>Fecha de Inicio:</label>
+                                <span id="modal-fecha-inicio">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>Fecha de Fin:</label>
+                                <span id="modal-fecha-fin">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>Duración:</label>
+                                <span id="modal-duracion">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>Certificado:</label>
+                                <span id="modal-certificado">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cupos y Costos -->
+                    <div class="detail-section">
+                        <h4><i class="fas fa-users"></i> Cupos y Costos</h4>
+                        <div class="detail-grid">
+                            <div class="detail-item">
+                                <label>Cupos Totales:</label>
+                                <span id="modal-cupos">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>Inscriptos:</label>
+                                <span id="modal-inscriptos">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>Costo de Inscripción:</label>
+                                <span id="modal-costo">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>Disponibles:</label>
+                                <span id="modal-disponibles">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Horarios -->
+                    <div class="detail-section">
+                        <h4><i class="fas fa-clock"></i> Horarios</h4>
+                        <div id="modal-horarios" class="horarios-list">
+                            <p class="no-data">No hay horarios definidos</p>
+                        </div>
+                    </div>
+
+                    <!-- Categorías -->
+                    <div class="detail-section">
+                        <h4><i class="fas fa-tags"></i> Categorías</h4>
+                        <div id="modal-categorias" class="categorias-list">
+                            <p class="no-data">No hay categorías asignadas</p>
+                        </div>
+                    </div>
+
+                    <!-- Docentes/Disertantes -->
+                    <div class="detail-section">
+                        <h4><i class="fas fa-chalkboard-teacher"></i> Docentes/Disertantes</h4>
+                        <div id="modal-docentes" class="docentes-list">
+                            <p class="no-data">No hay docentes asignados</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="cerrarModalVerOferta()">
+                    <i class="fas fa-times"></i> Cerrar
+                </button>
+                <button type="button" class="btn btn-danger" onclick="eliminarOfertaDesdeModal()">
+                    <i class="fas fa-trash"></i> Eliminar Oferta
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmación para Eliminar -->
+    <div id="confirmDeleteModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content modal-sm">
+            <div class="modal-header">
+                <h3><i class="fas fa-exclamation-triangle text-danger"></i> Confirmar Eliminación</h3>
+                <button type="button" class="btn-close" aria-label="Cerrar" onclick="cerrarModalConfirmacion()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <p>¿Estás seguro de que deseas eliminar la oferta académica <strong id="nombre-oferta-eliminar">-</strong>?</p>
+                <p class="text-muted">Esta acción no se puede deshacer.</p>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="cerrarModalConfirmacion()">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button id="btn-confirmar-eliminar" type="button" class="btn btn-danger" onclick="ejecutarEliminacion()">
+                    <i class="fas fa-trash"></i> Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- SCRIPT COMPLETO INLINE - SIN ARCHIVOS EXTERNOS -->
+    <script>
+        console.log('🔥 SCRIPT INLINE CARGADO');
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('✅ DOM CARGADO');
+            
+            // Referencias a elementos
+            const btnShowForm = document.getElementById('btn-show-form');
+            const formContainer = document.getElementById('form-container');
+            const btnCloseForm = document.getElementById('btn-close-form');
+            const btnGestionarCategorias = document.getElementById('btn-gestionar-categorias');
+            
+            console.log('Elementos encontrados:', {
+                btnShowForm: !!btnShowForm,
+                formContainer: !!formContainer,
+                btnCloseForm: !!btnCloseForm,
+                btnGestionarCategorias: !!btnGestionarCategorias
+            });
+            
+            // Manejador del botón mostrar formulario
+            if (btnShowForm && formContainer) {
+                btnShowForm.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    console.log('👆 CLICK EN NUEVA OFERTA');
+                    
+                    // Mostrar formulario con animación
+                    formContainer.style.display = 'block';
+                    
+                    setTimeout(() => {
+                        formContainer.classList.add('show');
+                        console.log('📝 FORMULARIO MOSTRADO');
+                    }, 10);
+                });
+            }
+            
+            // Manejador del botón cerrar formulario
+            if (btnCloseForm && formContainer) {
+                btnCloseForm.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    console.log('❌ CERRANDO FORMULARIO');
+                    
+                    formContainer.classList.remove('show');
+                    setTimeout(() => {
+                        formContainer.style.display = 'none';
+                    }, 500);
+                });
+            }
+            
+            // Manejador del botón gestionar categorías
+            if (btnGestionarCategorias) {
+                btnGestionarCategorias.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    console.log('📋 ABRIENDO GESTIÓN DE CATEGORÍAS');
+                    
+                    const modal = document.getElementById('categoriaModal');
+                    if (modal) {
+                        modal.style.display = 'flex';
+                        cargarCategorias();
+                    }
+                });
+            }
+            
+            // Manejador del botón añadir categoría
+            const btnAddCategoria = document.getElementById('btn-add-categoria');
+            if (btnAddCategoria) {
+                btnAddCategoria.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    añadirCategoriaSeleccionada();
+                });
+            }
+            
+            // Manejador para mostrar campos específicos según tipo de oferta
+            const tipoOfertaSelect = document.getElementById('tipoOferta');
+            if (tipoOfertaSelect) {
+                tipoOfertaSelect.addEventListener('change', function() {
+                    mostrarCamposEspecificos(this.value);
+                });
+            }
+            
+            // Event listeners para disertantes (Enter key)
+            const disertantesCharlaInput = document.getElementById('disertantesCharlaInput');
+            if (disertantesCharlaInput) {
+                disertantesCharlaInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        agregarDisertante('charla');
+                    }
+                });
+            }
+            
+            const disertantesSeminarioInput = document.getElementById('disertantesSeminarioInput');
+            if (disertantesSeminarioInput) {
+                disertantesSeminarioInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        agregarDisertante('seminario');
+                    }
+                });
+            }
+            
+            // Cargar categorías al iniciar
+            cargarCategoriasSelect();
+            
+            // Event listener para envío del formulario
+            const formulario = document.getElementById('oferta-form');
+            if (formulario) {
+                formulario.addEventListener('submit', function(e) {
+                    e.preventDefault(); // Prevenir envío tradicional
+                    console.log('📤 Formulario enviado');
+                    
+                    const tipoOferta = document.getElementById('tipoOferta').value;
+                    
+                    // Actualizar todos los campos hidden antes de enviar
+                    actualizarHorariosHidden();
+                    actualizarDocentesHidden('curso');
+                    actualizarDocentesHidden('formacion');
+                    actualizarDisertantesHidden('charla');
+                    actualizarDisertantesHidden('seminario');
+                    actualizarCategoriaHidden();
+                    actualizarCertificadoHidden();
+                    
+                    // Validar según tipo de oferta
+                    if (!validarFormulario(tipoOferta)) {
+                        return false;
+                    }
+                    
+                    // Enviar con AJAX
+                    enviarFormularioAjax();
+                });
+            }
+            
+            // Event listener para cerrar notificación
+            const notificationClose = document.getElementById('notification-close');
+            if (notificationClose) {
+                notificationClose.addEventListener('click', ocultarNotificacion);
+            }
+            
+            console.log('🎉 GESTIÓN DE OFERTAS INICIALIZADA');
+        });
+        
+        // Función para mostrar campos específicos según tipo de oferta
+        function mostrarCamposEspecificos(tipoOferta) {
+            console.log('🔄 Cambiando tipo de oferta a:', tipoOferta);
+            
+            // Limpiar datos anteriores
+            limpiarDatosFormulario();
+            
+            // Ocultar todas las secciones específicas
+            const seccionesEspecificas = document.querySelectorAll('.tipo-specific');
+            seccionesEspecificas.forEach(seccion => {
+                seccion.style.display = 'none';
+            });
+            
+            // Ocultar sección de horarios por defecto
+            const seccionHorarios = document.getElementById('seccion-horarios');
+            seccionHorarios.style.display = 'none';
+            
+            // Controlar campos de cuotas en la sección principal de costos
+            const grupoCostoCuota = document.getElementById('grupo-costo-cuota');
+            const grupoNroCuotas = document.getElementById('grupo-nro-cuotas');
+            const grupoCostoMora = document.getElementById('grupo-costo-mora');
+            const grupoDiaVencimiento = document.getElementById('grupo-dia-vencimiento');
+            
+            // Mostrar campos de cuotas solo para CURSO y FORMACION
+            const mostrarCamposCuotas = tipoOferta === 'CURSO' || tipoOferta === 'FORMACION';
+            
+            if (grupoCostoCuota) grupoCostoCuota.style.display = mostrarCamposCuotas ? 'block' : 'none';
+            if (grupoNroCuotas) grupoNroCuotas.style.display = mostrarCamposCuotas ? 'block' : 'none';
+            if (grupoCostoMora) grupoCostoMora.style.display = mostrarCamposCuotas ? 'block' : 'none';
+            if (grupoDiaVencimiento) grupoDiaVencimiento.style.display = mostrarCamposCuotas ? 'block' : 'none';
+            
+            // Mostrar la sección correspondiente al tipo seleccionado
+            let seccionMostrar = null;
+            switch(tipoOferta) {
+                case 'CURSO':
+                    seccionMostrar = document.getElementById('fields-curso');
+                    // Inicializar búsqueda de docentes para curso
+                    setTimeout(() => {
+                        inicializarBusquedaDocentes('docente-search', 'docente-results', 'docentes-table');
+                    }, 100);
+                    // Mostrar horarios para curso
+                    seccionHorarios.style.display = 'block';
+                    break;
+                    
+                case 'FORMACION':
+                    seccionMostrar = document.getElementById('fields-formacion');
+                    // Inicializar búsqueda de docentes para formación
+                    setTimeout(() => {
+                        inicializarBusquedaDocentes('docente-search-formacion', 'docente-results-formacion', 'docentes-table-formacion');
+                    }, 100);
+                    // Mostrar horarios para formación
+                    seccionHorarios.style.display = 'block';
+                    break;
+                    
+                case 'CHARLA':
+                    seccionMostrar = document.getElementById('fields-charla');
+                    break;
+                    
+                case 'SEMINARIO':
+                    seccionMostrar = document.getElementById('fields-seminario');
+                    break;
+                    
+                default:
+                    console.log('⚠️ Tipo de oferta no reconocido:', tipoOferta);
+                    return;
+            }
+            
+            if (seccionMostrar) {
+                seccionMostrar.style.display = 'block';
+                console.log('✅ Mostrando campos específicos para:', tipoOferta);
+            }
+        }
+        
+        // Función para limpiar datos del formulario cuando se cambia tipo
+        function limpiarDatosFormulario() {
+            // Limpiar docentes seleccionados
+            docentesSeleccionados.curso = [];
+            docentesSeleccionados.formacion = [];
+            
+            // Limpiar horarios
+            horariosSeleccionados = [];
+            
+            // Limpiar disertantes
+            disertantesCharla = [];
+            disertantesSeminario = [];
+            
+            // Limpiar tablas de docentes
+            const tablaCurso = document.getElementById('docentes-table');
+            const tablaFormacion = document.getElementById('docentes-table-formacion');
+            
+            if (tablaCurso) {
+                const tbody = tablaCurso.querySelector('tbody');
+                if (tbody) tbody.innerHTML = '';
+            }
+            
+            if (tablaFormacion) {
+                const tbody = tablaFormacion.querySelector('tbody');
+                if (tbody) tbody.innerHTML = '';
+            }
+            
+            // Limpiar visualizaciones
+            actualizarHorariosChips();
+            actualizarDisertantesChips('charla');
+            actualizarDisertantesChips('seminario');
+            
+            // Actualizar campos hidden
+            actualizarDocentesHidden('curso');
+            actualizarDocentesHidden('formacion');
+            
+            console.log('🧹 Datos del formulario limpiados');
+        }
+        
+        // Variables globales para docentes seleccionados
+        let docentesSeleccionados = {
+            curso: [],
+            formacion: []
+        };
+        
+        // Función para inicializar búsqueda de docentes
+        function inicializarBusquedaDocentes(inputId, resultsId, tableId) {
+            const searchInput = document.getElementById(inputId);
+            const resultsDiv = document.getElementById(resultsId);
+            
+            if (!searchInput || !resultsDiv) return;
+            
+            let timeoutId;
+            
+            searchInput.addEventListener('input', function() {
+                clearTimeout(timeoutId);
+                const query = this.value.trim();
+                
+                if (query.length < 2) {
+                    resultsDiv.style.display = 'none';
+                    return;
+                }
+                
+                timeoutId = setTimeout(() => {
+                    buscarDocentes(query, resultsDiv, tableId);
+                }, 300);
+            });
+            
+            // Ocultar resultados al hacer click fuera
+            document.addEventListener('click', function(e) {
+                if (!searchInput.contains(e.target) && !resultsDiv.contains(e.target)) {
+                    resultsDiv.style.display = 'none';
+                }
+            });
+        }
+        
+        // Función para buscar docentes
+        function buscarDocentes(query, resultsDiv, tableId) {
+            console.log('🔍 Buscando docentes:', query);
+            
+            // Buscar docentes reales desde la base de datos
+            fetch(`/admin/docentes/buscar?q=${encodeURIComponent(query)}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error en la respuesta del servidor');
+                    }
+                    return response.json();
+                })
+                .then(docentes => {
+                    console.log('✅ Docentes encontrados:', docentes);
+                    mostrarResultadosDocentes(docentes, resultsDiv, tableId);
+                })
+                .catch(error => {
+                    console.error('❌ Error al buscar docentes:', error);
+                    // Fallback con docentes simulados para desarrollo
+                    const docentesSimulados = [
+                        { id: 1, nombre: 'Dr. Juan Pérez', especialidad: 'Programación Java' },
+                        { id: 2, nombre: 'Dra. María González', especialidad: 'Base de Datos' },
+                        { id: 3, nombre: 'Ing. Carlos López', especialidad: 'Desarrollo Web' },
+                        { id: 4, nombre: 'Dra. Ana Martínez', especialidad: 'Inteligencia Artificial' },
+                        { id: 5, nombre: 'Ing. Roberto Silva', especialidad: 'Redes y Sistemas' }
+                    ];
+                    
+                    const resultados = docentesSimulados.filter(docente => 
+                        docente.nombre.toLowerCase().includes(query.toLowerCase()) ||
+                        docente.especialidad.toLowerCase().includes(query.toLowerCase())
+                    );
+                    
+                    mostrarResultadosDocentes(resultados, resultsDiv, tableId);
+                });
+        }
+        
+        // Función para mostrar resultados de búsqueda
+        function mostrarResultadosDocentes(docentes, resultsDiv, tableId) {
+            resultsDiv.innerHTML = '';
+            
+            if (docentes.length === 0) {
+                resultsDiv.innerHTML = '<div class="no-results">No se encontraron docentes</div>';
+                resultsDiv.style.display = 'block';
+                return;
+            }
+            
+            const ul = document.createElement('ul');
+            ul.className = 'search-results-list';
+            
+            docentes.forEach(docente => {
+                const li = document.createElement('li');
+                li.className = 'search-result-item';
+                li.innerHTML = `
+                    <div class="docente-info">
+                        <span class="docente-nombre">${docente.nombre}</span>
+                    </div>
+                    <button type="button" class="btn-add-docente" onclick="agregarDocente('${docente.id}', '${docente.nombre}', '${tableId}')">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                `;
+                ul.appendChild(li);
+            });
+            
+            resultsDiv.appendChild(ul);
+            resultsDiv.style.display = 'block';
+        }
+        
+        // Función para agregar docente a la tabla
+        function agregarDocente(id, nombre, especialidad, tableId) {
+            const tabla = document.getElementById(tableId);
+            const tbody = tabla.querySelector('tbody');
+            
+            // Verificar si el docente ya está agregado
+            const tipoSeccion = tableId.includes('formacion') ? 'formacion' : 'curso';
+            const yaAgregado = docentesSeleccionados[tipoSeccion].find(d => d.id === id);
+            
+            if (yaAgregado) {
+                alert('Este docente ya ha sido agregado');
+                return;
+            }
+            
+            // Agregar a la lista de seleccionados
+            docentesSeleccionados[tipoSeccion].push({ id, nombre, especialidad });
+            
+            // Crear fila en la tabla
+            const fila = document.createElement('tr');
+            fila.innerHTML = `
+                <td>${nombre}</td>
+                <td>${especialidad}</td>
+                <td>
+                    <button type="button" class="btn-remove-docente" onclick="removerDocente(${id}, '${tableId}', this)">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            
+            tbody.appendChild(fila);
+            
+            // Ocultar resultados de búsqueda
+            const resultsDiv = document.querySelector('.search-results:not([style*="display: none"])');
+            if (resultsDiv) {
+                resultsDiv.style.display = 'none';
+            }
+            
+            // Limpiar campo de búsqueda
+            const searchInput = tableId.includes('formacion') ? 
+                document.getElementById('docente-search-formacion') : 
+                document.getElementById('docente-search');
+            if (searchInput) {
+                searchInput.value = '';
+            }
+            
+            console.log('✅ Docente agregado:', nombre);
+        }
+        
+        // Función para remover docente
+        function removerDocente(id, tableId, button) {
+            const tipoSeccion = tableId.includes('formacion') ? 'formacion' : 'curso';
+            
+            // Remover de la lista
+            docentesSeleccionados[tipoSeccion] = docentesSeleccionados[tipoSeccion].filter(d => d.id !== id);
+            
+            // Remover fila de la tabla
+            const fila = button.closest('tr');
+            fila.remove();
+            
+            console.log('❌ Docente removido');
+        }
+        
+        // Array para almacenar categorías seleccionadas
+        let categoriasSeleccionadas = [];
+        
+        // Función para añadir categoría seleccionada
+        function añadirCategoriaSeleccionada() {
+            const select = document.getElementById('categoria-select');
+            const selectedValue = select.value;
+            const selectedText = select.options[select.selectedIndex].text;
+            
+            if (!selectedValue || selectedValue === '') {
+                alert('Por favor seleccione una categoría');
+                return;
+            }
+            
+            // Verificar si ya está seleccionada
+            const yaSeleccionada = categoriasSeleccionadas.find(cat => cat.id === selectedValue);
+            if (yaSeleccionada) {
+                alert('Esta categoría ya ha sido seleccionada');
+                return;
+            }
+            
+            // Añadir a la lista
+            categoriasSeleccionadas.push({
+                id: selectedValue,
+                nombre: selectedText
+            });
+            
+            // Actualizar la visualización
+            actualizarCategoriasChips();
+            
+            // Reset del select
+            select.value = '';
+            
+            console.log('✅ Categoría añadida:', selectedText);
+        }
+        
+        // Función para actualizar los chips de categorías
+        function actualizarCategoriasChips() {
+            const chipsContainer = document.getElementById('selected-chips');
+            const selectedContainer = document.getElementById('selected-categories');
+            
+            if (!chipsContainer) return;
+            
+            // Limpiar chips existentes
+            chipsContainer.innerHTML = '';
+            
+            if (categoriasSeleccionadas.length === 0) {
+                selectedContainer.style.display = 'none';
+                // Actualizar campo hidden del formulario
+                const formCategorias = document.getElementById('categorias');
+                if (formCategorias) {
+                    formCategorias.value = '';
+                }
+                return;
+            }
+            
+            // Mostrar contenedor
+            selectedContainer.style.display = 'block';
+            
+            // Crear chips
+            categoriasSeleccionadas.forEach((categoria, index) => {
+                const chip = document.createElement('span');
+                chip.className = 'categoria-chip';
+                chip.dataset.categoriaId = categoria.id; // Agregar el data attribute
+                chip.innerHTML = `
+                    ${categoria.nombre}
+                    <button type="button" class="chip-remove" onclick="removerCategoria(${index})">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                chipsContainer.appendChild(chip);
+            });
+            
+            // Actualizar el campo hidden del formulario principal con IDs separados por coma
+            const formCategorias = document.getElementById('categorias');
+            if (formCategorias) {
+                const ids = categoriasSeleccionadas.map(cat => cat.id).join(',');
+                formCategorias.value = ids;
+                console.log('Categorías actualizadas:', ids);
+            }
+        }
+        
+        // Función para actualizar campo hidden de categorías
+        function actualizarCategoriaHidden() {
+            const categoriasSeleccionadas = Array.from(document.querySelectorAll('#selected-chips .categoria-chip'))
+                .map(chip => chip.dataset.categoriaId);
+            
+            const formCategorias = document.getElementById('categorias');
+            if (formCategorias) {
+                formCategorias.value = categoriasSeleccionadas.join(',');
+                console.log('Categorías actualizadas en hidden field:', formCategorias.value);
+            }
+        }
+        
+        // Función para actualizar campo hidden de certificado
+        function actualizarCertificadoHidden() {
+            const checkbox = document.getElementById('otorgaCertificado');
+            const hiddenField = document.getElementById('otorgaCertificadoHidden');
+            
+            if (checkbox && hiddenField) {
+                hiddenField.value = checkbox.checked ? 'true' : 'false';
+                console.log('Certificado actualizado:', hiddenField.value);
+            }
+        }
+        
+        // Función para actualizar campos hidden de disertantes
+        function actualizarDisertantesHidden(tipo) {
+            const hiddenId = tipo === 'charla' ? 'disertantesCharlaHidden' : 'disertantesSeminarioHidden';
+            const hiddenField = document.getElementById(hiddenId);
+            
+            if (hiddenField) {
+                const lista = tipo === 'charla' ? disertantesCharla : disertantesSeminario;
+                hiddenField.value = JSON.stringify(lista);
+            }
+        }
+        
+        // Función para actualizar campo hidden de horarios
+        function actualizarHorariosHidden() {
+            const hiddenField = document.getElementById('horarios');
+            if (hiddenField) {
+                hiddenField.value = JSON.stringify(horariosSeleccionados);
+            }
+        }
+        
+        // Función para remover categoría
+        function removerCategoria(index) {
+            categoriasSeleccionadas.splice(index, 1);
+            actualizarCategoriasChips();
+            console.log('❌ Categoría removida, total:', categoriasSeleccionadas.length);
+        }
+        
+        // Funciones para gestión de categorías
+        function cargarCategorias() {
+            console.log('🔄 Cargando categorías...');
+            
+            const loadingDiv = document.getElementById('categoriasLoading');
+            const errorDiv = document.getElementById('categoriasError');
+            const table = document.getElementById('categoriasTable');
+            
+            if (loadingDiv) loadingDiv.style.display = 'block';
+            if (errorDiv) errorDiv.style.display = 'none';
+            if (table) table.style.display = 'none';
+            
+            fetch('/api/categorias')
+                .then(response => response.json())
+                .then(categorias => {
+                    console.log('✅ Categorías cargadas:', categorias);
+                    
+                    if (loadingDiv) loadingDiv.style.display = 'none';
+                    
+                    mostrarCategorias(categorias);
+                    if (table) table.style.display = 'table';
+                })
+                .catch(error => {
+                    console.error('❌ Error:', error);
+                    if (loadingDiv) loadingDiv.style.display = 'none';
+                    mostrarError('Error de conexión al cargar categorías');
+                });
+        }
+        
+        function cargarCategoriasSelect() {
+            console.log('🔄 Cargando categorías para select...');
+            
+            fetch('/api/categorias')
+                .then(response => response.json())
+                .then(categorias => {
+                    const select = document.getElementById('categoria-select');
+                    if (select) {
+                        // Limpiar opciones existentes (excepto la primera)
+                        while (select.children.length > 1) {
+                            select.removeChild(select.lastChild);
+                        }
+                        
+                        // Agregar categorías
+                        categorias.forEach(categoria => {
+                            const option = document.createElement('option');
+                            option.value = categoria.idCategoria;
+                            option.textContent = categoria.nombre;
+                            select.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Error al cargar categorías para select:', error);
+                });
+        }
+        
+        function mostrarCategorias(categorias) {
+            const tbody = document.getElementById('categoriasTableBody');
+            const contador = document.getElementById('contadorCategorias');
+            
+            if (!tbody) return;
+            
+            tbody.innerHTML = '';
+            
+            if (categorias && categorias.length > 0) {
+                categorias.forEach(categoria => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${categoria.nombre}</td>
+                        <td>${categoria.descripcion}</td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-outline-primary me-1" onclick="editarCategoria(${categoria.idCategoria})" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="eliminarCategoria(${categoria.idCategoria})" title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+                
+                if (contador) {
+                    contador.textContent = `Total: ${categorias.length} categorías`;
+                }
+            } else {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="3" class="text-center text-muted">No hay categorías registradas</td>';
+                tbody.appendChild(row);
+                
+                if (contador) {
+                    contador.textContent = 'Total: 0 categorías';
+                }
+            }
+        }
+        
+        function mostrarError(mensaje) {
+            const errorDiv = document.getElementById('categoriasError');
+            if (errorDiv) {
+                errorDiv.textContent = mensaje;
+                errorDiv.style.display = 'block';
+            }
+        }
+        
+        // Funciones globales para el modal
+        window.categoriaModal = {
+            hide: function() {
+                const modal = document.getElementById('categoriaModal');
+                if (modal) {
+                    modal.style.display = 'none';
+                }
+            }
+        };
+        
+        // Controlador de categorías
+        window.categoriaController = {
+            guardarCategoria: function() {
+                console.log('💾 Guardando categoría...');
+                
+                const form = document.getElementById('categoriaForm');
+                const formData = new FormData(form);
+                
+                const categoria = {
+                    nombre: formData.get('categoriaNombre'),
+                    descripcion: formData.get('categoriaDescripcion')
+                };
+                
+                // Validaciones básicas
+                if (!categoria.nombre || categoria.nombre.trim().length < 2) {
+                    alert('El nombre debe tener al menos 2 caracteres');
+                    return;
+                }
+                
+                if (!categoria.descripcion || categoria.descripcion.trim().length < 5) {
+                    alert('La descripción debe tener al menos 5 caracteres');
+                    return;
+                }
+                
+                fetch('/api/categorias', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(categoria)
+                })
+                .then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    } else {
+                        throw new Error('Error en la respuesta del servidor');
+                    }
+                })
+                .then(data => {
+                    console.log('✅ Categoría guardada:', data);
+                    form.reset();
+                    cargarCategorias();
+                    cargarCategoriasSelect();
+                    alert('Categoría guardada exitosamente');
+                })
+                .catch(error => {
+                    console.error('❌ Error:', error);
+                    alert('Error al guardar categoría: ' + error.message);
+                });
+            },
+            
+            cancelarEdicion: function() {
+                const form = document.getElementById('categoriaForm');
+                if (form) {
+                    form.reset();
+                }
+            }
+        };
+        
+        // Funciones globales para botones
+        window.editarCategoria = function(id) {
+            console.log('✏️ Editando categoría:', id);
+            // TODO: Implementar edición
+        };
+        
+        window.eliminarCategoria = function(id) {
+            console.log('🗑️ Eliminando categoría:', id);
+            if (confirm('¿Estás seguro de que deseas eliminar esta categoría?')) {
+                fetch(`/api/categorias/${id}`, {
+                    method: 'DELETE'
+                })
+                .then(response => {
+                    if (response.ok) {
+                        console.log('✅ Categoría eliminada');
+                        cargarCategorias();
+                        cargarCategoriasSelect();
+                        alert('Categoría eliminada exitosamente');
+                    } else {
+                        throw new Error('Error en la respuesta del servidor');
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Error:', error);
+                    alert('Error al eliminar categoría: ' + error.message);
+                });
+            }
+        };
+        
+        // Función global para remover categoría (accesible desde onclick)
+        window.removerCategoria = function(index) {
+            categoriasSeleccionadas.splice(index, 1);
+            actualizarCategoriasChips();
+            console.log('❌ Categoría removida, total:', categoriasSeleccionadas.length);
+        };
+        
+        // Funciones globales para docentes (accesibles desde onclick)
+        window.agregarDocente = function(id, nombre, tableId) {
+            const tabla = document.getElementById(tableId);
+            const tbody = tabla.querySelector('tbody');
+            
+            // Verificar si el docente ya está agregado
+            const tipoSeccion = tableId.includes('formacion') ? 'formacion' : 'curso';
+            const yaAgregado = docentesSeleccionados[tipoSeccion].find(d => d.id === id);
+            
+            if (yaAgregado) {
+                alert('Este docente ya ha sido agregado');
+                return;
+            }
+            
+            // Agregar a la lista de seleccionados
+            docentesSeleccionados[tipoSeccion].push({ id, nombre });
+            
+            // Crear fila en la tabla
+            const fila = document.createElement('tr');
+            fila.innerHTML = `
+                <td>${nombre}</td>
+                <td>
+                    <button type="button" class="btn-remove-docente" onclick="removerDocente('${id}', '${tableId}', this)">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            
+            tbody.appendChild(fila);
+            
+            // Ocultar resultados de búsqueda
+            const resultsDiv = document.querySelector('.search-results[style*="block"]');
+            if (resultsDiv) {
+                resultsDiv.style.display = 'none';
+            }
+            
+            // Limpiar campo de búsqueda
+            const searchInput = tableId.includes('formacion') ? 
+                document.getElementById('docente-search-formacion') : 
+                document.getElementById('docente-search');
+            if (searchInput) {
+                searchInput.value = '';
+            }
+            
+            console.log('✅ Docente agregado:', nombre);
+            
+            // Actualizar campo hidden del formulario
+            actualizarDocentesHidden(tipoSeccion);
+            
+            console.log('✅ Docente seleccionado:', docente);
+        };
+        
+        window.removerDocente = function(id, tableId, button) {
+            const tipoSeccion = tableId.includes('formacion') ? 'formacion' : 'curso';
+            
+            // Remover de la lista
+            docentesSeleccionados[tipoSeccion] = docentesSeleccionados[tipoSeccion].filter(d => d.id !== id);
+            
+            // Remover fila de la tabla
+            const fila = button.closest('tr');
+            fila.remove();
+            
+            // Actualizar campo hidden del formulario
+            actualizarDocentesHidden(tipoSeccion);
+            
+            console.log('❌ Docente removido');
+        };
+        
+        // Función para actualizar campos hidden de docentes
+        function actualizarDocentesHidden(tipoSeccion) {
+            const fieldName = tipoSeccion === 'formacion' ? 'docentesFormacion' : 'docentesCurso';
+            const hiddenField = document.getElementById(fieldName);
+            
+            if (hiddenField && docentesSeleccionados[tipoSeccion]) {
+                const ids = docentesSeleccionados[tipoSeccion].map(d => d.id).join(',');
+                hiddenField.value = ids;
+                console.log(`🔄 Campo ${fieldName} actualizado:`, ids);
+            }
+        }
+
+        // Variables globales para disertantes
+        let disertantesCharla = [];
+        let disertantesSeminario = [];
+
+        // Función global para agregar disertante
+        window.agregarDisertante = function(tipo) {
+            const inputId = tipo === 'charla' ? 'disertantesCharlaInput' : 'disertantesSeminarioInput';
+            const listId = tipo === 'charla' ? 'disertantes-charla-list' : 'disertantes-seminario-list';
+            const hiddenId = tipo === 'charla' ? 'disertantesCharlaHidden' : 'disertantesSeminarioHidden';
+            
+            const input = document.getElementById(inputId);
+            const nombre = input.value.trim();
+            
+            if (!nombre) {
+                alert('Por favor ingrese el nombre del disertante');
+                return;
+            }
+            
+            // Verificar si ya existe
+            const listaActual = tipo === 'charla' ? disertantesCharla : disertantesSeminario;
+            if (listaActual.includes(nombre)) {
+                alert('Este disertante ya ha sido agregado');
+                return;
+            }
+            
+            // Agregar a la lista
+            if (tipo === 'charla') {
+                disertantesCharla.push(nombre);
+            } else {
+                disertantesSeminario.push(nombre);
+            }
+            
+            // Actualizar la visualización
+            actualizarDisertantesChips(tipo);
+            
+            // Limpiar el input
+            input.value = '';
+            
+            console.log('✅ Disertante agregado:', nombre);
+        };
+
+        // Función para actualizar los chips de disertantes
+        function actualizarDisertantesChips(tipo) {
+            const listId = tipo === 'charla' ? 'disertantes-charla-list' : 'disertantes-seminario-list';
+            const hiddenId = tipo === 'charla' ? 'disertantesCharlaHidden' : 'disertantesSeminarioHidden';
+            const lista = tipo === 'charla' ? disertantesCharla : disertantesSeminario;
+            
+            const container = document.getElementById(listId);
+            const hiddenInput = document.getElementById(hiddenId);
+            
+            if (!container || !hiddenInput) {
+                console.error('❌ Elementos no encontrados para tipo:', tipo);
+                return;
+            }
+            
+            // Limpiar contenedor
+            container.innerHTML = '';
+            
+            // Crear chips
+            lista.forEach((nombre, index) => {
+                const chip = document.createElement('span');
+                chip.className = 'categoria-chip';
+                chip.innerHTML = `
+                    ${nombre}
+                    <button type="button" class="remove-chip" onclick="removerDisertante(${index}, '${tipo}')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                container.appendChild(chip);
+            });
+            
+            // Actualizar input hidden
+            hiddenInput.value = lista.join(',');
+            
+            console.log(`🔄 Chips actualizados para ${tipo}:`, lista.length);
+        }
+
+        // Función global para remover disertante
+        window.removerDisertante = function(index, tipo) {
+            if (tipo === 'charla') {
+                disertantesCharla.splice(index, 1);
+            } else {
+                disertantesSeminario.splice(index, 1);
+            }
+            
+            actualizarDisertantesChips(tipo);
+            console.log('❌ Disertante removido');
+        };
+
+        // ================= GESTIÓN DE HORARIOS =================
+        
+        // Variable global para horarios
+        let horariosSeleccionados = [];
+        
+        // Función global para agregar horario
+        window.agregarHorario = function() {
+            const dia = document.getElementById('dia-horario').value;
+            const horaInicio = document.getElementById('hora-inicio').value;
+            const horaFin = document.getElementById('hora-fin').value;
+            
+            // Validaciones
+            if (!dia) {
+                alert('Por favor seleccione un día');
+                return;
+            }
+            
+            if (!horaInicio || !horaFin) {
+                alert('Por favor complete las horas de inicio y fin');
+                return;
+            }
+            
+            if (horaInicio >= horaFin) {
+                alert('La hora de inicio debe ser anterior a la hora de fin');
+                return;
+            }
+            
+            // Verificar conflictos de horario
+            const conflicto = horariosSeleccionados.find(h => 
+                h.dia === dia && 
+                ((horaInicio >= h.horaInicio && horaInicio < h.horaFin) ||
+                 (horaFin > h.horaInicio && horaFin <= h.horaFin) ||
+                 (horaInicio <= h.horaInicio && horaFin >= h.horaFin))
+            );
+            
+            if (conflicto) {
+                alert('Existe un conflicto de horario en el mismo día');
+                return;
+            }
+            
+            // Crear objeto horario
+            const horario = {
+                dia: dia,
+                horaInicio: horaInicio,
+                horaFin: horaFin
+            };
+            
+            // Agregar a la lista
+            horariosSeleccionados.push(horario);
+            
+            // Actualizar visualización
+            actualizarHorariosChips();
+            
+            // Limpiar formulario
+            document.getElementById('dia-horario').value = '';
+            document.getElementById('hora-inicio').value = '';
+            document.getElementById('hora-fin').value = '';
+            
+            console.log('✅ Horario agregado:', horario);
+        };
+        
+        // Función para actualizar chips de horarios
+        function actualizarHorariosChips() {
+            const container = document.getElementById('lista-horarios');
+            const hiddenInput = document.getElementById('horarios');
+            
+            // Limpiar contenedor
+            container.innerHTML = '';
+            
+            if (horariosSeleccionados.length === 0) {
+                container.innerHTML = '<p class="no-horarios">No hay horarios programados</p>';
+                hiddenInput.value = '';
+                return;
+            }
+            
+            // Crear chips para cada horario
+            horariosSeleccionados.forEach((horario, index) => {
+                const chip = document.createElement('div');
+                chip.className = 'horario-chip';
+                chip.innerHTML = `
+                    <div class="horario-info">
+                        <strong>${horario.dia}</strong><br>
+                        ${horario.horaInicio} - ${horario.horaFin}
+                    </div>
+                    <button type="button" class="remove-horario" onclick="removerHorario(${index})">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                container.appendChild(chip);
+            });
+            
+            // Actualizar input hidden con JSON
+            hiddenInput.value = JSON.stringify(horariosSeleccionados);
+            
+            console.log('🔄 Horarios actualizados:', horariosSeleccionados.length);
+        }
+        
+        // Función global para remover horario
+        window.removerHorario = function(index) {
+            horariosSeleccionados.splice(index, 1);
+            actualizarHorariosChips();
+            console.log('❌ Horario removido');
+        };
+        
+        // ================= VALIDACIÓN Y ENVÍO DEL FORMULARIO =================
+        
+        // Función para validar formulario
+        function validarFormulario(tipoOferta) {
+            const titulo = document.getElementById('nombre').value.trim();
+            const descripcion = document.getElementById('descripcion').value.trim();
+            
+            if (!titulo || !descripcion) {
+                mostrarNotificacion('❌ Por favor complete el título y la descripción', 'error');
+                return false;
+            }
+            
+            // Validación de fechas obligatorias
+            const fechaInicio = document.getElementById('fechaInicio').value;
+            const fechaFin = document.getElementById('fechaFin').value;
+            
+            if (!fechaInicio) {
+                mostrarNotificacion('❌ Por favor seleccione la fecha de inicio', 'error');
+                return false;
+            }
+            
+            if (!fechaFin) {
+                mostrarNotificacion('❌ Por favor seleccione la fecha de fin', 'error');
+                return false;
+            }
+            
+            // Validar que la fecha de inicio no sea posterior a la fecha de fin
+            if (new Date(fechaInicio) > new Date(fechaFin)) {
+                mostrarNotificacion('❌ La fecha de inicio no puede ser posterior a la fecha de fin', 'error');
+                return false;
+            }
+            
+            // Validaciones específicas según tipo
+            switch(tipoOferta) {
+                case 'CURSO':
+                case 'FORMACION':
+                    if (horariosSeleccionados.length === 0) {
+                        mostrarNotificacion('❌ Por favor agregue al menos un horario', 'error');
+                        return false;
+                    }
+                    const tipoDocente = tipoOferta === 'CURSO' ? 'curso' : 'formacion';
+                    if (!docentesSeleccionados[tipoDocente] || docentesSeleccionados[tipoDocente].length === 0) {
+                        mostrarNotificacion('❌ Por favor seleccione al menos un docente', 'error');
+                        return false;
+                    }
+                    break;
+                    
+                case 'CHARLA':
+                    if (disertantesCharla.length === 0) {
+                        mostrarNotificacion('❌ Por favor agregue al menos un disertante', 'error');
+                        return false;
+                    }
+                    break;
+                    
+                case 'SEMINARIO':
+                    if (disertantesSeminario.length === 0) {
+                        mostrarNotificacion('❌ Por favor agregue al menos un disertante', 'error');
+                        return false;
+                    }
+                    break;
+            }
+            
+            return true;
+        }
+        
+        // ================= ENVÍO AJAX Y NOTIFICACIONES =================
+        
+        // Función para enviar formulario con AJAX
+        function enviarFormularioAjax() {
+            console.log('🚀 Iniciando envío AJAX');
+            
+            const formulario = document.getElementById('oferta-form');
+            const formData = new FormData(formulario);
+            
+            // Debug: mostrar datos del formulario
+            console.log('📋 Datos del formulario:');
+            for (let [key, value] of formData.entries()) {
+                console.log(`  ${key}: ${value}`);
+            }
+            
+            // Mostrar loading en el botón
+            const btnSubmit = formulario.querySelector('button[type="submit"]');
+            const textoOriginal = btnSubmit.innerHTML;
+            btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registrando...';
+            btnSubmit.disabled = true;
+            
+            console.log('📡 Enviando request a /admin/ofertas/registrar');
+            
+            fetch('/admin/ofertas/registrar', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                console.log('📥 Respuesta recibida:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('📊 Datos de respuesta:', data);
+                
+                if (data.success) {
+                    console.log('✅ Registro exitoso');
+                    // Mostrar notificación de éxito
+                    mostrarNotificacion('✅ ' + data.message, 'success');
+                    
+                    // Limpiar formulario
+                    limpiarFormularioCompleto();
+                    
+                    // Cerrar formulario después de un momento
+                    setTimeout(() => {
+                        cerrarFormulario();
+                    }, 1500);
+                    
+                    // Actualizar tabla de ofertas
+                    actualizarTablaOfertas();
+                    
+                } else {
+                    console.log('❌ Error en registro:', data.message);
+                    mostrarNotificacion('❌ ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('❌ Error en fetch:', error);
+                mostrarNotificacion('❌ Error al registrar la oferta. Inténtelo nuevamente.', 'error');
+            })
+            .finally(() => {
+                // Restaurar botón
+                btnSubmit.innerHTML = textoOriginal;
+                btnSubmit.disabled = false;
+            });
+        }
+        
+        // Función para mostrar notificaciones
+        function mostrarNotificacion(mensaje, tipo = 'success') {
+            const notificationArea = document.getElementById('notification-area');
+            const notification = document.getElementById('notification');
+            const notificationIcon = document.getElementById('notification-icon');
+            const notificationMessage = document.getElementById('notification-message');
+            
+            // Configurar icono según tipo
+            let iconClass = 'fas fa-check-circle';
+            if (tipo === 'error') {
+                iconClass = 'fas fa-exclamation-circle';
+            } else if (tipo === 'warning') {
+                iconClass = 'fas fa-exclamation-triangle';
+            }
+            
+            notificationIcon.className = iconClass;
+            notificationMessage.textContent = mensaje;
+            
+            // Limpiar clases anteriores y agregar nueva
+            notification.className = `notification notification-${tipo}`;
+            
+            // Mostrar notificación
+            notificationArea.style.display = 'block';
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 10);
+            
+            // Auto-ocultar después de 5 segundos
+            setTimeout(() => {
+                ocultarNotificacion();
+            }, 5000);
+        }
+        
+        // Función para ocultar notificación
+        function ocultarNotificacion() {
+            const notificationArea = document.getElementById('notification-area');
+            const notification = document.getElementById('notification');
+            
+            notification.classList.remove('show');
+            setTimeout(() => {
+                notificationArea.style.display = 'none';
+            }, 300);
+        }
+        
+        // Función para limpiar formulario completo
+        function limpiarFormularioCompleto() {
+            const formulario = document.getElementById('oferta-form');
+            formulario.reset();
+            
+            // Limpiar datos específicos
+            limpiarDatosFormulario();
+            
+            // Ocultar todas las secciones específicas
+            const seccionesEspecificas = document.querySelectorAll('.tipo-specific');
+            seccionesEspecificas.forEach(seccion => {
+                seccion.style.display = 'none';
+            });
+            
+            // Ocultar sección de horarios
+            const seccionHorarios = document.getElementById('seccion-horarios');
+            if (seccionHorarios) {
+                seccionHorarios.style.display = 'none';
+            }
+            
+            console.log('🧹 Formulario limpiado completamente');
+        }
+        
+        // Función para cerrar formulario
+        function cerrarFormulario() {
+            const formContainer = document.getElementById('form-container');
+            if (formContainer) {
+                formContainer.classList.remove('show');
+                setTimeout(() => {
+                    formContainer.style.display = 'none';
+                }, 500);
+            }
+        }
+        
+        // Función para actualizar tabla de ofertas
+        function actualizarTablaOfertas() {
+            console.log('📊 Actualizando tabla de ofertas...');
+            fetch('/admin/ofertas/listar')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('📥 Respuesta del servidor:', data);
+                    if (data.success && data.data) {
+                        actualizarTablaConDatos(data.data);
+                        actualizarContadorOfertas(data.data.length);
+                        console.log('✅ Tabla actualizada con', data.data.length, 'ofertas');
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Error al actualizar tabla:', error);
+                });
+        }
+        
+        // Función para actualizar tabla con nuevos datos
+        function actualizarTablaConDatos(ofertas) {
+            console.log('🔄 Actualizando tabla con', ofertas.length, 'ofertas');
+            const tbody = document.querySelector('#ofertas-table tbody');
+            if (!tbody) {
+                console.log('❌ No se encontró tbody de la tabla');
+                return;
+            }
+            
+            tbody.innerHTML = '';
+            
+            if (ofertas.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            <i class="fas fa-inbox fa-2x mb-2"></i><br>
+                            No hay ofertas académicas registradas
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            ofertas.forEach((oferta, index) => {
+                console.log(`📋 Procesando oferta ${index + 1}:`, oferta.nombre);
+                const fila = document.createElement('tr');
+                fila.innerHTML = `
+                    <td>${oferta.nombre || '-'}</td>
+                    <td>${oferta.tipoOferta || '-'}</td>
+                    <td>${oferta.modalidad || '-'}</td>
+                    <td class="cupos-cell">
+                        ${oferta.cupos ? 
+                            `<span class="cupos-disponibles">${oferta.cupos}</span>` : 
+                            '<span class="cupos-ilimitados">∞</span>'
+                        }
+                    </td>
+                    <td>${oferta.fechaInicio ? formatearFecha(oferta.fechaInicio) : '-'}</td>
+                    <td>${oferta.fechaFin ? formatearFecha(oferta.fechaFin) : '-'}</td>
+                    <td><span class="estado-badge">${oferta.estado || 'ACTIVA'}</span></td>
+                    <td class="acciones-cell">
+                        <button class="btn-accion btn-ver" title="Ver información" data-id="${oferta.idOferta}" onclick="verOferta(this)">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn-accion btn-modificar" title="Modificar" data-id="${oferta.idOferta}" onclick="modificarOferta(this)">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(fila);
+            });
+        }
+        
+        // Función para formatear fecha
+        function formatearFecha(fechaString) {
+            try {
+                const fecha = new Date(fechaString);
+                return fecha.toLocaleDateString('es-ES');
+            } catch (e) {
+                return fechaString;
+            }
+        }
+        
+        // Función para actualizar contador de ofertas
+        function actualizarContadorOfertas(total) {
+            const contador = document.getElementById('total-ofertas');
+            if (contador) {
+                contador.textContent = total;
+            }
+        }
+    </script>
 </main>
 </body>
 </html>
