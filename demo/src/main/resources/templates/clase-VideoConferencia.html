@@ -118,6 +118,20 @@
                     <span>Conectado</span>
                 </div>
             </div>
+            <div th:if="${esDocente}" class="bg-gradient-to-r from-green-500 to-green-600 text-white p-4 mb-4 rounded-lg">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <i class="fas fa-crown text-2xl mr-3"></i>
+                        <div>
+                            <h3 class="font-bold text-lg">Eres el Moderador de esta clase</h3>
+                            <p class="text-green-100">Los alumnos podrán unirse automáticamente</p>
+                        </div>
+                    </div>
+                    <div class="bg-white text-green-600 px-3 py-1 rounded-full font-bold">
+                        MODERADOR
+                    </div>
+                </div>
+            </div>
             
             <!-- Iframe de la videoconferencia -->
             <div class="video-container mb-6">
@@ -163,6 +177,194 @@
             </a>
         </div>
     </div>
+
+    <script th:if="${esDocente}">
+        document.addEventListener('DOMContentLoaded', function() {
+            const panelDocente = document.getElementById('panelDocente');
+            const btnPermitir = document.getElementById('btnPermitirAlumnos');
+            const statusDiv = document.getElementById('confirmacionStatus');
+            const claseId = '[[${clase.idClase}]]';
+            let alumnosPermitidos = false;
+            let docenteEnReunion = false;
+            
+            console.log('🎯 Inicializando detección de join del docente');
+    
+            // ✅ DETECCIÓN INTELIGENTE DE CUANDO EL DOCENTE SE UNE
+            function detectarJoinDeDocente() {
+                const iframe = document.querySelector('iframe');
+                if (!iframe) {
+                    console.log('❌ No se encontró el iframe de Jitsi');
+                    return;
+                }
+    
+                // 1. Detectar cuando el iframe esté completamente cargado
+                iframe.addEventListener('load', function() {
+                    console.log('🔄 Iframe de Jitsi cargado, iniciando detección...');
+                    
+                    // 2. Esperar a que Jitsi esté listo
+                    setTimeout(() => {
+                        iniciarDeteccionInteraccion();
+                    }, 2000);
+                });
+    
+                // 3. Si el iframe ya está cargado
+                if (iframe.contentDocument || iframe.contentWindow) {
+                    console.log('⚡ Iframe ya cargado, iniciando detección inmediata');
+                    iniciarDeteccionInteraccion();
+                }
+            }
+    
+            function iniciarDeteccionInteraccion() {
+                console.log('🔍 Iniciando detección de interacción del docente...');
+                
+                let interaccionesDetectadas = 0;
+                const interaccionesNecesarias = 2; // Requerir múltiples interacciones
+    
+                // Detectar clicks en toda la página (incluido el iframe)
+                document.addEventListener('click', function() {
+                    interaccionesDetectadas++;
+                    console.log(`🎯 Interacción detectada (${interaccionesDetectadas}/${interaccionesNecesarias})`);
+                    
+                    if (interaccionesDetectadas >= interaccionesNecesarias && !docenteEnReunion) {
+                        docenteSeUnio();
+                    }
+                });
+    
+                // Detectar teclas presionadas
+                document.addEventListener('keydown', function() {
+                    interaccionesDetectadas++;
+                    console.log(`⌨️ Tecla presionada (${interaccionesDetectadas}/${interaccionesNecesarias})`);
+                    
+                    if (interaccionesDetectadas >= interaccionesNecesarias && !docenteEnReunion) {
+                        docenteSeUnio();
+                    }
+                });
+    
+                // Detectar movimiento del mouse (más sensible)
+                let movimientosMouse = 0;
+                document.addEventListener('mousemove', function() {
+                    movimientosMouse++;
+                    if (movimientosMouse > 10 && !docenteEnReunion) {
+                        interaccionesDetectadas = interaccionesNecesarias; // Forzar detección
+                        docenteSeUnio();
+                    }
+                });
+    
+                // Fallback: Si después de 15 segundos no detectamos interacción, 
+                // asumimos que el docente se unió pero no mostramos el botón inmediatamente
+                setTimeout(() => {
+                    if (!docenteEnReunion) {
+                        console.log('⏰ Fallback: Mostrando panel después de 15 segundos');
+                        mostrarPanelConAdvertencia();
+                    }
+                }, 15000);
+            }
+    
+            function docenteSeUnio() {
+                if (docenteEnReunion) return;
+                
+                docenteEnReunion = true;
+                console.log('✅ Docente detectado en la reunión');
+                
+                // Mostrar el panel con animación
+                panelDocente.classList.remove('hidden');
+                panelDocente.style.animation = 'slideInDown 0.5s ease-out';
+                
+                // Agregar estilos CSS para la animación
+                if (!document.querySelector('#docente-styles')) {
+                    const styles = document.createElement('style');
+                    styles.id = 'docente-styles';
+                    styles.textContent = `
+                        @keyframes slideInDown {
+                            from {
+                                transform: translateY(-20px);
+                                opacity: 0;
+                            }
+                            to {
+                                transform: translateY(0);
+                                opacity: 1;
+                            }
+                        }
+                        .pulse-alert {
+                            animation: pulse 2s infinite;
+                        }
+                        @keyframes pulse {
+                            0% { transform: scale(1); }
+                            50% { transform: scale(1.05); }
+                            100% { transform: scale(1); }
+                        }
+                    `;
+                    document.head.appendChild(styles);
+                }
+            }
+    
+            function mostrarPanelConAdvertencia() {
+                if (docenteEnReunion) return;
+                
+                console.log('⚠️ Mostrando panel con advertencia');
+                panelDocente.classList.remove('hidden');
+                
+                // Cambiar el mensaje para indicar que es una confirmación manual
+                const titulo = panelDocente.querySelector('h2');
+                const descripcion = panelDocente.querySelector('p');
+                
+                if (titulo) titulo.textContent = '⚠️ Confirmar participación';
+                if (descripcion) descripcion.textContent = 'Si ya estás en la reunión, permite que los alumnos se unan';
+                
+                // Hacer que el botón llame más la atención
+                btnPermitir.classList.add('pulse-alert');
+            }
+    
+            // ✅ PERMITIR QUE LOS ALUMNOS SE UNAN
+            btnPermitir.addEventListener('click', function() {
+                if (alumnosPermitidos) return;
+                
+                console.log('🎓 Docente permitiendo entrada de alumnos:', claseId);
+                
+                fetch('/clase/docente-entrar/' + claseId, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error en el servidor: ' + response.status);
+                    }
+                    return response.text();
+                })
+                .then(result => {
+                    console.log('Respuesta del servidor:', result);
+                    if (result === 'OK') {
+                        statusDiv.innerHTML = '<p class="text-green-600 font-bold">✅ ¡Alumnos pueden unirse ahora!</p>';
+                        btnPermitir.disabled = true;
+                        btnPermitir.textContent = '✅ Alumnos permitidos';
+                        btnPermitir.classList.remove('bg-green-600', 'hover:bg-green-700', 'pulse-alert');
+                        btnPermitir.classList.add('bg-gray-400');
+                        alumnosPermitidos = true;
+                        
+                        // Ocultar el panel después de 3 segundos
+                        setTimeout(() => {
+                            panelDocente.style.transition = 'opacity 0.5s ease';
+                            panelDocente.style.opacity = '0';
+                            setTimeout(() => {
+                                panelDocente.style.display = 'none';
+                            }, 500);
+                        }, 3000);
+                    } else {
+                        statusDiv.innerHTML = '<p class="text-red-600">❌ Error: ' + result + '</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    statusDiv.innerHTML = '<p class="text-red-600">❌ Error de conexión: ' + error.message + '</p>';
+                });
+            });
+            
+            // ✅ INICIAR DETECCIÓN
+            detectarJoinDeDocente();
+        });
+    </script>
 
     <script>
         // Ocultar mensaje de carga cuando el iframe se cargue

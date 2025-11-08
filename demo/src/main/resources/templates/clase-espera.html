@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Esperando al docente</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="min-h-screen flex items-center justify-center">
+        <div class="bg-white p-8 rounded-lg shadow-md max-w-md w-full text-center">
+            <!-- Icono de espera -->
+            <div class="text-6xl mb-4">⏳</div>
+            
+            <h1 class="text-2xl font-bold text-gray-800 mb-2">
+                Esperando al docente
+            </h1>
+            
+            <p class="text-gray-600 mb-4">
+                El docente <span th:text="${clase?.docente?.nombre + ' ' + clase?.docente?.apellido}">Docente</span> 
+                aún no se ha unido a la clase 
+                "<span th:text="${clase?.titulo}">Clase</span>".
+            </p>
+            
+            <p class="text-sm text-gray-500 mb-6">
+                Podrás unirte a la videollamada cuando el docente inicie la sesión.
+            </p>
+            
+            <!-- Mostrar error si existe -->
+            <div th:if="${error}" class="mb-4 p-3 bg-red-50 text-red-700 rounded-lg">
+                <span th:text="${error}"></span>
+            </div>
+            
+            <!-- Botón de recargar -->
+            <button onclick="verificarEstado()" 
+                    class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                🔄 Verificar estado
+            </button>
+            
+            <!-- Botón volver -->
+            <a th:href="@{/alumno/aula/} + ${clase?.modulo?.curso?.idOferta}"
+               class="ml-2 bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition-colors">
+                ← Volver al aula
+            </a>
+            
+            <!-- Estado en tiempo real -->
+            <div id="estado" class="mt-4 p-3 bg-blue-50 rounded-lg hidden">
+                <p class="text-blue-800" id="mensajeEstado"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function verificarEstado() {
+            const claseId = '[[${clase.idClase}]]';
+            
+            fetch('/clase/estado/' + claseId)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.docenteEnSala) {
+                        // Redirigir inmediatamente
+                        window.location.href = '/clase/unirse/' + claseId;
+                    }
+                });
+        }
+        
+        // Verificar cada 3 segundos
+        setInterval(verificarEstado, 3000);
+        // Verificar inmediatamente
+        verificarEstado();
+        </script>
+</body>
+</html>

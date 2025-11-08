@@ -27,8 +27,8 @@ public class Inscripciones {
     private Long idInscripcion;
 
     @ManyToOne
-    @JoinColumn(name = "usuario_dni")
-    private Usuario alumno;
+    @JoinColumn(name = "alumno_id")
+    private Alumno alumno;
     
     @ManyToOne
     @JoinColumn(name = "oferta_id")
