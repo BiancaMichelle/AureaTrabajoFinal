@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import com.example.demo.model.Alumno;
 import com.example.demo.model.Inscripciones;
 import com.example.demo.model.OfertaAcademica;
 import com.example.demo.model.Usuario;
@@ -25,4 +26,7 @@ public interface InscripcionRepository extends JpaRepository<Inscripciones, Long
 
     @Query("SELECT i FROM Inscripciones i WHERE i.alumno.dni = :dniAlumno")
     List<Inscripciones> findByAlumnoDni(String dniAlumno);
+
+    List<Inscripciones> findByAlumnoAndOferta(Alumno alumno, OfertaAcademica oferta);
+    
 }

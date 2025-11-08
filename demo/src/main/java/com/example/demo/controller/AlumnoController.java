@@ -24,6 +24,7 @@ import com.example.demo.model.Inscripciones;
 import com.example.demo.model.Modulo;
 import com.example.demo.model.OfertaAcademica;
 import com.example.demo.model.Usuario;
+import com.example.demo.repository.AlumnoRepository;
 import com.example.demo.repository.CursoRepository;
 import com.example.demo.repository.InscripcionRepository;
 import com.example.demo.repository.ModuloRepository;
@@ -42,6 +43,7 @@ public class AlumnoController {
     private final OfertaAcademicaRepository ofertaAcademicaRepository;
     private final InscripcionRepository inscripcionRepository;
     private final UsuarioRepository usuarioRepository;
+    private final AlumnoRepository alumnoRepository;
     private final CursoRepository cursoRepository;
     private final ModuloRepository moduloRepository;
 
@@ -49,36 +51,41 @@ public class AlumnoController {
                           InscripcionRepository inscripcionRepository,
                           UsuarioRepository usuarioRepository,
                           CursoRepository cursoRepository,
-                          ModuloRepository moduloRepository) {
+                          ModuloRepository moduloRepository,
+                          AlumnoRepository alumnoRepository) {
         this.ofertaAcademicaRepository = ofertaAcademicaRepository;
         this.inscripcionRepository = inscripcionRepository;
         this.usuarioRepository = usuarioRepository;
         this.cursoRepository = cursoRepository;
         this.moduloRepository = moduloRepository;
+        this.alumnoRepository = alumnoRepository;
     }
 
     // Inscribirse a una oferta académica
     @PostMapping("/inscribirse/{ofertaId}")
     public String inscribirseAOferta(@PathVariable Long ofertaId,
-                                   Authentication authentication,
-                                   RedirectAttributes redirectAttributes) {
+                                Authentication authentication,
+                                RedirectAttributes redirectAttributes) {
         try {
             String dni = authentication.getName();
-            Usuario alumno = usuarioRepository.findByDni(dni)
-                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+            
+            // ✅ CAMBIO: Buscar ALUMNO, no Usuario
+            Alumno alumno = alumnoRepository.findByDni(dni)
+                    .orElseThrow(() -> new RuntimeException("Alumno no encontrado. Debes estar registrado como alumno para inscribirte."));
             
             OfertaAcademica oferta = ofertaAcademicaRepository.findById(ofertaId)
                     .orElseThrow(() -> new RuntimeException("Oferta no encontrada"));
 
-            // Verificar si ya está inscrito
-            if (inscripcionRepository.findByAlumnoAndOferta(alumno, oferta).isPresent()) {
+            // ✅ CAMBIO: Usar List en lugar de Optional
+            List<Inscripciones> inscripcionesExistentes = inscripcionRepository.findByAlumnoAndOferta(alumno, oferta);
+            if (!inscripcionesExistentes.isEmpty()) {
                 redirectAttributes.addFlashAttribute("error", "Ya estás inscrito en esta oferta");
                 return "redirect:/";
             }
 
             // Crear inscripción
             Inscripciones inscripcion = new Inscripciones();
-            inscripcion.setAlumno(alumno);
+            inscripcion.setAlumno(alumno); // ✅ Ahora es Alumno
             inscripcion.setOferta(oferta);
             inscripcion.setFechaInscripcion(LocalDate.now());
             inscripcion.setEstadoInscripcion(true);

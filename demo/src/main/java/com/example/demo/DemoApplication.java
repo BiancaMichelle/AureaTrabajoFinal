@@ -14,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import com.example.demo.enums.EstadoOferta;
 import com.example.demo.enums.Modalidad;
 import com.example.demo.enums.TipoGenero;
+import com.example.demo.model.Alumno;
 import com.example.demo.model.Categoria;
 import com.example.demo.model.Curso;
 import com.example.demo.model.Docente;
@@ -22,6 +23,7 @@ import com.example.demo.model.Instituto;
 import com.example.demo.model.Modulo;
 import com.example.demo.model.Rol;
 import com.example.demo.model.Usuario;
+import com.example.demo.repository.AlumnoRepository;
 import com.example.demo.repository.CategoriaRepository;
 import com.example.demo.repository.CursoRepository;
 import com.example.demo.repository.DocenteRepository;
@@ -43,6 +45,7 @@ public class DemoApplication implements CommandLineRunner {
     private final InscripcionRepository inscripcionRepository;
     private final CategoriaRepository categoriaRepository;
     private final DocenteRepository docenteRepository;
+    private final AlumnoRepository alumnoRepository;
 
     public DemoApplication(RolRepository roleRepository,
                            UsuarioRepository usuarioRepository,
@@ -51,7 +54,8 @@ public class DemoApplication implements CommandLineRunner {
                            ModuloRepository moduloRepository,
                            InscripcionRepository inscripcionRepository,
                            CategoriaRepository categoriaRepository,
-                           DocenteRepository docenteRepository) {
+                           DocenteRepository docenteRepository,
+                           AlumnoRepository alumnoRepository) {
         this.roleRepository = roleRepository;
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
@@ -60,6 +64,7 @@ public class DemoApplication implements CommandLineRunner {
         this.inscripcionRepository = inscripcionRepository;
         this.categoriaRepository = categoriaRepository;
         this.docenteRepository = docenteRepository;
+        this.alumnoRepository = alumnoRepository;
     }
 
     public static void main(String[] args) {
@@ -122,30 +127,38 @@ public class DemoApplication implements CommandLineRunner {
     crearUsuarioDocente("55555555", "Ana", "Martínez", "ana@demo.com");
 }
 
-private void crearUsuarioAlumno(String dni, String nombre, String apellido, String email) {
-    if (usuarioRepository.findByDni(dni).isEmpty()) {
-        Usuario alumno = new Usuario();
-        alumno.setDni(dni);
-        alumno.setNombre(nombre);
-        alumno.setApellido(apellido);
-        alumno.setFechaNacimiento(LocalDate.of(2000, 1, 1));
-        alumno.setGenero(TipoGenero.MASCULINO);
-        alumno.setCorreo(email);
-        alumno.setNumTelefono("1234567890");
-        alumno.setContraseña(passwordEncoder.encode("123"));
-        alumno.setEstado(true);
-        alumno.setEstadoCuenta(true);
-        
-        // ✅ IMPORTANTE: Crear una NUEVA colección para cada usuario
-        alumno.setRoles(new HashSet<>());
-        
-        Rol rolAlumno = roleRepository.findByNombre("ALUMNO")
-                                     .orElseThrow(() -> new RuntimeException("Rol ALUMNO no encontrado"));
-        alumno.getRoles().add(rolAlumno);
+    private void crearUsuarioAlumno(String dni, String nombre, String apellido, String email) {
+        if (usuarioRepository.findByDni(dni).isEmpty()) {
+            // ✅ Cambiar de Usuario a Alumno
+            Alumno alumno = new Alumno();
+            alumno.setDni(dni);
+            alumno.setNombre(nombre);
+            alumno.setApellido(apellido);
+            alumno.setFechaNacimiento(LocalDate.of(2000, 1, 1));
+            alumno.setGenero(TipoGenero.MASCULINO);
+            alumno.setCorreo(email);
+            alumno.setNumTelefono("1234567890");
+            alumno.setContraseña(passwordEncoder.encode("123"));
+            alumno.setEstado(true);
+            alumno.setEstadoCuenta(true);
+            
+            // ✅ Campos específicos de Alumno
+            alumno.setColegioEgreso("Colegio Nacional");
+            alumno.setAñoEgreso(2020);
+            alumno.setUltimosEstudios("Secundario Completo");
+            
+            // ✅ IMPORTANTE: Crear una NUEVA colección para cada usuario
+            alumno.setRoles(new HashSet<>());
+            
+            Rol rolAlumno = roleRepository.findByNombre("ALUMNO")
+                                        .orElseThrow(() -> new RuntimeException("Rol ALUMNO no encontrado"));
+            alumno.getRoles().add(rolAlumno);
 
-        usuarioRepository.save(alumno);
+            // ✅ Guardar como Alumno (esto creará registros en ambas tablas)
+            alumnoRepository.save(alumno);
+            System.out.println("✅ Alumno creado: " + nombre + " " + apellido + " (DNI: " + dni + ")");
+        }
     }
-}
 
         private void crearUsuarioDocente(String dni, String nombre, String apellido, String email) {
             if (usuarioRepository.findByDni(dni).isEmpty()) {
@@ -437,17 +450,18 @@ private void crearUsuarioAlumno(String dni, String nombre, String apellido, Stri
 
 
     private void crearInscripciones() {
-        // Obtener usuarios con rol ALUMNO
-        List<Usuario> usuarios = usuarioRepository.findByRolesNombre("ALUMNO");
+        // ✅ Obtener ALUMNOS, no usuarios
+        List<Alumno> alumnos = alumnoRepository.findAll();
         List<Curso> cursos = cursoRepository.findAll();
     
-        System.out.println("👥 Creando inscripciones para " + usuarios.size() + " alumnos en " + cursos.size() + " cursos");
+        System.out.println("👥 Creando inscripciones para " + alumnos.size() + " alumnos en " + cursos.size() + " cursos");
     
-        for (Usuario usuario : usuarios) {
+        for (Alumno alumno : alumnos) {
             for (Curso curso : cursos) {
-                if (inscripcionRepository.findByAlumnoAndOferta(usuario, curso).isEmpty()) {
+                // ✅ Verificar si ya existe la inscripción para este ALUMNO
+                if (inscripcionRepository.findByAlumnoAndOferta(alumno, curso).isEmpty()) {
                     Inscripciones inscripcion = new Inscripciones();
-                    inscripcion.setAlumno(usuario); // Esto funcionará si cambias la entidad a Usuario
+                    inscripcion.setAlumno(alumno); // ✅ Ahora es Alumno, no Usuario
                     inscripcion.setOferta(curso);
                     inscripcion.setFechaInscripcion(LocalDate.now());
                     inscripcion.setEstadoInscripcion(true);
@@ -456,11 +470,11 @@ private void crearUsuarioAlumno(String dni, String nombre, String apellido, Stri
                     
                     inscripcionRepository.save(inscripcion);
                     
-                    System.out.println("✅ " + usuario.getNombre() + " inscrito en " + curso.getNombre());
+                    System.out.println("✅ " + alumno.getNombre() + " inscrito en " + curso.getNombre());
                 }
             }
         }
         
-        System.out.println("🎉 " + (usuarios.size() * cursos.size()) + " inscripciones creadas exitosamente");
+        System.out.println("🎉 " + (alumnos.size() * cursos.size()) + " inscripciones creadas exitosamente");
     }
 }

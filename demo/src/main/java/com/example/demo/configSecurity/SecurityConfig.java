@@ -47,7 +47,11 @@ public class SecurityConfig {
         http
         .csrf(csrf -> csrf
             .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-            .ignoringRequestMatchers("/api/**")  // ← IGNORAR CSRF para APIs
+            .ignoringRequestMatchers(
+                    "/api/**",
+                    "/clase/docente-entrar/**", 
+                    "/clase/docente/salir/**"    
+                )
         )
         .cors(cors -> cors.configurationSource(corsConfigurationSource()))
         .userDetailsService(usuarioJpaService)
