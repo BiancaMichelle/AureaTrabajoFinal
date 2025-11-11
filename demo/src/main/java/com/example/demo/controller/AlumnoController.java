@@ -20,6 +20,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import com.example.demo.enums.TipoGenero;
 import com.example.demo.model.Alumno;
 import com.example.demo.model.Curso;
+import com.example.demo.model.Formacion;
 import com.example.demo.model.Inscripciones;
 import com.example.demo.model.Modulo;
 import com.example.demo.model.OfertaAcademica;
@@ -107,22 +108,24 @@ public class AlumnoController {
         this.mercadoPagoService = mercadoPagoService;
     }
 
-    // Inscribirse a una oferta académica - Redirige a Mercado Pago
+    // Inscribirse a una oferta académica - Inscripción directa (sin pago)
     @PostMapping("/inscribirse/{ofertaId}")
     public String inscribirseAOferta(@PathVariable Long ofertaId,
                                 Authentication authentication,
                                 RedirectAttributes redirectAttributes) {
         try {
             String dni = authentication.getName();
-            System.out.println("💳 Iniciando proceso de inscripción con pago para oferta: " + ofertaId);
+            System.out.println("� Iniciando proceso de inscripción directa para oferta: " + ofertaId);
             
-            // Buscar el usuario
-            Usuario usuario = usuarioRepository.findByDni(dni)
-                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+            // Buscar el alumno
+            Alumno alumno = alumnoRepository.findByDni(dni)
+                    .orElseThrow(() -> new RuntimeException("Alumno no encontrado"));
             
             // Buscar la oferta
             OfertaAcademica oferta = ofertaAcademicaRepository.findById(ofertaId)
                     .orElseThrow(() -> new RuntimeException("Oferta no encontrada"));
+
+            System.out.println("📚 Oferta encontrada: " + oferta.getNombre() + " (Tipo: " + oferta.getClass().getSimpleName() + ")");
 
             // Verificar si ya está inscrito
             List<Inscripciones> inscripcionesExistentes = inscripcionRepository.findByAlumnoDni(dni);
@@ -134,16 +137,24 @@ public class AlumnoController {
                 return "redirect:/publico";
             }
 
-            // Crear preferencia de pago en Mercado Pago
-            String urlPago = mercadoPagoService.crearPreferenciaPago(usuario, oferta);
+            // ✅ CREAR INSCRIPCIÓN DIRECTA (sin pago de Mercado Pago)
+            Inscripciones nuevaInscripcion = new Inscripciones();
+            nuevaInscripcion.setAlumno(alumno);
+            nuevaInscripcion.setOferta(oferta);
+            nuevaInscripcion.setEstadoInscripcion(true); // Inscripción activa
+            nuevaInscripcion.setFechaInscripcion(LocalDate.now());
             
-            System.out.println("✅ Preferencia creada, redirigiendo a: " + urlPago);
+            inscripcionRepository.save(nuevaInscripcion);
             
-            // Redirigir a la URL de pago de Mercado Pago
-            return "redirect:" + urlPago;
+            System.out.println("✅ Inscripción creada exitosamente para " + alumno.getNombre());
+            
+            redirectAttributes.addFlashAttribute("success", 
+                "¡Te has inscrito exitosamente a " + oferta.getNombre() + "!");
+            
+            return "redirect:/alumno/mis-ofertas";
             
         } catch (Exception e) {
-            System.err.println("❌ Error al crear preferencia de pago: " + e.getMessage());
+            System.err.println("❌ Error al crear inscripción: " + e.getMessage());
             e.printStackTrace();
             redirectAttributes.addFlashAttribute("error", 
                 "Error al procesar la inscripción: " + e.getMessage());
@@ -161,21 +172,25 @@ public class AlumnoController {
             Usuario alumno = usuarioRepository.findByDni(dni)
                     .orElseThrow(() -> new RuntimeException("Alumno no encontrado"));
             
-            // ✅ CORREGIDO: Buscar inscripciones del alumno
+            // ✅ Buscar inscripciones del alumno
             List<Inscripciones> inscripciones = inscripcionRepository.findByAlumnoDni(dni);
             
-            // Extraer los cursos de las inscripciones
-            List<Curso> cursos = inscripciones.stream()
-                    .filter(insc -> insc.getOferta() instanceof Curso)
-                    .map(insc -> (Curso) insc.getOferta())
+            // ✅ Extraer TODAS las ofertas académicas (Cursos Y Formaciones)
+            List<OfertaAcademica> ofertas = inscripciones.stream()
+                    .map(Inscripciones::getOferta)
                     .collect(Collectors.toList());
             
             System.out.println("📊 Inscripciones encontradas: " + inscripciones.size());
-            System.out.println("📊 Cursos encontrados: " + cursos.size());
+            System.out.println("📊 Ofertas académicas: " + ofertas.size());
+            
+            // Debug: mostrar tipos de ofertas
+            for (OfertaAcademica oferta : ofertas) {
+                System.out.println("   - " + oferta.getClass().getSimpleName() + ": " + oferta.getNombre());
+            }
             
             model.addAttribute("alumno", alumno);
-            model.addAttribute("cursos", cursos);
-            model.addAttribute("inscripciones", inscripciones); // Para debug
+            model.addAttribute("cursos", ofertas); // Mantener nombre "cursos" para compatibilidad con vista
+            model.addAttribute("inscripciones", inscripciones);
             
             return "misOfertasAcademicas";
             
@@ -211,24 +226,32 @@ public class AlumnoController {
             OfertaAcademica oferta = inscripcion.getOferta();
             System.out.println("📚 Oferta encontrada: " + oferta.getNombre() + ", tipo: " + oferta.getClass().getSimpleName());
             
-            // Si es un curso, cargar módulos y contenido
-            if (oferta instanceof Curso) {
-                Curso curso = (Curso) oferta;
-                System.out.println("🎓 Es un curso: " + curso.getNombre());
+            // Si es un curso o formación, cargar módulos y contenido
+            if (oferta instanceof Curso || oferta instanceof Formacion) {
+                System.out.println("🎓 Es un curso/formación: " + oferta.getNombre());
                 
-                // Cargar módulos del curso
-                List<Modulo> modulos = moduloRepository.findByCursoOrderByFechaInicioModuloAsc(curso);
+                // Cargar módulos de la oferta
+                List<Modulo> modulos = moduloRepository.findByCursoOrderByFechaInicioModuloAsc(oferta);
                 System.out.println("📦 Módulos encontrados: " + modulos.size());
                 
-                model.addAttribute("curso", curso);
+                model.addAttribute("curso", oferta); // Mantener nombre "curso" para compatibilidad
                 model.addAttribute("modulos", modulos);
                 model.addAttribute("inscripcion", inscripcion);
                 
-                // Verificar permisos de modificación (solo admin o docente del curso)
+                // Verificar permisos de modificación (solo admin o docente de la oferta)
                 boolean puedeModificar = authentication.getAuthorities().stream()
-                        .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN")) ||
-                        (curso.getDocentes() != null && curso.getDocentes().stream()
-                                .anyMatch(docente -> docente.getDni().equals(dni)));
+                        .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
+                
+                // Verificar si es docente según el tipo de oferta
+                if (oferta instanceof Curso) {
+                    Curso curso = (Curso) oferta;
+                    puedeModificar = puedeModificar || (curso.getDocentes() != null && curso.getDocentes().stream()
+                            .anyMatch(docente -> docente.getDni().equals(dni)));
+                } else if (oferta instanceof Formacion) {
+                    Formacion formacion = (Formacion) oferta;
+                    puedeModificar = puedeModificar || (formacion.getDocentes() != null && formacion.getDocentes().stream()
+                            .anyMatch(docente -> docente.getDni().equals(dni)));
+                }
                 
                 model.addAttribute("puedeModificar", puedeModificar);
                 System.out.println("👤 Puede modificar: " + puedeModificar);

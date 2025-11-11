@@ -10,8 +10,10 @@ import org.springframework.stereotype.Service;
 import com.example.demo.model.Clase;
 import com.example.demo.model.Curso;
 import com.example.demo.model.Modulo;
+import com.example.demo.model.OfertaAcademica;
 import com.example.demo.repository.CursoRepository;
 import com.example.demo.repository.ModuloRepository;
+import com.example.demo.repository.OfertaAcademicaRepository;
 
 import jakarta.transaction.Transactional;
 
@@ -20,11 +22,14 @@ import jakarta.transaction.Transactional;
 public class CursoService {
     
     private final CursoRepository cursoRepository;
+    private final OfertaAcademicaRepository ofertaAcademicaRepository;
     private final ModuloRepository moduloRepository;
     
-    public CursoService(CursoRepository cursoRepository, 
+    public CursoService(CursoRepository cursoRepository,
+                       OfertaAcademicaRepository ofertaAcademicaRepository,
                        ModuloRepository moduloRepository) {
         this.cursoRepository = cursoRepository;
+        this.ofertaAcademicaRepository = ofertaAcademicaRepository;
         this.moduloRepository = moduloRepository;
     }
     
@@ -33,16 +38,22 @@ public class CursoService {
                 .orElseThrow(() -> new RuntimeException("Curso no encontrado"));
     }
     
-    public Modulo crearModulo(String nombre, String descripcion, Long cursoId) {
-        Curso curso = obtenerCursoPorId(cursoId);
+    public Modulo crearModulo(String nombre, String descripcion, String objetivos,
+                               LocalDate fechaInicio, LocalDate fechaFin, 
+                               Boolean visibilidad, Long cursoId) {
+        // ✅ Buscar en OfertaAcademicaRepository para soportar Cursos Y Formaciones
+        OfertaAcademica curso = ofertaAcademicaRepository.findById(cursoId)
+                .orElseThrow(() -> new RuntimeException("Oferta académica no encontrada"));
+        
+        System.out.println("📚 Creando módulo para: " + curso.getNombre() + " (Tipo: " + curso.getClass().getSimpleName() + ")");
         
         Modulo modulo = new Modulo();
         modulo.setNombre(nombre);
         modulo.setDescripcion(descripcion);
-        modulo.setFechaInicioModulo(LocalDate.now());
-        modulo.setFechaFinModulo(LocalDate.now().plusDays(30)); // +30 días
-        modulo.setObjetivos("Objetivos del módulo");
-        modulo.setVisibilidad(true);
+        modulo.setFechaInicioModulo(fechaInicio);
+        modulo.setFechaFinModulo(fechaFin);
+        modulo.setObjetivos(objetivos != null && !objetivos.trim().isEmpty() ? objetivos : "Objetivos del módulo");
+        modulo.setVisibilidad(visibilidad != null ? visibilidad : true);
         modulo.setCurso(curso);
         modulo.setClases(new ArrayList<>());
         modulo.setActividades(new ArrayList<>());

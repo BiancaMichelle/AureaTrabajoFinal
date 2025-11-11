@@ -1,5 +1,15 @@
 package com.example.demo.service;
 
+// ===============================================
+// 🔒 SERVICIO DE MERCADO PAGO - COMENTADO TEMPORALMENTE
+// ===============================================
+// Este servicio está desactivado hasta que se active la funcionalidad de pago
+// Para activarlo:
+// 1. Descomentar la anotación @Service abajo
+// 2. Descomentar las configuraciones en application.properties
+// 3. Descomentar las líneas relacionadas en AlumnoController
+// ===============================================
+
 import com.example.demo.enums.EstadoPago;
 import com.example.demo.model.Alumno;
 import com.example.demo.model.Inscripciones;
@@ -33,10 +43,11 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
+// ✅ COMENTADO TEMPORALMENTE - Descomentar cuando se active la funcionalidad de pago
 @Service
 public class MercadoPagoService {
 
-    @Value("${mercadopago.access.token}")
+    @Value("${mercadopago.access.token:}")
     private String accessToken;
 
     private final PagoRepository pagoRepository;

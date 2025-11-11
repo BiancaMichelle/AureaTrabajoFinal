@@ -524,8 +524,8 @@ public class AdminController {
                     break;
                 case "FORMACION":
                     oferta = crearFormacion(nombre, descripcion, cupos, costoInscripcion, fechaInicio, fechaFin, modalidad,
-                                          planFormacion, docentesFormacion, costoCuotaFormacion, costoMoraFormacion, 
-                                          nrCuotasFormacion, diaVencimientoFormacion);
+                                          planFormacion, docentesFormacion, 
+                                          costoCuota, costoMora, nrCuotas, diaVencimiento); // ✅ Usar los mismos parámetros que Curso
                     break;
                 case "CHARLA":
                     oferta = crearCharla(nombre, descripcion, cupos, costoInscripcion, fechaInicio, fechaFin, modalidad,
@@ -574,6 +574,18 @@ public class AdminController {
             
             // Guardar en la base de datos
             OfertaAcademica nuevaOferta = ofertaAcademicaRepository.save(oferta);
+            
+            // ✅ Si es una Formación con docentes, guardar los docentes para persistir la relación ManyToMany
+            if (nuevaOferta instanceof Formacion) {
+                Formacion formacion = (Formacion) nuevaOferta;
+                if (formacion.getDocentes() != null && !formacion.getDocentes().isEmpty()) {
+                    System.out.println("💾 Guardando docentes para persistir relación ManyToMany...");
+                    for (Docente docente : formacion.getDocentes()) {
+                        docenteRepository.save(docente);
+                    }
+                    System.out.println("   ✅ Relación docente-formación guardada");
+                }
+            }
             
             // Asociar horarios si se proporcionaron
             if (horarios != null && !horarios.trim().isEmpty()) {
@@ -630,15 +642,42 @@ public class AdminController {
         
         // Campos específicos de la formación
         formacion.setPlan(plan);
-        if (costoCuota != null) formacion.setCostoCuota(costoCuota);
-        if (costoMora != null) formacion.setCostoMora(costoMora);
-        if (nrCuotas != null) formacion.setNrCuotas(nrCuotas);
-        if (diaVencimiento != null) formacion.setDiaVencimiento(diaVencimiento);
+        
+        // ✅ Asegurar que los valores no sean null
+        formacion.setCostoCuota(costoCuota != null ? costoCuota : 0.0);
+        formacion.setCostoMora(costoMora != null ? costoMora : 0.0);
+        formacion.setNrCuotas(nrCuotas != null ? nrCuotas : 0);
+        formacion.setDiaVencimiento(diaVencimiento != null ? diaVencimiento : 0);
+        
+        System.out.println("🔍 Formación creada con:");
+        System.out.println("   - Costo Cuota: " + formacion.getCostoCuota());
+        System.out.println("   - Costo Mora: " + formacion.getCostoMora());
+        System.out.println("   - Nr Cuotas: " + formacion.getNrCuotas());
+        System.out.println("   - Día Vencimiento: " + formacion.getDiaVencimiento());
         
         // Asociar docentes si se proporcionaron
         if (docentesIds != null && !docentesIds.trim().isEmpty()) {
+            System.out.println("🎓 Asociando docentes: " + docentesIds);
             List<Docente> docentes = obtenerDocentesPorIds(docentesIds);
-            formacion.setDocentes(docentes);
+            
+            if (!docentes.isEmpty()) {
+                // ✅ Configurar relación bidireccional ManyToMany
+                for (Docente docente : docentes) {
+                    // Agregar la formación a la lista del docente (lado propietario)
+                    if (!docente.getFormaciones().contains(formacion)) {
+                        docente.getFormaciones().add(formacion);
+                    }
+                    // Agregar el docente a la lista de la formación (lado inverso)
+                    if (!formacion.getDocentes().contains(docente)) {
+                        formacion.getDocentes().add(docente);
+                    }
+                }
+                System.out.println("   ✅ " + docentes.size() + " docente(s) asociado(s)");
+            } else {
+                System.out.println("   ⚠️ No se encontraron docentes con los IDs proporcionados");
+            }
+        } else {
+            System.out.println("   ℹ️ No se proporcionaron docentes");
         }
         
         return formacion;

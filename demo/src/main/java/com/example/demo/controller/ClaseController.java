@@ -65,7 +65,7 @@ public class ClaseController {
             
             Modulo modulo = moduloRepository.findById(moduloId)
                     .orElseThrow(() -> new RuntimeException("Módulo no encontrado"));
-            Curso curso = modulo.getCurso();
+            com.example.demo.model.OfertaAcademica curso = modulo.getCurso();
             
             System.out.println("✅ Clase Jitsi creada exitosamente");
             

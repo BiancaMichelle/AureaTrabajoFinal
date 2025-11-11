@@ -49,5 +49,5 @@ public class Modulo {
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "curso_id")
-    private Curso curso;
+    private OfertaAcademica curso; // Ahora puede ser Curso, Formación, etc.
 }

@@ -43,7 +43,7 @@ public class Clase {
     
     @ManyToOne
     @JoinColumn(name = "curso_id")
-    private Curso curso;
+    private OfertaAcademica curso; // Puede ser Curso, Formación, etc.
     
     @ManyToOne
     @JoinColumn(name = "docente_dni")

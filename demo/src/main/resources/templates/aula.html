@@ -95,7 +95,7 @@
 
     <!-- Modal para crear módulo -->
     <div id="moduleModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white rounded-lg p-6 w-96">
+        <div class="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <h3 class="text-lg font-semibold mb-4">
                 <i class="fas fa-folder-plus me-2"></i>Crear Nuevo Módulo
             </h3>
@@ -104,15 +104,59 @@
                 <input type="hidden" name="_csrf" th:value="${_csrf.token}">
                 
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700">Nombre del módulo</label>
-                    <input type="text" name="nombre" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2" required>
+                    <label class="block text-sm font-medium text-gray-700">
+                        <i class="fas fa-heading me-1"></i>Nombre del módulo *
+                    </label>
+                    <input type="text" name="nombre" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2" 
+                           placeholder="Ej: Módulo 1: Introducción" required>
                 </div>
+                
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700">Descripción</label>
-                    <textarea name="descripcion" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2" rows="3"></textarea>
+                    <label class="block text-sm font-medium text-gray-700">
+                        <i class="fas fa-align-left me-1"></i>Descripción *
+                    </label>
+                    <textarea name="descripcion" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2" 
+                              rows="3" placeholder="Describe el contenido del módulo..." required></textarea>
                 </div>
-                <div class="flex justify-end space-x-2">
-                    <button type="button" onclick="closeModuleModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800">Cancelar</button>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">
+                        <i class="fas fa-bullseye me-1"></i>Objetivos
+                    </label>
+                    <textarea name="objetivos" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2" 
+                              rows="2" placeholder="Objetivos de aprendizaje del módulo..."></textarea>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">
+                            <i class="fas fa-calendar-alt me-1"></i>Fecha de Inicio *
+                        </label>
+                        <input type="date" name="fechaInicio" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">
+                            <i class="fas fa-calendar-check me-1"></i>Fecha de Fin *
+                        </label>
+                        <input type="date" name="fechaFin" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2" required>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="flex items-center">
+                        <input type="checkbox" name="visibilidad" value="true" checked 
+                               class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                        <span class="ml-2 text-sm font-medium text-gray-700">
+                            <i class="fas fa-eye me-1"></i>Módulo visible para estudiantes
+                        </span>
+                    </label>
+                    <small class="text-gray-500 ml-6">Si está desmarcado, solo los docentes podrán verlo</small>
+                </div>
+                
+                <div class="flex justify-end space-x-2 pt-4 border-t">
+                    <button type="button" onclick="closeModuleModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md">
+                        <i class="fas fa-times me-1"></i>Cancelar
+                    </button>
                     <button type="submit" class="px-4 py-2 bg-customGreen text-white rounded-md hover:bg-green-700">
                         <i class="fas fa-plus me-1"></i>Crear Módulo
                     </button>
