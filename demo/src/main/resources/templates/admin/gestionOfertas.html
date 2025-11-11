@@ -1098,22 +1098,20 @@
             switch(tipoOferta) {
                 case 'CURSO':
                     seccionMostrar = document.getElementById('fields-curso');
-                    // Inicializar búsqueda de docentes para curso
-                    setTimeout(() => {
-                        inicializarBusquedaDocentes('docente-search', 'docente-results', 'docentes-table');
-                    }, 100);
                     // Mostrar horarios para curso
                     seccionHorarios.style.display = 'block';
+                    // Inicializar búsqueda de docentes para curso
+                    console.log('🔍 Inicializando búsqueda para CURSO');
+                    inicializarBusquedaDocentes('docente-search', 'docente-results', 'docentes-table');
                     break;
                     
                 case 'FORMACION':
                     seccionMostrar = document.getElementById('fields-formacion');
-                    // Inicializar búsqueda de docentes para formación
-                    setTimeout(() => {
-                        inicializarBusquedaDocentes('docente-search-formacion', 'docente-results-formacion', 'docentes-table-formacion');
-                    }, 100);
                     // Mostrar horarios para formación
                     seccionHorarios.style.display = 'block';
+                    // Inicializar búsqueda de docentes para formación
+                    console.log('🔍 Inicializando búsqueda para FORMACION');
+                    inicializarBusquedaDocentes('docente-search-formacion', 'docente-results-formacion', 'docentes-table-formacion');
                     break;
                     
                 case 'CHARLA':
@@ -1180,16 +1178,36 @@
             formacion: []
         };
         
+        // Variable para rastrear event listeners ya agregados
+        let docenteSearchListenersAdded = {
+            'docente-search': false,
+            'docente-search-formacion': false
+        };
+        
         // Función para inicializar búsqueda de docentes
         function inicializarBusquedaDocentes(inputId, resultsId, tableId) {
+            console.log('🔧 Inicializando búsqueda de docentes para:', inputId);
+            
             const searchInput = document.getElementById(inputId);
             const resultsDiv = document.getElementById(resultsId);
             
-            if (!searchInput || !resultsDiv) return;
+            if (!searchInput || !resultsDiv) {
+                console.warn('⚠️ No se encontraron elementos:', inputId, resultsId);
+                return;
+            }
+            
+            console.log('✅ Elementos encontrados:', searchInput, resultsDiv);
+            
+            // Evitar agregar múltiples event listeners
+            if (docenteSearchListenersAdded[inputId]) {
+                console.log('⏭️ Event listener ya agregado para:', inputId);
+                return;
+            }
             
             let timeoutId;
             
             searchInput.addEventListener('input', function() {
+                console.log('📝 Input detectado:', this.value);
                 clearTimeout(timeoutId);
                 const query = this.value.trim();
                 
@@ -1209,6 +1227,9 @@
                     resultsDiv.style.display = 'none';
                 }
             });
+            
+            docenteSearchListenersAdded[inputId] = true;
+            console.log('✅ Event listener agregado correctamente para:', inputId);
         }
         
         // Función para buscar docentes
