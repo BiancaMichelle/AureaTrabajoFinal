@@ -73,20 +73,18 @@ public class SecurityConfig {
         )
         .formLogin(form -> form
             .loginPage("/login")
-            .failureUrl("/login?error=true") 
+            .failureUrl("/login?error=true")
             .successHandler((request, response, authentication) -> {
                 var roles = authentication.getAuthorities()
-                                        .stream()
-                                        .map(a -> a.getAuthority())
-                                        .toList();
+                    .stream()
+                    .map(a -> a.getAuthority())
+                    .toList();
+                
+                // Admin va a su dashboard, los demás van a inicio
                 if (roles.contains("ADMIN")) {
                     response.sendRedirect("/admin/dashboard");
-                } else if (roles.contains("ALUMNO")) {
-                    response.sendRedirect("/alumno/dashboard");
-                } else if (roles.contains("DOCENTE")) {
-                    response.sendRedirect("/docente/dashboard");
                 } else {
-                    response.sendRedirect("/");  
+                    response.sendRedirect("/");
                 }
             })
             .permitAll()

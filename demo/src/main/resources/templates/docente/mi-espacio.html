@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Espacio - Docente - Aurea</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .mi-espacio-container {
+            max-width: 1400px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .welcome-section {
+            background: linear-gradient(135deg, #2c5282 0%, #2d3748 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 16px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .welcome-section h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .welcome-section p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 1024px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .calendar-container {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .calendar-header h2 {
+            font-size: 1.5rem;
+            color: #2d3748;
+            margin: 0;
+        }
+
+        .calendar-nav {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .calendar-nav button {
+            background: #f7fafc;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            color: #4a5568;
+        }
+
+        .calendar-nav button:hover {
+            background: #2c5282;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .month-year {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #2d3748;
+            min-width: 150px;
+            text-align: center;
+        }
+
+        .calendar {
+            width: 100%;
+        }
+
+        .calendar-weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .weekday {
+            text-align: center;
+            font-weight: 600;
+            color: #718096;
+            font-size: 0.9rem;
+            padding: 10px 0;
+        }
+
+        .calendar-days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+        }
+
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            position: relative;
+            color: #2d3748;
+            background: #f7fafc;
+        }
+
+        .calendar-day:hover {
+            background: #e2e8f0;
+            transform: scale(1.05);
+        }
+
+        .calendar-day.today {
+            background: #2c5282;
+            color: white;
+            font-weight: 700;
+            box-shadow: 0 4px 12px rgba(44, 82, 130, 0.4);
+        }
+
+        .calendar-day.other-month {
+            color: #cbd5e0;
+            background: transparent;
+        }
+
+        .calendar-day.has-event::after {
+            content: '';
+            position: absolute;
+            bottom: 5px;
+            width: 6px;
+            height: 6px;
+            background: #f56565;
+            border-radius: 50%;
+        }
+
+        .calendar-day.today.has-event::after {
+            background: white;
+        }
+
+        .sidebar-panels {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .panel-header i {
+            font-size: 1.5rem;
+            color: #2c5282;
+        }
+
+        .panel-header h3 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: #2d3748;
+        }
+
+        .event-item {
+            padding: 15px;
+            background: #f7fafc;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            border-left: 4px solid #2c5282;
+            transition: all 0.3s ease;
+        }
+
+        .event-item:hover {
+            background: #edf2f7;
+            transform: translateX(5px);
+        }
+
+        .event-item.urgent {
+            border-left-color: #f56565;
+        }
+
+        .event-time {
+            font-size: 0.85rem;
+            color: #718096;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .event-title {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 4px;
+        }
+
+        .event-description {
+            font-size: 0.9rem;
+            color: #718096;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        }
+
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+        }
+
+        .stat-icon.blue {
+            background: #e6f2ff;
+            color: #2c5282;
+        }
+
+        .stat-icon.green {
+            background: #e6f9f0;
+            color: #48bb78;
+        }
+
+        .stat-icon.orange {
+            background: #fff3e6;
+            color: #ed8936;
+        }
+
+        .stat-content h4 {
+            margin: 0 0 5px 0;
+            color: #718096;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .stat-content p {
+            margin: 0;
+            font-size: 2rem;
+            font-weight: 700;
+            color: #2d3748;
+        }
+    </style>
+</head>
+
+<div layout:fragment="content">
+    <div class="mi-espacio-container">
+        <div class="welcome-section">
+            <h1>
+                <i class="fas fa-chalkboard-teacher"></i> 
+                ¡Hola, Profesor(a) <span th:text="${docente.nombre}">Docente</span>!
+            </h1>
+            <p>Bienvenido a tu espacio. Gestiona tus clases, horarios y actividades.</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon blue">
+                    <i class="fas fa-book-open"></i>
+                </div>
+                <div class="stat-content">
+                    <h4>Cursos Activos</h4>
+                    <p>4</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon green">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-content">
+                    <h4>Total Alumnos</h4>
+                    <p>87</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon orange">
+                    <i class="fas fa-clipboard-list"></i>
+                </div>
+                <div class="stat-content">
+                    <h4>Entregas Pendientes</h4>
+                    <p>15</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="calendar-container">
+                <div class="calendar-header">
+                    <h2><i class="fas fa-calendar-alt"></i> Mi Calendario</h2>
+                    <div class="calendar-nav">
+                        <button id="prevMonth" title="Mes anterior">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <span class="month-year" id="monthYear"></span>
+                        <button id="nextMonth" title="Mes siguiente">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                        <button id="todayBtn" title="Ir a hoy" style="width: auto; padding: 0 20px;">
+                            <i class="fas fa-calendar-day"></i> Hoy
+                        </button>
+                    </div>
+                </div>
+
+                <div class="calendar">
+                    <div class="calendar-weekdays">
+                        <div class="weekday">Dom</div>
+                        <div class="weekday">Lun</div>
+                        <div class="weekday">Mar</div>
+                        <div class="weekday">Mié</div>
+                        <div class="weekday">Jue</div>
+                        <div class="weekday">Vie</div>
+                        <div class="weekday">Sáb</div>
+                    </div>
+                    <div class="calendar-days" id="calendarDays"></div>
+                </div>
+            </div>
+
+            <div class="sidebar-panels">
+                <div class="panel">
+                    <div class="panel-header">
+                        <i class="fas fa-clock"></i>
+                        <h3>Próximas Clases</h3>
+                    </div>
+                    <div>
+                        <div class="event-item urgent">
+                            <div class="event-time">
+                                <i class="fas fa-clock"></i>
+                                Hoy, 14:00
+                            </div>
+                            <div class="event-title">Programación Web</div>
+                            <div class="event-description">Módulo 5: APIs REST</div>
+                        </div>
+
+                        <div class="event-item">
+                            <div class="event-time">
+                                <i class="fas fa-clock"></i>
+                                Mañana, 10:00
+                            </div>
+                            <div class="event-title">Base de Datos</div>
+                            <div class="event-description">Examen Parcial</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <i class="fas fa-tasks"></i>
+                        <h3>Tareas por Revisar</h3>
+                    </div>
+                    <div>
+                        <div class="event-item urgent">
+                            <div class="event-title">15 entregas pendientes</div>
+                            <div class="event-description">Proyecto Final - Programación Web</div>
+                        </div>
+
+                        <div class="event-item">
+                            <div class="event-title">8 entregas pendientes</div>
+                            <div class="event-description">Ejercicios SQL - Base de Datos</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentDate = new Date();
+        const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                          'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+        const events = {
+            '2025-11-10': [{ title: 'Clase Programación Web', type: 'urgent' }],
+            '2025-11-11': [{ title: 'Examen Parcial', type: 'important' }],
+            '2025-11-15': [{ title: 'Reunión Departamento', type: 'normal' }]
+        };
+
+        function renderCalendar() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            
+            document.getElementById('monthYear').textContent = `${monthNames[month]} ${year}`;
+            
+            const firstDay = new Date(year, month, 1).getDay();
+            const lastDate = new Date(year, month + 1, 0).getDate();
+            const prevLastDate = new Date(year, month, 0).getDate();
+            
+            const calendarDays = document.getElementById('calendarDays');
+            calendarDays.innerHTML = '';
+            
+            for (let i = firstDay; i > 0; i--) {
+                const day = document.createElement('div');
+                day.className = 'calendar-day other-month';
+                day.textContent = prevLastDate - i + 1;
+                calendarDays.appendChild(day);
+            }
+            
+            const today = new Date();
+            for (let i = 1; i <= lastDate; i++) {
+                const day = document.createElement('div');
+                day.className = 'calendar-day';
+                day.textContent = i;
+                
+                if (i === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
+                    day.classList.add('today');
+                }
+                
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                if (events[dateStr]) {
+                    day.classList.add('has-event');
+                }
+                
+                day.addEventListener('click', () => {
+                    console.log(`Día seleccionado: ${i}/${month + 1}/${year}`);
+                });
+                
+                calendarDays.appendChild(day);
+            }
+            
+            const remainingDays = 42 - (firstDay + lastDate);
+            for (let i = 1; i <= remainingDays; i++) {
+                const day = document.createElement('div');
+                day.className = 'calendar-day other-month';
+                day.textContent = i;
+                calendarDays.appendChild(day);
+            }
+        }
+
+        document.getElementById('prevMonth').addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            renderCalendar();
+        });
+
+        document.getElementById('nextMonth').addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            renderCalendar();
+        });
+
+        document.getElementById('todayBtn').addEventListener('click', () => {
+            currentDate = new Date();
+            renderCalendar();
+        });
+
+        renderCalendar();
+    </script>
+</div>
+</html>

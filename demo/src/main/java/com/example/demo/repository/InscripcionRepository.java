@@ -27,6 +27,9 @@ public interface InscripcionRepository extends JpaRepository<Inscripciones, Long
     @Query("SELECT i FROM Inscripciones i WHERE i.alumno.dni = :dniAlumno")
     List<Inscripciones> findByAlumnoDni(String dniAlumno);
 
+    @Query("SELECT i FROM Inscripciones i WHERE i.alumno.dni = :dniAlumno AND i.oferta.idOferta = :idOferta")
+    Optional<Inscripciones> findByAlumnoDniAndOfertaId(String dniAlumno, Long idOferta);
+
     List<Inscripciones> findByAlumnoAndOferta(Alumno alumno, OfertaAcademica oferta);
     
 }

@@ -34,6 +34,48 @@ public class DocenteController {
         this.moduloRepository = moduloRepository;
     }
 
+    // Mi Espacio - Dashboard del docente con calendario
+    @GetMapping("/mi-espacio")
+    public String miEspacio(Principal principal, Model model) {
+        try {
+            String dni = principal.getName();
+            
+            Usuario docente = usuarioRepository.findByDni(dni)
+                    .orElseThrow(() -> new RuntimeException("Docente no encontrado"));
+            
+            model.addAttribute("docente", docente);
+            model.addAttribute("esDocente", true);
+            
+            return "docente/mi-espacio";
+            
+        } catch (Exception e) {
+            System.out.println("❌ Error en mi-espacio (docente): " + e.getMessage());
+            model.addAttribute("error", "Error al cargar tu espacio");
+            return "redirect:/";
+        }
+    }
+    
+    // Mis Pagos
+    @GetMapping("/mis-pagos")
+    public String misPagos(Principal principal, Model model) {
+        try {
+            String dni = principal.getName();
+            
+            Usuario docente = usuarioRepository.findByDni(dni)
+                    .orElseThrow(() -> new RuntimeException("Docente no encontrado"));
+            
+            model.addAttribute("docente", docente);
+            model.addAttribute("esDocente", true);
+            
+            return "docente/mis-pagos";
+            
+        } catch (Exception e) {
+            System.out.println("❌ Error en mis-pagos (docente): " + e.getMessage());
+            model.addAttribute("error", "Error al cargar tus pagos");
+            return "redirect:/";
+        }
+    }
+
     @GetMapping("/mis-ofertas")
     public String misOfertas(Model model, Principal principal) {
         try {

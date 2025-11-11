@@ -39,6 +39,47 @@ public class AlumnoController {
     public String alumnoDashboard() {
         return "publico";
     }
+    
+    // Mi Espacio - Dashboard del alumno con calendario
+    @GetMapping("/mi-espacio")
+    public String miEspacio(Principal principal, Model model) {
+        try {
+            String dni = principal.getName();
+            
+            Usuario alumno = usuarioRepository.findByDni(dni)
+                    .orElseThrow(() -> new RuntimeException("Alumno no encontrado"));
+            
+            model.addAttribute("alumno", alumno);
+            
+            return "alumno/mi-espacio";
+            
+        } catch (Exception e) {
+            System.out.println("❌ Error en mi-espacio: " + e.getMessage());
+            model.addAttribute("error", "Error al cargar tu espacio");
+            return "redirect:/";
+        }
+    }
+    
+    // Mis Pagos
+    @GetMapping("/mis-pagos")
+    public String misPagos(Principal principal, Model model) {
+        try {
+            String dni = principal.getName();
+            
+            Usuario alumno = usuarioRepository.findByDni(dni)
+                    .orElseThrow(() -> new RuntimeException("Alumno no encontrado"));
+            
+            model.addAttribute("alumno", alumno);
+            // Aquí cargarías los pagos del alumno
+            
+            return "alumno/mis-pagos";
+            
+        } catch (Exception e) {
+            System.out.println("❌ Error en mis-pagos: " + e.getMessage());
+            model.addAttribute("error", "Error al cargar tus pagos");
+            return "redirect:/";
+        }
+    }
 
     private final OfertaAcademicaRepository ofertaAcademicaRepository;
     private final InscripcionRepository inscripcionRepository;
@@ -140,23 +181,19 @@ public class AlumnoController {
         }
     }
 
-    // Acceder al aula de un curso - VERSIÓN CORREGIDA
-    @GetMapping("/aula/{inscripcionId}")
-    public String accederAlAula(@PathVariable Long inscripcionId,
+    @GetMapping("/aula/{ofertaId}")
+    public String accederAlAula(@PathVariable Long ofertaId,
                               Authentication authentication,
                               Model model) {
         try {
             String dni = authentication.getName();
-            System.out.println("🔍 Accediendo al aula para inscripción ID: " + inscripcionId + ", usuario: " + dni);
+            System.out.println("🔍 Accediendo al aula para oferta ID: " + ofertaId + ", usuario: " + dni);
             
-            Inscripciones inscripcion = inscripcionRepository.findById(inscripcionId)
+            // Buscar la inscripción del alumno en esta oferta
+            Inscripciones inscripcion = inscripcionRepository.findByAlumnoDniAndOfertaId(dni, ofertaId)
                     .orElseThrow(() -> new RuntimeException("Inscripción no encontrada"));
 
-            // Verificar que el alumno es el dueño de la inscripción
-            if (!inscripcion.getAlumno().getDni().equals(dni)) {
-                System.out.println("❌ Acceso denegado: el alumno no es dueño de la inscripción");
-                return "redirect:/acceso-denegado";
-            }
+            System.out.println("✅ Inscripción encontrada ID: " + inscripcion.getIdInscripcion());
 
             // Verificar que la inscripción esté activa
             if (!inscripcion.getEstadoInscripcion()) {

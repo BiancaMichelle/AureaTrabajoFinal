@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Espacio - Aurea</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .mi-espacio-container {
+            max-width: 1400px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .welcome-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 16px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .welcome-section h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .welcome-section p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 1024px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .calendar-container {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .calendar-header h2 {
+            font-size: 1.5rem;
+            color: #2d3748;
+            margin: 0;
+        }
+
+        .calendar-nav {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .calendar-nav button {
+            background: #f7fafc;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            color: #4a5568;
+        }
+
+        .calendar-nav button:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .month-year {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #2d3748;
+            min-width: 150px;
+            text-align: center;
+        }
+
+        .calendar {
+            width: 100%;
+        }
+
+        .calendar-weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .weekday {
+            text-align: center;
+            font-weight: 600;
+            color: #718096;
+            font-size: 0.9rem;
+            padding: 10px 0;
+        }
+
+        .calendar-days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+        }
+
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            position: relative;
+            color: #2d3748;
+            background: #f7fafc;
+        }
+
+        .calendar-day:hover {
+            background: #e2e8f0;
+            transform: scale(1.05);
+        }
+
+        .calendar-day.today {
+            background: #667eea;
+            color: white;
+            font-weight: 700;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .calendar-day.other-month {
+            color: #cbd5e0;
+            background: transparent;
+        }
+
+        .calendar-day.has-event::after {
+            content: '';
+            position: absolute;
+            bottom: 5px;
+            width: 6px;
+            height: 6px;
+            background: #f56565;
+            border-radius: 50%;
+        }
+
+        .calendar-day.today.has-event::after {
+            background: white;
+        }
+
+        /* Panel lateral */
+        .sidebar-panels {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .panel-header i {
+            font-size: 1.5rem;
+            color: #667eea;
+        }
+
+        .panel-header h3 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: #2d3748;
+        }
+
+        .event-item {
+            padding: 15px;
+            background: #f7fafc;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            border-left: 4px solid #667eea;
+            transition: all 0.3s ease;
+        }
+
+        .event-item:hover {
+            background: #edf2f7;
+            transform: translateX(5px);
+        }
+
+        .event-item.urgent {
+            border-left-color: #f56565;
+        }
+
+        .event-item.completed {
+            border-left-color: #48bb78;
+            opacity: 0.7;
+        }
+
+        .event-time {
+            font-size: 0.85rem;
+            color: #718096;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .event-title {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 4px;
+        }
+
+        .event-description {
+            font-size: 0.9rem;
+            color: #718096;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        }
+
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+        }
+
+        .stat-icon.blue {
+            background: #e6f0ff;
+            color: #667eea;
+        }
+
+        .stat-icon.green {
+            background: #e6f9f0;
+            color: #48bb78;
+        }
+
+        .stat-icon.orange {
+            background: #fff3e6;
+            color: #ed8936;
+        }
+
+        .stat-icon.red {
+            background: #ffe6e6;
+            color: #f56565;
+        }
+
+        .stat-content h4 {
+            margin: 0 0 5px 0;
+            color: #718096;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .stat-content p {
+            margin: 0;
+            font-size: 2rem;
+            font-weight: 700;
+            color: #2d3748;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #a0aec0;
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        .empty-state p {
+            margin: 0;
+            font-size: 1rem;
+        }
+    </style>
+</head>
+
+<div layout:fragment="content">
+    <div class="mi-espacio-container">
+        <!-- Sección de Bienvenida -->
+        <div class="welcome-section">
+            <h1>
+                <i class="fas fa-hand-sparkles"></i> 
+                ¡Hola, <span th:text="${alumno.nombre}">Estudiante</span>!
+            </h1>
+            <p>Bienvenido a tu espacio personal. Aquí encontrarás tu calendario, tareas y actividades.</p>
+        </div>
+
+        <!-- Tarjetas de Estadísticas -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon blue">
+                    <i class="fas fa-book-open"></i>
+                </div>
+                <div class="stat-content">
+                    <h4>Cursos Activos</h4>
+                    <p>3</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon green">
+                    <i class="fas fa-tasks"></i>
+                </div>
+                <div class="stat-content">
+                    <h4>Tareas Completadas</h4>
+                    <p>12/15</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon orange">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-content">
+                    <h4>Próximas Entregas</h4>
+                    <p>3</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon red">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="stat-content">
+                    <h4>Promedio General</h4>
+                    <p>8.5</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grid Principal: Calendario y Sidebar -->
+        <div class="dashboard-grid">
+            <!-- Calendario -->
+            <div class="calendar-container">
+                <div class="calendar-header">
+                    <h2><i class="fas fa-calendar-alt"></i> Mi Calendario</h2>
+                    <div class="calendar-nav">
+                        <button id="prevMonth" title="Mes anterior">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <span class="month-year" id="monthYear"></span>
+                        <button id="nextMonth" title="Mes siguiente">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                        <button id="todayBtn" title="Ir a hoy" style="width: auto; padding: 0 20px;">
+                            <i class="fas fa-calendar-day"></i> Hoy
+                        </button>
+                    </div>
+                </div>
+
+                <div class="calendar">
+                    <div class="calendar-weekdays">
+                        <div class="weekday">Dom</div>
+                        <div class="weekday">Lun</div>
+                        <div class="weekday">Mar</div>
+                        <div class="weekday">Mié</div>
+                        <div class="weekday">Jue</div>
+                        <div class="weekday">Vie</div>
+                        <div class="weekday">Sáb</div>
+                    </div>
+                    <div class="calendar-days" id="calendarDays">
+                        <!-- Los días se generarán dinámicamente con JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar con Eventos -->
+            <div class="sidebar-panels">
+                <!-- Próximas Actividades -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <i class="fas fa-bell"></i>
+                        <h3>Próximas Actividades</h3>
+                    </div>
+                    <div id="upcomingEvents">
+                        <div class="event-item urgent">
+                            <div class="event-time">
+                                <i class="fas fa-clock"></i>
+                                Hoy, 18:00
+                            </div>
+                            <div class="event-title">Entrega de Proyecto Final</div>
+                            <div class="event-description">Programación Web Avanzada</div>
+                        </div>
+
+                        <div class="event-item">
+                            <div class="event-time">
+                                <i class="fas fa-clock"></i>
+                                Mañana, 10:00
+                            </div>
+                            <div class="event-title">Clase Virtual</div>
+                            <div class="event-description">Base de Datos II</div>
+                        </div>
+
+                        <div class="event-item">
+                            <div class="event-time">
+                                <i class="fas fa-clock"></i>
+                                15 Nov, 15:00
+                            </div>
+                            <div class="event-title">Examen Parcial</div>
+                            <div class="event-description">Desarrollo de Software</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tareas Pendientes -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <i class="fas fa-clipboard-list"></i>
+                        <h3>Tareas Pendientes</h3>
+                    </div>
+                    <div id="pendingTasks">
+                        <div class="event-item urgent">
+                            <div class="event-title">Investigación sobre APIs REST</div>
+                            <div class="event-description">Vence: Hoy</div>
+                        </div>
+
+                        <div class="event-item">
+                            <div class="event-title">Lectura Capítulos 5-7</div>
+                            <div class="event-description">Vence: 12 Nov</div>
+                        </div>
+
+                        <div class="event-item completed">
+                            <div class="event-title">
+                                <i class="fas fa-check-circle"></i> 
+                                Ejercicios de SQL
+                            </div>
+                            <div class="event-description">Completada</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales
+        let currentDate = new Date();
+        const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                          'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+        // Eventos de ejemplo (posteriormente se cargarán desde el backend)
+        const events = {
+            '2025-11-10': [{ title: 'Entrega Proyecto', type: 'urgent' }],
+            '2025-11-11': [{ title: 'Clase Virtual', type: 'normal' }],
+            '2025-11-15': [{ title: 'Examen Parcial', type: 'important' }],
+            '2025-11-20': [{ title: 'Reunión Equipo', type: 'normal' }]
+        };
+
+        // Renderizar calendario
+        function renderCalendar() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            
+            // Actualizar título
+            document.getElementById('monthYear').textContent = `${monthNames[month]} ${year}`;
+            
+            // Primer día del mes
+            const firstDay = new Date(year, month, 1).getDay();
+            
+            // Último día del mes
+            const lastDate = new Date(year, month + 1, 0).getDate();
+            
+            // Último día del mes anterior
+            const prevLastDate = new Date(year, month, 0).getDate();
+            
+            const calendarDays = document.getElementById('calendarDays');
+            calendarDays.innerHTML = '';
+            
+            // Días del mes anterior
+            for (let i = firstDay; i > 0; i--) {
+                const day = document.createElement('div');
+                day.className = 'calendar-day other-month';
+                day.textContent = prevLastDate - i + 1;
+                calendarDays.appendChild(day);
+            }
+            
+            // Días del mes actual
+            const today = new Date();
+            for (let i = 1; i <= lastDate; i++) {
+                const day = document.createElement('div');
+                day.className = 'calendar-day';
+                day.textContent = i;
+                
+                // Marcar día actual
+                if (i === today.getDate() && 
+                    month === today.getMonth() && 
+                    year === today.getFullYear()) {
+                    day.classList.add('today');
+                }
+                
+                // Verificar si hay eventos
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                if (events[dateStr]) {
+                    day.classList.add('has-event');
+                }
+                
+                // Click en día
+                day.addEventListener('click', () => {
+                    console.log(`Día seleccionado: ${i}/${month + 1}/${year}`);
+                    // Aquí puedes mostrar eventos del día seleccionado
+                });
+                
+                calendarDays.appendChild(day);
+            }
+            
+            // Días del siguiente mes
+            const remainingDays = 42 - (firstDay + lastDate);
+            for (let i = 1; i <= remainingDays; i++) {
+                const day = document.createElement('div');
+                day.className = 'calendar-day other-month';
+                day.textContent = i;
+                calendarDays.appendChild(day);
+            }
+        }
+
+        // Navegación del calendario
+        document.getElementById('prevMonth').addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            renderCalendar();
+        });
+
+        document.getElementById('nextMonth').addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            renderCalendar();
+        });
+
+        document.getElementById('todayBtn').addEventListener('click', () => {
+            currentDate = new Date();
+            renderCalendar();
+        });
+
+        // Inicializar calendario
+        renderCalendar();
+    </script>
+</div>
+</html>
