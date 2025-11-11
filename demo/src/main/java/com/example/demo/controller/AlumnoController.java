@@ -30,6 +30,8 @@ import com.example.demo.repository.InscripcionRepository;
 import com.example.demo.repository.ModuloRepository;
 import com.example.demo.repository.OfertaAcademicaRepository;
 import com.example.demo.repository.UsuarioRepository;
+import com.example.demo.service.MercadoPagoService;
+import com.example.demo.repository.UsuarioRepository;
 
 @Controller
 @RequestMapping("/alumno")
@@ -87,62 +89,66 @@ public class AlumnoController {
     private final AlumnoRepository alumnoRepository;
     private final CursoRepository cursoRepository;
     private final ModuloRepository moduloRepository;
+    private final MercadoPagoService mercadoPagoService;
 
     public AlumnoController(OfertaAcademicaRepository ofertaAcademicaRepository,
                           InscripcionRepository inscripcionRepository,
                           UsuarioRepository usuarioRepository,
                           CursoRepository cursoRepository,
                           ModuloRepository moduloRepository,
-                          AlumnoRepository alumnoRepository) {
+                          AlumnoRepository alumnoRepository,
+                          MercadoPagoService mercadoPagoService) {
         this.ofertaAcademicaRepository = ofertaAcademicaRepository;
         this.inscripcionRepository = inscripcionRepository;
         this.usuarioRepository = usuarioRepository;
         this.cursoRepository = cursoRepository;
         this.moduloRepository = moduloRepository;
         this.alumnoRepository = alumnoRepository;
+        this.mercadoPagoService = mercadoPagoService;
     }
 
-    // Inscribirse a una oferta académica
+    // Inscribirse a una oferta académica - Redirige a Mercado Pago
     @PostMapping("/inscribirse/{ofertaId}")
     public String inscribirseAOferta(@PathVariable Long ofertaId,
                                 Authentication authentication,
                                 RedirectAttributes redirectAttributes) {
         try {
             String dni = authentication.getName();
+            System.out.println("💳 Iniciando proceso de inscripción con pago para oferta: " + ofertaId);
             
-            // ✅ CAMBIO: Buscar ALUMNO, no Usuario
-            Alumno alumno = alumnoRepository.findByDni(dni)
-                    .orElseThrow(() -> new RuntimeException("Alumno no encontrado. Debes estar registrado como alumno para inscribirte."));
+            // Buscar el usuario
+            Usuario usuario = usuarioRepository.findByDni(dni)
+                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
             
+            // Buscar la oferta
             OfertaAcademica oferta = ofertaAcademicaRepository.findById(ofertaId)
                     .orElseThrow(() -> new RuntimeException("Oferta no encontrada"));
 
-            // ✅ CAMBIO: Usar List en lugar de Optional
-            List<Inscripciones> inscripcionesExistentes = inscripcionRepository.findByAlumnoAndOferta(alumno, oferta);
-            if (!inscripcionesExistentes.isEmpty()) {
+            // Verificar si ya está inscrito
+            List<Inscripciones> inscripcionesExistentes = inscripcionRepository.findByAlumnoDni(dni);
+            boolean yaInscrito = inscripcionesExistentes.stream()
+                    .anyMatch(ins -> ins.getOferta().getIdOferta().equals(ofertaId));
+            
+            if (yaInscrito) {
                 redirectAttributes.addFlashAttribute("error", "Ya estás inscrito en esta oferta");
-                return "redirect:/";
+                return "redirect:/publico";
             }
 
-            // Crear inscripción
-            Inscripciones inscripcion = new Inscripciones();
-            inscripcion.setAlumno(alumno); // ✅ Ahora es Alumno
-            inscripcion.setOferta(oferta);
-            inscripcion.setFechaInscripcion(LocalDate.now());
-            inscripcion.setEstadoInscripcion(true);
-            inscripcion.setObservaciones("Inscripción realizada desde el portal web");
+            // Crear preferencia de pago en Mercado Pago
+            String urlPago = mercadoPagoService.crearPreferenciaPago(usuario, oferta);
             
-            inscripcionRepository.save(inscripcion);
-
-            redirectAttributes.addFlashAttribute("success", 
-                "¡Inscripción exitosa! Ahora puedes acceder al aula virtual desde 'Mis Ofertas Académicas'");
+            System.out.println("✅ Preferencia creada, redirigiendo a: " + urlPago);
+            
+            // Redirigir a la URL de pago de Mercado Pago
+            return "redirect:" + urlPago;
             
         } catch (Exception e) {
+            System.err.println("❌ Error al crear preferencia de pago: " + e.getMessage());
+            e.printStackTrace();
             redirectAttributes.addFlashAttribute("error", 
-                "Error al realizar la inscripción: " + e.getMessage());
+                "Error al procesar la inscripción: " + e.getMessage());
+            return "redirect:/publico";
         }
-        
-        return "redirect:/";
     }
 
     // Ver mis ofertas académicas (inscripciones)

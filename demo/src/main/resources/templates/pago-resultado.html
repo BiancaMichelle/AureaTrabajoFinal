@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head>
+    <title>Resultado del Pago</title>
+    <style>
+        .resultado-pago {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .icono-resultado {
+            font-size: 80px;
+            margin-bottom: 20px;
+        }
+        
+        .icono-resultado.success {
+            color: #28a745;
+        }
+        
+        .icono-resultado.error {
+            color: #dc3545;
+        }
+        
+        .icono-resultado.warning {
+            color: #ffc107;
+        }
+        
+        .mensaje-pago {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .detalles-pago {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 30px 0;
+            text-align: left;
+        }
+        
+        .detalle-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .detalle-item:last-child {
+            border-bottom: none;
+        }
+        
+        .detalle-label {
+            font-weight: 600;
+            color: #666;
+        }
+        
+        .detalle-valor {
+            color: #333;
+        }
+        
+        .botones-accion {
+            margin-top: 30px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+        
+        .btn-primary-custom {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .btn-primary-custom:hover {
+            transform: translateY(-2px);
+            color: white;
+            text-decoration: none;
+        }
+        
+        .btn-secondary-custom {
+            background: #6c757d;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .btn-secondary-custom:hover {
+            transform: translateY(-2px);
+            color: white;
+            text-decoration: none;
+        }
+
+        .info-adicional {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin-top: 20px;
+            text-align: left;
+            border-radius: 4px;
+        }
+
+        .info-adicional h4 {
+            margin-top: 0;
+            color: #1976D2;
+            font-size: 16px;
+        }
+
+        .info-adicional ul {
+            margin: 10px 0 0 20px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div layout:fragment="content" class="resultado-pago">
+        <!-- Ícono de resultado -->
+        <div class="icono-resultado" th:classappend="${tipo}">
+            <i class="fas" th:classappend="${tipo == 'success' ? 'fa-check-circle' : (tipo == 'error' ? 'fa-times-circle' : 'fa-clock')}"></i>
+        </div>
+
+        <!-- Mensaje principal -->
+        <h1 class="mensaje-pago" th:text="${mensaje}">Mensaje del resultado</h1>
+
+        <!-- Detalles del pago (si están disponibles) -->
+        <div class="detalles-pago" th:if="${pago != null}">
+            <h3 style="margin-top: 0;">Detalles de la Transacción</h3>
+            
+            <div class="detalle-item">
+                <span class="detalle-label">Curso:</span>
+                <span class="detalle-valor" th:text="${oferta?.nombre}">Nombre del curso</span>
+            </div>
+            
+            <div class="detalle-item" th:if="${paymentId != null}">
+                <span class="detalle-label">ID de Pago:</span>
+                <span class="detalle-valor" th:text="${paymentId}">12345678</span>
+            </div>
+            
+            <div class="detalle-item">
+                <span class="detalle-label">Monto:</span>
+                <span class="detalle-valor">
+                    $<span th:text="${#numbers.formatDecimal(pago.monto, 1, 2)}">0.00</span>
+                </span>
+            </div>
+            
+            <div class="detalle-item">
+                <span class="detalle-label">Estado:</span>
+                <span class="detalle-valor">
+                    <span th:if="${pago.estadoPago.toString() == 'COMPLETADO'}" class="badge bg-success">Aprobado</span>
+                    <span th:if="${pago.estadoPago.toString() == 'PENDIENTE'}" class="badge bg-warning">Pendiente</span>
+                    <span th:if="${pago.estadoPago.toString() == 'RECHAZADO'}" class="badge bg-danger">Rechazado</span>
+                </span>
+            </div>
+
+            <div class="detalle-item" th:if="${inscripcion != null}">
+                <span class="detalle-label">Inscripción:</span>
+                <span class="detalle-valor">
+                    <span class="badge bg-success">Activa</span>
+                </span>
+            </div>
+        </div>
+
+        <!-- Información adicional según el tipo de resultado -->
+        <div class="info-adicional" th:if="${tipo == 'success'}">
+            <h4><i class="fas fa-info-circle"></i> Próximos Pasos</h4>
+            <ul>
+                <li>Ya puedes acceder al aula virtual desde "Mis Ofertas Académicas"</li>
+                <li>Recibirás un correo con el comprobante de pago</li>
+                <li>Revisa el calendario de clases en tu panel de alumno</li>
+            </ul>
+        </div>
+
+        <div class="info-adicional" th:if="${tipo == 'warning'}">
+            <h4><i class="fas fa-info-circle"></i> Información</h4>
+            <ul>
+                <li>Tu pago está siendo procesado</li>
+                <li>Recibirás una notificación cuando se apruebe</li>
+                <li>Esto puede tomar algunos minutos</li>
+            </ul>
+        </div>
+
+        <div class="info-adicional" th:if="${tipo == 'error'}">
+            <h4><i class="fas fa-info-circle"></i> ¿Qué puedo hacer?</h4>
+            <ul>
+                <li>Verifica que tu método de pago tenga fondos suficientes</li>
+                <li>Intenta con otro medio de pago</li>
+                <li>Contacta con tu banco si el problema persiste</li>
+            </ul>
+        </div>
+
+        <!-- Botones de acción -->
+        <div class="botones-accion">
+            <a th:if="${tipo == 'success' and inscripcion != null}" 
+               th:href="@{/alumno/aula/{id}(id=${oferta?.idOferta})}" 
+               class="btn-primary-custom">
+                <i class="fas fa-chalkboard-teacher"></i> Ir al Aula Virtual
+            </a>
+            
+            <a th:if="${tipo == 'success'}" 
+               th:href="@{/alumno/mis-ofertas}" 
+               class="btn-secondary-custom">
+                <i class="fas fa-list"></i> Ver Mis Cursos
+            </a>
+            
+            <a th:if="${tipo != 'success'}" 
+               th:href="@{/publico}" 
+               class="btn-primary-custom">
+                <i class="fas fa-home"></i> Volver al Inicio
+            </a>
+            
+            <a th:if="${tipo == 'error'}" 
+               th:href="@{/publico}" 
+               class="btn-secondary-custom">
+                <i class="fas fa-redo"></i> Intentar Nuevamente
+            </a>
+        </div>
+    </div>
+</body>
+</html>

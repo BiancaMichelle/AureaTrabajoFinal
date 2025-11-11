@@ -6,15 +6,7 @@ import java.util.List;
 
 import com.example.demo.enums.EstadoPago;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -34,6 +26,14 @@ public class Pago {
     @JoinColumn(name = "usuario_id")
     private Usuario usuario;
     
+    @ManyToOne
+    @JoinColumn(name = "id_oferta")
+    private OfertaAcademica oferta;
+
+    @OneToOne
+    @JoinColumn(name = "id_inscripcion")
+    private Inscripciones inscripcion;
+    
     private BigDecimal monto;
     private LocalDateTime fechaPago;
     private String metodoPago;
@@ -47,4 +47,51 @@ public class Pago {
     
     @OneToMany(mappedBy = "pago")
     private List<Cuota> cuotas;
+
+    // Campos específicos de Mercado Pago
+    @Column(name = "preference_id")
+    private String preferenceId;
+
+    @Column(name = "payment_id")
+    private Long paymentId;
+
+    @Column(name = "merchant_order_id")
+    private Long merchantOrderId;
+
+    @Column(name = "tipo_pago")
+    private String tipoPago; // credit_card, debit_card, account_money
+
+    @Column(name = "email_pagador")
+    private String emailPagador;
+
+    @Column(name = "nombre_pagador")
+    private String nombrePagador;
+
+    @Column(name = "fecha_aprobacion")
+    private LocalDateTime fechaAprobacion;
+
+    @Column(name = "external_reference")
+    private String externalReference;
+
+    @Column(name = "comprobante_enviado")
+    private Boolean comprobanteEnviado = false;
+
+    @Column(name = "es_cuota_mensual")
+    private Boolean esCuotaMensual = false;
+
+    @Column(name = "numero_cuota")
+    private Integer numeroCuota;
+
+    @PrePersist
+    protected void onCreate() {
+        if (fechaPago == null) {
+            fechaPago = LocalDateTime.now();
+        }
+        if (comprobanteEnviado == null) {
+            comprobanteEnviado = false;
+        }
+        if (esCuotaMensual == null) {
+            esCuotaMensual = false;
+        }
+    }
 }

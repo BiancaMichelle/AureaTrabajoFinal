@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface PagoRepository extends JpaRepository<Pago, Long> {
@@ -28,4 +29,13 @@ public interface PagoRepository extends JpaRepository<Pago, Long> {
     
     @Query("SELECT p FROM Pago p WHERE p.numeroTransaccion = :numeroTransaccion")
     List<Pago> findByNumeroTransaccion(@Param("numeroTransaccion") String numeroTransaccion);
+
+    // Métodos para Mercado Pago
+    Optional<Pago> findByPreferenceId(String preferenceId);
+    
+    Optional<Pago> findByPaymentId(Long paymentId);
+    
+    Optional<Pago> findByExternalReference(String externalReference);
+
+    List<Pago> findByUsuarioDniAndEsCuotaMensualTrue(String dni);
 }

@@ -50,7 +50,8 @@ public class SecurityConfig {
             .ignoringRequestMatchers(
                     "/api/**",
                     "/clase/docente-entrar/**", 
-                    "/clase/docente/salir/**"    
+                    "/clase/docente/salir/**",
+                    "/pago/webhook"
                 )
         )
         .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -64,7 +65,8 @@ public class SecurityConfig {
             "/email/**", "/css/**", "/js/**", "/style/**", "/img/**",
             "/api/**", "/admin/configuracion/carrusel/**", 
             "/crear-admin-temporal", "/forgot-password", "/recuperacion/**",
-            "/api/usuarios/**","/admin/debug-user","/api/categorias/**")
+            "/api/usuarios/**","/admin/debug-user","/api/categorias/**",
+            "/pago/**")
             .permitAll()
             .requestMatchers("/admin/**").hasAuthority("ADMIN")
             .requestMatchers("/alumno/**").hasAuthority("ALUMNO")
