@@ -2,6 +2,9 @@
 <html lang="es" xmlns:th="http://www.thymeleaf.org" layout:decorate="~{layout/base}">
 <head>
     <title th:text="${curso.nombre + ' - Aula del Curso'}">Aula del Curso</title>
+    <!-- CSRF Token -->
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
@@ -471,6 +474,862 @@
             });
         }
 
+        // ========================================
+        // CREAR ACTIVIDAD - Selector de Módulo y Tipo
+        // ========================================
+        const createActivityButton = document.getElementById('createActivityButton');
+        
+        if (createActivityButton) {
+            createActivityButton.addEventListener('click', () => {
+                // Obtener todos los módulos
+                const modulos = document.querySelectorAll('[data-modulo-id]');
+                
+                if (modulos.length > 0) {
+                    // Si hay múltiples módulos, preguntar cuál usar
+                    if (modulos.length === 1) {
+                        // Solo hay un módulo, ir directo a selección de tipo
+                        const moduloId = modulos[0].getAttribute('data-modulo-id');
+                        const moduloNombre = modulos[0].querySelector('h3').textContent;
+                        mostrarSelectorTipoActividad(moduloId, moduloNombre);
+                    } else {
+                        // Hay múltiples módulos, mostrar selector
+                        mostrarSelectorModulosParaActividad(modulos);
+                    }
+                } else {
+                    alert('Primero debes crear un módulo');
+                }
+            });
+        }
+
+        // Función para mostrar selector de módulos para actividad
+        function mostrarSelectorModulosParaActividad(modulos) {
+            const modalHTML = `
+                <div id="moduloActividadSelectorModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div class="bg-white rounded-lg p-6 w-96">
+                        <h3 class="text-lg font-semibold mb-4">
+                            <i class="fas fa-folder me-2 text-customGreen"></i>Seleccionar Módulo
+                        </h3>
+                        <p class="text-gray-600 mb-4">Selecciona en qué módulo quieres crear la actividad:</p>
+                        <div id="moduloActividadList" class="max-h-60 overflow-y-auto mb-4">
+                            ${Array.from(modulos).map(modulo => `
+                                <button class="w-full text-left py-3 px-4 mb-2 rounded-lg border border-gray-200 hover:bg-green-50 hover:border-green-300 transition-colors duration-200 modulo-actividad-option"
+                                        data-modulo-id="${modulo.getAttribute('data-modulo-id')}"
+                                        data-modulo-nombre="${modulo.querySelector('h3').textContent}">
+                                    <i class="fas fa-folder text-gray-400 me-2"></i>
+                                    <strong>${modulo.querySelector('h3').textContent}</strong>
+                                </button>
+                            `).join('')}
+                        </div>
+                        <div class="flex justify-end">
+                            <button type="button" onclick="cerrarSelectorModulosActividad()" class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md">
+                                <i class="fas fa-times me-1"></i>Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            
+            // Agregar event listeners a los botones de módulo
+            document.querySelectorAll('.modulo-actividad-option').forEach(button => {
+                button.addEventListener('click', function() {
+                    const moduloId = this.getAttribute('data-modulo-id');
+                    const moduloNombre = this.getAttribute('data-modulo-nombre');
+                    cerrarSelectorModulosActividad();
+                    mostrarSelectorTipoActividad(moduloId, moduloNombre);
+                });
+            });
+        }
+
+        function cerrarSelectorModulosActividad() {
+            const modal = document.getElementById('moduloActividadSelectorModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        // Función para mostrar selector de tipo de actividad
+        function mostrarSelectorTipoActividad(moduloId, moduloNombre) {
+            const modalHTML = `
+                <div id="tipoActividadModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div class="bg-white rounded-lg p-5 w-full max-w-md">
+                        <h3 class="text-lg font-semibold mb-1">
+                            <i class="fas fa-tasks me-2 text-customGreen"></i>Crear Actividad
+                        </h3>
+                        <p class="text-sm text-gray-500 mb-4">
+                            <i class="fas fa-folder text-gray-400 me-1"></i>${moduloNombre}
+                        </p>
+                        
+                        <div class="grid grid-cols-2 gap-3">
+                            <!-- Opción 1: Crear Tarea -->
+                            <button class="tipo-actividad-btn group p-4 border-2 border-gray-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all duration-200"
+                                    data-tipo="tarea" data-modulo-id="${moduloId}">
+                                <div class="flex flex-col items-center text-center">
+                                    <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-2 group-hover:bg-blue-200 transition-colors">
+                                        <i class="fas fa-file-alt text-2xl text-blue-600"></i>
+                                    </div>
+                                    <h4 class="font-semibold text-sm text-gray-800">Tarea</h4>
+                                </div>
+                            </button>
+                            
+                            <!-- Opción 2: Crear Examen -->
+                            <button class="tipo-actividad-btn group p-4 border-2 border-gray-200 rounded-lg hover:border-purple-400 hover:bg-purple-50 transition-all duration-200"
+                                    data-tipo="examen" data-modulo-id="${moduloId}">
+                                <div class="flex flex-col items-center text-center">
+                                    <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mb-2 group-hover:bg-purple-200 transition-colors">
+                                        <i class="fas fa-clipboard-check text-2xl text-purple-600"></i>
+                                    </div>
+                                    <h4 class="font-semibold text-sm text-gray-800">Examen</h4>
+                                </div>
+                            </button>
+                            
+                            <!-- Opción 3: Crear Carpeta -->
+                            <button class="tipo-actividad-btn group p-4 border-2 border-gray-200 rounded-lg hover:border-yellow-400 hover:bg-yellow-50 transition-all duration-200"
+                                    data-tipo="carpeta" data-modulo-id="${moduloId}">
+                                <div class="flex flex-col items-center text-center">
+                                    <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mb-2 group-hover:bg-yellow-200 transition-colors">
+                                        <i class="fas fa-folder-open text-2xl text-yellow-600"></i>
+                                    </div>
+                                    <h4 class="font-semibold text-sm text-gray-800">Carpeta</h4>
+                                </div>
+                            </button>
+                            
+                            <!-- Opción 4: Subir Material -->
+                            <button class="tipo-actividad-btn group p-4 border-2 border-gray-200 rounded-lg hover:border-green-400 hover:bg-green-50 transition-all duration-200"
+                                    data-tipo="material" data-modulo-id="${moduloId}">
+                                <div class="flex flex-col items-center text-center">
+                                    <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-2 group-hover:bg-green-200 transition-colors">
+                                        <i class="fas fa-upload text-2xl text-green-600"></i>
+                                    </div>
+                                    <h4 class="font-semibold text-sm text-gray-800">Material</h4>
+                                </div>
+                            </button>
+                        </div>
+                        
+                        <div class="flex justify-end mt-4">
+                            <button type="button" onclick="cerrarSelectorTipoActividad()" class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md">
+                                <i class="fas fa-times me-1"></i>Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            
+            // Agregar event listeners a los botones de tipo de actividad
+            document.querySelectorAll('.tipo-actividad-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const tipo = this.getAttribute('data-tipo');
+                    const moduloId = this.getAttribute('data-modulo-id');
+                    cerrarSelectorTipoActividad();
+                    abrirFormularioActividad(tipo, moduloId, moduloNombre);
+                });
+            });
+        }
+
+        function cerrarSelectorTipoActividad() {
+            const modal = document.getElementById('tipoActividadModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        // Función para abrir el formulario específico según el tipo de actividad
+        function abrirFormularioActividad(tipo, moduloId, moduloNombre) {
+            let formularioHTML = '';
+            
+            switch(tipo) {
+                case 'tarea':
+                    formularioHTML = crearFormularioTarea(moduloId, moduloNombre);
+                    break;
+                case 'examen':
+                    formularioHTML = crearFormularioExamen(moduloId, moduloNombre);
+                    break;
+                case 'carpeta':
+                    formularioHTML = crearFormularioCarpeta(moduloId, moduloNombre);
+                    break;
+                case 'material':
+                    formularioHTML = crearFormularioMaterial(moduloId, moduloNombre);
+                    break;
+            }
+            
+            document.body.insertAdjacentHTML('beforeend', formularioHTML);
+        }
+
+        // ========================================
+        // FORMULARIO DE TAREA
+        // ========================================
+        function crearFormularioTarea(moduloId, moduloNombre) {
+            return `
+                <div id="formularioTareaModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div class="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                        <h3 class="text-xl font-semibold mb-2 text-blue-600">
+                            <i class="fas fa-file-alt me-2"></i>Crear Tarea
+                        </h3>
+                        <p class="text-sm text-gray-500 mb-4">
+                            <i class="fas fa-folder text-gray-400 me-1"></i>${moduloNombre}
+                        </p>
+                        
+                        <form id="formTarea" class="space-y-4">
+                            <input type="hidden" name="moduloId" value="${moduloId}">
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    <i class="fas fa-heading me-1"></i>Título de la tarea *
+                                </label>
+                                <input type="text" name="titulo" required
+                                       class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                       placeholder="Ej: Trabajo Práctico N°1">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    <i class="fas fa-align-left me-1"></i>Descripción *
+                                </label>
+                                <textarea name="descripcion" required rows="3"
+                                          class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                          placeholder="Describe las instrucciones de la tarea..."></textarea>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                                        <i class="fas fa-calendar-alt me-1"></i>Fecha de entrega *
+                                    </label>
+                                    <input type="datetime-local" name="fechaEntrega" required
+                                           class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                                        <i class="fas fa-star me-1"></i>Puntos
+                                    </label>
+                                    <input type="number" name="puntos" min="0" step="0.5" value="10"
+                                           class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500">
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center space-x-4">
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="visibilidad" value="true" checked
+                                           class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                    <span class="ml-2 text-sm text-gray-700">
+                                        <i class="fas fa-eye me-1"></i>Visible para alumnos
+                                    </span>
+                                </label>
+                            </div>
+                            
+                            <div class="flex justify-end space-x-2 pt-4 border-t">
+                                <button type="button" onclick="cerrarFormularioTarea()" 
+                                        class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md">
+                                    <i class="fas fa-times me-1"></i>Cancelar
+                                </button>
+                                <button type="submit" 
+                                        class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                                    <i class="fas fa-save me-1"></i>Crear Tarea
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+
+        function cerrarFormularioTarea() {
+            document.getElementById('formularioTareaModal')?.remove();
+        }
+
+        // ========================================
+        // FORMULARIO DE EXAMEN
+        // ========================================
+        function crearFormularioExamen(moduloId, moduloNombre) {
+            return `
+                <div id="formularioExamenModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
+                    <div class="bg-white rounded-lg p-6 w-full max-w-4xl my-8 max-h-[90vh] overflow-y-auto">
+                        <h3 class="text-xl font-semibold mb-2 text-purple-600">
+                            <i class="fas fa-clipboard-check me-2"></i>Crear Examen
+                        </h3>
+                        <p class="text-sm text-gray-500 mb-4">
+                            <i class="fas fa-folder text-gray-400 me-1"></i>${moduloNombre}
+                        </p>
+                        
+                        <form id="formExamen" class="space-y-4">
+                            <input type="hidden" name="moduloId" value="${moduloId}">
+                            <input type="hidden" id="poolsData" name="poolsData" value="[]">
+                            
+                            <!-- Información Básica -->
+                            <div class="border-b pb-3">
+                                <h4 class="font-semibold text-gray-700 mb-3">
+                                    <i class="fas fa-info-circle me-1"></i>Información Básica
+                                </h4>
+                                
+                                <div class="grid grid-cols-1 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            <i class="fas fa-heading me-1"></i>Título del examen *
+                                        </label>
+                                        <input type="text" name="titulo" required
+                                               class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                                               placeholder="Ej: Examen Parcial - Unidad 1">
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            <i class="fas fa-align-left me-1"></i>Descripción
+                                        </label>
+                                        <textarea name="descripcion" rows="2"
+                                                  class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                                                  placeholder="Instrucciones y temas del examen..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Configuración de Fechas -->
+                            <div class="border-b pb-3">
+                                <h4 class="font-semibold text-gray-700 mb-3">
+                                    <i class="fas fa-calendar-alt me-1"></i>Fechas y Tiempo
+                                </h4>
+                                
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            <i class="fas fa-door-open me-1"></i>Fecha de apertura *
+                                        </label>
+                                        <input type="datetime-local" name="fechaApertura" required
+                                               class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-purple-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            <i class="fas fa-door-closed me-1"></i>Fecha de cierre *
+                                        </label>
+                                        <input type="datetime-local" name="fechaCierre" required
+                                               class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-purple-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            <i class="fas fa-clock me-1"></i>Tiempo límite (minutos)
+                                        </label>
+                                        <input type="number" name="tiempoRealizacion" min="0" value="60"
+                                               class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-purple-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            <i class="fas fa-redo me-1"></i>Intentos permitidos
+                                        </label>
+                                        <input type="number" name="cantidadIntentos" min="1" value="1"
+                                               class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-purple-500">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Pools de Preguntas -->
+                            <div class="border-b pb-3">
+                                <div class="flex justify-between items-center mb-3">
+                                    <h4 class="font-semibold text-gray-700">
+                                        <i class="fas fa-layer-group me-1"></i>Pools de Preguntas *
+                                    </h4>
+                                    <button type="button" onclick="agregarPoolExamen()" 
+                                            class="px-3 py-1.5 bg-purple-600 text-white text-sm rounded-md hover:bg-purple-700">
+                                        <i class="fas fa-plus me-1"></i>Agregar Pool
+                                    </button>
+                                </div>
+                                
+                                <div id="poolsList" class="space-y-2 min-h-[50px]">
+                                    <p class="text-sm text-gray-500 italic" id="noPoolsMessage">
+                                        No hay pools agregados. Haz clic en "Agregar Pool" para comenzar.
+                                    </p>
+                                </div>
+                                
+                                <div class="mt-2 p-2 bg-purple-50 rounded text-sm">
+                                    <strong>Total de preguntas:</strong> <span id="totalPreguntas">0</span> |
+                                    <strong>Calificación automática:</strong> <span id="calificacionInfo">No configurada</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Opciones -->
+                            <div class="space-y-2">
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="calificacionAutomatica" value="true" checked
+                                           class="h-4 w-4 text-purple-600 border-gray-300 rounded">
+                                    <span class="ml-2 text-sm text-gray-700">
+                                        <i class="fas fa-magic me-1"></i>Calificación automática
+                                    </span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="publicarNota" value="true"
+                                           class="h-4 w-4 text-purple-600 border-gray-300 rounded">
+                                    <span class="ml-2 text-sm text-gray-700">
+                                        <i class="fas fa-eye me-1"></i>Publicar nota automáticamente
+                                    </span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="visibilidad" value="true" checked
+                                           class="h-4 w-4 text-purple-600 border-gray-300 rounded">
+                                    <span class="ml-2 text-sm text-gray-700">
+                                        <i class="fas fa-users me-1"></i>Visible para alumnos
+                                    </span>
+                                </label>
+                            </div>
+                            
+                            <div class="flex justify-end space-x-2 pt-4 border-t">
+                                <button type="button" onclick="cerrarFormularioExamen()" 
+                                        class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md">
+                                    <i class="fas fa-times me-1"></i>Cancelar
+                                </button>
+                                <button type="submit" 
+                                        class="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700">
+                                    <i class="fas fa-save me-1"></i>Crear Examen
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Variable global para almacenar los pools del examen actual
+        let examenPools = [];
+
+        function agregarPoolExamen() {
+            // Mostrar modal para crear/seleccionar pool
+            mostrarModalPool();
+        }
+
+        function mostrarModalPool() {
+            const modalHTML = `
+                <div id="modalPool" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+                    <div class="bg-white rounded-lg p-6 w-full max-w-lg">
+                        <h3 class="text-lg font-semibold mb-4 text-purple-600">
+                            <i class="fas fa-layer-group me-2"></i>Crear Pool de Preguntas
+                        </h3>
+                        
+                        <form id="formPool">
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                                        <i class="fas fa-heading me-1"></i>Nombre del pool *
+                                    </label>
+                                    <input type="text" name="nombrePool" required
+                                           class="w-full border border-gray-300 rounded-md px-3 py-2"
+                                           placeholder="Ej: Tema 1 - Introducción">
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                                        <i class="fas fa-align-left me-1"></i>Descripción
+                                    </label>
+                                    <textarea name="descripcionPool" rows="2"
+                                              class="w-full border border-gray-300 rounded-md px-3 py-2"
+                                              placeholder="Describe el contenido del pool..."></textarea>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                                        <i class="fas fa-list-ol me-1"></i>Cantidad de preguntas que se tomarán *
+                                    </label>
+                                    <input type="number" name="cantidadPreguntas" required min="1" value="1"
+                                           class="w-full border border-gray-300 rounded-md px-3 py-2">
+                                    <small class="text-gray-500">De todas las preguntas agregadas, cuántas se mostrarán en el examen</small>
+                                </div>
+                            </div>
+                            
+                            <div class="flex justify-end space-x-2 mt-4 pt-4 border-t">
+                                <button type="button" onclick="cerrarModalPool()" 
+                                        class="px-3 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md">
+                                    Cancelar
+                                </button>
+                                <button type="submit" 
+                                        class="px-3 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700">
+                                    <i class="fas fa-plus me-1"></i>Crear Pool
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            
+            // Event listener para el formulario de pool
+            document.getElementById('formPool').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                
+                const nuevoPool = {
+                    id: Date.now(), // ID temporal
+                    nombre: formData.get('nombrePool'),
+                    descripcion: formData.get('descripcionPool'),
+                    cantidadPreguntas: parseInt(formData.get('cantidadPreguntas')),
+                    preguntas: []
+                };
+                
+                examenPools.push(nuevoPool);
+                actualizarListaPools();
+                cerrarModalPool();
+                
+                // Abrir modal de preguntas para este pool
+                setTimeout(() => mostrarModalPreguntas(nuevoPool.id), 300);
+            });
+        }
+
+        function cerrarModalPool() {
+            document.getElementById('modalPool')?.remove();
+        }
+
+        function actualizarListaPools() {
+            const poolsList = document.getElementById('poolsList');
+            const noPoolsMsg = document.getElementById('noPoolsMessage');
+            
+            if (examenPools.length === 0) {
+                noPoolsMsg?.classList.remove('hidden');
+                return;
+            }
+            
+            noPoolsMsg?.classList.add('hidden');
+            
+            poolsList.innerHTML = examenPools.map((pool, index) => `
+                <div class="border border-purple-200 rounded-lg p-3 bg-purple-50">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <h5 class="font-semibold text-gray-800">
+                                <i class="fas fa-layer-group text-purple-600 me-1"></i>${pool.nombre}
+                            </h5>
+                            <p class="text-sm text-gray-600 mt-1">${pool.descripcion || 'Sin descripción'}</p>
+                            <div class="mt-2 flex items-center space-x-4 text-xs text-gray-500">
+                                <span>
+                                    <i class="fas fa-question-circle me-1"></i>
+                                    ${pool.preguntas.length} pregunta(s) creada(s)
+                                </span>
+                                <span>
+                                    <i class="fas fa-random me-1"></i>
+                                    Se tomarán ${pool.cantidadPreguntas} en el examen
+                                </span>
+                            </div>
+                        </div>
+                        <div class="flex space-x-1 ml-2">
+                            <button type="button" onclick="mostrarModalPreguntas(${pool.id})" 
+                                    class="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                                    title="Agregar preguntas">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                            <button type="button" onclick="eliminarPool(${index})" 
+                                    class="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+                                    title="Eliminar pool">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Actualizar totales
+            const totalPreguntas = examenPools.reduce((sum, pool) => sum + pool.cantidadPreguntas, 0);
+            document.getElementById('totalPreguntas').textContent = totalPreguntas;
+            document.getElementById('calificacionInfo').textContent = 
+                totalPreguntas > 0 ? `${(100 / totalPreguntas).toFixed(2)} puntos por pregunta` : 'No configurada';
+            
+            // Actualizar campo hidden con datos JSON
+            document.getElementById('poolsData').value = JSON.stringify(examenPools);
+        }
+
+        function eliminarPool(index) {
+            if (confirm('¿Estás seguro de eliminar este pool?')) {
+                examenPools.splice(index, 1);
+                actualizarListaPools();
+            }
+        }
+
+        function mostrarModalPreguntas(poolId) {
+            const pool = examenPools.find(p => p.id === poolId);
+            if (!pool) return;
+            
+            const modalHTML = `
+                <div id="modalPreguntas" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] overflow-y-auto">
+                    <div class="bg-white rounded-lg p-6 w-full max-w-2xl my-8">
+                        <h3 class="text-lg font-semibold mb-2 text-blue-600">
+                            <i class="fas fa-question-circle me-2"></i>Preguntas del Pool: ${pool.nombre}
+                        </h3>
+                        <p class="text-sm text-gray-500 mb-4">
+                            Se tomarán ${pool.cantidadPreguntas} pregunta(s) de este pool en el examen
+                        </p>
+                        
+                        <div id="preguntasList" class="space-y-2 mb-4 max-h-60 overflow-y-auto">
+                            ${pool.preguntas.length === 0 ? 
+                                '<p class="text-sm text-gray-500 italic">No hay preguntas agregadas</p>' :
+                                pool.preguntas.map((p, i) => `
+                                    <div class="border border-gray-200 rounded p-2 bg-gray-50">
+                                        <div class="flex justify-between items-start">
+                                            <div class="flex-1">
+                                                <strong class="text-sm">${i + 1}. ${p.enunciado}</strong>
+                                                <div class="text-xs text-gray-600 mt-1">
+                                                    <span class="inline-block px-2 py-0.5 bg-blue-100 text-blue-800 rounded">
+                                                        ${p.tipoPregunta}
+                                                    </span>
+                                                    <span class="ml-2">Puntaje: ${p.puntaje}</span>
+                                                </div>
+                                            </div>
+                                            <button type="button" onclick="eliminarPregunta(${poolId}, ${i})" 
+                                                    class="ml-2 px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                `).join('')
+                            }
+                        </div>
+                        
+                        <form id="formPregunta" class="space-y-3 border-t pt-4">
+                            <h4 class="font-semibold text-gray-700 text-sm">
+                                <i class="fas fa-plus me-1"></i>Agregar Nueva Pregunta
+                            </h4>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Enunciado *
+                                </label>
+                                <textarea name="enunciado" required rows="2"
+                                          class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                                          placeholder="Escribe la pregunta..."></textarea>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                                        Tipo *
+                                    </label>
+                                    <select name="tipoPregunta" required
+                                            class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                                        <option value="MULTIPLE_CHOICE">Opción múltiple</option>
+                                        <option value="UNICA_RESPUESTA">Única respuesta</option>
+                                        <option value="VERDADERO_FALSO">Verdadero/Falso</option>
+                                        <option value="RESPUESTA_CORTA">Respuesta corta</option>
+                                        <option value="DESCRIPCION_LARGA">Descripción larga</option>
+                                        <option value="EMPAREJAMIENTO">Emparejamiento</option>
+                                        <option value="AUTOCOMPLETADO">Autocompletado</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                                        Puntaje *
+                                    </label>
+                                    <input type="number" name="puntaje" required min="0" step="0.5" value="1"
+                                           class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                                </div>
+                            </div>
+                            
+                            <button type="submit" 
+                                    class="w-full px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700">
+                                <i class="fas fa-plus me-1"></i>Agregar Pregunta
+                            </button>
+                        </form>
+                        
+                        <div class="flex justify-end space-x-2 mt-4 pt-4 border-t">
+                            <button type="button" onclick="cerrarModalPreguntas()" 
+                                    class="px-3 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md">
+                                <i class="fas fa-check me-1"></i>Finalizar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            
+            // Event listener para agregar pregunta
+            document.getElementById('formPregunta').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                
+                const nuevaPregunta = {
+                    enunciado: formData.get('enunciado'),
+                    tipoPregunta: formData.get('tipoPregunta'),
+                    puntaje: parseFloat(formData.get('puntaje'))
+                };
+                
+                pool.preguntas.push(nuevaPregunta);
+                
+                // Recargar modal
+                cerrarModalPreguntas();
+                setTimeout(() => mostrarModalPreguntas(poolId), 100);
+            });
+        }
+
+        function cerrarModalPreguntas() {
+            document.getElementById('modalPreguntas')?.remove();
+            actualizarListaPools();
+        }
+
+        function eliminarPregunta(poolId, index) {
+            const pool = examenPools.find(p => p.id === poolId);
+            if (pool && confirm('¿Eliminar esta pregunta?')) {
+                pool.preguntas.splice(index, 1);
+                cerrarModalPreguntas();
+                setTimeout(() => mostrarModalPreguntas(poolId), 100);
+            }
+        }
+
+        function cerrarFormularioExamen() {
+            examenPools = []; // Limpiar pools
+            document.getElementById('formularioExamenModal')?.remove();
+        }
+
+        // ========================================
+        // FORMULARIO DE CARPETA
+        // ========================================
+        function crearFormularioCarpeta(moduloId, moduloNombre) {
+            return `
+                <div id="formularioCarpetaModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div class="bg-white rounded-lg p-6 w-full max-w-lg">
+                        <h3 class="text-xl font-semibold mb-2 text-yellow-600">
+                            <i class="fas fa-folder-open me-2"></i>Crear Carpeta
+                        </h3>
+                        <p class="text-sm text-gray-500 mb-4">
+                            <i class="fas fa-folder text-gray-400 me-1"></i>${moduloNombre}
+                        </p>
+                        
+                        <form id="formCarpeta" class="space-y-4">
+                            <input type="hidden" name="moduloId" value="${moduloId}">
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    <i class="fas fa-heading me-1"></i>Nombre de la carpeta *
+                                </label>
+                                <input type="text" name="titulo" required
+                                       class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-yellow-500"
+                                       placeholder="Ej: Materiales de Apoyo">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    <i class="fas fa-align-left me-1"></i>Descripción
+                                </label>
+                                <textarea name="descripcion" rows="2"
+                                          class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-yellow-500"
+                                          placeholder="Describe el contenido de la carpeta..."></textarea>
+                            </div>
+                            
+                            <div class="flex items-center">
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="visibilidad" value="true" checked
+                                           class="h-4 w-4 text-yellow-600 border-gray-300 rounded">
+                                    <span class="ml-2 text-sm text-gray-700">
+                                        <i class="fas fa-eye me-1"></i>Visible para alumnos
+                                    </span>
+                                </label>
+                            </div>
+                            
+                            <div class="flex justify-end space-x-2 pt-4 border-t">
+                                <button type="button" onclick="cerrarFormularioCarpeta()" 
+                                        class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md">
+                                    <i class="fas fa-times me-1"></i>Cancelar
+                                </button>
+                                <button type="submit" 
+                                        class="px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600">
+                                    <i class="fas fa-save me-1"></i>Crear Carpeta
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+
+        function cerrarFormularioCarpeta() {
+            document.getElementById('formularioCarpetaModal')?.remove();
+        }
+
+        // ========================================
+        // FORMULARIO DE MATERIAL
+        // ========================================
+        function crearFormularioMaterial(moduloId, moduloNombre) {
+            return `
+                <div id="formularioMaterialModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div class="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                        <h3 class="text-xl font-semibold mb-2 text-green-600">
+                            <i class="fas fa-upload me-2"></i>Subir Material
+                        </h3>
+                        <p class="text-sm text-gray-500 mb-4">
+                            <i class="fas fa-folder text-gray-400 me-1"></i>${moduloNombre}
+                        </p>
+                        
+                        <form id="formMaterial" class="space-y-4" enctype="multipart/form-data">
+                            <input type="hidden" name="moduloId" value="${moduloId}">
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    <i class="fas fa-heading me-1"></i>Título del material *
+                                </label>
+                                <input type="text" name="titulo" required
+                                       class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-green-500"
+                                       placeholder="Ej: Presentación - Introducción al tema">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    <i class="fas fa-align-left me-1"></i>Descripción
+                                </label>
+                                <textarea name="descripcion" rows="2"
+                                          class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-green-500"
+                                          placeholder="Describe el material..."></textarea>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    <i class="fas fa-link me-1"></i>URL del contenido (opcional)
+                                </label>
+                                <input type="url" name="contenido"
+                                       class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-green-500"
+                                       placeholder="https://ejemplo.com/documento.pdf">
+                                <small class="text-gray-500">Puedes ingresar un enlace a un archivo externo o subirlo abajo</small>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    <i class="fas fa-file-upload me-1"></i>Subir archivo (opcional)
+                                </label>
+                                <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-green-400 transition-colors">
+                                    <input type="file" name="archivo" 
+                                           class="hidden" id="archivoMaterial"
+                                           accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.jpg,.jpeg,.png,.zip">
+                                    <label for="archivoMaterial" class="cursor-pointer">
+                                        <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-2"></i>
+                                        <p class="text-sm text-gray-600">Click para seleccionar archivo</p>
+                                        <p class="text-xs text-gray-500 mt-1">PDF, Word, Excel, PowerPoint, imágenes, ZIP</p>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center">
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="visibilidad" value="true" checked
+                                           class="h-4 w-4 text-green-600 border-gray-300 rounded">
+                                    <span class="ml-2 text-sm text-gray-700">
+                                        <i class="fas fa-eye me-1"></i>Visible para alumnos
+                                    </span>
+                                </label>
+                            </div>
+                            
+                            <div class="flex justify-end space-x-2 pt-4 border-t">
+                                <button type="button" onclick="cerrarFormularioMaterial()" 
+                                        class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md">
+                                    <i class="fas fa-times me-1"></i>Cancelar
+                                </button>
+                                <button type="submit" 
+                                        class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
+                                    <i class="fas fa-save me-1"></i>Subir Material
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+
+        function cerrarFormularioMaterial() {
+            document.getElementById('formularioMaterialModal')?.remove();
+        }
+
         // Cerrar modal
         function closeModuleModal() {
             moduleModal.classList.add('hidden');
@@ -511,6 +1370,88 @@
         openButton.addEventListener('click', openSidebar);
         closeButton.addEventListener('click', closeSidebar);
         overlay.addEventListener('click', closeSidebar);
+
+        // ========================================
+        // EVENT LISTENERS PARA FORMULARIOS
+        // ========================================
+        
+        // Event delegation para manejar los submit de los formularios dinámicos
+        document.addEventListener('submit', function(e) {
+            if (e.target.id === 'formTarea') {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                console.log('📝 Datos de Tarea:', Object.fromEntries(formData));
+                alert('✅ Tarea creada (funcionalidad de guardado pendiente)\n\nDatos capturados:\n' + 
+                      'Título: ' + formData.get('titulo') + '\n' +
+                      'Fecha entrega: ' + formData.get('fechaEntrega') + '\n' +
+                      'Puntos: ' + formData.get('puntos'));
+                cerrarFormularioTarea();
+            }
+            
+            if (e.target.id === 'formExamen') {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                
+                // Validar que haya al menos un pool
+                if (examenPools.length === 0) {
+                    alert('⚠️ Debes agregar al menos un pool de preguntas antes de crear el examen.');
+                    return;
+                }
+                
+                // Verificar que los pools tengan preguntas
+                const poolsSinPreguntas = examenPools.filter(p => !p.preguntas || p.preguntas.length === 0);
+                if (poolsSinPreguntas.length > 0) {
+                    alert('⚠️ Todos los pools deben tener al menos una pregunta.');
+                    return;
+                }
+                
+                console.log('📋 Enviando examen con pools:', examenPools);
+                
+                // Enviar al backend
+                fetch('/actividad/crearExamen', {
+                    method: 'POST',
+                    headers: {
+                        'X-XSRF-TOKEN': document.querySelector('meta[name="_csrf"]')?.getAttribute('content') || ''
+                    },
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✅ Examen creado exitosamente');
+                        cerrarFormularioExamen();
+                        location.reload(); // Recargar para mostrar el examen en el módulo
+                    } else {
+                        alert('❌ Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error al crear examen:', error);
+                    alert('❌ Error al crear el examen. Por favor, intenta de nuevo.');
+                });
+            }
+            
+            if (e.target.id === 'formCarpeta') {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                console.log('📁 Datos de Carpeta:', Object.fromEntries(formData));
+                alert('✅ Carpeta creada (funcionalidad de guardado pendiente)\n\nDatos capturados:\n' + 
+                      'Nombre: ' + formData.get('titulo'));
+                cerrarFormularioCarpeta();
+            }
+            
+            if (e.target.id === 'formMaterial') {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                console.log('📤 Datos de Material:', Object.fromEntries(formData));
+                const archivo = formData.get('archivo');
+                alert('✅ Material subido (funcionalidad de guardado pendiente)\n\nDatos capturados:\n' + 
+                      'Título: ' + formData.get('titulo') + '\n' +
+                      'URL: ' + (formData.get('contenido') || 'No especificada') + '\n' +
+                      'Archivo: ' + (archivo && archivo.name ? archivo.name : 'No seleccionado'));
+                cerrarFormularioMaterial();
+            }
+        });
     </script>
     <!-- Incluir modal de crear clase -->
 

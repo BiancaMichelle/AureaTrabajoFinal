@@ -25,7 +25,7 @@ public class Pool {
     private String descripcion;
     private Integer cantidadPreguntas;
     
-    @OneToMany(mappedBy = "pool")
+    @OneToMany(mappedBy = "pool", cascade = jakarta.persistence.CascadeType.ALL, orphanRemoval = true)
     private List<Pregunta> preguntas;
     
     @ManyToOne

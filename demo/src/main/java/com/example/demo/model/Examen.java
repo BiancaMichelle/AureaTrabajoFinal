@@ -31,6 +31,6 @@ public class Examen extends Actividad {
     @Enumerated(EnumType.STRING)
     private EstadoExamen estado;
     
-    @OneToMany(mappedBy = "examen")
+    @OneToMany(mappedBy = "examen", cascade = jakarta.persistence.CascadeType.ALL, orphanRemoval = true)
     private List<Pool> poolPreguntas;
 }

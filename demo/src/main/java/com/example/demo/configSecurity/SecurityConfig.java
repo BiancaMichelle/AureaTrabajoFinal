@@ -71,6 +71,7 @@ public class SecurityConfig {
             .requestMatchers("/admin/**").hasAuthority("ADMIN")
             .requestMatchers("/alumno/**", "/inscribirse/**").hasAnyAuthority("ALUMNO", "DOCENTE")
             .requestMatchers("/docente/**").hasAuthority("DOCENTE")
+            .requestMatchers("/modulo/**", "/crearModulo", "/ofertaAcademica/**", "/actividad/**").hasAnyAuthority("DOCENTE", "ADMIN")
             .anyRequest().authenticated()
         )
         .formLogin(form -> form
