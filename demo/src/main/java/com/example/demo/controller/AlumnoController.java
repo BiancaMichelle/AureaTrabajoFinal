@@ -115,11 +115,11 @@ public class AlumnoController {
                                 RedirectAttributes redirectAttributes) {
         try {
             String dni = authentication.getName();
-            System.out.println("� Iniciando proceso de inscripción directa para oferta: " + ofertaId);
+            System.out.println("📝 Iniciando proceso de inscripción directa para oferta: " + ofertaId);
             
-            // Buscar el alumno
-            Alumno alumno = alumnoRepository.findByDni(dni)
-                    .orElseThrow(() -> new RuntimeException("Alumno no encontrado"));
+            // Buscar el usuario (alumno)
+            Usuario usuario = usuarioRepository.findByDni(dni)
+                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
             
             // Buscar la oferta
             OfertaAcademica oferta = ofertaAcademicaRepository.findById(ofertaId)
@@ -137,16 +137,16 @@ public class AlumnoController {
                 return "redirect:/publico";
             }
 
-            // ✅ CREAR INSCRIPCIÓN DIRECTA (sin pago de Mercado Pago)
+            // ✅ CREAR INSCRIPCIÓN DIRECTA usando Usuario
             Inscripciones nuevaInscripcion = new Inscripciones();
-            nuevaInscripcion.setAlumno(alumno);
+            nuevaInscripcion.setAlumno(usuario); // ✅ Ahora acepta Usuario
             nuevaInscripcion.setOferta(oferta);
             nuevaInscripcion.setEstadoInscripcion(true); // Inscripción activa
             nuevaInscripcion.setFechaInscripcion(LocalDate.now());
             
             inscripcionRepository.save(nuevaInscripcion);
             
-            System.out.println("✅ Inscripción creada exitosamente para " + alumno.getNombre());
+            System.out.println("✅ Inscripción creada exitosamente para " + usuario.getNombre());
             
             redirectAttributes.addFlashAttribute("success", 
                 "¡Te has inscrito exitosamente a " + oferta.getNombre() + "!");

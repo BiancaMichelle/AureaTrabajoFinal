@@ -79,9 +79,23 @@
                     </div>
                     <div class="card-footer bg-transparent">
                         <div class="d-flex justify-content-between align-items-center">
-                            <span class="badge" 
-                                  th:classappend="${curso.estado == 'ACTIVO'} ? 'bg-success' : 'bg-secondary'"
-                                  th:text="${curso.estado}">Estado</span>
+                            <div>
+                                <span class="badge" 
+                                      th:classappend="${curso.estado == 'ACTIVO'} ? 'bg-success' : 'bg-secondary'"
+                                      th:text="${curso.estado}">Estado</span>
+                                
+                                <!-- Badge para indicar ROL del docente en esta oferta -->
+                                <span th:if="${docente != null and ofertasComoDocente != null}" class="badge bg-primary ms-1">
+                                    <span th:if="${#lists.contains(ofertasComoDocente, curso)}">
+                                        <i class="fas fa-chalkboard-teacher"></i> Docente
+                                    </span>
+                                </span>
+                                <span th:if="${docente != null and ofertasComoAlumno != null}" class="badge bg-info ms-1">
+                                    <span th:if="${#lists.contains(ofertasComoAlumno, curso)}">
+                                        <i class="fas fa-user-graduate"></i> Alumno
+                                    </span>
+                                </span>
+                            </div>
                             
                             <!-- Botón diferente para docente vs alumno -->
                             <a th:if="${docente != null}" 

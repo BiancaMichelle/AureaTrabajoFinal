@@ -7,7 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
-import com.example.demo.model.Alumno;
 import com.example.demo.model.Inscripciones;
 import com.example.demo.model.OfertaAcademica;
 import com.example.demo.model.Usuario;
@@ -15,10 +14,10 @@ import com.example.demo.model.Usuario;
 @Repository
 public interface InscripcionRepository extends JpaRepository<Inscripciones, Long> {
     
-    // Buscar inscripción por alumno y oferta
+    // Buscar inscripción por usuario (alumno/docente) y oferta
     Optional<Inscripciones> findByAlumnoAndOferta(Usuario alumno, OfertaAcademica oferta);
     
-    // Buscar todas las inscripciones de un alumno
+    // Buscar todas las inscripciones de un usuario
     List<Inscripciones> findByAlumno(Usuario alumno);
     
     // Contar inscripciones activas por oferta
@@ -29,7 +28,5 @@ public interface InscripcionRepository extends JpaRepository<Inscripciones, Long
 
     @Query("SELECT i FROM Inscripciones i WHERE i.alumno.dni = :dniAlumno AND i.oferta.idOferta = :idOferta")
     Optional<Inscripciones> findByAlumnoDniAndOfertaId(String dniAlumno, Long idOferta);
-
-    List<Inscripciones> findByAlumnoAndOferta(Alumno alumno, OfertaAcademica oferta);
     
 }

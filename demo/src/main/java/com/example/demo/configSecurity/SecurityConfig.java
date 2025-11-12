@@ -69,7 +69,7 @@ public class SecurityConfig {
             "/pago/**")
             .permitAll()
             .requestMatchers("/admin/**").hasAuthority("ADMIN")
-            .requestMatchers("/alumno/**").hasAuthority("ALUMNO")
+            .requestMatchers("/alumno/**", "/inscribirse/**").hasAnyAuthority("ALUMNO", "DOCENTE")
             .requestMatchers("/docente/**").hasAuthority("DOCENTE")
             .anyRequest().authenticated()
         )

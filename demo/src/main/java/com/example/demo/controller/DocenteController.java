@@ -4,6 +4,7 @@ import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -14,11 +15,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import com.example.demo.model.Curso;
 import com.example.demo.model.Docente;
 import com.example.demo.model.Formacion;
+import com.example.demo.model.Inscripciones;
 import com.example.demo.model.Modulo;
 import com.example.demo.model.OfertaAcademica;
 import com.example.demo.model.Usuario;
 import com.example.demo.repository.CursoRepository;
 import com.example.demo.repository.FormacionRepository;
+import com.example.demo.repository.InscripcionRepository;
 import com.example.demo.repository.ModuloRepository;
 import com.example.demo.repository.OfertaAcademicaRepository;
 import com.example.demo.repository.UsuarioRepository;
@@ -32,17 +35,20 @@ public class DocenteController {
     private final OfertaAcademicaRepository ofertaAcademicaRepository;
     private final UsuarioRepository usuarioRepository;
     private final ModuloRepository moduloRepository;
+    private final InscripcionRepository inscripcionRepository;
 
     public DocenteController(CursoRepository cursoRepository,
                            FormacionRepository formacionRepository,
                            OfertaAcademicaRepository ofertaAcademicaRepository,
                            UsuarioRepository usuarioRepository,
-                           ModuloRepository moduloRepository) {
+                           ModuloRepository moduloRepository,
+                           InscripcionRepository inscripcionRepository) {
         this.cursoRepository = cursoRepository;
         this.formacionRepository = formacionRepository;
         this.ofertaAcademicaRepository = ofertaAcademicaRepository;
         this.usuarioRepository = usuarioRepository;
         this.moduloRepository = moduloRepository;
+        this.inscripcionRepository = inscripcionRepository;
     }
 
     // Mi Espacio - Dashboard del docente con calendario
@@ -105,30 +111,63 @@ public class DocenteController {
             Usuario docente = docenteOpt.get();
             System.out.println("✅ Docente encontrado: " + docente.getNombre() + " " + docente.getApellido());
             
-            // Buscar cursos donde el docente esté asignado
+            // ========================================
+            // 1. OFERTAS DONDE ES DOCENTE
+            // ========================================
             List<Curso> cursosDelDocente = cursoRepository.findByDocentesId(docente.getId());
-            System.out.println("📚 Cursos encontrados: " + cursosDelDocente.size());
+            System.out.println("�‍🏫 Cursos como docente: " + cursosDelDocente.size());
             
-            // Buscar formaciones donde el docente esté asignado
             List<Formacion> formacionesDelDocente = formacionRepository.findByDocentesId(docente.getId());
-            System.out.println("🎓 Formaciones encontradas: " + formacionesDelDocente.size());
+            System.out.println("👨‍🏫 Formaciones como docente: " + formacionesDelDocente.size());
             
-            // Combinar todas las ofertas académicas
-            List<OfertaAcademica> todasLasOfertas = new ArrayList<>();
-            todasLasOfertas.addAll(cursosDelDocente);
-            todasLasOfertas.addAll(formacionesDelDocente);
+            List<OfertaAcademica> ofertasComoDocente = new ArrayList<>();
+            ofertasComoDocente.addAll(cursosDelDocente);
+            ofertasComoDocente.addAll(formacionesDelDocente);
+            
+            // ========================================
+            // 2. OFERTAS DONDE ESTÁ INSCRITO COMO ALUMNO
+            // ========================================
+            List<Inscripciones> inscripciones = inscripcionRepository.findByAlumnoDni(username);
+            System.out.println("🎓 Inscripciones como alumno: " + inscripciones.size());
+            
+            List<OfertaAcademica> ofertasComoAlumno = inscripciones.stream()
+                    .filter(ins -> ins.getEstadoInscripcion())
+                    .map(Inscripciones::getOferta)
+                    .collect(Collectors.toList());
+            
+            // ========================================
+            // 3. COMBINAR TODAS (sin duplicados)
+            // ========================================
+            List<OfertaAcademica> todasLasOfertas = new ArrayList<>(ofertasComoDocente);
+            
+            // Agregar ofertas como alumno que NO estén ya en la lista (evitar duplicados)
+            for (OfertaAcademica ofertaAlumno : ofertasComoAlumno) {
+                boolean yaExiste = todasLasOfertas.stream()
+                        .anyMatch(o -> o.getIdOferta().equals(ofertaAlumno.getIdOferta()));
+                if (!yaExiste) {
+                    todasLasOfertas.add(ofertaAlumno);
+                }
+            }
             
             System.out.println("📋 Total de ofertas académicas: " + todasLasOfertas.size());
             
             // Debug: mostrar info de cada oferta
             for (OfertaAcademica oferta : todasLasOfertas) {
                 String tipo = oferta instanceof Curso ? "Curso" : "Formación";
-                System.out.println("   - " + tipo + ": " + oferta.getNombre() + " (ID: " + oferta.getIdOferta() + ")");
+                boolean esDocente = ofertasComoDocente.stream()
+                        .anyMatch(o -> o.getIdOferta().equals(oferta.getIdOferta()));
+                boolean esAlumno = ofertasComoAlumno.stream()
+                        .anyMatch(o -> o.getIdOferta().equals(oferta.getIdOferta()));
+                
+                String roles = esDocente && esAlumno ? "DOCENTE + ALUMNO" : (esDocente ? "DOCENTE" : "ALUMNO");
+                System.out.println("   - " + tipo + ": " + oferta.getNombre() + " (" + roles + ")");
             }
             
-            model.addAttribute("cursos", todasLasOfertas); // Mantener el nombre "cursos" para compatibilidad con la vista
+            model.addAttribute("cursos", todasLasOfertas);
+            model.addAttribute("ofertasComoDocente", ofertasComoDocente); // Para diferenciar en la vista
+            model.addAttribute("ofertasComoAlumno", ofertasComoAlumno);
             model.addAttribute("docente", docente);
-            model.addAttribute("esDocente", true); // Para el template
+            model.addAttribute("esDocente", true);
             
             return "misOfertasAcademicas";
             

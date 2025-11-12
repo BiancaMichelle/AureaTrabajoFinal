@@ -28,7 +28,7 @@ public class Inscripciones {
 
     @ManyToOne
     @JoinColumn(name = "alumno_id")
-    private Alumno alumno;
+    private Usuario alumno; // ✅ Cambiado de Alumno a Usuario para permitir inscripciones de Docentes
     
     @ManyToOne
     @JoinColumn(name = "oferta_id")
