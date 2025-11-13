@@ -8,7 +8,10 @@ import com.example.demo.enums.EstadoExamen;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.OneToMany;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -31,6 +34,12 @@ public class Examen extends Actividad {
     @Enumerated(EnumType.STRING)
     private EstadoExamen estado;
     
-    @OneToMany(mappedBy = "examen", cascade = jakarta.persistence.CascadeType.ALL, orphanRemoval = true)
+    // Cambio: Examen usa ManyToMany para compartir pools con otros exámenes
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+        name = "examen_pool",
+        joinColumns = @JoinColumn(name = "examen_id"),
+        inverseJoinColumns = @JoinColumn(name = "pool_id")
+    )
     private List<Pool> poolPreguntas;
 }

@@ -51,7 +51,9 @@ public class SecurityConfig {
                     "/api/**",
                     "/clase/docente-entrar/**", 
                     "/clase/docente/salir/**",
-                    "/pago/webhook"
+                    "/pago/webhook",
+                    "/pool/**",
+                    "/actividad/**"
                 )
         )
         .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -71,7 +73,8 @@ public class SecurityConfig {
             .requestMatchers("/admin/**").hasAuthority("ADMIN")
             .requestMatchers("/alumno/**", "/inscribirse/**").hasAnyAuthority("ALUMNO", "DOCENTE")
             .requestMatchers("/docente/**").hasAuthority("DOCENTE")
-            .requestMatchers("/modulo/**", "/crearModulo", "/ofertaAcademica/**", "/actividad/**").hasAnyAuthority("DOCENTE", "ADMIN")
+            .requestMatchers("/modulo/**", "/crearModulo", "/ofertaAcademica/**", "/actividad/**", "/pool/**").hasAnyAuthority("DOCENTE", "ADMIN")
+            .requestMatchers("/examen/**").hasAnyAuthority("ALUMNO", "DOCENTE", "ADMIN")
             .anyRequest().authenticated()
         )
         .formLogin(form -> form

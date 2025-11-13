@@ -58,7 +58,7 @@ public class ExamenService {
                 pool.setNombre(poolDTO.getNombre());
                 pool.setDescripcion(poolDTO.getDescripcion());
                 pool.setCantidadPreguntas(poolDTO.getCantidadPreguntas());
-                pool.setExamen(examenGuardado);
+                // Ya no se establece pool.setExamen() porque es ManyToMany
                 
                 // Guardar el pool
                 Pool poolGuardado = poolRepository.save(pool);
@@ -84,7 +84,9 @@ public class ExamenService {
                 pools.add(poolGuardado);
             }
             
+            // Asignar los pools al examen (lado owner de la relación ManyToMany)
             examenGuardado.setPoolPreguntas(pools);
+            examenRepository.save(examenGuardado);
         }
         
         return examenGuardado;

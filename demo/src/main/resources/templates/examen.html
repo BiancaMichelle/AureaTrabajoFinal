@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+    <title th:text="${examen.titulo}">Examen</title>
+    <!-- Carga de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Carga de la fuente Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Aplicamos la fuente Inter como predeterminada */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Estilos personalizados para los radio y checkbox */
+        .form-radio, .form-checkbox {
+            @apply text-blue-600 focus:ring-blue-500;
+        }
+        /* Estilo para el input de autocompletado */
+        .autocompletado-input {
+            @apply inline-block w-48 border-b-2 border-gray-400 focus:border-blue-500 outline-none mx-2 px-1 text-lg font-medium;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <!-- Tarjeta principal del examen -->
+    <div class="bg-white p-6 sm:p-10 rounded-xl shadow-lg w-full max-w-3xl">
+
+        <!-- Encabezado: Título y Temporizador -->
+        <header class="flex justify-between items-center border-b border-gray-200 pb-4 mb-8">
+            <h1 class="text-2xl font-bold text-gray-800" th:text="${examen.titulo}">Examen</h1>
+            <!-- Contenedor del temporizador (solicitado a la derecha arriba) -->
+            <div id="timer" class="text-xl font-semibold text-red-600 bg-red-100 px-4 py-2 rounded-lg shadow-inner">
+                <span th:text="${tiempoTotal} + ':00'">60:00</span>
+            </div>
+        </header>
+
+        <!-- Contenedor principal de la pregunta -->
+        <main id="exam-container">
+            <!-- Progreso (Ej: Pregunta 1 de 10) -->
+            <div id="question-progress" class="text-sm font-medium text-gray-500 mb-2"></div>
+            
+            <!-- Texto de la pregunta -->
+            <div id="question-text" class="text-xl font-medium text-gray-900 mb-8 min-h-[60px]"></div>
+
+            <!-- Área de respuestas (se genera dinámicamente) -->
+            <div id="answer-area" class="space-y-4">
+                <!-- El contenido se inyectará aquí -->
+            </div>
+        </main>
+
+        <!-- Navegación: Anterior / Siguiente / Finalizar -->
+        <footer class="mt-10 pt-6 border-t border-gray-200 flex justify-between items-center">
+            <button id="prev-btn" class="py-2 px-5 rounded-lg font-medium text-gray-700 bg-gray-200 hover:bg-gray-300 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                Anterior
+            </button>
+            <button id="next-btn" class="py-2 px-5 rounded-lg font-medium text-white bg-blue-600 hover:bg-blue-700 transition-all shadow-sm disabled:opacity-50">
+                Siguiente
+            </button>
+        </footer>
+
+    </div>
+
+    <!-- Script principal de la lógica del examen -->
+    <script th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- 1. DEFINICIÓN DE TIPOS DE PREGUNTA ---
+            const TipoPregunta = {
+                MULTIPLE_CHOICE: 'MULTIPLE_CHOICE',
+                VERDADERO_FALSO: 'VERDADERO_FALSO',
+                RESPUESTA_CORTA: 'RESPUESTA_CORTA',
+                DESCRIPCION_LARGA: 'DESCRIPCION_LARGA',
+                EMPAREJAMIENTO: 'EMPAREJAMIENTO',
+                UNICA_RESPUESTA: 'UNICA_RESPUESTA',
+                AUTOCOMPLETADO: 'AUTOCOMPLETADO'
+            };
+
+            // --- 2. CARGAR DATOS DEL EXAMEN DESDE EL BACKEND ---
+            const examenId = /*[[${examen.idActividad}]]*/ null;
+            const tiempoInicial = /*[[${tiempoTotal}]]*/ 60;
+            let preguntas = [];
+
+            // Cargar preguntas desde la API
+            fetch(`/examen/api/datos/${examenId}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Datos del examen cargados:', data);
+                    
+                    // Convertir las preguntas del backend al formato esperado
+                    preguntas = data.preguntas.map(p => {
+                        const pregunta = {
+                            id: p.id,
+                            tipo: p.tipo,
+                            texto: p.texto,
+                            puntaje: p.puntaje
+                        };
+                        
+                        // Si tiene opciones, mapearlas
+                        if (p.opciones && p.opciones.length > 0) {
+                            pregunta.opciones = p.opciones.map(o => o.texto);
+                        }
+                        
+                        // Para tipos especiales, configurar estructuras adicionales
+                        if (p.tipo === 'EMPAREJAMIENTO') {
+                            // Aquí se debería configurar columnaA y columnaB desde el backend
+                            // Por ahora dejamos un placeholder
+                            pregunta.columnaA = [];
+                            pregunta.columnaB = [];
+                        }
+                        
+                        return pregunta;
+                    });
+                    
+                    // Iniciar el examen
+                    iniciarExamen();
+                })
+                .catch(error => {
+                    console.error('Error al cargar el examen:', error);
+                    alert('Error al cargar el examen. Por favor, intenta de nuevo.');
+                });
+
+            // --- 3. ESTADO DEL EXAMEN ---
+            let preguntaActualIndex = 0;
+            let respuestasUsuario = [];
+            let tiempoRestante = tiempoInicial * 60; // Convertir minutos a segundos
+            let timerInterval = null;
+
+            // --- 4. REFERENCIAS AL DOM ---
+            const timerEl = document.getElementById('timer');
+            const progressEl = document.getElementById('question-progress');
+            const textEl = document.getElementById('question-text');
+            const answerEl = document.getElementById('answer-area');
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+
+            function iniciarExamen() {
+                respuestasUsuario = new Array(preguntas.length).fill(null);
+                mostrarPregunta();
+                iniciarContador();
+            }
+
+            // --- 5. LÓGICA DE RENDERIZADO DE PREGUNTAS ---
+
+            /**
+             * Muestra la pregunta actual basada en el índice.
+             */
+            function mostrarPregunta() {
+                // Limpiamos respuestas anteriores
+                answerEl.innerHTML = '';
+                const pregunta = preguntas[preguntaActualIndex];
+
+                // Actualizar progreso y texto
+                progressEl.textContent = `Pregunta ${preguntaActualIndex + 1} de ${preguntas.length}`;
+                
+                // Renderizar el área de respuesta según el tipo
+                // Usamos un switch para manejar los diferentes tipos de pregunta
+                switch (pregunta.tipo) {
+                    case TipoPregunta.UNICA_RESPUESTA:
+                        renderUnicaRespuesta(pregunta);
+                        break;
+                    case TipoPregunta.VERDADERO_FALSO:
+                        renderVerdaderoFalso(pregunta);
+                        break;
+                    case TipoPregunta.MULTIPLE_CHOICE:
+                        renderMultipleChoice(pregunta);
+                        break;
+                    case TipoPregunta.RESPUESTA_CORTA:
+                        renderRespuestaCorta(pregunta);
+                        break;
+                    case TipoPregunta.DESCRIPCION_LARGA:
+                        renderDescripcionLarga(pregunta);
+                        break;
+                    case TipoPregunta.AUTOCOMPLETADO:
+                        renderAutocompletado(pregunta);
+                        break;
+                    case TipoPregunta.EMPAREJAMIENTO:
+                        renderEmparejamiento(pregunta);
+                        break;
+                    default:
+                        textEl.textContent = pregunta.texto;
+                        answerEl.innerHTML = '<p class="text-red-500">Error: Tipo de pregunta no reconocido.</p>';
+                }
+                
+                // Actualizar estado de botones
+                actualizarBotones();
+            }
+            
+            // --- Funciones de renderizado específicas ---
+
+            function renderUnicaRespuesta(pregunta) {
+                textEl.textContent = pregunta.texto;
+                const respuestaGuardada = respuestasUsuario[preguntaActualIndex];
+                
+                pregunta.opciones.forEach(opcion => {
+                    const label = document.createElement('label');
+                    label.className = "flex items-center p-3 border rounded-lg hover:bg-gray-50 cursor-pointer";
+                    
+                    const radio = document.createElement('input');
+                    radio.type = 'radio';
+                    radio.name = 'unica_respuesta';
+                    radio.value = opcion;
+                    radio.className = 'form-radio h-5 w-5';
+                    radio.checked = (respuestaGuardada === opcion);
+                    
+                    radio.onchange = () => {
+                        respuestasUsuario[preguntaActualIndex] = radio.value;
+                    };
+                    
+                    label.appendChild(radio);
+                    label.append(document.createTextNode(` ${opcion}`));
+                    answerEl.appendChild(label);
+                });
+            }
+            
+            function renderVerdaderoFalso(pregunta) {
+                textEl.textContent = pregunta.texto;
+                const respuestaGuardada = respuestasUsuario[preguntaActualIndex];
+                const opciones = ['Verdadero', 'Falso'];
+
+                opciones.forEach(opcion => {
+                    const label = document.createElement('label');
+                    label.className = "flex items-center p-3 border rounded-lg hover:bg-gray-50 cursor-pointer";
+
+                    const radio = document.createElement('input');
+                    radio.type = 'radio';
+                    radio.name = 'vf_respuesta';
+                    radio.value = opcion;
+                    radio.className = 'form-radio h-5 w-5';
+                    radio.checked = (respuestaGuardada === opcion);
+
+                    radio.onchange = () => {
+                        respuestasUsuario[preguntaActualIndex] = radio.value;
+                    };
+
+                    label.appendChild(radio);
+                    label.append(document.createTextNode(` ${opcion}`));
+                    answerEl.appendChild(label);
+                });
+            }
+
+            function renderMultipleChoice(pregunta) {
+                textEl.textContent = pregunta.texto;
+                // Para múltiple choice, la respuesta es un array de seleccionados
+                let respuestaGuardada = respuestasUsuario[preguntaActualIndex];
+                if (!Array.isArray(respuestaGuardada)) {
+                    respuestasUsuario[preguntaActualIndex] = [];
+                    respuestaGuardada = [];
+                }
+
+                pregunta.opciones.forEach(opcion => {
+                    const label = document.createElement('label');
+                    label.className = "flex items-center p-3 border rounded-lg hover:bg-gray-50 cursor-pointer";
+
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.value = opcion;
+                    checkbox.className = 'form-checkbox h-5 w-5 rounded';
+                    checkbox.checked = respuestaGuardada.includes(opcion);
+
+                    checkbox.onchange = () => {
+                        const respuestas = new Set(respuestasUsuario[preguntaActualIndex]);
+                        if (checkbox.checked) {
+                            respuestas.add(opcion);
+                        } else {
+                            respuestas.delete(opcion);
+                        }
+                        respuestasUsuario[preguntaActualIndex] = Array.from(respuestas);
+                    };
+
+                    label.appendChild(checkbox);
+                    label.append(document.createTextNode(` ${opcion}`));
+                    answerEl.appendChild(label);
+                });
+            }
+            
+            function renderRespuestaCorta(pregunta) {
+                textEl.textContent = pregunta.texto;
+                const respuestaGuardada = respuestasUsuario[preguntaActualIndex] || '';
+
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500';
+                input.placeholder = 'Escribe tu respuesta corta aquí...';
+                input.value = respuestaGuardada;
+
+                input.oninput = () => {
+                    respuestasUsuario[preguntaActualIndex] = input.value;
+                };
+                
+                answerEl.appendChild(input);
+            }
+
+            function renderDescripcionLarga(pregunta) {
+                textEl.textContent = pregunta.texto;
+                const respuestaGuardada = respuestasUsuario[preguntaActualIndex] || '';
+                
+                const textarea = document.createElement('textarea');
+                textarea.rows = '6';
+                textarea.className = 'w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500';
+                textarea.placeholder = 'Escribe tu descripción aquí...';
+                textarea.value = respuestaGuardada;
+
+                textarea.oninput = () => {
+                    respuestasUsuario[preguntaActualIndex] = textarea.value;
+                };
+                
+                answerEl.appendChild(textarea);
+            }
+
+            function renderAutocompletado(pregunta) {
+                // Para este tipo, el texto de la pregunta se inyecta como HTML
+                textEl.innerHTML = '';
+                // Inicializamos la respuesta como un array si no existe
+                if (!Array.isArray(respuestasUsuario[preguntaActualIndex])) {
+                    const numBlanks = (pregunta.texto.match(/\[BLANK\]/g) || []).length;
+                    respuestasUsuario[preguntaActualIndex] = new Array(numBlanks).fill('');
+                }
+                const respuestasGuardadas = respuestasUsuario[preguntaActualIndex];
+
+                const partes = pregunta.texto.split('[BLANK]');
+                partes.forEach((parte, index) => {
+                    // Añadir el texto
+                    textEl.appendChild(document.createTextNode(parte));
+                    
+                    // Añadir un input si no es la última parte
+                    if (index < partes.length - 1) {
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.className = 'autocompletado-input';
+                        input.dataset.index = index;
+                        input.value = respuestasGuardadas[index] || '';
+                        
+                        input.oninput = () => {
+                            respuestasUsuario[preguntaActualIndex][input.dataset.index] = input.value;
+                        };
+                        
+                        textEl.appendChild(input);
+                    }
+                });
+            }
+            
+            function renderEmparejamiento(pregunta) {
+                textEl.textContent = pregunta.texto;
+                
+                // Inicializar respuesta como objeto si no existe
+                if (typeof respuestasUsuario[preguntaActualIndex] !== 'object' || respuestasUsuario[preguntaActualIndex] === null) {
+                    respuestasUsuario[preguntaActualIndex] = {};
+                }
+                const respuestasGuardadas = respuestasUsuario[preguntaActualIndex];
+
+                const container = document.createElement('div');
+                container.className = 'grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6';
+
+                // Mostrar las dos columnas como referencia
+                const colA = document.createElement('div');
+                colA.innerHTML = '<h3 class="font-semibold mb-2 text-gray-700">Columna A</h3>';
+                const listA = document.createElement('ul');
+                listA.className = 'list-disc list-inside space-y-1';
+                pregunta.columnaA.forEach(item => {
+                    const li = document.createElement('li');
+                    li.textContent = `${item.id}: ${item.texto}`;
+                    listA.appendChild(li);
+                });
+                colA.appendChild(listA);
+                
+                const colB = document.createElement('div');
+                colB.innerHTML = '<h3 class="font-semibold mb-2 text-gray-700">Columna B</h3>';
+                const listB = document.createElement('ul');
+                listB.className = 'list-disc list-inside space-y-1';
+                pregunta.columnaB.forEach(item => {
+                    const li = document.createElement('li');
+                    li.textContent = `${item.id}: ${item.texto}`;
+                    listB.appendChild(li);
+                });
+                colB.appendChild(listB);
+
+                container.appendChild(colA);
+                container.appendChild(colB);
+                answerEl.appendChild(container);
+                
+                // Separador
+                answerEl.appendChild(document.createElement('hr'));
+                answerEl.appendChild(document.createElement('hr')).className = 'my-4';
+
+                // Área de selección para emparejar
+                const matchingArea = document.createElement('div');
+                matchingArea.className = 'space-y-3';
+                matchingArea.innerHTML = '<h3 class="font-semibold text-gray-700">Realiza el emparejamiento:</h3>';
+
+                pregunta.columnaA.forEach(itemA => {
+                    const row = document.createElement('div');
+                    row.className = 'flex items-center space-x-4';
+                    
+                    const label = document.createElement('label');
+                    label.textContent = `${itemA.id}: ${itemA.texto}`;
+                    label.className = 'w-1/2 font-medium';
+                    
+                    const select = document.createElement('select');
+                    select.className = 'w-1/2 p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500';
+                    select.dataset.key = itemA.id;
+                    
+                    // Opción por defecto
+                    const defaultOption = document.createElement('option');
+                    defaultOption.value = '';
+                    defaultOption.textContent = 'Selecciona...';
+                    select.appendChild(defaultOption);
+
+                    // Llenar con opciones de columna B
+                    pregunta.columnaB.forEach(itemB => {
+                        const option = document.createElement('option');
+                        option.value = itemB.id;
+                        option.textContent = `${itemB.id}: ${itemB.texto}`;
+                        if (respuestasGuardadas[itemA.id] === itemB.id) {
+                            option.selected = true;
+                        }
+                        select.appendChild(option);
+                    });
+                    
+                    select.onchange = () => {
+                        respuestasUsuario[preguntaActualIndex][select.dataset.key] = select.value;
+                    };
+
+                    row.appendChild(label);
+                    row.appendChild(select);
+                    matchingArea.appendChild(row);
+                });
+                
+                answerEl.appendChild(matchingArea);
+            }
+
+            // --- 6. LÓGICA DE NAVEGACIÓN ---
+
+            /**
+             * Actualiza el estado habilitado/deshabilitado y el texto de los botones.
+             */
+            function actualizarBotones() {
+                // Botón Anterior
+                prevBtn.disabled = (preguntaActualIndex === 0);
+
+                // Botón Siguiente
+                if (preguntaActualIndex === preguntas.length - 1) {
+                    nextBtn.textContent = 'Finalizar Examen';
+                    nextBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                    nextBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+                } else {
+                    nextBtn.textContent = 'Siguiente';
+                    nextBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                    nextBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                }
+            }
+
+            /**
+             * Navega a la pregunta anterior.
+             */
+            function irAAnterior() {
+                if (preguntaActualIndex > 0) {
+                    preguntaActualIndex--;
+                    mostrarPregunta();
+                }
+            }
+
+            /**
+             * Navega a la siguiente pregunta o finaliza el examen.
+             */
+            function irASiguiente() {
+                if (preguntaActualIndex < preguntas.length - 1) {
+                    preguntaActualIndex++;
+                    mostrarPregunta();
+                } else {
+                    finalizarExamen();
+                }
+            }
+            
+            /**
+             * Finaliza el examen.
+             */
+            function finalizarExamen() {
+                clearInterval(timerInterval); // Detener el contador
+                
+                // Deshabilitar botones
+                prevBtn.disabled = true;
+                nextBtn.disabled = true;
+
+                // Mostrar mensaje de finalización
+                const container = document.getElementById('exam-container');
+                container.innerHTML = `
+                    <h2 class="text-3xl font-bold text-green-600 mb-4">Examen Finalizado</h2>
+                    <p class="text-lg text-gray-700 mb-6">Tus respuestas han sido enviadas con éxito.</p>
+                    <div class="bg-gray-100 p-4 rounded-lg">
+                        <h4 class="font-semibold mb-2">Tus Respuestas:</h4>
+                        <pre class="text-sm text-gray-800 whitespace-pre-wrap">${JSON.stringify(respuestasUsuario, null, 2)}</pre>
+                    </div>
+                `;
+                console.log("Respuestas finales:", respuestasUsuario);
+            }
+
+            // --- 7. LÓGICA DEL TEMPORIZADOR ---
+            
+            /**
+             * Inicia y actualiza el contador.
+             */
+            function iniciarContador() {
+                timerInterval = setInterval(() => {
+                    tiempoRestante--;
+                    
+                    if (tiempoRestante < 0) {
+                        clearInterval(timerInterval);
+                        timerEl.textContent = '00:00';
+                        finalizarExamen();
+                    } else {
+                        const minutos = Math.floor(tiempoRestante / 60);
+                        const segundos = tiempoRestante % 60;
+                        
+                        timerEl.textContent = `${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
+                        
+                        if(tiempoRestante < 300) { // Menos de 5 minutos
+                            timerEl.classList.remove('text-red-600', 'bg-red-100');
+                            timerEl.classList.add('text-yellow-600', 'bg-yellow-100', 'animate-pulse');
+                        }
+                    }
+                }, 1000);
+            }
+
+            // --- 8. INICIALIZACIÓN ---
+            
+            prevBtn.addEventListener('click', irAAnterior);
+            nextBtn.addEventListener('click', irASiguiente);
+
+            // El examen se inicia cuando se cargan los datos desde la API
+        });
+    </script>
+</body>
+</html>

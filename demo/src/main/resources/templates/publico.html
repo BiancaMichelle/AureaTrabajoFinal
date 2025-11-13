@@ -120,7 +120,8 @@
                     <div th:each="oferta : ${ofertas}" class="col-lg-4 col-md-6">
                         <div class="card h-100 border-0 shadow-sm">
                             <div class="card-header bg-primary text-white">
-                                <span class="badge bg-light text-primary me-2" th:text="${oferta.categorias[0]?.nombre ?: 'General'}">Categoría</span>
+                                <span class="badge bg-light text-primary me-2" 
+                                      th:text="${oferta.categorias != null and not #lists.isEmpty(oferta.categorias)} ? ${oferta.categorias[0].nombre} : 'General'">Categoría</span>
                                 <h5 class="card-title mb-0" th:text="${oferta.nombre}">Título de la Oferta</h5>
                             </div>
                             <div class="card-body">

@@ -30,7 +30,7 @@ public class Pregunta {
     @Enumerated(EnumType.STRING)
     private TipoPregunta tipoPregunta;
     
-    @OneToMany(mappedBy = "pregunta", cascade = jakarta.persistence.CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "pregunta", cascade = jakarta.persistence.CascadeType.ALL, orphanRemoval = true, fetch = jakarta.persistence.FetchType.EAGER)
     private List<Opcion> opciones;
     
     private Float puntaje;
