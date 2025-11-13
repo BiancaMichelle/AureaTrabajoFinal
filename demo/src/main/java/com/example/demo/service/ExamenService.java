@@ -53,34 +53,38 @@ public class ExamenService {
             List<Pool> pools = new ArrayList<>();
             
             for (PoolDTO poolDTO : poolsDTO) {
-                Pool pool = new Pool();
-                pool.setIdPool(UUID.randomUUID());
-                pool.setNombre(poolDTO.getNombre());
-                pool.setDescripcion(poolDTO.getDescripcion());
-                pool.setCantidadPreguntas(poolDTO.getCantidadPreguntas());
-                // Ya no se establece pool.setExamen() porque es ManyToMany
-                
-                // Guardar el pool
-                Pool poolGuardado = poolRepository.save(pool);
-                
-                // Procesar las preguntas del pool
-                if (poolDTO.getPreguntas() != null && !poolDTO.getPreguntas().isEmpty()) {
-                    List<Pregunta> preguntas = new ArrayList<>();
+                Pool poolGuardado;
+                // Si viene un idReal, usar el pool existente (reutilización)
+                if (poolDTO.getIdReal() != null && !poolDTO.getIdReal().isEmpty()) {
+                    poolGuardado = poolRepository.findById(UUID.fromString(poolDTO.getIdReal()))
+                        .orElseThrow(() -> new RuntimeException("Pool existente no encontrado: " + poolDTO.getIdReal()));
+                } else {
+                    // Crear un nuevo pool y asociarlo a la oferta del módulo
+                    Pool pool = new Pool();
+                    pool.setIdPool(UUID.randomUUID());
+                    pool.setNombre(poolDTO.getNombre());
+                    pool.setDescripcion(poolDTO.getDescripcion());
+                    pool.setCantidadPreguntas(poolDTO.getCantidadPreguntas());
+                    pool.setOferta(modulo.getCurso());
                     
-                    for (PreguntaDTO preguntaDTO : poolDTO.getPreguntas()) {
-                        Pregunta pregunta = new Pregunta();
-                        pregunta.setIdPregunta(UUID.randomUUID());
-                        pregunta.setEnunciado(preguntaDTO.getEnunciado());
-                        pregunta.setTipoPregunta(preguntaDTO.getTipoPregunta());
-                        pregunta.setPuntaje(preguntaDTO.getPuntaje());
-                        pregunta.setPool(poolGuardado);
-                        
-                        preguntas.add(preguntaRepository.save(pregunta));
+                    // Guardar el pool
+                    poolGuardado = poolRepository.save(pool);
+                    
+                    // Procesar las preguntas del pool (si vinieron inline)
+                    if (poolDTO.getPreguntas() != null && !poolDTO.getPreguntas().isEmpty()) {
+                        List<Pregunta> preguntas = new ArrayList<>();
+                        for (PreguntaDTO preguntaDTO : poolDTO.getPreguntas()) {
+                            Pregunta pregunta = new Pregunta();
+                            pregunta.setIdPregunta(UUID.randomUUID());
+                            pregunta.setEnunciado(preguntaDTO.getEnunciado());
+                            pregunta.setTipoPregunta(preguntaDTO.getTipoPregunta());
+                            pregunta.setPuntaje(preguntaDTO.getPuntaje());
+                            pregunta.setPool(poolGuardado);
+                            preguntas.add(preguntaRepository.save(pregunta));
+                        }
+                        poolGuardado.setPreguntas(preguntas);
                     }
-                    
-                    poolGuardado.setPreguntas(preguntas);
                 }
-                
                 pools.add(poolGuardado);
             }
             
@@ -94,12 +98,19 @@ public class ExamenService {
     
     // DTOs internos para transferencia de datos
     public static class PoolDTO {
+        private String idReal; // UUID en string
+        private Boolean esExistente;
         private String nombre;
         private String descripcion;
         private Integer cantidadPreguntas;
         private List<PreguntaDTO> preguntas;
         
         // Getters y Setters
+        public String getIdReal() { return idReal; }
+        public void setIdReal(String idReal) { this.idReal = idReal; }
+        
+        public Boolean getEsExistente() { return esExistente; }
+        public void setEsExistente(Boolean esExistente) { this.esExistente = esExistente; }
         public String getNombre() { return nombre; }
         public void setNombre(String nombre) { this.nombre = nombre; }
         

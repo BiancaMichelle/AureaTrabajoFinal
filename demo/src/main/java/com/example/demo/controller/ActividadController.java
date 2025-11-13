@@ -85,6 +85,8 @@ public class ActividadController {
     
     private PoolDTO convertirAPoolDTO(PoolDTORequest request) {
         PoolDTO poolDTO = new PoolDTO();
+        poolDTO.setIdReal(request.getIdReal());
+        poolDTO.setEsExistente(request.getEsExistente());
         poolDTO.setNombre(request.getNombre());
         poolDTO.setDescripcion(request.getDescripcion());
         poolDTO.setCantidadPreguntas(request.getCantidadPreguntas());
@@ -109,7 +111,9 @@ public class ActividadController {
     
     // Clases internas para recibir datos del frontend
     public static class PoolDTORequest {
-        private Long id;
+        private Long id; // id temporal del frontend
+        private String idReal; // UUID real del pool existente
+        private Boolean esExistente;
         private String nombre;
         private String descripcion;
         private Integer cantidadPreguntas;
@@ -118,6 +122,10 @@ public class ActividadController {
         // Getters y Setters
         public Long getId() { return id; }
         public void setId(Long id) { this.id = id; }
+        public String getIdReal() { return idReal; }
+        public void setIdReal(String idReal) { this.idReal = idReal; }
+        public Boolean getEsExistente() { return esExistente; }
+        public void setEsExistente(Boolean esExistente) { this.esExistente = esExistente; }
         
         public String getNombre() { return nombre; }
         public void setNombre(String nombre) { this.nombre = nombre; }

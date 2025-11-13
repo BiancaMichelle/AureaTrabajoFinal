@@ -396,7 +396,8 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    <script>
+    <script th:inline="javascript">
+        /*<![CDATA[*/
         // Obtener elementos del DOM
         const modifyCourseButton = document.getElementById('modifyCourseButton');
         const toolsSidebar = document.getElementById('toolsSidebar');
@@ -935,6 +936,11 @@
 
         // Variable global para almacenar los pools del examen actual
         let examenPools = [];
+        
+        // Variable global con el ID de la oferta académica (se interpola desde Thymeleaf)
+        const OFERTA_ID = /*[[${curso.idOferta}]]*/ 0;
+        
+        console.log('🔍 OFERTA_ID cargado:', OFERTA_ID);
 
         function agregarPoolExamen() {
             // Mostrar modal para crear/seleccionar pool
@@ -942,12 +948,17 @@
         }
 
         function mostrarModalPool() {
-            const ofertaId = /*[[${curso.idOferta}]]*/ null;
+            console.log('📋 Cargando pools para oferta:', OFERTA_ID);
             
             // Primero cargamos los pools existentes de esta oferta
-            fetch(`/pool/listar/${ofertaId}`)
+            fetch(`/pool/listar/${OFERTA_ID}`)
                 .then(response => response.json())
                 .then(poolsExistentes => {
+                    console.log('=== POOLS EXISTENTES ===');
+                    console.log('Cantidad:', poolsExistentes.length);
+                    console.log('Pools:', poolsExistentes);
+                    console.log('========================');
+                    
                     const modalHTML = `
                         <div id="modalPool" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
                             <div class="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -1024,13 +1035,13 @@
                                             </p>
                                             ${poolsExistentes.map(pool => `
                                                 <div class="border border-gray-200 rounded-lg p-3 hover:border-purple-500 cursor-pointer transition"
-                                                     onclick="seleccionarPoolExistente('${pool.idPool}', '${pool.nombre}', '${pool.descripcion || ''}', ${pool.cantidadPreguntas})">
+                                                     onclick="seleccionarPoolExistente('${pool.idPool}', '${pool.nombre}', '${pool.descripcion || ''}', ${pool.cantidadPreguntas}, ${pool.preguntasCount || 0})">
                                                     <div class="flex items-start justify-between">
                                                         <div class="flex-1">
                                                             <h4 class="font-medium text-gray-900">${pool.nombre}</h4>
                                                             ${pool.descripcion ? `<p class="text-sm text-gray-600 mt-1">${pool.descripcion}</p>` : ''}
                                                             <div class="flex items-center gap-3 mt-2 text-xs text-gray-500">
-                                                                <span><i class="fas fa-question-circle me-1"></i>${pool.preguntas ? pool.preguntas.length : 0} preguntas creadas</span>
+                                                                <span><i class="fas fa-question-circle me-1"></i>${typeof pool.preguntasCount === 'number' ? pool.preguntasCount : 0} preguntas creadas</span>
                                                                 <span><i class="fas fa-list-ol me-1"></i>Toma ${pool.cantidadPreguntas} al azar</span>
                                                             </div>
                                                         </div>
@@ -1065,6 +1076,8 @@
                     document.getElementById('formPool').addEventListener('submit', function(e) {
                         e.preventDefault();
                         const formData = new FormData(e.target);
+                        // Asociar el pool a la oferta actual
+                        formData.append('ofertaId', OFERTA_ID);
                         
                         // Persistir pool en el backend
                         fetch('/pool/crear', {
@@ -1126,14 +1139,15 @@
             document.getElementById('tabContenidoExistente').classList.toggle('hidden', tab !== 'existente');
         }
         
-        function seleccionarPoolExistente(idPool, nombre, descripcion, cantidadPreguntas) {
+        function seleccionarPoolExistente(idPool, nombre, descripcion, cantidadPreguntas, preguntasCount) {
             const nuevoPool = {
                 id: Date.now(),
                 idReal: idPool,
                 nombre: nombre,
                 descripcion: descripcion,
                 cantidadPreguntas: cantidadPreguntas,
-                preguntas: [], // Se cargarán del backend
+                preguntas: [], // Se cargarán del backend si hiciera falta
+                preguntasCount: typeof preguntasCount === 'number' ? preguntasCount : 0,
                 esExistente: true
             };
             
@@ -1169,7 +1183,7 @@
                             <div class="mt-2 flex items-center space-x-4 text-xs text-gray-500">
                                 <span>
                                     <i class="fas fa-question-circle me-1"></i>
-                                    ${pool.preguntas.length} pregunta(s) creada(s)
+                                    ${typeof pool.preguntasCount === 'number' ? pool.preguntasCount : (pool.preguntas ? pool.preguntas.length : 0)} pregunta(s) creada(s)
                                 </span>
                                 <span>
                                     <i class="fas fa-random me-1"></i>
@@ -1178,7 +1192,7 @@
                             </div>
                         </div>
                         <div class="flex space-x-1 ml-2">
-                            <button type="button" onclick="mostrarModalPreguntas(${pool.id})" 
+                            <button type="button" onclick="mostrarModalPreguntas(${pool.id}, '${pool.idReal || ''}')" 
                                     class="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
                                     title="Agregar preguntas">
                                 <i class="fas fa-plus"></i>
@@ -1777,8 +1791,11 @@
                     return;
                 }
                 
-                // Verificar que los pools tengan preguntas
-                const poolsSinPreguntas = examenPools.filter(p => !p.preguntas || p.preguntas.length === 0);
+                // Verificar que los pools tengan preguntas (usar conteo para existentes)
+                const poolsSinPreguntas = examenPools.filter(p => {
+                    const count = p.esExistente ? (typeof p.preguntasCount === 'number' ? p.preguntasCount : 0) : (p.preguntas ? p.preguntas.length : 0);
+                    return count === 0;
+                });
                 if (poolsSinPreguntas.length > 0) {
                     alert('⚠️ Todos los pools deben tener al menos una pregunta.');
                     return;
@@ -1831,6 +1848,7 @@
                 cerrarFormularioMaterial();
             }
         });
+        /*]]>*/
     </script>
     <!-- Incluir modal de crear clase -->
 

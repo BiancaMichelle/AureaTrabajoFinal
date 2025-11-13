@@ -20,6 +20,7 @@ import com.example.demo.model.Opcion;
 import com.example.demo.model.Pool;
 import com.example.demo.model.Pregunta;
 import com.example.demo.repository.OpcionRepository;
+import com.example.demo.repository.OfertaAcademicaRepository;
 import com.example.demo.repository.PoolRepository;
 import com.example.demo.repository.PreguntaRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -41,6 +42,9 @@ public class PoolController {
     @Autowired
     private ObjectMapper objectMapper;
     
+    @Autowired
+    private OfertaAcademicaRepository ofertaAcademicaRepository;
+    
     /**
      * Crear un pool independiente (sin examen asociado)
      */
@@ -50,7 +54,8 @@ public class PoolController {
     public ResponseEntity<String> crearPool(
             @RequestParam("nombrePool") String nombre,
             @RequestParam(value = "descripcionPool", required = false, defaultValue = "") String descripcion,
-            @RequestParam("cantidadPreguntas") Integer cantidadPreguntas) {
+            @RequestParam("cantidadPreguntas") Integer cantidadPreguntas,
+            @RequestParam("ofertaId") Long ofertaId) {
         try {
             Pool pool = new Pool();
             pool.setIdPool(UUID.randomUUID());
@@ -58,6 +63,10 @@ public class PoolController {
             pool.setDescripcion(descripcion);
             pool.setCantidadPreguntas(cantidadPreguntas);
             pool.setPreguntas(new ArrayList<>());
+            // Asociar oferta para filtrar más tarde
+            var oferta = ofertaAcademicaRepository.findById(ofertaId)
+                .orElseThrow(() -> new RuntimeException("Oferta no encontrada para ID: " + ofertaId));
+            pool.setOferta(oferta);
             
             Pool poolGuardado = poolRepository.save(pool);
             
@@ -159,7 +168,16 @@ public class PoolController {
     public ResponseEntity<?> listarPools() {
         try {
             List<Pool> pools = poolRepository.findAll();
-            return ResponseEntity.ok(pools);
+            List<java.util.Map<String, Object>> dto = pools.stream().map(p -> {
+                java.util.Map<String, Object> m = new java.util.HashMap<>();
+                m.put("idPool", p.getIdPool());
+                m.put("nombre", p.getNombre());
+                m.put("descripcion", p.getDescripcion());
+                m.put("cantidadPreguntas", p.getCantidadPreguntas());
+                m.put("preguntasCount", p.getPreguntas() != null ? p.getPreguntas().size() : 0);
+                return m;
+            }).toList();
+            return ResponseEntity.ok(dto);
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.badRequest()
@@ -175,10 +193,26 @@ public class PoolController {
     @ResponseBody
     public ResponseEntity<?> listarPoolsPorOferta(@PathVariable Long ofertaId) {
         try {
-            // Por ahora retorna todos los pools
-            // TODO: Filtrar por oferta navegando: Pool -> Examenes -> Modulo -> OfertaAcademica
-            List<Pool> pools = poolRepository.findAll();
-            return ResponseEntity.ok(pools);
+            // Filtrar pools por la oferta indicada
+            List<Pool> pools = poolRepository.findByOferta_IdOferta(ofertaId);
+            System.out.println("=== LISTAR POOLS ===");
+            System.out.println("Oferta ID solicitada: " + ofertaId);
+            System.out.println("Total pools en BD: " + pools.size());
+            for (Pool pool : pools) {
+                System.out.println("  - Pool: " + pool.getNombre() + " (ID: " + pool.getIdPool() + ")");
+                System.out.println("    Preguntas: " + (pool.getPreguntas() != null ? pool.getPreguntas().size() : 0));
+            }
+            System.out.println("====================");
+            List<java.util.Map<String, Object>> dto = pools.stream().map(p -> {
+                java.util.Map<String, Object> m = new java.util.HashMap<>();
+                m.put("idPool", p.getIdPool());
+                m.put("nombre", p.getNombre());
+                m.put("descripcion", p.getDescripcion());
+                m.put("cantidadPreguntas", p.getCantidadPreguntas());
+                m.put("preguntasCount", p.getPreguntas() != null ? p.getPreguntas().size() : 0);
+                return m;
+            }).toList();
+            return ResponseEntity.ok(dto);
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.badRequest()
