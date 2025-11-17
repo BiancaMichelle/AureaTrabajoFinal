@@ -2,6 +2,77 @@
 <html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/adminBase :: layout(~{::title}, ~{::main})}">
 <head>
     <title>Gestión de Ofertas Académicas</title>
+    <style>
+        /* Estilos para el modal de error */
+        .error-content {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .error-icon {
+            font-size: 2rem;
+            color: #ffc107;
+            margin-top: 0.2rem;
+        }
+        
+        .error-message h4 {
+            color: #dc3545;
+            margin: 0 0 0.5rem 0;
+            font-size: 1.2rem;
+        }
+        
+        .error-message p {
+            margin: 0 0 1rem 0;
+            line-height: 1.5;
+            color: #333;
+        }
+        
+        .error-suggestions {
+            background: #f8f9fa;
+            border-left: 4px solid #ffc107;
+            padding: 1rem;
+            border-radius: 0.375rem;
+            margin-top: 1rem;
+        }
+        
+        .error-suggestions h5 {
+            color: #856404;
+            margin: 0 0 0.5rem 0;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .error-suggestions ul {
+            margin: 0;
+            padding-left: 1rem;
+        }
+        
+        .error-suggestions li {
+            margin-bottom: 0.5rem;
+            color: #495057;
+        }
+        
+        .error-suggestions li i {
+            color: #6c757d;
+            margin-right: 0.5rem;
+        }
+        
+        .modal-md {
+            max-width: 500px;
+        }
+        
+        .text-warning {
+            color: #ffc107 !important;
+        }
+        
+        .text-danger {
+            color: #dc3545 !important;
+        }
+    </style>
 </head>
 <body>
 <main class="main-content">
@@ -422,10 +493,11 @@
                 <input type="hidden" id="docentesFormacion" name="docentesFormacion" value="">
                 <input type="hidden" id="horarios" name="horarios" value="">
                 <input type="hidden" id="otorgaCertificadoHidden" name="otorgaCertificado" value="false">
+                <input type="hidden" id="idOfertaModificar" name="idOferta" value="">
                 
                 <div class="form-actions">
-                    <button type="submit" class="btn-submit">
-                        <i class="fas fa-save"></i> Registrar Oferta
+                    <button type="submit" id="btn-submit-form" class="btn-submit">
+                        <i class="fas fa-save"></i> <span id="btn-submit-text">Registrar Oferta</span>
                     </button>
                     <button type="button" id="btn-cancel-form" class="btn-cancel">
                         <i class="fas fa-times"></i> Cancelar
@@ -529,13 +601,14 @@
                                 <button class="btn-accion btn-ver" 
                                         title="Ver información"
                                         th:data-id="${oferta.idOferta}"
-                                        onclick="verOferta(this)">
+                                        onclick="verDetalleOferta(this.getAttribute('data-id'))">
                                     <i class="fas fa-eye"></i>
                                 </button>
                                 <button class="btn-accion btn-modificar" 
                                         title="Modificar"
                                         th:data-id="${oferta.idOferta}"
-                                        onclick="modificarOferta(this)">
+                                        th:data-nombre="${oferta.nombre}"
+                                        onclick="modificarOferta(this.getAttribute('data-id'), this.getAttribute('data-nombre'))">
                                     <i class="fas fa-edit"></i>
                                 </button>
                             </td>
@@ -664,110 +737,6 @@
                         </table>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal de Detalle de Oferta -->
-    <div id="detalleOfertaModal" class="modal-overlay" style="display: none;">
-        <div class="modal-content modal-lg">
-            <div class="modal-header">
-                <h3><i class="fas fa-info-circle"></i> Detalles de la Oferta Académica</h3>
-                <button type="button" class="btn-close" aria-label="Cerrar" onclick="cerrarModalDetalle()">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            
-            <div class="modal-body">
-                <!-- Información principal -->
-                <div class="detalle-section">
-                    <h4><i class="fas fa-graduation-cap"></i> Información General</h4>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="detalle-item">
-                                <label>Nombre:</label>
-                                <span id="detalle-nombre">-</span>
-                            </div>
-                            <div class="detalle-item">
-                                <label>Tipo:</label>
-                                <span id="detalle-tipo" class="status-badge">-</span>
-                            </div>
-                            <div class="detalle-item">
-                                <label>Modalidad:</label>
-                                <span id="detalle-modalidad" class="status-badge">-</span>
-                            </div>
-                            <div class="detalle-item">
-                                <label>Estado:</label>
-                                <span id="detalle-estado" class="status-badge">-</span>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="detalle-item">
-                                <label>Cupos:</label>
-                                <span id="detalle-cupos">-</span>
-                            </div>
-                            <div class="detalle-item">
-                                <label>Costo:</label>
-                                <span id="detalle-costo">-</span>
-                            </div>
-                            <div class="detalle-item">
-                                <label>Certificado:</label>
-                                <span id="detalle-certificado">-</span>
-                            </div>
-                            <div class="detalle-item">
-                                <label>Duración:</label>
-                                <span id="detalle-duracion">-</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Fechas -->
-                <div class="detalle-section">
-                    <h4><i class="fas fa-calendar"></i> Fechas</h4>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="detalle-item">
-                                <label>Fecha de Inicio:</label>
-                                <span id="detalle-fecha-inicio">-</span>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="detalle-item">
-                                <label>Fecha de Fin:</label>
-                                <span id="detalle-fecha-fin">-</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Descripción -->
-                <div class="detalle-section">
-                    <h4><i class="fas fa-align-left"></i> Descripción</h4>
-                    <div class="detalle-item">
-                        <p id="detalle-descripcion" class="text-muted">-</p>
-                    </div>
-                </div>
-
-                <!-- Categorías -->
-                <div class="detalle-section">
-                    <h4><i class="fas fa-tags"></i> Categorías</h4>
-                    <div class="detalle-item">
-                        <span id="detalle-categorias" class="text-muted">-</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="cerrarModalDetalle()">
-                    <i class="fas fa-times"></i> Cerrar
-                </button>
-                <a id="btn-editar-oferta" href="#" class="btn btn-primary">
-                    <i class="fas fa-edit"></i> Editar Oferta
-                </a>
-                <button id="btn-eliminar-oferta" type="button" class="btn btn-danger" onclick="eliminarOfertaDesdeModal()">
-                    <i class="fas fa-trash"></i> Eliminar
-                </button>
             </div>
         </div>
     </div>
@@ -920,6 +889,277 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal de Detalle Completo de Oferta -->
+    <div id="modalDetalleOferta" class="modal-overlay" style="display: none;">
+        <div class="modal-content modal-xl">
+            <div class="modal-header">
+                <h3><i class="fas fa-graduation-cap"></i> Detalle de Oferta Académica</h3>
+                <button type="button" class="btn-close" onclick="cerrarModalDetalle()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Información General -->
+                <div class="oferta-detalle-section">
+                    <div class="section-header">
+                        <h4><i class="fas fa-info-circle"></i> Información General</h4>
+                    </div>
+                    <div class="oferta-info-grid">
+                        <div class="info-item">
+                            <label>Nombre:</label>
+                            <span id="detalle-nombre">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Tipo:</label>
+                            <span id="detalle-tipo" class="badge">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Modalidad:</label>
+                            <span id="detalle-modalidad" class="badge">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Estado:</label>
+                            <span id="detalle-estado" class="badge">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Categorías:</label>
+                            <div id="detalle-categorias" class="categorias-list">-</div>
+                        </div>
+                        <div class="info-item">
+                            <label>Costo:</label>
+                            <span id="detalle-costo" class="precio">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Imagen y Descripción -->
+                <div class="oferta-detalle-section">
+                    <div class="section-header">
+                        <h4><i class="fas fa-image"></i> Imagen y Descripción</h4>
+                    </div>
+                    <div class="imagen-descripcion-container">
+                        <div class="imagen-container">
+                            <img id="detalle-imagen" src="" alt="Imagen de la oferta" style="display: none;">
+                            <div id="detalle-sin-imagen" class="sin-imagen-placeholder">
+                                <i class="fas fa-image"></i>
+                                <span>Sin imagen</span>
+                            </div>
+                        </div>
+                        <div class="descripcion-container">
+                            <label>Descripción:</label>
+                            <div id="detalle-descripcion" class="descripcion-content">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fechas -->
+                <div class="oferta-detalle-section">
+                    <div class="section-header">
+                        <h4><i class="fas fa-calendar"></i> Fechas Importantes</h4>
+                    </div>
+                    <div class="oferta-info-grid">
+                        <div class="info-item">
+                            <label>Fecha de Inicio:</label>
+                            <span id="detalle-fecha-inicio">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Fecha de Fin:</label>
+                            <span id="detalle-fecha-fin">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Fecha de Inscripción:</label>
+                            <span id="detalle-fecha-inscripcion">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Fecha Límite de Inscripción:</label>
+                            <span id="detalle-fecha-limite">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Capacidad -->
+                <div class="oferta-detalle-section">
+                    <div class="section-header">
+                        <h4><i class="fas fa-users"></i> Capacidad</h4>
+                    </div>
+                    <div class="oferta-info-grid">
+                        <div class="info-item">
+                            <label>Capacidad Mínima:</label>
+                            <span id="detalle-capacidad-min">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Capacidad Máxima:</label>
+                            <span id="detalle-capacidad-max">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Certificación -->
+                <div id="seccion-certificacion" class="oferta-detalle-section" style="display: none;">
+                    <div class="section-header">
+                        <h4><i class="fas fa-certificate"></i> Certificación</h4>
+                    </div>
+                    <div class="oferta-info-grid">
+                        <div class="info-item">
+                            <label>Otorga Certificado:</label>
+                            <span id="detalle-otorga-certificado">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Costo de Certificado:</label>
+                            <span id="detalle-costo-certificado" class="precio">-</span>
+                        </div>
+                        <div class="info-item full-width">
+                            <label>Descripción del Certificado:</label>
+                            <div id="detalle-descripcion-certificado">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Datos Específicos por Tipo -->
+                <!-- Datos para CURSO -->
+                <div id="datos-curso" class="oferta-detalle-section tipo-especifico" style="display: none;">
+                    <div class="section-header">
+                        <h4><i class="fas fa-book"></i> Información del Curso</h4>
+                    </div>
+                    <div class="oferta-info-grid">
+                        <div class="info-item">
+                            <label>Costo por Cuota:</label>
+                            <span id="detalle-curso-costo-cuota" class="precio">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Número de Cuotas:</label>
+                            <span id="detalle-curso-nro-cuotas">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Costo de Mora:</label>
+                            <span id="detalle-curso-costo-mora" class="precio">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Día de Vencimiento:</label>
+                            <span id="detalle-curso-dia-vencimiento">-</span>
+                        </div>
+                        <div class="info-item full-width">
+                            <label>Docentes:</label>
+                            <div id="detalle-curso-docentes" class="docentes-list">-</div>
+                        </div>
+                        <div class="info-item full-width">
+                            <label>Horarios:</label>
+                            <div id="detalle-curso-horarios" class="horarios-list">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Datos para FORMACIÓN -->
+                <div id="datos-formacion" class="oferta-detalle-section tipo-especifico" style="display: none;">
+                    <div class="section-header">
+                        <h4><i class="fas fa-graduation-cap"></i> Información de la Formación</h4>
+                    </div>
+                    <div class="oferta-info-grid">
+                        <div class="info-item">
+                            <label>Costo por Cuota:</label>
+                            <span id="detalle-formacion-costo-cuota" class="precio">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Número de Cuotas:</label>
+                            <span id="detalle-formacion-nro-cuotas">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Costo de Mora:</label>
+                            <span id="detalle-formacion-costo-mora" class="precio">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Día de Vencimiento:</label>
+                            <span id="detalle-formacion-dia-vencimiento">-</span>
+                        </div>
+                        <div class="info-item full-width">
+                            <label>Docentes:</label>
+                            <div id="detalle-formacion-docentes" class="docentes-list">-</div>
+                        </div>
+                        <div class="info-item full-width">
+                            <label>Horarios:</label>
+                            <div id="detalle-formacion-horarios" class="horarios-list">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Datos para CHARLA -->
+                <div id="datos-charla" class="oferta-detalle-section tipo-especifico" style="display: none;">
+                    <div class="section-header">
+                        <h4><i class="fas fa-microphone"></i> Información de la Charla</h4>
+                    </div>
+                    <div class="oferta-info-grid">
+                        <div class="info-item full-width">
+                            <label>Disertantes:</label>
+                            <div id="detalle-charla-disertantes" class="disertantes-list">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Datos para SEMINARIO -->
+                <div id="datos-seminario" class="oferta-detalle-section tipo-especifico" style="display: none;">
+                    <div class="section-header">
+                        <h4><i class="fas fa-chalkboard-teacher"></i> Información del Seminario</h4>
+                    </div>
+                    <div class="oferta-info-grid">
+                        <div class="info-item full-width">
+                            <label>Disertantes:</label>
+                            <div id="detalle-seminario-disertantes" class="disertantes-list">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <div class="action-buttons">
+                    <button type="button" class="btn-primary" onclick="cerrarModalDetalle()">
+                        <i class="fas fa-times"></i>
+                        Cerrar
+                    </button>
+                    <button type="button" id="btn-cambiar-estado" class="btn-secondary" onclick="cambiarEstadoOferta()">
+                        <i id="icon-estado" class="fas fa-toggle-on"></i>
+                        <span id="text-estado">Dar de Baja</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Error para Cambio de Estado -->
+    <div id="modalErrorEstado" class="modal-overlay" style="display: none;">
+        <div class="modal-content modal-md">
+            <div class="modal-header">
+                <h3><i class="fas fa-exclamation-triangle text-warning"></i> No se puede cambiar el estado</h3>
+                <button type="button" class="btn-close" onclick="cerrarModalError()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="error-content">
+                    <div class="error-icon">
+                        <i id="error-icon" class="fas fa-exclamation-circle"></i>
+                    </div>
+                    <div class="error-message">
+                        <h4 id="error-title">Error al cambiar estado</h4>
+                        <p id="error-description">Descripción del error</p>
+                        <div id="error-suggestions" class="error-suggestions" style="display: none;">
+                            <h5><i class="fas fa-lightbulb"></i> Sugerencias:</h5>
+                            <ul id="error-suggestions-list">
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="cerrarModalError()">
+                    <i class="fas fa-check"></i> Entendido
+                </button>
+            </div>
+        </div>
+    </div>
     
     <!-- SCRIPT COMPLETO INLINE - SIN ARCHIVOS EXTERNOS -->
     <script>
@@ -927,6 +1167,15 @@
         
         document.addEventListener('DOMContentLoaded', function() {
             console.log('✅ DOM CARGADO');
+            
+            // Test: Verificar que los botones de ver detalle estén presentes
+            setTimeout(function() {
+                const botonesVer = document.querySelectorAll('.btn-ver');
+                console.log('🔍 Botones de ver encontrados:', botonesVer.length);
+                botonesVer.forEach((btn, index) => {
+                    console.log(`- Botón ${index + 1}:`, btn.getAttribute('data-id'));
+                });
+            }, 1000);
             
             // Referencias a elementos
             const btnShowForm = document.getElementById('btn-show-form');
@@ -2241,28 +2490,17 @@
                     <td>${oferta.fechaFin ? formatearFecha(oferta.fechaFin) : '-'}</td>
                     <td><span class="estado-badge">${oferta.estado || 'ACTIVA'}</span></td>
                     <td class="acciones-cell">
-                        <button class="btn-accion btn-ver" title="Ver información" data-id="${oferta.idOferta}" onclick="verOferta(this)">
+                        <button class="btn-accion btn-ver" title="Ver información" data-id="${oferta.idOferta}" onclick="verDetalleOferta(${oferta.idOferta})">
                             <i class="fas fa-eye"></i>
                         </button>
-                        <button class="btn-accion btn-modificar" title="Modificar" data-id="${oferta.idOferta}" onclick="modificarOferta(this)">
+                        <button class="btn-accion btn-modificar" title="Modificar" data-id="${oferta.idOferta}" onclick="modificarOferta(${oferta.idOferta})">
                             <i class="fas fa-edit"></i>
                         </button>
                     </td>
                 `;
                 tbody.appendChild(fila);
             });
-        }
-        
-        // Función para formatear fecha
-        function formatearFecha(fechaString) {
-            try {
-                const fecha = new Date(fechaString);
-                return fecha.toLocaleDateString('es-ES');
-            } catch (e) {
-                return fechaString;
-            }
-        }
-        
+        }        
         // Función para actualizar contador de ofertas
         function actualizarContadorOfertas(total) {
             const contador = document.getElementById('total-ofertas');
@@ -2270,7 +2508,984 @@
                 contador.textContent = total;
             }
         }
+
+        // ================= FUNCIONES PARA EL MODAL DE DETALLE =================
+        
+        // Variable global para almacenar el ID de la oferta actual
+        let ofertaActualId = null;
+
+        // Función global para abrir modal de detalle
+        window.verDetalleOferta = function(id) {
+            console.log('📋 FUNCIÓN verDetalleOferta EJECUTADA con ID:', id);
+            console.log('- Tipo de ID:', typeof id);
+            
+            if (!id) {
+                console.error('❌ ID de oferta no válido:', id);
+                mostrarNotificacion('ID de oferta no válido', 'error');
+                return;
+            }
+            
+            ofertaActualId = id;
+            console.log('- ID almacenado:', ofertaActualId);
+            
+            // Obtener datos de la oferta desde el servidor
+            console.log('🔗 Realizando fetch a:', `/admin/ofertas/${id}`);
+            fetch(`/admin/ofertas/${id}`)
+                .then(response => {
+                    console.log('📡 Respuesta recibida:', response.status, response.statusText);
+                    if (!response.ok) {
+                        throw new Error(`Error ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('✅ Datos de la oferta recibidos:', data);
+                    
+                    // Verificar estructura de la respuesta
+                    if (data.success && data.oferta) {
+                        console.log('📋 Estructura correcta - cargando en modal...');
+                        cargarDatosEnModal(data.oferta);
+                    } else if (data.oferta) {
+                        console.log('📋 Datos directos - cargando en modal...');
+                        cargarDatosEnModal(data.oferta);
+                    } else if (data) {
+                        console.log('📋 Datos directos (sin wrapper) - cargando en modal...');
+                        cargarDatosEnModal(data);
+                    } else {
+                        console.error('❌ Estructura de respuesta no reconocida:', data);
+                        mostrarNotificacion('Error: Estructura de datos no válida', 'error');
+                    }
+                    
+                    // Mostrar el modal después de cargar los datos
+                    const modal = document.getElementById('modalDetalleOferta');
+                    if (modal) {
+                        modal.style.display = 'flex';
+                        document.body.style.overflow = 'hidden';
+                        console.log('📱 Modal mostrado');
+                    } else {
+                        console.error('❌ Modal modalDetalleOferta no encontrado');
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Error al cargar detalle de la oferta:', error);
+                    mostrarNotificacion('Error al cargar los datos de la oferta', 'error');
+                });
+        };
+
+        // Función para cargar datos en el modal
+        function cargarDatosEnModal(oferta) {
+            console.log('🔄 Cargando datos en el modal:', oferta);
+            console.log('📊 Propiedades disponibles:', Object.keys(oferta));
+            console.log('📝 Valores de campos clave:');
+            console.log('  - nombre:', oferta.nombre);
+            console.log('  - descripcion:', oferta.descripcion); 
+            console.log('  - tipo:', oferta.tipo);
+            console.log('  - modalidad:', oferta.modalidad);
+            console.log('  - estado:', oferta.estado);
+            console.log('  - costoInscripcion:', oferta.costoInscripcion);
+            console.log('  - cupos:', oferta.cupos);
+            console.log('  - certificado:', oferta.certificado);
+            
+            // Verificar si oferta tiene datos
+            if (!oferta) {
+                console.error('❌ Objeto oferta está vacío o undefined');
+                return;
+            }
+            
+            // Información general - verificar que los elementos existen antes de asignar
+            const nombre = oferta.nombre || '-';
+            const nombreElement = document.getElementById('detalle-nombre');
+            if (nombreElement) {
+                nombreElement.textContent = nombre;
+                console.log('✅ Nombre asignado:', nombre);
+            } else {
+                console.error('❌ Elemento detalle-nombre no encontrado');
+            }
+            
+            const tipo = oferta.tipo || '-';
+            const tipoElement = document.getElementById('detalle-tipo');
+            if (tipoElement) {
+                tipoElement.textContent = tipo;
+                tipoElement.className = `badge tipo-${tipo}`;
+                console.log('✅ Tipo asignado:', tipo);
+            } else {
+                console.error('❌ Elemento detalle-tipo no encontrado');
+            }
+            
+            const modalidad = oferta.modalidad || '-';
+            const modalidadElement = document.getElementById('detalle-modalidad');
+            if (modalidadElement) {
+                modalidadElement.textContent = modalidad;
+                modalidadElement.className = `badge modalidad-${modalidad}`;
+                console.log('✅ Modalidad asignada:', modalidad);
+            } else {
+                console.error('❌ Elemento detalle-modalidad no encontrado');
+            }
+            
+            const estado = oferta.estado || '-';
+            const estadoElement = document.getElementById('detalle-estado');
+            if (estadoElement) {
+                estadoElement.textContent = estado;
+                estadoElement.className = `badge estado-${estado}`;
+                console.log('✅ Estado asignado:', estado);
+            } else {
+                console.error('❌ Elemento detalle-estado no encontrado');
+            }
+            
+            // Descripción
+            const descripcion = oferta.descripcion || 'Sin descripción disponible';
+            const descripcionElement = document.getElementById('detalle-descripcion');
+            if (descripcionElement) {
+                descripcionElement.innerHTML = descripcion;
+                console.log('✅ Descripción asignada:', descripcion ? 'Disponible' : 'No disponible');
+            } else {
+                console.error('❌ Elemento detalle-descripcion no encontrado');
+            }
+            
+            // Usar costoInscripcion que es el campo real de CursoDetalle
+            const costo = oferta.costoInscripcion || oferta.costo || 0;
+            const costoElement = document.getElementById('detalle-costo');
+            if (costoElement) {
+                costoElement.textContent = costo ? `$${costo.toLocaleString()}` : '-';
+                console.log('✅ Costo asignado:', costo);
+            } else {
+                console.error('❌ Elemento detalle-costo no encontrado');
+            }
+            
+            // Fechas - usar los nombres exactos de LocalDate
+            const fechaInicio = formatearFecha(oferta.fechaInicio) || '-';
+            const fechaInicioElement = document.getElementById('detalle-fecha-inicio');
+            if (fechaInicioElement) {
+                fechaInicioElement.textContent = fechaInicio;
+                console.log('✅ Fecha inicio asignada:', fechaInicio);
+            } else {
+                console.error('❌ Elemento detalle-fecha-inicio no encontrado');
+            }
+            
+            const fechaFin = formatearFecha(oferta.fechaFin) || '-';
+            const fechaFinElement = document.getElementById('detalle-fecha-fin');
+            if (fechaFinElement) {
+                fechaFinElement.textContent = fechaFin;
+                console.log('✅ Fecha fin asignada:', fechaFin);
+            } else {
+                console.error('❌ Elemento detalle-fecha-fin no encontrado');
+            }
+            
+            // Para fechas de inscripción, pueden no estar en CursoDetalle
+            const fechaInscripcionElement = document.getElementById('detalle-fecha-inscripcion');
+            if (fechaInscripcionElement) fechaInscripcionElement.textContent = '-';
+            
+            const fechaLimiteElement = document.getElementById('detalle-fecha-limite');
+            if (fechaLimiteElement) fechaLimiteElement.textContent = '-';
+            
+            // Capacidad - usar cupos que es el campo real
+            const cupos = oferta.cupos || '-';
+            const capacidadMinElement = document.getElementById('detalle-capacidad-min');
+            if (capacidadMinElement) capacidadMinElement.textContent = '-'; // No disponible en CursoDetalle
+            
+            const capacidadMaxElement = document.getElementById('detalle-capacidad-max');
+            if (capacidadMaxElement) {
+                capacidadMaxElement.textContent = cupos;
+                console.log('✅ Cupos asignados:', cupos);
+            } else {
+                console.error('❌ Elemento detalle-capacidad-max no encontrado');
+            }
+            
+            // Categorías
+            const categoriasContainer = document.getElementById('detalle-categorias');
+            if (categoriasContainer) {
+                if (oferta.categorias && oferta.categorias.length > 0) {
+                    categoriasContainer.innerHTML = oferta.categorias.map(cat => 
+                        `<span class="categoria-chip">${cat}</span>`
+                    ).join('');
+                } else {
+                    categoriasContainer.innerHTML = '<span class="text-muted">Sin categorías</span>';
+                }
+            }
+            
+            // Imagen
+            const imagenElement = document.getElementById('detalle-imagen');
+            const sinImagenElement = document.getElementById('detalle-sin-imagen');
+            if (imagenElement && sinImagenElement) {
+                if (oferta.imagen) {
+                    imagenElement.src = oferta.imagen;
+                    imagenElement.style.display = 'block';
+                    sinImagenElement.style.display = 'none';
+                } else {
+                    imagenElement.style.display = 'none';
+                    sinImagenElement.style.display = 'flex';
+                }
+            }
+            
+            // Certificación
+            const certificado = oferta.certificado;
+            const seccionCertificacion = document.getElementById('seccion-certificacion');
+            if (seccionCertificacion) {
+                if (certificado === true || certificado === 'true' || certificado === 'Sí') {
+                    seccionCertificacion.style.display = 'block';
+                    const certificadoElement = document.getElementById('detalle-otorga-certificado');
+                    if (certificadoElement) certificadoElement.textContent = 'Sí';
+                } else {
+                    seccionCertificacion.style.display = 'none';
+                }
+            }
+            
+            // Mostrar datos específicos según el tipo
+            mostrarDatosEspecificosPorTipo(oferta, tipo);
+            
+            // Configurar botón de estado
+            configurarBotonEstado(estado);
+            
+            console.log('✅ Carga de datos en modal completada');
+        }
+        
+        // Función para mostrar datos específicos según el tipo
+        function mostrarDatosEspecificosPorTipo(oferta, tipo) {
+            // Ocultar todas las secciones específicas por tipo
+            document.querySelectorAll('.tipo-especifico').forEach(seccion => {
+                seccion.style.display = 'none';
+            });
+            
+            switch (tipo) {
+                case 'CURSO':
+                    mostrarDatosCurso(oferta);
+                    break;
+                case 'FORMACION':
+                    mostrarDatosFormacion(oferta);
+                    break;
+                case 'CHARLA':
+                    mostrarDatosCharla(oferta);
+                    break;
+                case 'SEMINARIO':
+                    mostrarDatosSeminario(oferta);
+                    break;
+                default:
+                    console.log('⚠️ Tipo de oferta no reconocido:', tipo);
+            }
+        }
+        
+        // Funciones para mostrar datos específicos por tipo
+        function mostrarDatosCurso(oferta) {
+            const seccion = document.getElementById('datos-curso');
+            seccion.style.display = 'block';
+            
+            document.getElementById('detalle-curso-costo-cuota').textContent = 
+                oferta.costoCuota ? `$${oferta.costoCuota.toLocaleString()}` : '-';
+            document.getElementById('detalle-curso-nro-cuotas').textContent = oferta.nrCuotas || '-';
+            document.getElementById('detalle-curso-costo-mora').textContent = 
+                oferta.costoMora ? `$${oferta.costoMora.toLocaleString()}` : '-';
+            document.getElementById('detalle-curso-dia-vencimiento').textContent = oferta.diaVencimiento || '-';
+            
+            // Docentes
+            const docentesContainer = document.getElementById('detalle-curso-docentes');
+            if (oferta.docentes && oferta.docentes.length > 0) {
+                docentesContainer.innerHTML = oferta.docentes.map(docente => `
+                    <div class="docente-item">
+                        <i class="fas fa-user-tie"></i>
+                        <div class="docente-info">
+                            <div class="docente-nombre">${docente.nombre} ${docente.apellido || ''}</div>
+                            <div class="docente-especialidad">${docente.especialidad || 'Sin especialidad'}</div>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                docentesContainer.innerHTML = '<span class="text-muted">Sin docentes asignados</span>';
+            }
+            
+            // Horarios (si están disponibles)
+            const horariosContainer = document.getElementById('detalle-curso-horarios');
+            if (oferta.horarios && oferta.horarios.length > 0) {
+                horariosContainer.innerHTML = oferta.horarios.map(horario => `
+                    <div class="horario-item">
+                        <i class="fas fa-clock"></i>
+                        <span class="horario-dia">${horario.dia}</span>
+                        <span class="horario-horas">${horario.horaInicio} - ${horario.horaFin}</span>
+                    </div>
+                `).join('');
+            } else {
+                horariosContainer.innerHTML = '<span class="text-muted">Sin horarios definidos</span>';
+            }
+            
+            console.log('📚 Datos de curso cargados');
+        }
+        
+        function mostrarDatosFormacion(oferta) {
+            const seccion = document.getElementById('datos-formacion');
+            seccion.style.display = 'block';
+            
+            document.getElementById('detalle-formacion-costo-cuota').textContent = 
+                oferta.costoCuota ? `$${oferta.costoCuota.toLocaleString()}` : '-';
+            document.getElementById('detalle-formacion-nro-cuotas').textContent = oferta.nrCuotas || '-';
+            document.getElementById('detalle-formacion-costo-mora').textContent = 
+                oferta.costoMora ? `$${oferta.costoMora.toLocaleString()}` : '-';
+            document.getElementById('detalle-formacion-dia-vencimiento').textContent = oferta.diaVencimiento || '-';
+            
+            // Docentes
+            const docentesContainer = document.getElementById('detalle-formacion-docentes');
+            if (oferta.docentes && oferta.docentes.length > 0) {
+                docentesContainer.innerHTML = oferta.docentes.map(docente => `
+                    <div class="docente-item">
+                        <i class="fas fa-user-tie"></i>
+                        <div class="docente-info">
+                            <div class="docente-nombre">${docente.nombre} ${docente.apellido || ''}</div>
+                            <div class="docente-especialidad">${docente.especialidad || 'Sin especialidad'}</div>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                docentesContainer.innerHTML = '<span class="text-muted">Sin docentes asignados</span>';
+            }
+            
+            // Horarios
+            const horariosContainer = document.getElementById('detalle-formacion-horarios');
+            if (oferta.horarios && oferta.horarios.length > 0) {
+                horariosContainer.innerHTML = oferta.horarios.map(horario => `
+                    <div class="horario-item">
+                        <i class="fas fa-clock"></i>
+                        <span class="horario-dia">${horario.dia}</span>
+                        <span class="horario-horas">${horario.horaInicio} - ${horario.horaFin}</span>
+                    </div>
+                `).join('');
+            } else {
+                horariosContainer.innerHTML = '<span class="text-muted">Sin horarios definidos</span>';
+            }
+            
+            console.log('🎓 Datos de formación cargados');
+        }
+        
+        function mostrarDatosCharla(oferta) {
+            const seccion = document.getElementById('datos-charla');
+            seccion.style.display = 'block';
+            
+            const disertantesContainer = document.getElementById('detalle-charla-disertantes');
+            if (oferta.disertantes && oferta.disertantes.length > 0) {
+                disertantesContainer.innerHTML = oferta.disertantes.map(disertante => `
+                    <div class="disertante-item">
+                        <i class="fas fa-microphone"></i>
+                        <div class="disertante-info">
+                            <div class="disertante-nombre">${disertante}</div>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                disertantesContainer.innerHTML = '<span class="text-muted">Sin disertantes asignados</span>';
+            }
+            
+            console.log('🎤 Datos de charla cargados');
+        }
+        
+        function mostrarDatosSeminario(oferta) {
+            const seccion = document.getElementById('datos-seminario');
+            seccion.style.display = 'block';
+            
+            const disertantesContainer = document.getElementById('detalle-seminario-disertantes');
+            if (oferta.disertantes && oferta.disertantes.length > 0) {
+                disertantesContainer.innerHTML = oferta.disertantes.map(disertante => `
+                    <div class="disertante-item">
+                        <i class="fas fa-chalkboard-teacher"></i>
+                        <div class="disertante-info">
+                            <div class="disertante-nombre">${disertante}</div>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                disertantesContainer.innerHTML = '<span class="text-muted">Sin disertantes asignados</span>';
+            }
+            
+            console.log('🏛️ Datos de seminario cargados');
+        }
+        
+        // Función para configurar botón de estado
+        function configurarBotonEstado(estado) {
+            const btnCambiarEstado = document.getElementById('btn-cambiar-estado');
+            const iconEstado = document.getElementById('icon-estado');
+            const textEstado = document.getElementById('text-estado');
+            
+            console.log('🎯 Configurando botón para estado:', estado);
+            
+            if (btnCambiarEstado && iconEstado && textEstado) {
+                if (estado === 'ACTIVA') {
+                    btnCambiarEstado.className = 'btn-danger';  // Rojo para dar de baja
+                    iconEstado.className = 'fas fa-times-circle';
+                    textEstado.textContent = 'Dar de Baja';
+                    console.log('🔴 Botón configurado para dar de baja');
+                } else {
+                    btnCambiarEstado.className = 'btn-success';  // Verde para dar de alta
+                    iconEstado.className = 'fas fa-check-circle';
+                    textEstado.textContent = 'Dar de Alta';
+                    console.log('🟢 Botón configurado para dar de alta');
+                }
+            } else {
+                console.error('❌ No se pudieron encontrar los elementos del botón de estado');
+                console.log('Elementos encontrados:', {
+                    btnCambiarEstado: !!btnCambiarEstado,
+                    iconEstado: !!iconEstado,
+                    textEstado: !!textEstado
+                });
+            }
+        }
+        
+        // Función global para cerrar modal
+        window.cerrarModalDetalle = function() {
+            const modal = document.getElementById('modalDetalleOferta');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = 'auto';
+                ofertaActualId = null;
+                console.log('🔚 Modal cerrado');
+            }
+        };
+        
+        // Función para cambiar estado de la oferta
+        window.cambiarEstadoOferta = function() {
+            if (!ofertaActualId) {
+                console.error('❌ No hay oferta seleccionada para cambiar estado');
+                mostrarNotificacion('Error: No hay oferta seleccionada', 'error');
+                return;
+            }
+            
+            console.log('🔄 Cambiando estado de oferta con ID:', ofertaActualId);
+            
+            // Obtener elementos del DOM
+            const btnCambiarEstado = document.getElementById('btn-cambiar-estado');
+            const iconEstado = document.getElementById('icon-estado');
+            const textEstado = document.getElementById('text-estado');
+            
+            // Verificar que los elementos existen
+            if (!btnCambiarEstado || !iconEstado || !textEstado) {
+                console.error('❌ No se encontraron los elementos del botón');
+                console.log('Elementos encontrados:', {
+                    btnCambiarEstado: !!btnCambiarEstado,
+                    iconEstado: !!iconEstado,
+                    textEstado: !!textEstado
+                });
+                mostrarNotificacion('Error: Elementos del botón no encontrados', 'error');
+                return;
+            }
+            
+            // Deshabilitar botón durante la operación
+            const textoOriginal = btnCambiarEstado.innerHTML;
+            btnCambiarEstado.disabled = true;
+            btnCambiarEstado.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+            
+            // Realizar petición al servidor
+            fetch(`/admin/ofertas/cambiar-estado/${ofertaActualId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                console.log('📡 Respuesta del servidor:', response.status);
+                // No lanzar error aquí, siempre procesar la respuesta JSON
+                return response.json();
+            })
+            .then(data => {
+                console.log('✅ Respuesta procesada:', data);
+                console.log('📋 Detalles de la respuesta:', {
+                    success: data.success,
+                    message: data.message,
+                    motivo: data.motivo,
+                    nuevoEstado: data.nuevoEstado
+                });
+                
+                if (data.success) {
+                    console.log('🎉 Estado cambiado exitosamente a:', data.nuevoEstado);
+                    
+                    // Actualizar interfaz del botón según el nuevo estado
+                    if (data.nuevoEstado === 'ACTIVA') {
+                        btnCambiarEstado.className = 'btn-danger';  // Rojo para dar de baja
+                        iconEstado.className = 'fas fa-times-circle';
+                        textEstado.textContent = 'Dar de Baja';
+                    } else {
+                        btnCambiarEstado.className = 'btn-success';  // Verde para dar de alta
+                        iconEstado.className = 'fas fa-check-circle';
+                        textEstado.textContent = 'Dar de Alta';
+                    }
+                    
+                    // Actualizar badge de estado en el modal
+                    const estadoElement = document.getElementById('detalle-estado');
+                    if (estadoElement) {
+                        estadoElement.textContent = data.nuevoEstado;
+                        estadoElement.className = `badge estado-${data.nuevoEstado}`;
+                    }
+                    
+                    // Mostrar notificación de éxito
+                    const mensaje = data.nuevoEstado === 'ACTIVA' ? 
+                        'Oferta activada correctamente' : 
+                        'Oferta dada de baja correctamente';
+                    mostrarNotificacion(mensaje, 'success');
+                    
+                    console.log('🔄 Estado actualizado en la interfaz');
+                } else {
+                    console.error('❌ Error del servidor:', data.message || 'Error desconocido');
+                    console.log('🔍 Motivo del error:', data.motivo);
+                    console.log('🔍 Datos completos del error:', data);
+                    
+                    // Crear mensaje detallado para alert
+                    let mensajeDetallado = data.message || 'Error al cambiar estado';
+                    if (data.motivo) {
+                        switch(data.motivo) {
+                            case 'VALIDACION_BAJA':
+                                mensajeDetallado += '\n\nMotivo: La oferta tiene inscripciones activas';
+                                mensajeDetallado += '\n\nSugerencias:';
+                                mensajeDetallado += '\n- Cancela las inscripciones activas primero';
+                                mensajeDetallado += '\n- O edita la oferta para cambiar las fechas';
+                                mensajeDetallado += '\n- Espera a que termine la oferta naturalmente';
+                                break;
+                            case 'ESTADO_FINAL':
+                                mensajeDetallado += '\n\nMotivo: La fecha de finalización ya pasó';
+                                mensajeDetallado += '\n\nSugerencias:';
+                                mensajeDetallado += '\n- Las ofertas finalizadas no pueden cambiar de estado';
+                                mensajeDetallado += '\n- Crea una nueva oferta similar si necesitas reactivarla';
+                                break;
+                            case 'ERROR_SERVIDOR':
+                                mensajeDetallado += '\n\nMotivo: Error interno del servidor';
+                                mensajeDetallado += '\n\nSugerencias:';
+                                mensajeDetallado += '\n- Intenta nuevamente en unos segundos';
+                                mensajeDetallado += '\n- Si persiste, contacta al administrador';
+                                break;
+                            default:
+                                if (data.motivo !== 'ERROR_GENERAL') {
+                                    mensajeDetallado += '\n\nMotivo: ' + data.motivo;
+                                }
+                        }
+                    }
+                    
+                    // Mostrar el mensaje detallado
+                    alert(mensajeDetallado);
+                    
+                    // Restaurar botón original
+                    btnCambiarEstado.innerHTML = textoOriginal;
+                }
+            })
+            .catch(error => {
+                console.error('❌ Error en la petición:', error);
+                
+                // Mensaje de error más simple
+                alert('Error de conexión al cambiar el estado de la oferta\n\nIntenta nuevamente en unos segundos.');
+                
+                // Restaurar botón original
+                btnCambiarEstado.innerHTML = textoOriginal;
+            })
+            .finally(() => {
+                // Siempre rehabilitar el botón
+                btnCambiarEstado.disabled = false;
+            });
+        };
+        
+        // Función para mostrar modal de error con motivo específico
+        window.mostrarModalError = function(mensaje, tipoError) {
+            console.log('🚨 Mostrando modal de error:', mensaje, tipoError);
+            
+            const modal = document.getElementById('modalErrorEstado');
+            const errorIcon = document.getElementById('error-icon');
+            const errorTitle = document.getElementById('error-title');
+            const errorDescription = document.getElementById('error-description');
+            const errorSuggestions = document.getElementById('error-suggestions');
+            const errorSuggestionsList = document.getElementById('error-suggestions-list');
+            
+            if (!modal || !errorTitle || !errorDescription) {
+                console.error('❌ Elementos del modal de error no encontrados');
+                // Fallback a alert simple
+                alert('Error: ' + mensaje + '\n\nMotivo: ' + tipoError);
+                return;
+            }
+            
+            // Configurar contenido según el tipo de error
+            let mensajeFinal = mensaje;
+            switch(tipoError) {
+                case 'VALIDACION_BAJA':
+                    errorIcon.className = 'fas fa-users text-warning';
+                    errorTitle.textContent = 'No se puede dar de baja la oferta';
+                    errorDescription.textContent = mensaje;
+                    mensajeFinal = mensaje + ' (La oferta tiene inscripciones activas)';
+                    
+                    // Mostrar sugerencias específicas
+                    if (errorSuggestions) {
+                        errorSuggestions.style.display = 'block';
+                        errorSuggestionsList.innerHTML = `
+                            <li><i class="fas fa-user-minus"></i> Cancela las inscripciones activas primero</li>
+                            <li><i class="fas fa-edit"></i> O edita la oferta para cambiar las fechas</li>
+                            <li><i class="fas fa-clock"></i> Espera a que termine la oferta naturalmente</li>
+                        `;
+                    }
+                    break;
+                    
+                case 'ESTADO_FINAL':
+                    errorIcon.className = 'fas fa-flag text-danger';
+                    errorTitle.textContent = 'Oferta en estado final';
+                    errorDescription.textContent = mensaje;
+                    mensajeFinal = mensaje + ' (La fecha de finalización ya pasó)';
+                    
+                    if (errorSuggestions) {
+                        errorSuggestions.style.display = 'block';
+                        errorSuggestionsList.innerHTML = `
+                            <li><i class="fas fa-info-circle"></i> Las ofertas finalizadas o canceladas no pueden cambiar de estado</li>
+                            <li><i class="fas fa-plus"></i> Crea una nueva oferta similar si necesitas reactivarla</li>
+                        `;
+                    }
+                    break;
+                    
+                case 'ERROR_SERVIDOR':
+                    errorIcon.className = 'fas fa-server text-danger';
+                    errorTitle.textContent = 'Error del sistema';
+                    errorDescription.textContent = mensaje;
+                    mensajeFinal = mensaje + ' (Error interno del servidor)';
+                    
+                    if (errorSuggestions) {
+                        errorSuggestions.style.display = 'block';
+                        errorSuggestionsList.innerHTML = `
+                            <li><i class="fas fa-refresh"></i> Intenta nuevamente en unos segundos</li>
+                            <li><i class="fas fa-phone"></i> Si el problema persiste, contacta al administrador</li>
+                        `;
+                    }
+                    break;
+                    
+                default:
+                    errorIcon.className = 'fas fa-exclamation-triangle text-warning';
+                    errorTitle.textContent = 'Error';
+                    errorDescription.textContent = mensaje;
+                    mensajeFinal = mensaje;
+                    if (errorSuggestions) {
+                        errorSuggestions.style.display = 'none';
+                    }
+                    break;
+            }
+            
+            // Intentar mostrar el modal, usar alert como fallback
+            try {
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+                console.log('✅ Modal de error mostrado');
+            } catch (e) {
+                console.error('❌ Error mostrando modal, usando alert:', e);
+                alert('Error: ' + mensajeFinal);
+            }
+        };
+        
+        // Función para cerrar modal de error
+        window.cerrarModalError = function() {
+            const modal = document.getElementById('modalErrorEstado');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = 'auto';
+                console.log('🔚 Modal de error cerrado');
+            }
+        };
+
+        // Función para cerrar modal
+        function cerrarModal() {
+            const modal = document.getElementById('modalDetalleOferta');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = 'auto'; // Restaurar scroll
+                console.log('🔚 Modal cerrado');
+            }
+        }
+
+        // Función auxiliar para formatear fechas
+        function formatearFecha(fecha) {
+            if (!fecha) return null;
+            try {
+                if (Array.isArray(fecha) && fecha.length >= 3) {
+                    // Si es array [año, mes, día] - formato que devuelve LocalDate en JSON
+                    const [año, mes, dia] = fecha;
+                    const fechaObj = new Date(año, mes - 1, dia); // mes - 1 porque Date usa índice 0
+                    return fechaObj.toLocaleDateString('es-ES', {
+                        day: '2-digit',
+                        month: '2-digit',  
+                        year: 'numeric'
+                    });
+                } else if (typeof fecha === 'string') {
+                    // Si es string, asumimos formato ISO (yyyy-mm-dd)
+                    return new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                    });
+                } else if (fecha instanceof Date) {
+                    return fecha.toLocaleDateString('es-ES', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                    });
+                }
+                return null;
+            } catch (e) {
+                console.error('Error formateando fecha:', e, fecha);
+                return null;
+            }
+        }
+
+        // Cerrar modal al hacer clic fuera
+        window.onclick = function(event) {
+            const modal = document.getElementById('modalDetalleOferta');
+            if (event.target === modal) {
+                cerrarModal();
+            }
+        };
+
+        console.log('✅ Funciones del modal de detalle inicializadas');
+        
+        // ================= FUNCIÓN PARA MODIFICAR OFERTA =================
+        
+        // Variable global para rastrear si está en modo edición
+        let modoEdicion = false;
+        let idOfertaModificar = null;
+        
+        /**
+         * Función para modificar una oferta académica
+         */
+        window.modificarOferta = function(idOferta, nombreOferta) {
+            console.log('🔄 Iniciando modificación de oferta:', idOferta, nombreOferta);
+            
+            // Mostrar confirmación
+            if (confirm(`¿Estás seguro que quieres modificar la oferta "${nombreOferta}"?`)) {
+                console.log('✅ Usuario confirmó modificación');
+                
+                // Activar modo edición
+                modoEdicion = true;
+                idOfertaModificar = idOferta;
+                
+                // Cambiar el texto del botón submit
+                const btnSubmit = document.getElementById('btn-submit-form');
+                const btnSubmitText = document.getElementById('btn-submit-text');
+                if (btnSubmit && btnSubmitText) {
+                    btnSubmitText.textContent = 'Guardar Modificaciones';
+                    btnSubmit.classList.add('btn-update');
+                }
+                
+                // Cargar datos de la oferta
+                cargarDatosOferta(idOferta);
+                
+                // Mostrar el formulario
+                mostrarFormulario();
+                
+            } else {
+                console.log('❌ Usuario canceló modificación');
+            }
+        };
+        
+        /**
+         * Función para cargar los datos de una oferta en el formulario
+         */
+        function cargarDatosOferta(idOferta) {
+            console.log('📥 Cargando datos de la oferta:', idOferta);
+            
+            fetch(`/admin/ofertas/${idOferta}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('📋 Respuesta del servidor:', data);
+                    
+                    if (data.success) {
+                        poblarFormulario(data.oferta);
+                    } else {
+                        console.error('❌ Error al cargar datos:', data.message);
+                        alert('Error al cargar los datos de la oferta: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Error en la petición:', error);
+                    alert('Error de conexión al cargar los datos de la oferta');
+                });
+        }
+        
+        /**
+         * Función para poblar el formulario con los datos de la oferta
+         */
+        function poblarFormulario(oferta) {
+            console.log('📝 Poblando formulario con datos:', oferta);
+            
+            try {
+                // Establecer ID de la oferta para modificar
+                if (document.getElementById('idOfertaModificar')) {
+                    document.getElementById('idOfertaModificar').value = oferta.id || oferta.idOferta || '';
+                }
+                
+                // Datos básicos (usando los IDs reales del formulario)
+                if (document.getElementById('nombre')) {
+                    document.getElementById('nombre').value = oferta.nombre || '';
+                }
+                if (document.getElementById('descripcion')) {
+                    document.getElementById('descripcion').value = oferta.descripcion || '';
+                }
+                if (document.getElementById('tipoOferta')) {
+                    document.getElementById('tipoOferta').value = oferta.tipo || oferta.tipoOferta || '';
+                }
+                if (document.getElementById('modalidad')) {
+                    document.getElementById('modalidad').value = oferta.modalidad || '';
+                }
+                if (document.getElementById('fechaInicio')) {
+                    document.getElementById('fechaInicio').value = oferta.fechaInicio || '';
+                }
+                if (document.getElementById('fechaFin')) {
+                    document.getElementById('fechaFin').value = oferta.fechaFin || '';
+                }
+                if (document.getElementById('cupos')) {
+                    document.getElementById('cupos').value = oferta.cupos || '';
+                }
+                
+                // Certificado - manejar diferentes formatos
+                const certificadoField = document.getElementById('otorgaCertificado');
+                if (certificadoField && oferta.certificado !== undefined) {
+                    if (typeof oferta.certificado === 'string') {
+                        certificadoField.checked = oferta.certificado === 'true' || oferta.certificado === 'SI';
+                    } else {
+                        certificadoField.checked = oferta.certificado === true;
+                    }
+                }
+                
+                // Mostrar campos específicos según el tipo
+                mostrarCamposEspecificos(oferta.tipo || oferta.tipoOferta);
+                
+                // Campos específicos según el tipo
+                const tipoOferta = oferta.tipo || oferta.tipoOferta;
+                if (tipoOferta === 'CURSO') {
+                    if (document.getElementById('costoCuota')) document.getElementById('costoCuota').value = oferta.costoCuota || '';
+                    if (document.getElementById('costoMora')) document.getElementById('costoMora').value = oferta.costoMora || '';
+                    if (document.getElementById('nrCuotas')) document.getElementById('nrCuotas').value = oferta.nrCuotas || '';
+                    if (document.getElementById('diaVencimiento')) document.getElementById('diaVencimiento').value = oferta.diaVencimiento || '';
+                    
+                } else if (tipoOferta === 'FORMACION') {
+                    if (document.getElementById('costoCuotaFormacion')) document.getElementById('costoCuotaFormacion').value = oferta.costoCuota || '';
+                    if (document.getElementById('costoMoraFormacion')) document.getElementById('costoMoraFormacion').value = oferta.costoMora || '';
+                    if (document.getElementById('nrCuotasFormacion')) document.getElementById('nrCuotasFormacion').value = oferta.nrCuotas || '';
+                    if (document.getElementById('diaVencimientoFormacion')) document.getElementById('diaVencimientoFormacion').value = oferta.diaVencimiento || '';
+                    
+                } else if (tipoOferta === 'CHARLA') {
+                    if (document.getElementById('costoInscripcionCharla')) document.getElementById('costoInscripcionCharla').value = oferta.costoInscripcion || oferta.costo || '';
+                    
+                } else if (tipoOferta === 'SEMINARIO') {
+                    if (document.getElementById('costoInscripcionSeminario')) document.getElementById('costoInscripcionSeminario').value = oferta.costoInscripcion || oferta.costo || '';
+                }
+                
+                // TODO: Cargar categorías
+                // TODO: Mostrar imagen existente si la hay
+                
+                console.log('✅ Formulario poblado exitosamente');
+                
+            } catch (error) {
+                console.error('❌ Error poblando formulario:', error);
+                alert('Error al cargar los datos en el formulario: ' + error.message);
+            }
+        }
+        
+        /**
+         * Función para mostrar el formulario
+         */
+        function mostrarFormulario() {
+            const formContainer = document.getElementById('form-container');
+            if (formContainer) {
+                formContainer.style.display = 'block';
+                formContainer.classList.add('show');
+                
+                // Scroll hasta el formulario
+                formContainer.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+        
+        /**
+         * Función para resetear el modo edición
+         */
+        function resetearModoEdicion() {
+            modoEdicion = false;
+            idOfertaModificar = null;
+            
+            // Resetear el botón submit
+            const btnSubmit = document.getElementById('btn-submit-form');
+            const btnSubmitText = document.getElementById('btn-submit-text');
+            if (btnSubmit && btnSubmitText) {
+                btnSubmitText.textContent = 'Registrar Oferta';
+                btnSubmit.classList.remove('btn-update');
+            }
+            
+            // Limpiar ID de oferta
+            document.getElementById('idOfertaModificar').value = '';
+        }
+        
+        // Modificar la función de envío del formulario para manejar actualizaciones
+        const formularioOriginal = document.getElementById('oferta-form');
+        if (formularioOriginal) {
+            // Interceptar el envío del formulario
+            formularioOriginal.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                if (modoEdicion) {
+                    console.log('📤 Enviando actualización de oferta');
+                    enviarActualizacionOferta();
+                } else {
+                    console.log('📤 Enviando nueva oferta');
+                    enviarFormularioAjax(); // Función existente para crear
+                }
+            });
+        }
+        
+        /**
+         * Función para enviar actualización de oferta
+         */
+        function enviarActualizacionOferta() {
+            console.log('🚀 Iniciando actualización de oferta');
+            
+            const formulario = document.getElementById('oferta-form');
+            const formData = new FormData(formulario);
+            
+            // Agregar el ID de la oferta
+            formData.append('idOferta', idOfertaModificar);
+            
+            // Mostrar loading
+            const btnSubmit = document.getElementById('btn-submit-form');
+            const textoOriginal = btnSubmit.innerHTML;
+            btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Actualizando...';
+            btnSubmit.disabled = true;
+            
+            fetch('/admin/ofertas/modificar', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('📋 Respuesta del servidor:', data);
+                
+                if (data.success) {
+                    console.log('✅ Oferta actualizada exitosamente');
+                    mostrarNotificacion('Oferta actualizada exitosamente', 'success');
+                    
+                    // Limpiar formulario y resetear modo
+                    limpiarFormularioCompleto();
+                    resetearModoEdicion();
+                    cerrarFormulario();
+                    
+                    // Recargar la tabla
+                    actualizarTablaOfertas();
+                    
+                } else {
+                    console.error('❌ Error al actualizar:', data.message);
+                    mostrarNotificacion('Error al actualizar la oferta: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('❌ Error en la petición:', error);
+                mostrarNotificacion('Error de conexión al actualizar la oferta', 'error');
+            })
+            .finally(() => {
+                // Restaurar botón
+                btnSubmit.innerHTML = textoOriginal;
+                btnSubmit.disabled = false;
+            });
+        }
+        
+        // Resetear modo edición al cancelar formulario
+        const btnCancelForm = document.getElementById('btn-cancel-form');
+        if (btnCancelForm) {
+            btnCancelForm.addEventListener('click', function() {
+                resetearModoEdicion();
+            });
+        }
+        
+        console.log('🔄 Sistema de modificación de ofertas inicializado');
     </script>
-</main>
+
 </body>
 </html>

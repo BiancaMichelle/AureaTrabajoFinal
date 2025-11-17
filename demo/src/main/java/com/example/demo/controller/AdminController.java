@@ -180,9 +180,11 @@ public class AdminController {
     @ResponseBody
     public ResponseEntity<Map<String, Object>> obtenerDetalleOferta(@PathVariable Long id) {
         try {
+            System.out.println("🔍 Buscando oferta con ID: " + id);
             Optional<OfertaAcademica> ofertaOpt = ofertaAcademicaRepository.findById(id);
             
             if (ofertaOpt.isEmpty()) {
+                System.out.println("❌ Oferta no encontrada con ID: " + id);
                 Map<String, Object> response = new HashMap<>();
                 response.put("success", false);
                 response.put("message", "Oferta no encontrada");
@@ -190,9 +192,15 @@ public class AdminController {
             }
             
             OfertaAcademica oferta = ofertaOpt.get();
+            System.out.println("✅ Oferta encontrada: " + oferta.getNombre() + " (Tipo: " + oferta.getClass().getSimpleName() + ")");
+            
+            Map<String, Object> detalleOferta = obtenerDetalleOfertaCompleto(oferta);
+            System.out.println("📋 Detalle obtenido con " + detalleOferta.size() + " campos");
+            System.out.println("🔑 Campos disponibles: " + detalleOferta.keySet());
+            
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
-            response.put("oferta", mapearOfertaAResponse(oferta));
+            response.put("oferta", detalleOferta);
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -279,6 +287,126 @@ public class AdminController {
     }
     
     /**
+     * Endpoint para cambiar el estado de una oferta (activar/desactivar)
+     */
+    @PostMapping("/admin/ofertas/cambiar-estado/{id}")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> cambiarEstadoOferta(@PathVariable Long id) {
+        try {
+            System.out.println("🔄 Cambiando estado de oferta con ID: " + id);
+            Optional<OfertaAcademica> ofertaOpt = ofertaAcademicaRepository.findById(id);
+            
+            if (ofertaOpt.isEmpty()) {
+                System.out.println("❌ Oferta no encontrada con ID: " + id);
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "Oferta no encontrada");
+                response.put("motivo", "OFERTA_NO_ENCONTRADA");
+                return ResponseEntity.ok(response); // Devolver 200 OK con success: false
+            }
+            
+            OfertaAcademica oferta = ofertaOpt.get();
+            System.out.println("📋 Estado actual: " + oferta.getEstado());
+            
+            // Validar si se puede cambiar el estado
+            if (!oferta.puedeCambiarEstado()) {
+                String motivo = "No se puede cambiar el estado de una oferta finalizada o cancelada";
+                System.out.println("❌ No se puede cambiar estado: " + motivo);
+                
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", motivo);
+                response.put("motivo", "ESTADO_FINAL");
+                return ResponseEntity.ok(response); // Devolver 200 OK con success: false
+            }
+            
+            // Si está activa, validar si se puede dar de baja
+            if (oferta.getEstado() == com.example.demo.enums.EstadoOferta.ACTIVA) {
+                String motivoRechazo = validarDarDeBaja(oferta);
+                if (motivoRechazo != null) {
+                    System.out.println("❌ No se puede dar de baja: " + motivoRechazo);
+                    
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("success", false);
+                    response.put("message", motivoRechazo);
+                    response.put("motivo", "VALIDACION_BAJA");
+                    return ResponseEntity.ok(response); // Devolver 200 OK con success: false
+                }
+                
+                // Dar de baja
+                oferta.setEstado(com.example.demo.enums.EstadoOferta.INACTIVA);
+                System.out.println("🔴 Cambiando a INACTIVA");
+            } else {
+                // Dar de alta (de INACTIVA a ACTIVA)
+                oferta.setEstado(com.example.demo.enums.EstadoOferta.ACTIVA);
+                System.out.println("🟢 Cambiando a ACTIVA");
+            }
+            
+            // Guardar cambios
+            ofertaAcademicaRepository.save(oferta);
+            System.out.println("✅ Estado cambiado exitosamente a: " + oferta.getEstado());
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("nuevoEstado", oferta.getEstado().toString());
+            response.put("message", "Estado de la oferta cambiado exitosamente");
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            System.err.println("❌ Error cambiando estado de oferta " + id + ": " + e.getMessage());
+            e.printStackTrace();
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Error interno del servidor: " + e.getMessage());
+            response.put("motivo", "ERROR_SERVIDOR");
+            return ResponseEntity.ok(response); // Devolver 200 OK con success: false
+        }
+    }
+    
+    /**
+     * Valida si una oferta puede ser dada de baja y devuelve el motivo si no puede
+     */
+    private String validarDarDeBaja(OfertaAcademica oferta) {
+        java.time.LocalDate ahora = java.time.LocalDate.now();
+        
+        // Contar inscripciones activas
+        int inscripcionesActivas = 0;
+        if (oferta.getInscripciones() != null) {
+            inscripcionesActivas = (int) oferta.getInscripciones().stream()
+                    .filter(inscripcion -> inscripcion.getEstadoInscripcion() != null && 
+                           inscripcion.getEstadoInscripcion() == true)
+                    .count();
+        }
+        
+        System.out.println("📊 Validando baja - Inscripciones activas: " + inscripcionesActivas);
+        System.out.println("📊 Fechas - Inicio: " + oferta.getFechaInicio() + ", Fin: " + oferta.getFechaFin() + ", Hoy: " + ahora);
+        
+        // Si ya terminó la oferta, siempre se puede dar de baja
+        if (oferta.getFechaFin() != null && oferta.getFechaFin().isBefore(ahora)) {
+            System.out.println("✅ Oferta ya terminó, se puede dar de baja");
+            return null; // Se puede dar de baja
+        }
+        
+        // Si tiene inscripciones activas y ya comenzó, no se puede dar de baja
+        if (inscripcionesActivas > 0) {
+            if (oferta.getFechaInicio() != null && !oferta.getFechaInicio().isAfter(ahora)) {
+                return "No se puede dar de baja esta oferta porque ya comenzó y tiene " + 
+                       inscripcionesActivas + " inscripcion" + (inscripcionesActivas > 1 ? "es" : "") + " activa" + 
+                       (inscripcionesActivas > 1 ? "s" : "") + ". Las inscripciones deben ser canceladas primero.";
+            } else {
+                return "No se puede dar de baja esta oferta porque tiene " + 
+                       inscripcionesActivas + " inscripcion" + (inscripcionesActivas > 1 ? "es" : "") + " activa" + 
+                       (inscripcionesActivas > 1 ? "s" : "") + ". Las inscripciones deben ser canceladas primero.";
+            }
+        }
+        
+        // Si no tiene inscripciones activas, siempre se puede dar de baja
+        System.out.println("✅ No hay inscripciones activas, se puede dar de baja");
+        return null; // Se puede dar de baja
+    }
+    
+    /**
      * Método auxiliar para mapear una oferta a un objeto de respuesta con validaciones defensivas
      */
     private Map<String, Object> mapearOfertaAResponse(OfertaAcademica oferta) {
@@ -322,6 +450,86 @@ public class AdminController {
         }
         
         map.put("visibilidad", oferta.getVisibilidad() != null ? oferta.getVisibilidad() : "");
+        return map;
+    }
+
+    /**
+     * Obtiene el detalle completo de una oferta usando los métodos específicos del modelo
+     */
+    private Map<String, Object> obtenerDetalleOfertaCompleto(OfertaAcademica oferta) {
+        Map<String, Object> detalle = new HashMap<>();
+        
+        try {
+            System.out.println("🔄 Obteniendo detalle para oferta tipo: " + oferta.getClass().getSimpleName());
+            
+            // Determinar el tipo específico y obtener el detalle correspondiente
+            if (oferta instanceof com.example.demo.model.Curso) {
+                System.out.println("📚 Procesando como Curso...");
+                com.example.demo.model.Curso curso = (com.example.demo.model.Curso) oferta;
+                com.example.demo.model.Curso.CursoDetalle cursoDetalle = curso.obtenerDetalleCompleto();
+                detalle = convertirDetalleAMap(cursoDetalle);
+                System.out.println("✅ Curso procesado, campos obtenidos: " + detalle.size());
+            } else if (oferta instanceof com.example.demo.model.Formacion) {
+                System.out.println("🎓 Procesando como Formación...");
+                com.example.demo.model.Formacion formacion = (com.example.demo.model.Formacion) oferta;
+                com.example.demo.model.Formacion.FormacionDetalle formacionDetalle = formacion.obtenerDetalleCompleto();
+                detalle = convertirDetalleAMap(formacionDetalle);
+                System.out.println("✅ Formación procesada, campos obtenidos: " + detalle.size());
+            } else if (oferta instanceof com.example.demo.model.Charla) {
+                System.out.println("🎤 Procesando como Charla...");
+                com.example.demo.model.Charla charla = (com.example.demo.model.Charla) oferta;
+                com.example.demo.model.Charla.CharlaDetalle charlaDetalle = charla.obtenerDetalleCompleto();
+                detalle = convertirDetalleAMap(charlaDetalle);
+                System.out.println("✅ Charla procesada, campos obtenidos: " + detalle.size());
+            } else if (oferta instanceof com.example.demo.model.Seminario) {
+                System.out.println("🏛️ Procesando como Seminario...");
+                com.example.demo.model.Seminario seminario = (com.example.demo.model.Seminario) oferta;
+                com.example.demo.model.Seminario.SeminarioDetalle seminarioDetalle = seminario.obtenerDetalleCompleto();
+                detalle = convertirDetalleAMap(seminarioDetalle);
+                System.out.println("✅ Seminario procesado, campos obtenidos: " + detalle.size());
+            } else {
+                System.out.println("⚠️ Tipo no reconocido, usando fallback...");
+                // Fallback para tipos no reconocidos
+                detalle = mapearOfertaAResponse(oferta);
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Error obteniendo detalle de oferta " + oferta.getIdOferta() + ": " + e.getMessage());
+            e.printStackTrace();
+            // Fallback en caso de error
+            detalle = mapearOfertaAResponse(oferta);
+        }
+        
+        return detalle;
+    }
+
+    /**
+     * Convierte cualquier objeto detalle a Map para la respuesta JSON
+     */
+    private Map<String, Object> convertirDetalleAMap(Object detalle) {
+        Map<String, Object> map = new HashMap<>();
+        
+        try {
+            System.out.println("🔄 Convirtiendo objeto detalle a Map: " + detalle.getClass().getSimpleName());
+            
+            // Usar reflection para convertir el objeto a Map
+            java.lang.reflect.Field[] fields = detalle.getClass().getDeclaredFields();
+            System.out.println("📊 Campos encontrados: " + fields.length);
+            
+            for (java.lang.reflect.Field field : fields) {
+                field.setAccessible(true);
+                Object value = field.get(detalle);
+                String fieldName = field.getName();
+                map.put(fieldName, value);
+                
+                System.out.println("🔑 Campo: " + fieldName + " = " + (value != null ? value.toString() : "null"));
+            }
+            
+            System.out.println("✅ Conversión completada. Total campos: " + map.size());
+        } catch (Exception e) {
+            System.err.println("❌ Error convirtiendo detalle a Map: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
         return map;
     }
 
@@ -766,6 +974,214 @@ public class AdminController {
         // Configurar estado por defecto
         oferta.setEstado(EstadoOferta.ACTIVA);
         oferta.setVisibilidad(true);
+    }
+
+    /**
+     * Endpoint para modificar una oferta académica existente
+     */
+    @PostMapping("/admin/ofertas/modificar")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> modificarOferta(
+            @RequestParam Long idOferta, // ID de la oferta a modificar
+            @RequestParam String tipoOferta,
+            @RequestParam String nombre,
+            @RequestParam(required = false) String descripcion,
+            @RequestParam(required = false) Integer cupos,
+            @RequestParam(required = false) Double costoInscripcion,
+            @RequestParam(required = false) String fechaInicio,
+            @RequestParam(required = false) String fechaFin,
+            @RequestParam(required = false) String modalidad,
+            @RequestParam(required = false) String otorgaCertificado,
+            @RequestParam(required = false) MultipartFile imagen,
+            @RequestParam(required = false) String categorias,
+            @RequestParam(required = false) String horarios,
+            // Campos específicos para CURSO
+            @RequestParam(required = false) String temario,
+            @RequestParam(required = false) String docentesCurso,
+            @RequestParam(required = false) Double costoCuota,
+            @RequestParam(required = false) Double costoMora,
+            @RequestParam(required = false) Integer nrCuotas,
+            @RequestParam(required = false) Integer diaVencimiento,
+            // Campos específicos para FORMACION
+            @RequestParam(required = false) String planFormacion,
+            @RequestParam(required = false) String docentesFormacion,
+            @RequestParam(required = false) Double costoCuotaFormacion,
+            @RequestParam(required = false) Double costoMoraFormacion,
+            @RequestParam(required = false) Integer nrCuotasFormacion,
+            @RequestParam(required = false) Integer diaVencimientoFormacion,
+            // Campos específicos para CHARLA
+            @RequestParam(required = false) String lugarCharla,
+            @RequestParam(required = false) String enlaceCharla,
+            @RequestParam(required = false) Integer duracionEstimada,
+            @RequestParam(required = false) String disertantesCharla,
+            @RequestParam(required = false) String publicoObjetivoCharla,
+            // Campos específicos para SEMINARIO
+            @RequestParam(required = false) String lugarSeminario,
+            @RequestParam(required = false) String enlaceSeminario,
+            @RequestParam(required = false) Integer duracionMinutos,
+            @RequestParam(required = false) String disertantesSeminario,
+            @RequestParam(required = false) String publicoObjetivoSeminario) {
+        
+        try {
+            System.out.println("🔄 MODIFICACIÓN DE OFERTA INICIADA");
+            System.out.println("ID Oferta: " + idOferta);
+            System.out.println("Tipo: " + tipoOferta);
+            System.out.println("Nombre: " + nombre);
+            
+            // Buscar la oferta existente
+            Optional<OfertaAcademica> ofertaOpt = ofertaAcademicaRepository.findById(idOferta);
+            if (ofertaOpt.isEmpty()) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("success", false);
+                errorResponse.put("message", "Oferta no encontrada");
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+            
+            OfertaAcademica ofertaExistente = ofertaOpt.get();
+            
+            // Verificar si se puede modificar
+            if (!ofertaExistente.puedeSerEditada()) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("success", false);
+                errorResponse.put("message", "No se puede modificar esta oferta porque ya finalizó o tiene inscripciones activas");
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+            
+            // Validaciones de fechas
+            if (fechaInicio == null || fechaInicio.trim().isEmpty()) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("success", false);
+                errorResponse.put("message", "La fecha de inicio es obligatoria");
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+            
+            if (fechaFin == null || fechaFin.trim().isEmpty()) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("success", false);
+                errorResponse.put("message", "La fecha de fin es obligatoria");
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+            
+            // Validar formato de fechas
+            LocalDate fechaInicioDate, fechaFinDate;
+            try {
+                fechaInicioDate = LocalDate.parse(fechaInicio);
+                fechaFinDate = LocalDate.parse(fechaFin);
+                
+                if (fechaInicioDate.isAfter(fechaFinDate)) {
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("success", false);
+                    errorResponse.put("message", "La fecha de inicio no puede ser posterior a la fecha de fin");
+                    return ResponseEntity.badRequest().body(errorResponse);
+                }
+            } catch (Exception e) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("success", false);
+                errorResponse.put("message", "Formato de fecha inválido. Use AAAA-MM-DD");
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+            
+            // Validar que el tipo de oferta coincida
+            if (!ofertaExistente.getTipoOferta().equals(tipoOferta)) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("success", false);
+                errorResponse.put("message", "No se puede cambiar el tipo de oferta existente");
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+            
+            // Llamar al servicio apropiado según el tipo de oferta
+            OfertaAcademica ofertaModificada = null;
+            String tipoOfertaUpper = tipoOferta.toUpperCase();
+            
+            // Actualizar los campos básicos de la oferta existente
+            ofertaExistente.setNombre(nombre);
+            ofertaExistente.setDescripcion(descripcion);
+            ofertaExistente.setFechaInicio(fechaInicioDate);
+            ofertaExistente.setFechaFin(fechaFinDate);
+            
+            if (cupos != null) {
+                ofertaExistente.setCupos(cupos);
+            }
+            
+            if (modalidad != null && !modalidad.isEmpty()) {
+                ofertaExistente.setModalidad(Modalidad.valueOf(modalidad.toUpperCase()));
+            }
+            
+            if (otorgaCertificado != null) {
+                ofertaExistente.setCertificado(Boolean.parseBoolean(otorgaCertificado));
+            }
+            
+            // Actualizar campos específicos según el tipo de oferta
+            switch (tipoOfertaUpper) {
+                case "CURSO":
+                    if (ofertaExistente instanceof Curso) {
+                        Curso curso = (Curso) ofertaExistente;
+                        if (costoCuota != null) curso.setCostoCuota(costoCuota);
+                        if (costoMora != null) curso.setCostoMora(costoMora);
+                        if (nrCuotas != null) curso.setNrCuotas(nrCuotas);
+                        if (diaVencimiento != null) curso.setDiaVencimiento(diaVencimiento);
+                    }
+                    break;
+                    
+                case "FORMACION":
+                    if (ofertaExistente instanceof Formacion) {
+                        Formacion formacion = (Formacion) ofertaExistente;
+                        if (costoCuotaFormacion != null) formacion.setCostoCuota(costoCuotaFormacion);
+                        if (costoMoraFormacion != null) formacion.setCostoMora(costoMoraFormacion);
+                        if (nrCuotasFormacion != null) formacion.setNrCuotas(nrCuotasFormacion);
+                        if (diaVencimientoFormacion != null) formacion.setDiaVencimiento(diaVencimientoFormacion);
+                    }
+                    break;
+                    
+                case "CHARLA":
+                    if (ofertaExistente instanceof Charla) {
+                        Charla charla = (Charla) ofertaExistente;
+                        if (costoInscripcion != null) charla.setCostoInscripcion(costoInscripcion);
+                    }
+                    break;
+                    
+                case "SEMINARIO":
+                    if (ofertaExistente instanceof Seminario) {
+                        Seminario seminario = (Seminario) ofertaExistente;
+                        if (costoInscripcion != null) seminario.setCostoInscripcion(costoInscripcion);
+                    }
+                    break;
+                    
+                default:
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("success", false);
+                    errorResponse.put("message", "Tipo de oferta no válido: " + tipoOferta);
+                    return ResponseEntity.badRequest().body(errorResponse);
+            }
+            
+            // Guardar la oferta modificada
+            ofertaModificada = ofertaAcademicaRepository.save(ofertaExistente);
+            
+            if (ofertaModificada != null) {
+                System.out.println("✅ Oferta modificada exitosamente: " + ofertaModificada.getNombre());
+                
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", true);
+                response.put("message", "Oferta modificada exitosamente");
+                response.put("oferta", mapearOfertaAResponse(ofertaModificada));
+                
+                return ResponseEntity.ok(response);
+            } else {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("success", false);
+                errorResponse.put("message", "Error al modificar la oferta");
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error al modificar oferta: " + e.getMessage());
+            e.printStackTrace();
+            
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Error al modificar oferta: " + e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
     }
 
     @GetMapping("/admin/ofertas")
