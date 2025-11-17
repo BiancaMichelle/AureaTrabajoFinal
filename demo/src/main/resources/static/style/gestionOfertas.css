@@ -1,0 +1,536 @@
+/* ================================================
+   ESTILOS PARA GESTIÓN DE OFERTAS ACADÉMICAS
+   ================================================ */
+
+/* Variables CSS para el theme */
+:root {
+    --primary-color: #4a90e2;
+    --secondary-color: #5a6c7d;
+    --success-color: #28a745;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+    --info-color: #17a2b8;
+    --light-color: #f8f9fa;
+    --dark-color: #343a40;
+    --border-color: #e9ecef;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --border-radius: 8px;
+    --transition: all 0.3s ease;
+}
+
+/* ================================================
+   ESTILOS DEL MODAL DE DETALLE
+   ================================================ */
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    backdrop-filter: blur(3px);
+}
+
+.modal-content {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    max-width: 90vw;
+    max-height: 90vh;
+    overflow: hidden;
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+.modal-xl {
+    width: 1200px;
+    max-width: 95vw;
+}
+
+.modal-lg {
+    width: 800px;
+    max-width: 90vw;
+}
+
+.modal-sm {
+    width: 400px;
+    max-width: 80vw;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.modal-header {
+    padding: 20px 30px;
+    background: linear-gradient(135deg, var(--primary-color), #357abd);
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.modal-header h3 i {
+    margin-right: 10px;
+}
+
+.btn-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 4px;
+    transition: var(--transition);
+}
+
+.btn-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
+}
+
+.modal-body {
+    padding: 30px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.modal-footer {
+    padding: 20px 30px;
+    background: var(--light-color);
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* ================================================
+   ESTILOS PARA EL DETALLE DE LA OFERTA
+   ================================================ */
+
+.oferta-detalle-section {
+    margin-bottom: 30px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    background: white;
+}
+
+.section-header {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.section-header h4 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--dark-color);
+    display: flex;
+    align-items: center;
+}
+
+.section-header h4 i {
+    margin-right: 10px;
+    color: var(--primary-color);
+}
+
+.oferta-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    padding: 20px;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.info-item.full-width {
+    grid-column: 1 / -1;
+}
+
+.info-item label {
+    font-weight: 600;
+    color: var(--secondary-color);
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.info-item span, .info-item div {
+    background: #f8f9fa;
+    padding: 10px 15px;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+/* ================================================
+   BADGES Y ELEMENTOS VISUALES
+   ================================================ */
+
+.badge {
+    display: inline-block;
+    padding: 6px 12px !important;
+    border-radius: 20px !important;
+    font-size: 0.85rem !important;
+    font-weight: 500;
+    text-align: center;
+    color: white !important;
+    background: var(--primary-color) !important;
+    border: none !important;
+}
+
+.badge.tipo-CURSO { background: #28a745 !important; }
+.badge.tipo-FORMACION { background: #17a2b8 !important; }
+.badge.tipo-CHARLA { background: #ffc107 !important; color: #212529 !important; }
+.badge.tipo-SEMINARIO { background: #6f42c1 !important; }
+
+.badge.modalidad-PRESENCIAL { background: #fd7e14 !important; }
+.badge.modalidad-VIRTUAL { background: #20c997 !important; }
+.badge.modalidad-HIBRIDA { background: #6610f2 !important; }
+
+.badge.estado-ACTIVA { background: #28a745 !important; }
+.badge.estado-INACTIVA { background: #6c757d !important; }
+.badge.estado-PENDIENTE { background: #ffc107 !important; color: #212529 !important; }
+
+.precio {
+    font-weight: 700 !important;
+    color: var(--success-color) !important;
+    background: linear-gradient(135deg, #d4edda, #c3e6cb) !important;
+    border: 1px solid #c3e6cb !important;
+}
+
+/* ================================================
+   CONTENEDORES ESPECIALES
+   ================================================ */
+
+.imagen-descripcion-container {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 20px;
+    padding: 20px;
+}
+
+.imagen-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.imagen-container img {
+    max-width: 100%;
+    max-height: 150px;
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 8px var(--shadow-color);
+}
+
+.sin-imagen-placeholder {
+    width: 150px;
+    height: 150px;
+    background: #f8f9fa;
+    border: 2px dashed #dee2e6;
+    border-radius: var(--border-radius);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: #6c757d;
+}
+
+.sin-imagen-placeholder i {
+    font-size: 2rem;
+    margin-bottom: 8px;
+}
+
+.descripcion-container {
+    display: flex;
+    flex-direction: column;
+}
+
+.descripcion-content {
+    background: #f8f9fa !important;
+    padding: 15px !important;
+    border-radius: 6px !important;
+    border: 1px solid #e9ecef !important;
+    line-height: 1.6 !important;
+    min-height: 100px !important;
+}
+
+/* ================================================
+   LISTAS ESPECIALES
+   ================================================ */
+
+.categorias-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    background: transparent !important;
+    padding: 5px !important;
+    border: none !important;
+}
+
+.categoria-chip {
+    background: var(--primary-color);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.docentes-list, .disertantes-list, .horarios-list {
+    background: transparent !important;
+    padding: 0 !important;
+    border: none !important;
+}
+
+.docente-item, .disertante-item {
+    background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+    border: 1px solid #90caf9;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+}
+
+.docente-item i, .disertante-item i {
+    color: var(--primary-color);
+    margin-right: 10px;
+    font-size: 1.1rem;
+}
+
+.docente-info, .disertante-info {
+    flex: 1;
+}
+
+.docente-nombre, .disertante-nombre {
+    font-weight: 600;
+    color: var(--dark-color);
+    margin-bottom: 2px;
+}
+
+.docente-especialidad {
+    font-size: 0.85rem;
+    color: var(--secondary-color);
+}
+
+.horario-item {
+    background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+    border: 1px solid #ffeaa7;
+    border-radius: 8px;
+    padding: 10px 15px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+}
+
+.horario-item i {
+    color: #856404;
+    margin-right: 10px;
+}
+
+.horario-dia {
+    font-weight: 600;
+    margin-right: 10px;
+}
+
+.horario-horas {
+    color: #856404;
+}
+
+/* ================================================
+   BOTONES DEL MODAL
+   ================================================ */
+
+.action-buttons {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.btn-primary, .btn-secondary, .btn-danger {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-primary {
+    background: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #357abd;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
+}
+
+.btn-secondary {
+    background: var(--secondary-color);
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #495057;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(90, 108, 125, 0.3);
+}
+
+.btn-danger {
+    background: var(--danger-color);
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
+
+/* ================================================
+   ESTADOS ESPECIALES
+   ================================================ */
+
+.estado-activa #icon-estado {
+    color: var(--success-color);
+}
+
+.estado-inactiva #icon-estado {
+    color: var(--danger-color);
+}
+
+.estado-activa #text-estado::before {
+    content: "Dar de Baja";
+}
+
+.estado-inactiva #text-estado::before {
+    content: "Dar de Alta";
+}
+
+/* ================================================
+   RESPONSIVE DESIGN
+   ================================================ */
+
+@media (max-width: 768px) {
+    .modal-content {
+        margin: 10px;
+        max-width: calc(100vw - 20px);
+        max-height: calc(100vh - 20px);
+    }
+    
+    .modal-body {
+        padding: 20px;
+        max-height: 60vh;
+    }
+    
+    .oferta-info-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+        padding: 15px;
+    }
+    
+    .imagen-descripcion-container {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .imagen-container {
+        justify-content: flex-start;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .btn-primary, .btn-secondary, .btn-danger {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .modal-header {
+        padding: 15px 20px;
+    }
+    
+    .modal-header h3 {
+        font-size: 1.2rem;
+    }
+    
+    .modal-body {
+        padding: 15px;
+    }
+    
+    .section-header {
+        padding: 10px 15px;
+    }
+    
+    .oferta-info-grid {
+        padding: 10px;
+    }
+}
+
+/* ================================================
+   UTILIDADES
+   ================================================ */
+
+.text-center {
+    text-align: center;
+}
+
+.text-muted {
+    color: #6c757d !important;
+}
+
+.text-danger {
+    color: var(--danger-color) !important;
+}
+
+.mb-0 {
+    margin-bottom: 0 !important;
+}
+
+.mt-2 {
+    margin-top: 0.5rem !important;
+}
+
+.d-none {
+    display: none !important;
+}
+
+.d-block {
+    display: block !important;
+}

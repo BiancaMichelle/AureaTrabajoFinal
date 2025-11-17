@@ -240,4 +240,200 @@ public class OfertaAcademica {
         return "status-" + estado.name().toLowerCase();
     }
 
+    /**
+     * Verifica si la oferta puede cambiar de estado (dar de baja/alta)
+     */
+    public Boolean puedeCambiarEstado() {
+        return estado != EstadoOferta.FINALIZADA && estado != EstadoOferta.CANCELADA;
+    }
+
+    /**
+     * Verifica si se puede dar de baja la oferta
+     * - No debe tener inscripciones activas
+     * - Si ya comenzó pero no tiene inscripciones, se puede dar de baja
+     * - Si la fecha de fin ya pasó, se puede dar de baja
+     */
+    public Boolean puedeDarseDeBaja() {
+        // No se puede dar de baja si ya está inactiva, finalizada o cancelada
+        if (estado == EstadoOferta.INACTIVA || 
+            estado == EstadoOferta.FINALIZADA || 
+            estado == EstadoOferta.CANCELADA) {
+            return false;
+        }
+
+        LocalDate ahora = LocalDate.now();
+        int inscripcionesActivas = contarInscripcionesActivas();
+
+        // Si ya terminó la oferta, siempre se puede dar de baja
+        if (fechaFin != null && fechaFin.isBefore(ahora)) {
+            return true;
+        }
+
+        // Si no hay inscripciones activas, se puede dar de baja
+        if (inscripcionesActivas == 0) {
+            return true;
+        }
+
+        // Si ya comenzó y tiene inscripciones activas, no se puede dar de baja
+        if (fechaInicio != null && !fechaInicio.isAfter(ahora) && inscripcionesActivas > 0) {
+            return false;
+        }
+
+        // En otros casos (no ha comenzado pero tiene inscripciones), también se puede dar de baja
+        return true;
+    }
+
+    /**
+     * Cuenta las inscripciones activas (no canceladas)
+     */
+    private int contarInscripcionesActivas() {
+        if (inscripciones == null) {
+            return 0;
+        }
+        return (int) inscripciones.stream()
+                .filter(inscripcion -> inscripcion.getEstadoInscripcion() != null && 
+                       inscripcion.getEstadoInscripcion() == true)
+                .count();
+    }
+
+    /**
+     * Cambia el estado de la oferta con validaciones
+     */
+    public Boolean cambiarEstado(EstadoOferta nuevoEstado) {
+        if (!puedeCambiarEstado()) {
+            return false;
+        }
+
+        // Validaciones específicas según el nuevo estado
+        switch (nuevoEstado) {
+            case INACTIVA:
+                if (!puedeDarseDeBaja()) {
+                    return false;
+                }
+                break;
+            case ACTIVA:
+                // Para activar, debe tener fecha de inicio futura o actual
+                if (fechaInicio != null && fechaInicio.isBefore(LocalDate.now())) {
+                    // Si ya pasó la fecha de inicio, verificar que no haya pasado la de fin
+                    if (fechaFin != null && fechaFin.isBefore(LocalDate.now())) {
+                        return false;
+                    }
+                }
+                break;
+            case FINALIZADA:
+                // Solo se puede finalizar si la fecha de fin ya pasó
+                if (fechaFin == null || fechaFin.isAfter(LocalDate.now())) {
+                    return false;
+                }
+                break;
+            case CANCELADA:
+                // Se puede cancelar si no tiene inscripciones activas o no ha comenzado
+                if (fechaInicio != null && !fechaInicio.isAfter(LocalDate.now()) && 
+                    contarInscripcionesActivas() > 0) {
+                    return false;
+                }
+                break;
+        }
+
+        this.estado = nuevoEstado;
+        return true;
+    }
+
+    /**
+     * Dar de baja la oferta (cambiar a INACTIVA)
+     */
+    public Boolean darDeBaja() {
+        return cambiarEstado(EstadoOferta.INACTIVA);
+    }
+
+    /**
+     * Dar de alta la oferta (cambiar a ACTIVA)
+     */
+    public Boolean darDeAlta() {
+        return cambiarEstado(EstadoOferta.ACTIVA);
+    }
+
+    /**
+     * Modifica los datos básicos de la oferta
+     */
+    public void modificarDatosBasicos(String nombre, String descripcion, String duracion,
+                                    LocalDate fechaInicio, LocalDate fechaFin, 
+                                    Modalidad modalidad, Integer cupos, Boolean visibilidad,
+                                    Double costoInscripcion, Boolean certificado) {
+        if (nombre != null && !nombre.trim().isEmpty()) {
+            this.nombre = nombre.trim();
+        }
+        
+        if (descripcion != null) {
+            this.descripcion = descripcion.trim();
+        }
+        
+        if (duracion != null) {
+            this.duracion = duracion.trim();
+        }
+        
+        if (fechaInicio != null) {
+            this.fechaInicio = fechaInicio;
+        }
+        
+        if (fechaFin != null) {
+            this.fechaFin = fechaFin;
+            // Recalcular duración en meses
+            calcularDuracionMeses();
+        }
+        
+        if (modalidad != null) {
+            this.modalidad = modalidad;
+        }
+        
+        if (cupos != null && cupos > 0) {
+            this.cupos = cupos;
+        }
+        
+        if (visibilidad != null) {
+            this.visibilidad = visibilidad;
+        }
+        
+        if (costoInscripcion != null && costoInscripcion >= 0) {
+            this.costoInscripcion = costoInscripcion;
+        }
+        
+        if (certificado != null) {
+            this.certificado = certificado;
+        }
+    }
+
+    /**
+     * Valida si los datos de la oferta son consistentes
+     */
+    public List<String> validarDatos() {
+        List<String> errores = new ArrayList<>();
+        
+        if (nombre == null || nombre.trim().isEmpty()) {
+            errores.add("El nombre es obligatorio");
+        }
+        
+        if (fechaInicio == null) {
+            errores.add("La fecha de inicio es obligatoria");
+        }
+        
+        if (fechaFin == null) {
+            errores.add("La fecha de fin es obligatoria");
+        }
+        
+        if (fechaInicio != null && fechaFin != null && fechaFin.isBefore(fechaInicio)) {
+            errores.add("La fecha de fin debe ser posterior a la fecha de inicio");
+        }
+        
+        if (cupos != null && cupos <= 0) {
+            errores.add("Los cupos deben ser mayor a 0");
+        }
+        
+        if (costoInscripcion != null && costoInscripcion < 0) {
+            errores.add("El costo de inscripción no puede ser negativo");
+        }
+        
+        return errores;
+    }
+
 }

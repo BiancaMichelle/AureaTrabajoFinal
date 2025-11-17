@@ -35,7 +35,9 @@ public class Inscripciones {
     private OfertaAcademica oferta;
     
     private LocalDate fechaInscripcion;
-    private Boolean estadoInscripcion;
+    
+    private Boolean estadoInscripcion; // true = activa, false = inactiva
+    
     private String observaciones;
     
     @ManyToOne

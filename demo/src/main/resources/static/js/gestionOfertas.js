@@ -572,7 +572,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function viewOferta(id, nombre) {
         console.log(`Ver oferta ${id}: ${nombre}`);
-        // Implementar lógica de visualización
+        // Llamar a la función global para abrir el modal de detalle
+        if (window.verDetalleOferta) {
+            window.verDetalleOferta(id);
+        } else {
+            console.error('❌ Función verDetalleOferta no disponible');
+            showNotification('Error al abrir el detalle de la oferta', 'error');
+        }
     }
 
     function deleteOferta(id, nombre) {
