@@ -9,8 +9,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class JitsiClaseService {
     
-    @Value("${jitsi.meet.url:http://localhost:8000}")
-    private String jitsiMeetUrl;
+    @Value("${jitsi.meet.url:https://meet.jit.si}")
+    private String videoMeetUrl;
     
     @Value("${jitsi.room.prefix:aula-}")
     private String roomPrefix;
@@ -20,20 +20,30 @@ public class JitsiClaseService {
                 .replace(" ", "-")
                 .replaceAll("[^a-z0-9-]", "");
         
-        return jitsiMeetUrl + "/" + safeRoomName;
+        String url = videoMeetUrl + "/" + safeRoomName;
+        
+        System.out.println("🎯 Generando URL Jitsi Meet:");
+        System.out.println("   - Room Name: " + safeRoomName);
+        System.out.println("   - URL Final: " + url);
+        
+        return url;
     }
     
     public String generateRoomUrlWithConfig(String roomName, Map<String, String> config) {
         String baseUrl = generateRoomUrl(roomName);
+        
         if (config != null && !config.isEmpty()) {
             try {
                 String configString = config.entrySet().stream()
                         .map(entry -> entry.getKey() + "=" + entry.getValue())
                         .collect(Collectors.joining("&"));
-                baseUrl += "#config." + configString;
+                baseUrl += "#" + configString;
+                
+                System.out.println("   - Configuración: " + configString);
+                System.out.println("   - URL con Config: " + baseUrl);
+                
             } catch (Exception e) {
-                // Fallback sin configuración
-                return baseUrl;
+                System.out.println("⚠️ Error en configuración, usando URL base: " + baseUrl);
             }
         }
         return baseUrl;

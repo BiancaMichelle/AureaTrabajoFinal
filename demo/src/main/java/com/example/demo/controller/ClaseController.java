@@ -82,30 +82,21 @@ public class ClaseController {
     public String unirseAClase(@PathVariable UUID claseId, Principal principal, Model model) {
         try {
             System.out.println("🎯 Uniéndose a clase Jitsi ID: " + claseId);
-            System.out.println("🎯 Usuario: " + principal.getName());
             
             String meetingUrl = claseService.unirseAClase(claseId, principal.getName());
-            
             Clase clase = claseService.findById(claseId)
                     .orElseThrow(() -> new RuntimeException("Clase no encontrada"));
-            
-            // Con Jitsi, la reunión siempre está disponible
-            boolean reunionActiva = true;
-            
-            System.out.println("🎯 Meeting URL Jitsi: " + meetingUrl);
-            System.out.println("🎯 Clase: " + clase.getTitulo());
             
             model.addAttribute("meetingUrl", meetingUrl);
             model.addAttribute("clase", clase);
             model.addAttribute("codigoMeet", clase.getRoomName());
-            model.addAttribute("proveedor", "Jitsi Meet"); // Cambiar esto
-            model.addAttribute("reunionActiva", reunionActiva);
+            model.addAttribute("proveedor", "Jitsi Meet");
+            model.addAttribute("reunionActiva", true);
             
             return "clase-VideoConferencia";
             
         } catch (Exception e) {
             System.out.println("❌ Error en unirseAClase Jitsi: " + e.getMessage());
-            e.printStackTrace();
             model.addAttribute("error", "No se pudo cargar la sala de Jitsi: " + e.getMessage());
             return "clase-VideoConferencia";
         }

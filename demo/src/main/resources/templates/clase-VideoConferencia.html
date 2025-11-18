@@ -142,7 +142,10 @@
                     <p class="text-sm">Esto puede tomar un momento.</p>
                 </div>
                 <iframe th:src="${meetingUrl + '#config.prejoinPageEnabled=false&config.startWithAudioMuted=true&config.startWithVideoMuted=false'}" 
-                        allow="camera; microphone; fullscreen; speaker; display-capture; autoplay"
+                        allow="camera *; microphone *; fullscreen *; speaker *; display-capture *; autoplay *"
+                        allowfullscreen="true"
+                        sandbox="allow-same-origin allow-scripts allow-forms allow-modals allow-popups allow-presentation"
+                        referrerpolicy="no-referrer-when-downgrade"
                         title="Sala de Jitsi Meet"
                         style="border-radius: 8px;">
                 </iframe>

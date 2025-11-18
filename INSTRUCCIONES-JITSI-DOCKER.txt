@@ -1,0 +1,131 @@
+═══════════════════════════════════════════════════════════════════════════════
+  🎥 JITSI MEET EN DOCKER - INSTRUCCIONES FINALES
+═══════════════════════════════════════════════════════════════════════════════
+
+✅ CONFIGURACIÓN COMPLETADA
+
+He creado todos los archivos necesarios para ejecutar Jitsi Meet en Docker:
+
+📁 Archivos creados en la carpeta jitsi-meet/:
+   - docker-compose.yml     (Configuración de contenedores)
+   - .env                   (Variables de entorno)
+   - iniciar-jitsi.sh       (Script para iniciar Jitsi)
+   - detener-jitsi.sh       (Script para detener Jitsi)
+   - README.md              (Documentación completa)
+   - INICIO-RAPIDO.txt      (Guía rápida)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+🎯 PASOS PARA INICIAR JITSI (SIGUE ESTO AHORA)
+
+1️⃣  Abre WSL en una nueva terminal de PowerShell:
+
+    wsl
+
+2️⃣  Inicia Docker en WSL (te pedirá tu contraseña de Ubuntu):
+
+    sudo service docker start
+
+3️⃣  Navega a la carpeta de Jitsi:
+
+    cd /mnt/c/Users/NicolasSosa/Desktop/AureaTrabajoFinal/jitsi-meet
+
+4️⃣  Ejecuta el script de inicio:
+
+    ./iniciar-jitsi.sh
+
+    (La primera vez descargará las imágenes Docker, tardará ~5-10 minutos)
+
+5️⃣  Verifica que funciona abriendo en tu navegador:
+
+    http://localhost:8000
+
+    ✅ Si ves la interfaz de Jitsi, ¡funcionó!
+
+6️⃣  Reinicia tu aplicación Spring Boot
+
+    (Detén la app con Ctrl+C y vuélvela a ejecutar)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+✅ TU APLICACIÓN YA ESTÁ CONFIGURADA
+
+El archivo application.properties ya apunta al servidor local:
+
+    jitsi.meet.url=http://localhost:8000
+
+Cuando reinicies Spring Boot, automáticamente usará tu servidor Jitsi local.
+
+═══════════════════════════════════════════════════════════════════════════════
+
+🎉 VENTAJAS DE TU SERVIDOR PROPIO
+
+✅ Sin límite de 5 minutos (reuniones ilimitadas)
+✅ Control total sobre las reuniones
+✅ Privacidad completa (todo en tu máquina)
+✅ Sin dependencias de servidores externos
+✅ Gratis para siempre
+
+═══════════════════════════════════════════════════════════════════════════════
+
+📋 COMANDOS ÚTILES (ejecutar desde WSL en la carpeta jitsi-meet)
+
+Ver estado de los contenedores:
+    docker-compose ps
+
+Ver logs en tiempo real:
+    docker-compose logs -f
+
+Detener Jitsi:
+    ./detener-jitsi.sh
+    (o manualmente: docker-compose stop)
+
+Reiniciar Jitsi:
+    docker-compose restart
+
+═══════════════════════════════════════════════════════════════════════════════
+
+⚠️  SOLUCIÓN DE PROBLEMAS
+
+❌ Error "Permission denied" al ejecutar docker:
+
+    Solución:
+    sudo usermod -aG docker $USER
+    (luego cierra WSL y vuelve a abrirlo)
+
+❌ Docker no está corriendo:
+
+    Solución:
+    sudo service docker start
+
+❌ Puerto 8000 ya está en uso:
+
+    Solución:
+    1. Edita el archivo .env en la carpeta jitsi-meet
+    2. Cambia HTTP_PORT=8000 por HTTP_PORT=9000
+    3. En application.properties cambia:
+       jitsi.meet.url=http://localhost:9000
+    4. Reinicia: docker-compose down && docker-compose up -d
+
+❌ No se ven los videos:
+
+    - Verifica que diste permisos a cámara/micrófono en el navegador
+    - Usa Chrome o Edge (mejor compatibilidad con WebRTC)
+    - Revisa los logs: docker-compose logs -f jvb
+
+═══════════════════════════════════════════════════════════════════════════════
+
+📖 DOCUMENTACIÓN COMPLETA
+
+Para más detalles, lee los archivos en la carpeta jitsi-meet:
+- README.md           (Documentación detallada)
+- INICIO-RAPIDO.txt   (Guía visual rápida)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+🚀 ¡LISTO PARA EMPEZAR!
+
+Ahora sigue los pasos arriba para iniciar Jitsi Meet y disfruta de reuniones
+sin límite de tiempo.
+
+═══════════════════════════════════════════════════════════════════════════════

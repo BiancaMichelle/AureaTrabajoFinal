@@ -1,0 +1,9 @@
+# Configuración generada por Jitsi
+.jitsi-meet-cfg/
+
+# Logs
+*.log
+
+# Variables de entorno personalizadas
+.env.local
+.env.production

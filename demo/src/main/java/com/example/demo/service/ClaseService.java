@@ -44,26 +44,22 @@ public class ClaseService {
         Docente docente = docenteRepository.findByDni(dniDocente)
                 .orElseThrow(() -> new RuntimeException("Docente no encontrado"));
         
-        // Establecer relaciones
         clase.setModulo(modulo);
         clase.setDocente(docente);
         clase.setCurso(modulo.getCurso());
         
-        // Generar roomName si no existe
         if (clase.getRoomName() == null) {
             clase.generateRoomName();
         }
         
-        // ✅ CAMBIO IMPORTANTE: Crear URL de Jitsi en lugar de BigBlueButton
+        // ✅ Genera URL de Jitsi Meet
         String meetingUrl = jitsiClaseService.generateRoomUrl(clase.getRoomName());
         clase.setMeetingUrl(meetingUrl);
         
-        System.out.println("🎯 Clase creada con Jitsi:");
-        System.out.println("   - Título: " + clase.getTitulo());
+        System.out.println("🎯 Clase creada con Jitsi Meet:");
+        System.out.println("   - Room: " + clase.getRoomName());
         System.out.println("   - Meeting URL: " + meetingUrl);
         System.out.println("   - Room Name: " + clase.getRoomName());
-        System.out.println("   - Módulo: " + modulo.getNombre());
-        System.out.println("   - Docente: " + docente.getNombre());
         
         return claseRepository.save(clase);
     }
@@ -73,14 +69,10 @@ public class ClaseService {
             Clase clase = findById(claseId)
                     .orElseThrow(() -> new RuntimeException("Clase no encontrada"));
             
-            System.out.println("🎯 Unirse a clase Jitsi:");
+            System.out.println("🎯 Uniéndose a clase 8x8:");
             System.out.println("   - Clase ID: " + claseId);
             System.out.println("   - Título: " + clase.getTitulo());
-            System.out.println("   - Meeting URL: " + clase.getMeetingUrl());
-            System.out.println("   - Usuario: " + dniUsuario);
             
-            // ✅ CAMBIO: Con Jitsi, todos usan la misma URL
-            // Puedes personalizar configuraciones si necesitas
             Map<String, String> config = new HashMap<>();
             config.put("prejoinPageEnabled", "false");
             config.put("startWithAudioMuted", "true");
@@ -89,7 +81,7 @@ public class ClaseService {
             String meetingUrl = jitsiClaseService.generateRoomUrlWithConfig(
                 clase.getRoomName(), config);
             
-            System.out.println("   - URL Jitsi final: " + meetingUrl);
+            System.out.println("   - URL 8x8 final: " + meetingUrl);
             
             return meetingUrl;
             
