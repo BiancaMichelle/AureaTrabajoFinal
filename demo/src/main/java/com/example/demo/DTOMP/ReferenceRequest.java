@@ -17,10 +17,6 @@ public record ReferenceRequest(
     @NotNull
     BackUrlsDTO backUrls,
     @NotNull
-    DeliveryAddressDTO deliveryAddress,
-    @NotNull
-    String autoReturn,
-    @NotNull
     @Valid
     List<ItemDTO> items
 ){
@@ -33,16 +29,6 @@ public record ReferenceRequest(
         String success,
         String failure,
         String pending
-    ){}
-
-    public record DeliveryAddressDTO(
-        String number,
-        String street,
-        String zipCode,
-        String complement,
-        String neighborhood,
-        String city,
-        String country
     ){}
 
     public record ItemDTO(

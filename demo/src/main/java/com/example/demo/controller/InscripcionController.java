@@ -1,6 +1,8 @@
 package com.example.demo.controller;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.security.core.Authentication;
@@ -10,6 +12,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import com.example.demo.DTOMP.ReferenceRequest;
+import com.example.demo.DTOMP.ResponseDTO;
 import com.example.demo.model.Curso;
 import com.example.demo.model.Docente;
 import com.example.demo.model.Formacion;
@@ -20,6 +24,9 @@ import com.example.demo.repository.DocenteRepository;
 import com.example.demo.repository.InscripcionRepository;
 import com.example.demo.repository.OfertaAcademicaRepository;
 import com.example.demo.repository.UsuarioRepository;
+import com.example.demo.service.MercadoPagoService;
+import com.mercadopago.exceptions.MPApiException;
+import com.mercadopago.exceptions.MPException;
 
 /**
  * Controlador genérico para inscripciones a ofertas académicas.
@@ -34,16 +41,19 @@ public class InscripcionController {
     private final DocenteRepository docenteRepository;
     private final OfertaAcademicaRepository ofertaAcademicaRepository;
     private final InscripcionRepository inscripcionRepository;
+    private final MercadoPagoService mercadoPagoService;
 
     public InscripcionController(
             UsuarioRepository usuarioRepository,
             DocenteRepository docenteRepository,
             OfertaAcademicaRepository ofertaAcademicaRepository,
-            InscripcionRepository inscripcionRepository) {
+            InscripcionRepository inscripcionRepository,
+            MercadoPagoService mercadoPagoService) {
         this.usuarioRepository = usuarioRepository;
         this.docenteRepository = docenteRepository;
         this.ofertaAcademicaRepository = ofertaAcademicaRepository;
         this.inscripcionRepository = inscripcionRepository;
+        this.mercadoPagoService = mercadoPagoService;
     }
 
     @PostMapping("/{ofertaId}")
@@ -57,7 +67,7 @@ public class InscripcionController {
                     .map(auth -> auth.getAuthority())
                     .orElse("");
 
-            System.out.println("📝 Iniciando proceso de inscripción para oferta: " + ofertaId + " (Rol: " + rol + ")");
+            System.out.println("💰 Iniciando proceso de pago e inscripción para oferta: " + ofertaId + " (Rol: " + rol + ")");
             
             // Buscar el usuario (puede ser Alumno o Docente)
             Usuario usuario = usuarioRepository.findByDni(dni)
@@ -112,23 +122,73 @@ public class InscripcionController {
             }
 
             // ========================================
-            // CREAR INSCRIPCIÓN usando el Usuario directamente
+            // VERIFICAR SI LA OFERTA TIENE COSTO
             // ========================================
-            Inscripciones nuevaInscripcion = new Inscripciones();
-            nuevaInscripcion.setAlumno(usuario); // ✅ Ahora acepta Usuario (Alumno o Docente)
-            nuevaInscripcion.setOferta(oferta);
-            nuevaInscripcion.setEstadoInscripcion(true);
-            nuevaInscripcion.setFechaInscripcion(LocalDate.now());
+            if (oferta.getCostoInscripcion() == null || oferta.getCostoInscripcion() <= 0) {
+                // Inscripción gratuita - crear directamente
+                System.out.println("✅ Oferta gratuita, creando inscripción directa");
+                Inscripciones nuevaInscripcion = new Inscripciones();
+                nuevaInscripcion.setAlumno(usuario);
+                nuevaInscripcion.setOferta(oferta);
+                nuevaInscripcion.setEstadoInscripcion(true);
+                nuevaInscripcion.setFechaInscripcion(LocalDate.now());
+                inscripcionRepository.save(nuevaInscripcion);
+                
+                redirectAttributes.addFlashAttribute("success", 
+                    "¡Te has inscrito exitosamente a " + oferta.getNombre() + "!");
+                return redirectSegunRol(rol);
+            }
+
+            // ========================================
+            // OFERTA CON COSTO - CREAR PREFERENCIA DE PAGO
+            // ========================================
+            System.out.println("💵 Oferta con costo: $" + oferta.getCostoInscripcion() + ", creando preferencia de pago");
             
-            inscripcionRepository.save(nuevaInscripcion);
+            // Crear el request para MercadoPago
+            ReferenceRequest.ItemDTO item = new ReferenceRequest.ItemDTO(
+                oferta.getIdOferta().toString(),
+                oferta.getNombre(),
+                BigDecimal.valueOf(oferta.getCostoInscripcion()),
+                1
+            );
             
-            System.out.println("✅ Inscripción creada exitosamente para " + usuario.getNombre() + " " + usuario.getApellido());
+            List<ReferenceRequest.ItemDTO> items = new ArrayList<>();
+            items.add(item);
             
-            redirectAttributes.addFlashAttribute("success", 
-                "¡Te has inscrito exitosamente a " + oferta.getNombre() + "!");
+            ReferenceRequest.PayerDTO payer = new ReferenceRequest.PayerDTO(
+                usuario.getNombre() + " " + usuario.getApellido(),
+                usuario.getCorreo()
+            );
             
-            return redirectSegunRol(rol);
+            ReferenceRequest.BackUrlsDTO backUrls = new ReferenceRequest.BackUrlsDTO(
+                "http://localhost:8080/pago-resultado?status=success",
+                "http://localhost:8080/pago-resultado?status=failure",
+                "http://localhost:8080/pago-resultado?status=pending"
+            );
             
+            ReferenceRequest request = new ReferenceRequest(
+                usuario.getId() != null ? usuario.getId().hashCode() & 0xFFFFFFFFL : 0L,
+                BigDecimal.valueOf(oferta.getCostoInscripcion()),
+                payer,
+                backUrls,
+                items
+            );
+            
+            // Crear preferencia con el usuario y oferta para generar el pago pendiente
+            ResponseDTO response = mercadoPagoService.createPreference(request, usuario, oferta);
+            
+            System.out.println("✅ Preferencia creada: " + response.preferenceId());
+            System.out.println("🔗 URL de pago: " + response.redirectUrl());
+            
+            // Redirigir al checkout de MercadoPago
+            return "redirect:" + response.redirectUrl();
+            
+        } catch (MPException | MPApiException e) {
+            System.err.println("❌ Error con MercadoPago: " + e.getMessage());
+            e.printStackTrace();
+            redirectAttributes.addFlashAttribute("error", 
+                "Error al procesar el pago. Por favor, intenta nuevamente.");
+            return "redirect:/publico";
         } catch (Exception e) {
             System.err.println("❌ Error al crear inscripción: " + e.getMessage());
             e.printStackTrace();
