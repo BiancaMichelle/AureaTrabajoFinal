@@ -1,6 +1,5 @@
 package com.example.demo.configSecurity;
 
-
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -20,11 +19,15 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.example.demo.service.UsuarioJpaService;
+
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
 
     private final UsuarioJpaService usuarioJpaService;
+
+    @Value("${app.base-url}")
+    private String baseUrl;
 
     public SecurityConfig(UsuarioJpaService usuarioJpaService) {
         this.usuarioJpaService = usuarioJpaService;
@@ -41,64 +44,59 @@ public class SecurityConfig {
         return authConfig.getAuthenticationManager();
     }
 
-
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-        .csrf(csrf -> csrf
-            .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-            .ignoringRequestMatchers(
-                    "/api/**",
-                    "/clase/docente-entrar/**", 
-                    "/clase/docente/salir/**",
-                    "/pago/webhook",
-                    "/pool/**",
-                    "/actividad/**"
-                )
-        )
-        .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-        .userDetailsService(usuarioJpaService)
-        .sessionManagement(session -> session
-            .invalidSessionUrl("/login?timeout")
-        )
-        .authorizeHttpRequests(auth -> auth
-        .requestMatchers("/", "/publico", "/login", "/register","/register/**",
-            "/provincias/**","/ciudades/**", "/api/ubicaciones/**",
-            "/email/**", "/css/**", "/js/**", "/style/**", "/img/**",
-            "/api/**", "/admin/configuracion/carrusel/**", 
-            "/crear-admin-temporal", "/forgot-password", "/recuperacion/**",
-            "/api/usuarios/**","/admin/debug-user","/api/categorias/**",
-            "/pago/**","/api/**","/pago-resultado")
-            .permitAll()
-            .requestMatchers("/admin/**").hasAuthority("ADMIN")
-            .requestMatchers("/alumno/**", "/inscribirse/**").hasAnyAuthority("ALUMNO", "DOCENTE")
-            .requestMatchers("/docente/**").hasAuthority("DOCENTE")
-            .requestMatchers("/modulo/**", "/crearModulo", "/ofertaAcademica/**", "/actividad/**", "/pool/**").hasAnyAuthority("DOCENTE", "ADMIN")
-            .requestMatchers("/examen/**").hasAnyAuthority("ALUMNO", "DOCENTE", "ADMIN")
-            .anyRequest().authenticated()
-        )
-        .formLogin(form -> form
-            .loginPage("/login")
-            .failureUrl("/login?error=true")
-            .successHandler((request, response, authentication) -> {
-                var roles = authentication.getAuthorities()
-                    .stream()
-                    .map(a -> a.getAuthority())
-                    .toList();
-                
-                // Admin va a su dashboard, los demás van a inicio
-                if (roles.contains("ADMIN")) {
-                    response.sendRedirect("/admin/dashboard");
-                } else {
-                    response.sendRedirect("/");
-                }
-            })
-            .permitAll()
-        )
-        .logout(logout -> logout
-            .logoutSuccessUrl("/login?logout=true")
-            .permitAll()
-        );
+                .csrf(csrf -> csrf
+                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        .ignoringRequestMatchers(
+                                "/api/**",
+                                "/clase/docente-entrar/**",
+                                "/clase/docente/salir/**",
+                                "/pago/webhook",
+                                "/pool/**",
+                                "/actividad/**"))
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .userDetailsService(usuarioJpaService)
+                .sessionManagement(session -> session
+                        .invalidSessionUrl(baseUrl + "/login?timeout"))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/", "/publico", "/login", "/register", "/register/**",
+                                "/provincias/**", "/ciudades/**", "/api/ubicaciones/**",
+                                "/email/**", "/css/**", "/js/**", "/style/**", "/img/**",
+                                "/api/**", "/admin/configuracion/carrusel/**",
+                                "/crear-admin-temporal", "/forgot-password", "/recuperacion/**",
+                                "/api/usuarios/**", "/admin/debug-user", "/api/categorias/**",
+                                "/pago/**", "/api/**", "/pago-resultado")
+                        .permitAll()
+                        .requestMatchers("/admin/**").hasAuthority("ADMIN")
+                        .requestMatchers("/alumno/**", "/inscribirse/**").hasAnyAuthority("ALUMNO", "DOCENTE")
+                        .requestMatchers("/docente/**").hasAuthority("DOCENTE")
+                        .requestMatchers("/modulo/**", "/crearModulo", "/ofertaAcademica/**", "/actividad/**",
+                                "/pool/**")
+                        .hasAnyAuthority("DOCENTE", "ADMIN")
+                        .requestMatchers("/examen/**").hasAnyAuthority("ALUMNO", "DOCENTE", "ADMIN")
+                        .anyRequest().authenticated())
+                .formLogin(form -> form
+                        .loginPage("/login")
+                        .failureUrl(baseUrl + "/login?error=true")
+                        .successHandler((request, response, authentication) -> {
+                            var roles = authentication.getAuthorities()
+                                    .stream()
+                                    .map(a -> a.getAuthority())
+                                    .toList();
+
+                            // Admin va a su dashboard, los demás van a inicio
+                            if (roles.contains("ADMIN")) {
+                                response.sendRedirect(baseUrl + "/admin/dashboard");
+                            } else {
+                                response.sendRedirect(baseUrl + "/");
+                            }
+                        })
+                        .permitAll())
+                .logout(logout -> logout
+                        .logoutSuccessUrl(baseUrl + "/login?logout=true")
+                        .permitAll());
         return http.build();
     }
 
@@ -109,7 +107,7 @@ public class SecurityConfig {
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
-        
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;

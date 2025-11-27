@@ -1,6 +1,5 @@
 package com.example.demo.client;
 
-
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -32,18 +31,18 @@ public class MPClient {
     private String notificationUrl;
 
     @PostConstruct
-    public void init(){
+    public void init() {
         if (acessToken == null || acessToken.trim().isEmpty()) {
             log.error("❌ Access Token de MercadoPago no configurado!");
             throw new RuntimeException("MercadoPago Access Token no encontrado en application.properties");
         }
-        
+
         MercadoPagoConfig.setAccessToken(acessToken);
-        
+
         log.info("✅ MercadoPago inicializado correctamente");
-        log.info("🔑 Access Token configurado (primeros 10 caracteres): {}", 
-            acessToken.substring(0, Math.min(10, acessToken.length())) + "...");
-        
+        log.info("🔑 Access Token configurado (primeros 10 caracteres): {}",
+                acessToken.substring(0, Math.min(10, acessToken.length())) + "...");
+
         // Validar si es token TEST o PROD
         if (acessToken.startsWith("TEST-")) {
             log.warn("⚠️  Usando Access Token de PRUEBA (TEST)");
@@ -54,78 +53,78 @@ public class MPClient {
         }
     }
 
-    public ResponseDTO createPreference(ReferenceRequest inputData, String orderNumber) throws MPException, MPApiException{
+    public ResponseDTO createPreference(ReferenceRequest inputData, String orderNumber)
+            throws MPException, MPApiException {
 
         log.info("creando preferencia de mercado pago con los datos: {}", inputData);
         log.info("📦 Order Number: {}", orderNumber);
-        
-        try{
+
+        try {
             PreferenceClient preferenceClient = new PreferenceClient();
-        List<PreferenceItemRequest> items = inputData.items().stream().map(item -> 
-            PreferenceItemRequest.builder()
-                .id(item.id())
-                .title(item.title())
-                .quantity(item.quantity())
-                .unitPrice(item.unitPrice())
-                .build()
-        ).toList();
-        
-        log.info("📋 Items construidos: {} items", items.size());
-        items.forEach(item -> log.info("   - Item: id={}, title={}, quantity={}, unitPrice={}", 
-            item.getId(), item.getTitle(), item.getQuantity(), item.getUnitPrice()));
+            List<PreferenceItemRequest> items = inputData.items().stream().map(item -> PreferenceItemRequest.builder()
+                    .id(item.id())
+                    .title(item.title())
+                    .quantity(item.quantity())
+                    .unitPrice(item.unitPrice())
+                    .build()).toList();
 
-        PreferencePayerRequest payer = PreferencePayerRequest.builder()
-            .name(inputData.payer().name())
-            .email(inputData.payer().email())
-            .build();
-        
-        log.info("👤 Payer: name={}, email={}", payer.getName(), payer.getEmail());
+            log.info("📋 Items construidos: {} items", items.size());
+            items.forEach(item -> log.info("   - Item: id={}, title={}, quantity={}, unitPrice={}",
+                    item.getId(), item.getTitle(), item.getQuantity(), item.getUnitPrice()));
 
-        PreferenceBackUrlsRequest backUrls = PreferenceBackUrlsRequest.builder()
-            .success(inputData.backUrls().success())
-            .failure(inputData.backUrls().failure())
-            .pending(inputData.backUrls().pending())
-            .build();
-        
-        log.info("🔗 Back URLs configuradas");
-        log.info("   - Success: {}", backUrls.getSuccess());
-        log.info("   - Failure: {}", backUrls.getFailure());
-        log.info("   - Pending: {}", backUrls.getPending());
-        
-        // Verificar que las URLs no sean null
-        if (backUrls.getSuccess() == null || backUrls.getSuccess().isEmpty()) {
-            log.error("❌ Success URL está vacía!");
-        }
-        if (backUrls.getFailure() == null || backUrls.getFailure().isEmpty()) {
-            log.error("❌ Failure URL está vacía!");
-        }
+            PreferencePayerRequest payer = PreferencePayerRequest.builder()
+                    .name(inputData.payer().name())
+                    .email(inputData.payer().email())
+                    .build();
 
-        PreferenceRequest preferenceRequest = PreferenceRequest.builder()
-            .items(items)
-            .payer(payer)
-            .backUrls(backUrls)
-            .notificationUrl(notificationUrl)
-            .externalReference(orderNumber)
-            // Configuración adicional para modo TEST
-            .statementDescriptor("AUREA-INSCRIPCION") // Nombre que aparece en el resumen
-            .binaryMode(false) // Permite pagos pendientes
-            // Remover autoReturn ya que puede causar conflictos
-            // .autoReturn("approved")
-            .build();
-        
-        log.info("🔔 Notification URL: {}", notificationUrl);
-        log.info("🔖 External Reference: {}", orderNumber);
-        log.info("🚀 Enviando request a MercadoPago...");
+            log.info("👤 Payer: name={}, email={}", payer.getName(), payer.getEmail());
 
-        Preference preference = preferenceClient.create(preferenceRequest);
+            PreferenceBackUrlsRequest backUrls = PreferenceBackUrlsRequest.builder()
+                    .success(inputData.backUrls().success())
+                    .failure(inputData.backUrls().failure())
+                    .pending(inputData.backUrls().pending())
+                    .build();
 
-        log.info("preferencia de mercado pago creada con id: {}", preference.getId());
-        return new ResponseDTO(
-            preference.getId(),
-            preference.getInitPoint()
-        );
+            log.info("🔗 Back URLs configuradas");
+            log.info("   - Success: {}", backUrls.getSuccess());
+            log.info("   - Failure: {}", backUrls.getFailure());
+            log.info("   - Pending: {}", backUrls.getPending());
 
-        }catch (MPApiException e){
+            // Verificar que las URLs no sean null
+            if (backUrls.getSuccess() == null || backUrls.getSuccess().isEmpty()) {
+                log.error("❌ Success URL está vacía!");
+            }
+            if (backUrls.getFailure() == null || backUrls.getFailure().isEmpty()) {
+                log.error("❌ Failure URL está vacía!");
+            }
+
+            PreferenceRequest preferenceRequest = PreferenceRequest.builder()
+                    .items(items)
+                    .payer(payer)
+                    .backUrls(backUrls)
+                    .notificationUrl(notificationUrl)
+                    .externalReference(orderNumber)
+                    // Configuración adicional para modo TEST
+                    .statementDescriptor("AUREA-INSCRIPCION") // Nombre que aparece en el resumen
+                    .binaryMode(false) // Permite pagos pendientes
+                    .autoReturn("approved")
+                    .build();
+
+            log.info("🔔 Notification URL: {}", notificationUrl);
+            log.info("🔖 External Reference: {}", orderNumber);
+            log.info("🚀 Enviando request a MercadoPago...");
+
+            Preference preference = preferenceClient.create(preferenceRequest);
+
+            log.info("🆔 Preference ID generado: {}", preference.getId());
+            log.info("🔗 Init Point generado: {}", preference.getInitPoint());
+
+            log.info("preferencia de mercado pago creada con id: {}", preference.getId());
+            return new ResponseDTO(
+                    preference.getId(),
+                    preference.getInitPoint());
+
+        } catch (MPApiException e) {
             log.error("❌ Error de API de MercadoPago: {}", e.getMessage());
             log.error("📋 Detalles de la respuesta de MercadoPago:");
             log.error("   - Status Code: {}", e.getStatusCode());
@@ -135,14 +134,14 @@ public class MPClient {
             log.error("   - Causa: {}", e.getCause());
             throw new MPApiException("Error en la API de MercadoPago: " + e.getMessage(), e.getApiResponse());
 
-        }catch (MPException e){
+        } catch (MPException e) {
             log.error("❌ Error de MercadoPago SDK: {}", e.getMessage());
             log.error("   - Causa: {}", e.getCause());
             throw e;
-        }catch (Exception e){
+        } catch (Exception e) {
             log.error("❌ Error general al crear preferencia de MercadoPago: {}", e.getMessage());
             e.printStackTrace();
             throw new MPException("ERROR inesperado al crear preferencia", e);
         }
-    } 
+    }
 }
