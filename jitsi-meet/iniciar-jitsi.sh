@@ -8,12 +8,6 @@ echo "════════════════════════�
 echo ""
 
 # Verificar si Docker está instalado
-echo "🔍 Verificando Docker..."
-if ! command -v docker &> /dev/null; then
-    echo "   ❌ ERROR: Docker no está instalado en WSL"
-    echo "   👉 Instala Docker en WSL o usa Docker Desktop con WSL2"
-    exit 1
-fi
 
 DOCKER_VERSION=$(docker --version)
 echo "   ✅ Docker encontrado: $DOCKER_VERSION"
@@ -66,7 +60,7 @@ if [ $? -eq 0 ]; then
     echo "   ✅ JITSI MEET INICIADO CORRECTAMENTE"
     echo "═══════════════════════════════════════════════════════"
     echo ""
-    echo "📍 Accede a Jitsi en: \e[33mhttp://localhost:8000\e[0m"
+    echo "📍 Accede a Jitsi en: \e[33mhttps://tzvhc3m8-8000.brs.devtunnels.ms\e[0m (o http://localhost:8000)"
     echo ""
     echo "📊 Estado de los contenedores:"
     echo ""

@@ -1,9 +1,15 @@
 # Configuración generada por Jitsi
-.jitsi-meet-cfg/
+# .jitsi-meet-cfg/
 
 # Logs
 *.log
 
 # Variables de entorno personalizadas
-.env.local
-.env.production
+# .env.local
+# .env.production
+
+# Ignorar configuración local de Jitsi (volúmenes)
+.jitsi-meet-cfg/
+
+# NO ignorar .env para que suba al repo (según solicitud)
+# .env

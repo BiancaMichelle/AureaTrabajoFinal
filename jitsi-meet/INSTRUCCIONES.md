@@ -7,7 +7,7 @@
 Abre PowerShell y ejecuta:
 
 ```powershell
-cd C:\Users\NicolasSosa\Desktop\AureaTrabajoFinal\jitsi-meet
+cd "C:\Users\HDC i5 10400\Desktop\AureaTrabajoFinal\jitsi-meet"
 wsl bash iniciar-jitsi.sh
 ```
 
@@ -16,75 +16,71 @@ wsl bash iniciar-jitsi.sh
 Espera a que aparezca:
 ```
 ✅ Jitsi Meet iniciado correctamente
-STATUS
-jitsi-meet-web-1      Up
-jitsi-meet-prosody-1  Up
-jitsi-meet-jicofo-1   Up
-jitsi-meet-jvb-1      Up
 ```
 
-### 2️⃣ CORREGIR CONFIGURACIÓN (IMPORTANTE - Hazlo cada vez después de iniciar)
+### 2️⃣ INICIAR TÚNEL (NGROK)
 
-```powershell
-wsl bash corregir-config.sh
-```
+Para que las reuniones funcionen externamente, necesitas exponer el puerto 8100.
 
-Ingresa tu contraseña nuevamente. Debes ver:
-```
-✅ Correcciones aplicadas
-config.bosh = 'http://localhost:8000/' + subdir + 'http-bind';
-config.websocket = 'ws://localhost:8000/' + subdir + 'xmpp-websocket';
-```
+1. Abre una nueva terminal PowerShell.
+2. Ejecuta:
+   ```powershell
+   ngrok http 8100
+   ```
+3. Copia la URL HTTPS que te da ngrok (ej: `https://xxxx-xxxx.ngrok-free.app`).
 
-### 3️⃣ USAR TU APLICACIÓN
+### 3️⃣ ACTUALIZAR CONFIGURACIÓN (Si cambió la URL)
 
-Ahora sí, inicia tu aplicación Spring Boot y crea clases normalmente.
+Si la URL de ngrok cambió, debes actualizarla en dos archivos:
+
+1. **En `jitsi-meet/.env`:**
+   ```properties
+   PUBLIC_URL=https://tu-nueva-url.ngrok-free.app
+   ```
+   *(Luego reinicia Jitsi con `wsl bash iniciar-jitsi.sh`)*
+
+2. **En `demo/src/main/resources/application.properties`:**
+   ```properties
+   jitsi.meet.url=https://tu-nueva-url.ngrok-free.app
+   ```
+   *(Luego reinicia tu aplicación Spring Boot)*
 
 ---
 
-## 🛑 Detener Jitsi (al terminar)
+## 🛑 Detener Jitsi
+
+Cuando termines de usarlo, para liberar recursos:
 
 ```powershell
-cd C:\Users\NicolasSosa\Desktop\AureaTrabajoFinal\jitsi-meet
+cd "C:\Users\HDC i5 10400\Desktop\AureaTrabajoFinal\jitsi-meet"
 wsl bash detener-jitsi.sh
 ```
 
 ---
 
+## ⚙️ Configuración Técnica
+
+- **Puerto HTTP Jitsi:** 8100 (Interno)
+- **Puerto HTTPS Jitsi:** 8444 (Interno - Deshabilitado para evitar conflictos)
+- **Puerto UDP (Video):** 10000
+- **Autenticación:** Deshabilitada (cualquiera puede crear salas)
+
+---
+
 ## ❓ Problemas Comunes
 
-### "Reconectando..." o "Desconectado"
-→ Ejecuta el script `corregir-config.sh` nuevamente
+### "ERR_NGROK_8012" o "Connection refused"
+→ Significa que Jitsi no está corriendo. Ejecuta el paso 1 de nuevo.
+
+### "Reconectando..." en la videollamada
+→ Verifica que la URL en `.env` coincida exactamente con la de ngrok.
 
 ### "Permission denied" al ejecutar comandos
-→ Asegúrate de estar ejecutando los comandos desde PowerShell, no desde WSL directamente
-
-### Los contenedores no inician
-→ Verifica que Docker Desktop esté corriendo en WSL
-
----
-
-## 📝 Resumen
-
-**Cada vez que uses Jitsi:**
-1. `wsl bash iniciar-jitsi.sh` (inicia los contenedores)
-2. `wsl bash corregir-config.sh` (corrige la configuración)
-3. Inicia tu aplicación Spring Boot
-4. Al terminar: `wsl bash detener-jitsi.sh`
-
----
-
-## 🔧 Configuración
-
-- **URL de Jitsi:** http://localhost:8000
-- **Puerto HTTP:** 8000
-- **Puerto UDP (video):** 10000
-- **Autenticación:** Deshabilitada (cualquiera puede crear salas)
-- **HTTPS:** Deshabilitado (solo HTTP para desarrollo local)
+→ Asegúrate de estar ejecutando los comandos desde PowerShell, no desde WSL directamente.
 
 ---
 
 **Ubicación de archivos importantes:**
 - Configuración: `.env`
 - Docker Compose: `docker-compose.yml`
-- Scripts: `iniciar-jitsi.sh`, `corregir-config.sh`, `detener-jitsi.sh`
+- Scripts: `iniciar-jitsi.sh`, `detener-jitsi.sh`
