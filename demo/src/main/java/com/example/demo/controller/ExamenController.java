@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -22,6 +23,9 @@ import com.example.demo.repository.ExamenRepository;
 @Controller
 @RequestMapping("/examen")
 public class ExamenController {
+
+    @Value("${app.base-url}")
+    private String baseUrl;
 
     @Autowired
     private ExamenRepository examenRepository;
@@ -48,7 +52,7 @@ public class ExamenController {
             
         } catch (Exception e) {
             e.printStackTrace();
-            return "redirect:/";
+            return "redirect:" + baseUrl + "/";
         }
     }
 

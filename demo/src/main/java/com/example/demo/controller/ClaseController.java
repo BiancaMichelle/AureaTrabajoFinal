@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -25,6 +26,9 @@ import com.example.demo.service.JitsiClaseService;
 @Controller
 @RequestMapping("/clase")
 public class ClaseController {
+    
+    @Value("${app.base-url}")
+    private String baseUrl;
     
     private final ClaseService claseService;
     private final JitsiClaseService jitsiClaseService; // Cambiar esto
@@ -69,12 +73,12 @@ public class ClaseController {
             
             System.out.println("✅ Clase Jitsi creada exitosamente");
             
-            return "redirect:/docente/aula/" + curso.getIdOferta();
+            return "redirect:" + baseUrl + "/docente/aula/" + curso.getIdOferta();
             
         } catch (Exception e) {
             System.out.println("❌ Error al crear clase Jitsi: " + e.getMessage());
             e.printStackTrace();
-            return "redirect:/docente/mis-ofertas?error=" + e.getMessage();
+            return "redirect:" + baseUrl + "/docente/mis-ofertas?error=" + e.getMessage();
         }
     }
     

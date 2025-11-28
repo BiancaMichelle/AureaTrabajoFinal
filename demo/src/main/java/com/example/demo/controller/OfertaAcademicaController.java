@@ -3,6 +3,7 @@ package com.example.demo.controller;
 import java.time.LocalDate;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -20,6 +21,9 @@ import com.example.demo.service.CursoService;
 
 @Controller
 public class OfertaAcademicaController {
+    
+    @Value("${app.base-url}")
+    private String baseUrl;
     
     private final CursoService cursoService;
     private final OfertaAcademicaRepository ofertaAcademicaRepository;
@@ -63,7 +67,7 @@ public class OfertaAcademicaController {
                             @RequestParam Long cursoId) {
         cursoService.crearModulo(nombre, descripcion, objetivos, fechaInicio, fechaFin, visibilidad, cursoId);
         // ✅ Redirigir de vuelta al curso específico
-        return "redirect:/ofertaAcademica/" + cursoId;
+        return "redirect:" + baseUrl + "/ofertaAcademica/" + cursoId;
     }
     
     private boolean puedeModificarCurso(Authentication authentication) {

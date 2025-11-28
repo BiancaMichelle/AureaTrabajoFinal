@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,6 +30,9 @@ import com.example.demo.repository.UsuarioRepository;
 @Controller
 @RequestMapping("/docente")
 public class DocenteController {
+
+    @Value("${app.base-url}")
+    private String baseUrl;
 
     private final CursoRepository cursoRepository;
     private final FormacionRepository formacionRepository;
@@ -68,7 +72,7 @@ public class DocenteController {
         } catch (Exception e) {
             System.out.println("❌ Error en mi-espacio (docente): " + e.getMessage());
             model.addAttribute("error", "Error al cargar tu espacio");
-            return "redirect:/";
+            return "redirect:" + baseUrl + "/";
         }
     }
     
@@ -89,7 +93,7 @@ public class DocenteController {
         } catch (Exception e) {
             System.out.println("❌ Error en mis-pagos (docente): " + e.getMessage());
             model.addAttribute("error", "Error al cargar tus pagos");
-            return "redirect:/";
+            return "redirect:" + baseUrl + "/";
         }
     }
 
@@ -220,7 +224,7 @@ public class DocenteController {
             
             if (!esDocenteDeLaOferta) {
                 System.out.println("❌ Acceso denegado: el docente no está asignado a esta oferta");
-                return "redirect:/docente/mis-ofertas";
+                return "redirect:" + baseUrl + "/docente/mis-ofertas";
             }
 
             // Buscar módulos de esta oferta
@@ -244,7 +248,7 @@ public class DocenteController {
         } catch (Exception e) {
             System.out.println("❌ Error: " + e.getMessage());
             e.printStackTrace();
-            return "redirect:/docente/mis-ofertas";
+            return "redirect:" + baseUrl + "/docente/mis-ofertas";
         }
     }
 }

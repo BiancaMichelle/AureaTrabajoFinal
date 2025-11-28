@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -38,6 +39,9 @@ import com.example.demo.repository.UsuarioRepository;
 @RequestMapping("/alumno")
 public class AlumnoController {
     
+    @Value("${app.base-url}")
+    private String baseUrl;
+
     @GetMapping("/alumno")
     public String alumnoDashboard() {
         return "publico";
@@ -59,7 +63,7 @@ public class AlumnoController {
         } catch (Exception e) {
             System.out.println("❌ Error en mi-espacio: " + e.getMessage());
             model.addAttribute("error", "Error al cargar tu espacio");
-            return "redirect:/";
+            return "redirect:" + baseUrl + "/";
         }
     }
     
@@ -80,7 +84,7 @@ public class AlumnoController {
         } catch (Exception e) {
             System.out.println("❌ Error en mis-pagos: " + e.getMessage());
             model.addAttribute("error", "Error al cargar tus pagos");
-            return "redirect:/";
+            return "redirect:" + baseUrl + "/";
         }
     }
 
@@ -134,7 +138,7 @@ public class AlumnoController {
             
             if (yaInscrito) {
                 redirectAttributes.addFlashAttribute("error", "Ya estás inscrito en esta oferta");
-                return "redirect:/publico";
+                return "redirect:" + baseUrl + "/publico";
             }
 
             // ✅ CREAR INSCRIPCIÓN DIRECTA usando Usuario
@@ -151,14 +155,14 @@ public class AlumnoController {
             redirectAttributes.addFlashAttribute("success", 
                 "¡Te has inscrito exitosamente a " + oferta.getNombre() + "!");
             
-            return "redirect:/alumno/mis-ofertas";
+            return "redirect:" + baseUrl + "/alumno/mis-ofertas";
             
         } catch (Exception e) {
             System.err.println("❌ Error al crear inscripción: " + e.getMessage());
             e.printStackTrace();
             redirectAttributes.addFlashAttribute("error", 
                 "Error al procesar la inscripción: " + e.getMessage());
-            return "redirect:/publico";
+            return "redirect:" + baseUrl + "/publico";
         }
     }
 
