@@ -135,6 +135,8 @@ public class InscripcionController {
                         }
 
                         // Verificar si tiene un pago pendiente para esta oferta
+                        // COMENTADO: Permitimos generar una nueva intención de pago si la anterior no se completó
+                        /*
                         boolean pagoPendiente = pagoRepository.existsByUsuarioAndOfertaAndEstadoPago(
                                         usuario, oferta, com.example.demo.enums.EstadoPago.PENDIENTE);
 
@@ -143,6 +145,7 @@ public class InscripcionController {
                                                 "Ya tienes un pago pendiente para esta oferta. Por favor, revisa tu correo o intenta pagar nuevamente desde 'Mis Ofertas'.");
                                 return redirectSegunRol(rol);
                         }
+                        */
 
                         // ========================================
                         // VERIFICAR SI LA OFERTA TIENE COSTO

@@ -55,7 +55,8 @@ public class SecurityConfig {
                                 "/clase/docente/salir/**",
                                 "/pago/webhook",
                                 "/pool/**",
-                                "/actividad/**"))
+                                "/actividad/**",
+                                "/aula/api/asistencia/registrar"))
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .userDetailsService(usuarioJpaService)
                 .sessionManagement(session -> session

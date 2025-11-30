@@ -41,6 +41,7 @@ public class Clase {
     private String meetingUrl;
     
     private Boolean asistenciaAutomatica;
+    private Boolean transcripcionHabilitada;
     private Boolean preguntasAleatorias;
     private Integer cantidadPreguntas;
     
@@ -64,5 +65,13 @@ public class Clase {
                     .replaceAll("[^a-z0-9-]", "");
             this.roomName = "clase-" + baseName + "-" + UUID.randomUUID().toString().substring(0, 8);
         }
+    }
+
+    public Boolean getTranscripcionHabilitada() {
+        return transcripcionHabilitada;
+    }
+
+    public void setTranscripcionHabilitada(Boolean transcripcionHabilitada) {
+        this.transcripcionHabilitada = transcripcionHabilitada;
     }
 }

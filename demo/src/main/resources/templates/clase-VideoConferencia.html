@@ -1,24 +1,25 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org" layout:decorate="~{layout/base}">
+
 <head>
     <title th:text="${clase?.titulo ?: 'Videoconferencia'}">Videoconferencia</title>
-    
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+    <script src="https://meet.jit.si/external_api.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
 
     <style>
         .video-container {
             position: relative;
-            padding-bottom: 56.25%; 
+            padding-bottom: 56.25%;
             height: 0;
             overflow: hidden;
-            background: #f3f4f6; 
-            border-radius: 12px; 
-            border: 1px solid #e5e7eb; 
+            background: #f3f4f6;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
         }
+
         .video-container iframe {
             position: absolute;
             top: 0;
@@ -27,6 +28,7 @@
             height: 100%;
             border: none;
         }
+
         /* Estilo mejorado para el mensaje de carga */
         .loading-message {
             position: absolute;
@@ -38,21 +40,29 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            background-color: rgba(255, 255, 255, 0.7); /* Fondo blanco semitransparente */
-            backdrop-filter: blur(4px); /* Efecto de desenfoque moderno */
-            color: #1f2937; /* Texto gris oscuro */
+            background-color: rgba(255, 255, 255, 0.7);
+            /* Fondo blanco semitransparente */
+            backdrop-filter: blur(4px);
+            /* Efecto de desenfoque moderno */
+            color: #1f2937;
+            /* Texto gris oscuro */
             border-radius: 12px;
             z-index: 10;
+            pointer-events: none;
+            /* Permitir clicks en el iframe subyacente */
         }
+
         .loading-message i {
-            color: #3b82f6; /* Icono de spinner azul */
+            color: #3b82f6;
+            /* Icono de spinner azul */
         }
     </style>
 </head>
+
 <body layout:fragment="content" class="bg-gray-50"> <!-- Fondo de página gris muy claro -->
 
     <div class="container mx-auto p-4 md:p-6 max-w-6xl">
-        
+
         <!-- Encabezado -->
         <div class="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
             <div>
@@ -61,15 +71,14 @@
             </div>
             <div class="flex gap-3 flex-shrink-0">
                 <!-- Botón para abrir en nueva pestaña (Estilo Primario) -->
-                <a th:href="${meetingUrl}" 
-                   target="_blank"
-                   class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-5 py-2.5 rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2 font-medium">
+                <a th:href="${meetingUrl}" target="_blank"
+                    class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-5 py-2.5 rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2 font-medium">
                     <i class="fas fa-external-link-alt"></i>
                     <span>Abrir en nueva pestaña</span>
                 </a>
                 <!-- Botón volver al aula (Estilo Secundario) -->
                 <a th:href="@{/docente/aula/} + ${clase?.modulo?.curso?.idOferta}"
-                   class="bg-white text-gray-700 px-5 py-2.5 rounded-lg border border-gray-300 hover:bg-gray-100 transition-colors duration-200 flex items-center gap-2 font-medium">
+                    class="bg-white text-gray-700 px-5 py-2.5 rounded-lg border border-gray-300 hover:bg-gray-100 transition-colors duration-200 flex items-center gap-2 font-medium">
                     <i class="fas fa-arrow-left"></i>
                     <span>Volver al aula</span>
                 </a>
@@ -81,15 +90,18 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
                 <div class="flex items-center gap-3">
                     <i class="fas fa-clock text-blue-600 text-lg"></i>
-                    <span class="text-gray-700"><strong>Inicio:</strong> <span th:text="${#temporals.format(clase.inicio, 'dd/MM/yyyy HH:mm')}"></span></span>
+                    <span class="text-gray-700"><strong>Inicio:</strong> <span
+                            th:text="${#temporals.format(clase.inicio, 'dd/MM/yyyy HH:mm')}"></span></span>
                 </div>
                 <div class="flex items-center gap-3">
                     <i class="fas fa-hourglass-end text-blue-600 text-lg"></i>
-                    <span class="text-gray-700"><strong>Fin:</strong> <span th:text="${#temporals.format(clase.fin, 'dd/MM/yyyy HH:mm')}"></span></span>
+                    <span class="text-gray-700"><strong>Fin:</strong> <span
+                            th:text="${#temporals.format(clase.fin, 'dd/MM/yyyy HH:mm')}"></span></span>
                 </div>
                 <div class="flex items-center gap-3">
                     <i class="fas fa-user-check text-blue-600 text-lg"></i>
-                    <span class="text-gray-700"><strong>Asistencia:</strong> <span th:text="${clase.asistenciaAutomatica ? 'Automática' : 'Manual'}"></span></span>
+                    <span class="text-gray-700"><strong>Asistencia:</strong> <span
+                            th:text="${clase.asistenciaAutomatica ? 'Automática' : 'Manual'}"></span></span>
                 </div>
             </div>
         </div>
@@ -112,13 +124,36 @@
                     <i class="fas fa-video me-2 text-blue-600"></i>
                     Sala de videoconferencia
                 </h2>
-                <!-- Indicador "Conectado" mejorado -->
-                <div class="flex items-center bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">
-                    <i class="fas fa-circle text-xs me-2 animate-pulse"></i>
-                    <span>Conectado</span>
+                <div class="flex gap-2">
+                    <!-- Indicador Docente -->
+                    <div th:if="${esDocente}"
+                        class="flex items-center bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium">
+                        <i class="fas fa-chalkboard-teacher me-2"></i>
+                        <span>Docente</span>
+                    </div>
+                    <!-- Indicador Transcripción Configurada -->
+                    <div th:if="${clase.transcripcionHabilitada}"
+                        class="flex items-center bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-medium"
+                        title="Transcripción habilitada para esta clase">
+                        <i class="fas fa-closed-captioning me-2"></i>
+                        <span>Transcripción ON</span>
+                    </div>
+                    <!-- Indicador Transcribiendo (Dinámico) -->
+                    <div id="transcribingBadge"
+                        class="hidden flex items-center bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm font-medium animate-pulse">
+                        <i class="fas fa-microphone me-2"></i>
+                        <span>Transcribiendo...</span>
+                    </div>
+                    <!-- Indicador "Conectado" mejorado -->
+                    <div
+                        class="flex items-center bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">
+                        <i class="fas fa-circle text-xs me-2 animate-pulse"></i>
+                        <span>Conectado</span>
+                    </div>
                 </div>
             </div>
-            <div th:if="${esDocente}" class="bg-gradient-to-r from-green-500 to-green-600 text-white p-4 mb-4 rounded-lg">
+            <div th:if="${esDocente}"
+                class="bg-gradient-to-r from-green-500 to-green-600 text-white p-4 mb-4 rounded-lg">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center">
                         <i class="fas fa-crown text-2xl mr-3"></i>
@@ -132,23 +167,37 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Iframe de la videoconferencia -->
-            <div class="video-container mb-6">
+            <div class="video-container mb-6" id="jitsi-container">
                 <!-- Mensaje de carga mejorado -->
                 <div class="loading-message" id="loadingMessage">
                     <i class="fas fa-spinner fa-spin text-3xl mb-3"></i>
                     <p class="font-medium text-lg">Cargando sala de videoconferencia...</p>
                     <p class="text-sm">Esto puede tomar un momento.</p>
                 </div>
-                <iframe th:src="${meetingUrl + '#config.prejoinPageEnabled=false&config.startWithAudioMuted=true&config.startWithVideoMuted=false'}" 
-                        allow="camera *; microphone *; fullscreen *; speaker *; display-capture *; autoplay *"
-                        allowfullscreen="true"
-                        sandbox="allow-same-origin allow-scripts allow-forms allow-modals allow-popups allow-presentation"
-                        referrerpolicy="no-referrer-when-downgrade"
-                        title="Sala de Jitsi Meet"
-                        style="border-radius: 8px;">
-                </iframe>
+                <!-- El iframe será inyectado por la API de Jitsi -->
+            </div>
+
+            <!-- Contenedor para mensaje de clase terminada (oculto inicialmente) -->
+            <div id="classEndedMessage"
+                class="hidden bg-white border border-gray-200 text-gray-700 px-6 py-12 rounded-xl text-center mb-6">
+                <i class="fas fa-check-circle text-5xl mb-5 text-green-500"></i>
+                <h2 class="text-2xl font-semibold mb-2 text-gray-800">La clase ha terminado</h2>
+                <p class="mb-6 text-gray-600">Gracias por participar.</p>
+
+                <div class="flex justify-center gap-4">
+                    <a th:href="@{/docente/aula/} + ${clase?.modulo?.curso?.idOferta}"
+                        class="bg-blue-600 text-white px-6 py-2.5 rounded-lg shadow-md hover:bg-blue-700 transition-all duration-200 inline-flex items-center gap-2 font-medium">
+                        <i class="fas fa-arrow-left me-2"></i>
+                        <span>Volver al aula</span>
+                    </a>
+                    <button onclick="descargarTranscripcion()" id="btnDescargarTranscripcion"
+                        class="hidden bg-green-600 text-white px-6 py-2.5 rounded-lg shadow-md hover:bg-green-700 transition-all duration-200 inline-flex items-center gap-2 font-medium">
+                        <i class="fas fa-file-download me-2"></i>
+                        <span>Descargar Transcripción</span>
+                    </button>
+                </div>
             </div>
 
             <!-- Recomendaciones (Estilo mejorado con iconos) -->
@@ -158,250 +207,266 @@
                     Recomendaciones para Jitsi Meet
                 </h3>
                 <ul class="text-gray-700 text-sm space-y-2">
-                    <li class="flex items-center"><i class="fas fa-check-circle text-green-500 w-5 me-2"></i> <strong>Permite el acceso</strong> a cámara y micrófono cuando el navegador lo solicite.</li>
-                    <li class="flex items-center"><i class="fas fa-headphones text-blue-500 w-5 me-2"></i> Usa <strong>auriculares</strong> para evitar ecos y mejorar la calidad de audio.</li>
-                    <li class="flex items-center"><i class="fas fa-wifi text-blue-500 w-5 me-2"></i> Asegúrate de tener una <strong>conexión estable</strong> a internet.</li>
-                    <li class="flex items-center"><i class="fas fa-mobile-alt text-purple-500 w-5 me-2"></i> <strong>Jitsi funciona mejor</strong> en Chrome, Firefox o Edge.</li>
-                    <!-- Eliminado el punto sobre "Abrir en nueva pestaña" ya que Jitsi es más estable -->
+                    <li class="flex items-center"><i class="fas fa-check-circle text-green-500 w-5 me-2"></i>
+                        <strong>Permite el acceso</strong> a cámara y micrófono cuando el navegador lo solicite.
+                    </li>
+                    <li class="flex items-center"><i class="fas fa-headphones text-blue-500 w-5 me-2"></i> Usa
+                        <strong>auriculares</strong> para evitar ecos y mejorar la calidad de audio.
+                    </li>
+                    <li class="flex items-center"><i class="fas fa-wifi text-blue-500 w-5 me-2"></i> Asegúrate de tener
+                        una <strong>conexión estable</strong> a internet.</li>
+                    <li class="flex items-center"><i class="fas fa-mobile-alt text-purple-500 w-5 me-2"></i>
+                        <strong>Jitsi funciona mejor</strong> en Chrome, Firefox o Edge.
+                    </li>
                 </ul>
             </div>
         </div>
+        <script th:inline="javascript">
+            // Datos del servidor
+            const meetingUrl = /*[[${meetingUrl}]]*/ '';
+            const defaultRoomName = /*[[${clase.roomName}]]*/ 'SalaPrueba';
+            const isTeacher = /*[[${esDocente}]]*/ false;
+            const transcripcionHabilitada = /*[[${clase.transcripcionHabilitada != null ? clase.transcripcionHabilitada : false}]]*/ false;
+            // Obtener datos del usuario de manera segura con Thymeleaf
+            const usuarioNombre = /*[[${usuario != null ? usuario.nombre + ' ' + usuario.apellido : 'Usuario Invitado'}]]*/ 'Usuario Invitado';
+            const usuarioEmail = /*[[${usuario != null ? usuario.correo : 'email@example.com'}]]*/ 'email@example.com';
 
-        <!-- Mensaje si no hay meeting URL (Estilo de "Estado Vacío" mejorado) -->
-        <div th:unless="${meetingUrl}" class="bg-white border border-gray-200 text-gray-700 px-6 py-12 rounded-xl text-center">
-            <i class="fas fa-video-slash text-5xl mb-5 text-gray-400"></i>
-            <h2 class="text-2xl font-semibold mb-2 text-gray-800">Sala no disponible</h2>
-            <p class="mb-6 text-gray-600">No se pudo cargar la sala de videoconferencia para esta clase.</p>
-            <a th:if="${clase?.modulo?.curso}" 
-               th:href="@{/docente/aula/} + ${clase.modulo.curso.idOferta}"
-               class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-2.5 rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 inline-flex items-center gap-2 font-medium">
-                <i class="fas fa-arrow-left me-2"></i>
-                <span>Volver al aula</span>
-            </a>
-        </div>
-    </div>
+            // Configuración dinámica de Jitsi (Soporte para JaaS/8x8)
+            let domain = "meet.jit.si";
+            let roomName = defaultRoomName;
+            let jwtToken = null;
 
-    <script th:if="${esDocente}">
-        document.addEventListener('DOMContentLoaded', function() {
-            const panelDocente = document.getElementById('panelDocente');
-            const btnPermitir = document.getElementById('btnPermitirAlumnos');
-            const statusDiv = document.getElementById('confirmacionStatus');
-            const claseId = '[[${clase.idClase}]]';
-            let alumnosPermitidos = false;
-            let docenteEnReunion = false;
-            
-            console.log('🎯 Inicializando detección de join del docente');
-    
-            // ✅ DETECCIÓN INTELIGENTE DE CUANDO EL DOCENTE SE UNE
-            function detectarJoinDeDocente() {
-                const iframe = document.querySelector('iframe');
-                if (!iframe) {
-                    console.log('❌ No se encontró el iframe de Jitsi');
+            if (meetingUrl && meetingUrl.includes("8x8.vc")) {
+                console.log("🔧 Configurando modo JaaS (8x8.vc)");
+                domain = "8x8.vc";
+                try {
+                    const urlObj = new URL(meetingUrl);
+                    // Extraer el path completo (tenant/room) sin el slash inicial
+                    roomName = urlObj.pathname.substring(1);
+                    jwtToken = urlObj.searchParams.get("jwt");
+                } catch (e) {
+                    console.error("Error parseando URL de Jitsi:", e);
+                }
+            }
+
+            const options = {
+                roomName: roomName,
+                width: '100%',
+                height: '100%',
+                parentNode: document.querySelector('#jitsi-container'),
+                jwt: jwtToken, // Inyectar token si existe
+                configOverwrite: {
+                    prejoinPageEnabled: false,
+                    startWithAudioMuted: true,
+                    startWithVideoMuted: false
+                },
+                interfaceConfigOverwrite: {
+                    // Opciones de interfaz
+                    TOOLBAR_BUTTONS: [
+                        'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
+                        'fodeviceselection', 'hangup', 'profile', 'chat', 'recording',
+                        'livestreaming', 'etherpad', 'sharedvideo', 'settings', 'raisehand',
+                        'videoquality', 'filmstrip', 'invite', 'feedback', 'stats', 'shortcuts',
+                        'tileview', 'videobackgroundblur', 'download', 'help', 'mute-everyone',
+                        'security'
+                    ]
+                },
+                userInfo: {
+                    displayName: isTeacher ? usuarioNombre + ' (Docente)' : usuarioNombre,
+                    email: usuarioEmail
+                }
+            };
+
+            // Fallback: Ocultar loading después de 5 segundos (por seguridad)
+            // Se define ANTES de iniciar la API para asegurar que se ejecute incluso si hay error JS abajo
+            const loadingTimeout = setTimeout(() => {
+                const loadingMessage = document.getElementById('loadingMessage');
+                if (loadingMessage) loadingMessage.style.display = 'none';
+                console.warn("⚠️ Tiempo de espera de carga agotado (Fallback ejecutado)");
+            }, 5000);
+
+            try {
+                if (typeof JitsiMeetExternalAPI === 'undefined') {
+                    throw new Error("La librería de Jitsi no se ha cargado correctamente. Verifique su conexión a internet.");
+                }
+
+                console.log("🚀 Iniciando Jitsi en:", domain, "Sala:", roomName);
+                const api = new JitsiMeetExternalAPI(domain, options);
+
+                let hasJoined = false;
+
+                // Ocultar mensaje de carga cuando se carga la API
+                api.addEventListener('videoConferenceJoined', () => {
+                    console.log("✅ Evento: videoConferenceJoined");
+                    hasJoined = true;
+                    clearTimeout(loadingTimeout); // Cancelar el fallback si cargó bien
+                    const loadingMessage = document.getElementById('loadingMessage');
+                    if (loadingMessage) {
+                        loadingMessage.style.display = 'none';
+                    }
+
+                    // Iniciar transcripción si es docente y está habilitada
+                    if (isTeacher && transcripcionHabilitada) {
+                        iniciarTranscripcion();
+                    }
+                });
+
+                // Detectar cuando se termina la llamada
+                api.addEventListener('videoConferenceLeft', () => {
+                    console.log("🚪 Evento: videoConferenceLeft");
+                    if (hasJoined) {
+                        mostrarMensajeFinClase();
+                        if (isTeacher && transcripcionHabilitada) {
+                            detenerTranscripcion();
+                        }
+                    }
+                });
+
+                api.addEventListener('readyToClose', () => {
+                    console.log("🔴 Evento: readyToClose");
+                    if (hasJoined) {
+                        mostrarMensajeFinClase();
+                        if (isTeacher && transcripcionHabilitada) {
+                            detenerTranscripcion();
+                        }
+                    }
+                });
+
+                function mostrarMensajeFinClase() {
+                    const container = document.getElementById('jitsi-container');
+                    const message = document.getElementById('classEndedMessage');
+                    const btnDescargar = document.getElementById('btnDescargarTranscripcion');
+
+                    if (container) container.style.display = 'none';
+                    if (message) message.classList.remove('hidden');
+
+                    // Mostrar botón de descarga si hay transcripción y es docente
+                    if (isTeacher && transcripcionHabilitada && btnDescargar) {
+                        btnDescargar.classList.remove('hidden');
+                        // Intentar descarga automática
+                        descargarTranscripcion();
+                    }
+
+                    // Eliminar la instancia de la API para limpiar recursos
+                    api.dispose();
+                }
+
+            } catch (error) {
+                console.error("❌ Error crítico al iniciar Jitsi:", error);
+                const loadingMessage = document.getElementById('loadingMessage');
+                if (loadingMessage) {
+                    loadingMessage.innerHTML = `
+                        <div class="text-center text-red-600 p-4">
+                            <i class="fas fa-exclamation-circle text-3xl mb-2"></i>
+                            <p class="font-bold">Error al cargar la videoconferencia</p>
+                            <p class="text-sm mb-3">${error.message}</p>
+                            <button onclick="location.reload()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">Recargar página</button>
+                        </div>
+                    `;
+                }
+            }
+
+            // --- LÓGICA DE TRANSCRIPCIÓN ---
+            let recognition;
+            let isTranscribing = false;
+            let fullTranscript = ""; // Variable para acumular el texto
+
+            function iniciarTranscripcion() {
+                if (!('webkitSpeechRecognition' in window)) {
+                    console.warn("La API de reconocimiento de voz no es soportada en este navegador.");
                     return;
                 }
-    
-                // 1. Detectar cuando el iframe esté completamente cargado
-                iframe.addEventListener('load', function() {
-                    console.log('🔄 Iframe de Jitsi cargado, iniciando detección...');
-                    
-                    // 2. Esperar a que Jitsi esté listo
-                    setTimeout(() => {
-                        iniciarDeteccionInteraccion();
-                    }, 2000);
-                });
-    
-                // 3. Si el iframe ya está cargado
-                if (iframe.contentDocument || iframe.contentWindow) {
-                    console.log('⚡ Iframe ya cargado, iniciando detección inmediata');
-                    iniciarDeteccionInteraccion();
+
+                recognition = new webkitSpeechRecognition();
+                recognition.continuous = true;
+                recognition.interimResults = true;
+                recognition.lang = 'es-ES'; // Ajustar idioma según necesidad
+
+                recognition.onstart = function () {
+                    isTranscribing = true;
+                    console.log("🎙️ Transcripción iniciada...");
+                    mostrarNotificacionTranscripcion(true);
+                };
+
+                recognition.onerror = function (event) {
+                    console.error("Error en transcripción:", event.error);
+                };
+
+                recognition.onend = function () {
+                    isTranscribing = false;
+                    console.log("Transcripción detenida.");
+                    mostrarNotificacionTranscripcion(false);
+                };
+
+                recognition.onresult = function (event) {
+                    let interimTranscript = '';
+                    let finalTranscript = '';
+
+                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+                        if (event.results[i].isFinal) {
+                            const text = event.results[i][0].transcript;
+                            finalTranscript += text;
+
+                            // Acumular con timestamp
+                            const now = new Date();
+                            const timeString = now.toLocaleTimeString();
+                            fullTranscript += `[${timeString}] ${text}\n`;
+
+                            console.log("📝 Texto final:", finalTranscript);
+                        } else {
+                            interimTranscript += event.results[i][0].transcript;
+                        }
+                    }
+                };
+
+                recognition.start();
+            }
+
+            function detenerTranscripcion() {
+                if (recognition && isTranscribing) {
+                    recognition.stop();
+                    mostrarNotificacionTranscripcion(false);
                 }
             }
-    
-            function iniciarDeteccionInteraccion() {
-                console.log('🔍 Iniciando detección de interacción del docente...');
-                
-                let interaccionesDetectadas = 0;
-                const interaccionesNecesarias = 2; // Requerir múltiples interacciones
-    
-                // Detectar clicks en toda la página (incluido el iframe)
-                document.addEventListener('click', function() {
-                    interaccionesDetectadas++;
-                    console.log(`🎯 Interacción detectada (${interaccionesDetectadas}/${interaccionesNecesarias})`);
-                    
-                    if (interaccionesDetectadas >= interaccionesNecesarias && !docenteEnReunion) {
-                        docenteSeUnio();
-                    }
-                });
-    
-                // Detectar teclas presionadas
-                document.addEventListener('keydown', function() {
-                    interaccionesDetectadas++;
-                    console.log(`⌨️ Tecla presionada (${interaccionesDetectadas}/${interaccionesNecesarias})`);
-                    
-                    if (interaccionesDetectadas >= interaccionesNecesarias && !docenteEnReunion) {
-                        docenteSeUnio();
-                    }
-                });
-    
-                // Detectar movimiento del mouse (más sensible)
-                let movimientosMouse = 0;
-                document.addEventListener('mousemove', function() {
-                    movimientosMouse++;
-                    if (movimientosMouse > 10 && !docenteEnReunion) {
-                        interaccionesDetectadas = interaccionesNecesarias; // Forzar detección
-                        docenteSeUnio();
-                    }
-                });
-    
-                // Fallback: Si después de 15 segundos no detectamos interacción, 
-                // asumimos que el docente se unió pero no mostramos el botón inmediatamente
-                setTimeout(() => {
-                    if (!docenteEnReunion) {
-                        console.log('⏰ Fallback: Mostrando panel después de 15 segundos');
-                        mostrarPanelConAdvertencia();
-                    }
-                }, 15000);
-            }
-    
-            function docenteSeUnio() {
-                if (docenteEnReunion) return;
-                
-                docenteEnReunion = true;
-                console.log('✅ Docente detectado en la reunión');
-                
-                // Mostrar el panel con animación
-                panelDocente.classList.remove('hidden');
-                panelDocente.style.animation = 'slideInDown 0.5s ease-out';
-                
-                // Agregar estilos CSS para la animación
-                if (!document.querySelector('#docente-styles')) {
-                    const styles = document.createElement('style');
-                    styles.id = 'docente-styles';
-                    styles.textContent = `
-                        @keyframes slideInDown {
-                            from {
-                                transform: translateY(-20px);
-                                opacity: 0;
-                            }
-                            to {
-                                transform: translateY(0);
-                                opacity: 1;
-                            }
-                        }
-                        .pulse-alert {
-                            animation: pulse 2s infinite;
-                        }
-                        @keyframes pulse {
-                            0% { transform: scale(1); }
-                            50% { transform: scale(1.05); }
-                            100% { transform: scale(1); }
-                        }
-                    `;
-                    document.head.appendChild(styles);
+
+            function descargarTranscripcion() {
+                if (!fullTranscript || fullTranscript.trim() === "") {
+                    console.warn("No hay transcripción para descargar.");
+                    return;
                 }
+
+                const blob = new Blob([fullTranscript], { type: "text/plain;charset=utf-8" });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+
+                const fecha = new Date().toISOString().slice(0, 10);
+                a.download = `Transcripcion_Clase_${fecha}.txt`;
+
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
             }
-    
-            function mostrarPanelConAdvertencia() {
-                if (docenteEnReunion) return;
-                
-                console.log('⚠️ Mostrando panel con advertencia');
-                panelDocente.classList.remove('hidden');
-                
-                // Cambiar el mensaje para indicar que es una confirmación manual
-                const titulo = panelDocente.querySelector('h2');
-                const descripcion = panelDocente.querySelector('p');
-                
-                if (titulo) titulo.textContent = '⚠️ Confirmar participación';
-                if (descripcion) descripcion.textContent = 'Si ya estás en la reunión, permite que los alumnos se unan';
-                
-                // Hacer que el botón llame más la atención
-                btnPermitir.classList.add('pulse-alert');
-            }
-    
-            // ✅ PERMITIR QUE LOS ALUMNOS SE UNAN
-            btnPermitir.addEventListener('click', function() {
-                if (alumnosPermitidos) return;
-                
-                console.log('🎓 Docente permitiendo entrada de alumnos:', claseId);
-                
-                fetch('/clase/docente-entrar/' + claseId, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Error en el servidor: ' + response.status);
-                    }
-                    return response.text();
-                })
-                .then(result => {
-                    console.log('Respuesta del servidor:', result);
-                    if (result === 'OK') {
-                        statusDiv.innerHTML = '<p class="text-green-600 font-bold">✅ ¡Alumnos pueden unirse ahora!</p>';
-                        btnPermitir.disabled = true;
-                        btnPermitir.textContent = '✅ Alumnos permitidos';
-                        btnPermitir.classList.remove('bg-green-600', 'hover:bg-green-700', 'pulse-alert');
-                        btnPermitir.classList.add('bg-gray-400');
-                        alumnosPermitidos = true;
-                        
-                        // Ocultar el panel después de 3 segundos
-                        setTimeout(() => {
-                            panelDocente.style.transition = 'opacity 0.5s ease';
-                            panelDocente.style.opacity = '0';
-                            setTimeout(() => {
-                                panelDocente.style.display = 'none';
-                            }, 500);
-                        }, 3000);
+
+            function mostrarNotificacionTranscripcion(activa) {
+                const badge = document.getElementById('transcribingBadge');
+                if (badge) {
+                    if (activa) {
+                        badge.classList.remove('hidden');
                     } else {
-                        statusDiv.innerHTML = '<p class="text-red-600">❌ Error: ' + result + '</p>';
+                        badge.classList.add('hidden');
                     }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    statusDiv.innerHTML = '<p class="text-red-600">❌ Error de conexión: ' + error.message + '</p>';
-                });
-            });
-            
-            // ✅ INICIAR DETECCIÓN
-            detectarJoinDeDocente();
-        });
-    </script>
-
-    <script>
-        // Ocultar mensaje de carga cuando el iframe se cargue
-        document.addEventListener('DOMContentLoaded', function() {
-            const iframe = document.querySelector('iframe');
-            const loadingMessage = document.getElementById('loadingMessage');
-            
-            if (iframe && loadingMessage) {
-                let loaded = false;
-                
-                iframe.addEventListener('load', function() {
-                    loaded = true;
-                    // Desvanecer suavemente
-                    loadingMessage.style.transition = 'opacity 0.5s ease';
-                    loadingMessage.style.opacity = '0';
-                    setTimeout(() => {
-                        loadingMessage.style.display = 'none';
-                    }, 500); // Espera a que termine la transición
-                });
-                
-                // Ocultar después de 7 segundos (aumentado) aunque no cargue
-                // A veces el evento 'load' no se dispara si hay redirecciones
-                setTimeout(function() {
-                    if (!loaded) {
-                        loadingMessage.style.transition = 'opacity 0.5s ease';
-                        loadingMessage.style.opacity = '0';
-                        setTimeout(() => {
-                            loadingMessage.style.display = 'none';
-                        }, 500);
-                    }
-                }, 7000);
+                }
             }
-        });
-    </script>
-</body>
-</html>
+        </script>
 
+        <script th:if="${esDocente}">
+            // El script anterior de detección de join del docente ya no es necesario 
+            // con la API externa, pero si tienes lógica específica de "Permitir Alumnos"
+            // que dependa de botones externos, puedes adaptarla aquí usando `api`
+            // en lugar de detección de iframe.
+        </script>
+</body>
+
+</html>

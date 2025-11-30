@@ -491,9 +491,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 return;
             }
     
-            // Timeout de 5 segundos
+            // Timeout de 10 segundos
             const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Timeout verificando DNI')), 5000)
+                setTimeout(() => reject(new Error('Timeout verificando DNI')), 10000)
             );
     
             const fetchPromise = fetch(`/api/usuarios/verificar-dni?dni=${dni}`, {
@@ -512,13 +512,15 @@ document.addEventListener("DOMContentLoaded", function () {
             })
             .then(data => {
                 console.log("📊 Datos DNI recibidos:", data);
-                resolve(data.existe);
+                return data.existe;
             });
     
             Promise.race([fetchPromise, timeoutPromise])
                 .then(resolve)
                 .catch(error => {
                     console.error('❌ Error verificando DNI:', error);
+                    // Si es timeout, asumimos que no existe para no bloquear (o manejamos diferente)
+                    // Pero mejor rechazamos para que el usuario intente de nuevo
                     reject(error);
                 });
         });
@@ -531,9 +533,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 return;
             }
     
-            // Timeout de 5 segundos
+            // Timeout de 10 segundos
             const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Timeout verificando email')), 5000)
+                setTimeout(() => reject(new Error('Timeout verificando email')), 10000)
             );
     
             const fetchPromise = fetch(`/api/usuarios/verificar-email?email=${encodeURIComponent(email)}`, {
@@ -552,7 +554,7 @@ document.addEventListener("DOMContentLoaded", function () {
             })
             .then(data => {
                 console.log("📊 Datos email recibidos:", data);
-                resolve(data.existe);
+                return data.existe;
             });
     
             Promise.race([fetchPromise, timeoutPromise])
