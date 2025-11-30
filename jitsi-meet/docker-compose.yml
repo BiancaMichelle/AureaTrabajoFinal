@@ -175,6 +175,8 @@ services:
             - JVB_BREWERY_MUC=jvbbrewery
             - JVB_PORT=${JVB_PORT:-10000}
             - JVB_TCP_HARVESTER_DISABLED=${JVB_TCP_HARVESTER_DISABLED}
+            - JVB_DISABLE_UDP=${JVB_DISABLE_UDP:-0}
+            - JVB_PREFER_TCP=${JVB_PREFER_TCP:-0}
             - JVB_TCP_PORT=${JVB_TCP_PORT:-4443}
             - JVB_TCP_MAPPED_PORT=${JVB_TCP_MAPPED_PORT:-4443}
             - JVB_STUN_SERVERS=meet-jit-si-turnrelay.jitsi.net:443

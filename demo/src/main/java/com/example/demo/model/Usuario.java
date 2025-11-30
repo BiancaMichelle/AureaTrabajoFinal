@@ -67,10 +67,10 @@ public class Usuario {
   private String apellido;
 
   @Column(name = "foto")
-    private String foto;
+  private String foto;
 
-    @Column(name = "fecha_registro")
-    private LocalDateTime fechaRegistro;
+  @Column(name = "fecha_registro")
+  private LocalDateTime fechaRegistro;
 
   @NotNull(message = "La fecha de nacimiento es obligatoria")
   @Past(message = "La fecha de nacimiento debe ser en el pasado")
@@ -94,14 +94,14 @@ public class Usuario {
   @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z]).+$", message = "La contraseña debe contener al menos una mayúscula y una minúscula")
   private String contraseña;
 
-    @Column(name = "password_temp")
-    private String passwordTemporal;  // Contraseña generada temporalmente
-    
-    @Column(name = "token_recuperacion")
-    private String tokenRecuperacion; // Token único para confirmación
-    
-    @Column(name = "expiracion_token")
-    private LocalDateTime expiracionToken; // Fecha de expiración del token
+  @Column(name = "password_temp")
+  private String passwordTemporal; // Contraseña generada temporalmente
+
+  @Column(name = "token_recuperacion")
+  private String tokenRecuperacion; // Token único para confirmación
+
+  @Column(name = "expiracion_token")
+  private LocalDateTime expiracionToken; // Fecha de expiración del token
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "pais_codigo")
@@ -119,22 +119,18 @@ public class Usuario {
 
   private boolean estadoCuenta;
 
-    public String getEstado() {
-        return estado ? "ACTIVO" : "INACTIVO";
-    }
+  public String getEstado() {
+    return estado ? "ACTIVO" : "INACTIVO";
+  }
 
-    public boolean isEstado() {
-        return estado;
-    }
+  public boolean isEstado() {
+    return estado;
+  }
 
   @ManyToMany(fetch = FetchType.EAGER)
-  @JoinTable(
-      name = "usuarios_roles",
-      joinColumns = @JoinColumn(name = "usuario_id", referencedColumnName = "id"),
-      inverseJoinColumns = @JoinColumn(name = "rol_id", referencedColumnName = "id")
-  )
+  @JoinTable(name = "usuarios_roles", joinColumns = @JoinColumn(name = "usuario_id", referencedColumnName = "id"), inverseJoinColumns = @JoinColumn(name = "rol_id", referencedColumnName = "id"))
   private Set<Rol> roles = new HashSet<>();
-  
+
   // Relación con pagos según el diagrama
   @OneToMany(mappedBy = "usuario")
   private List<Pago> pagos;
@@ -142,16 +138,16 @@ public class Usuario {
   // Método de validación personalizado para la edad
   @AssertTrue(message = "Debes tener al menos 16 años")
   public boolean isMayorDe16() {
-      if (fechaNacimiento == null) {
-          return false;
-      }
-      return Period.between(fechaNacimiento, LocalDate.now()).getYears() >= 16;
+    if (fechaNacimiento == null) {
+      return false;
+    }
+    return Period.between(fechaNacimiento, LocalDate.now()).getYears() >= 16;
   }
 
   @PrePersist
-    protected void onCreate() {
-        if (fechaRegistro == null) {
-            fechaRegistro = LocalDateTime.now();
-        }
+  protected void onCreate() {
+    if (fechaRegistro == null) {
+      fechaRegistro = LocalDateTime.now();
     }
+  }
 }

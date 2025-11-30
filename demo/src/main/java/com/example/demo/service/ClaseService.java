@@ -11,9 +11,11 @@ import org.springframework.stereotype.Service;
 import com.example.demo.model.Clase;
 import com.example.demo.model.Docente;
 import com.example.demo.model.Modulo;
+import com.example.demo.model.Usuario;
 import com.example.demo.repository.ClaseRepository;
 import com.example.demo.repository.DocenteRepository;
 import com.example.demo.repository.ModuloRepository;
+import com.example.demo.repository.UsuarioRepository;
 
 @Service
 public class ClaseService {
@@ -21,15 +23,18 @@ public class ClaseService {
     private final ClaseRepository claseRepository;
     private final ModuloRepository moduloRepository;
     private final DocenteRepository docenteRepository;
+    private final UsuarioRepository usuarioRepository;
     private final JitsiClaseService jitsiClaseService; // Cambiar esto
     
     public ClaseService(ClaseRepository claseRepository, 
                        ModuloRepository moduloRepository,
                        DocenteRepository docenteRepository,
+                       UsuarioRepository usuarioRepository,
                        JitsiClaseService jitsiClaseService) { // Cambiar esto
         this.claseRepository = claseRepository;
         this.moduloRepository = moduloRepository;
         this.docenteRepository = docenteRepository;
+        this.usuarioRepository = usuarioRepository;
         this.jitsiClaseService = jitsiClaseService; // Cambiar esto
     }
 
@@ -53,7 +58,7 @@ public class ClaseService {
         }
         
         // ✅ Genera URL de Jitsi Meet
-        String meetingUrl = jitsiClaseService.generateRoomUrl(clase.getRoomName());
+        String meetingUrl = jitsiClaseService.generateRoomUrl(clase.getRoomName(), docente, true);
         clase.setMeetingUrl(meetingUrl);
         
         System.out.println("🎯 Clase creada con Jitsi Meet:");
@@ -69,6 +74,12 @@ public class ClaseService {
             Clase clase = findById(claseId)
                     .orElseThrow(() -> new RuntimeException("Clase no encontrada"));
             
+            Usuario usuario = usuarioRepository.findByDni(dniUsuario)
+                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+            
+            boolean isModerator = usuario.getRoles().stream()
+                    .anyMatch(r -> r.getNombre().equals("DOCENTE") || r.getNombre().equals("ADMIN"));
+            
             System.out.println("🎯 Uniéndose a clase 8x8:");
             System.out.println("   - Clase ID: " + claseId);
             System.out.println("   - Título: " + clase.getTitulo());
@@ -79,7 +90,7 @@ public class ClaseService {
             config.put("startWithVideoMuted", "false");
             
             String meetingUrl = jitsiClaseService.generateRoomUrlWithConfig(
-                clase.getRoomName(), config);
+                clase.getRoomName(), config, usuario, isModerator);
             
             System.out.println("   - URL 8x8 final: " + meetingUrl);
             

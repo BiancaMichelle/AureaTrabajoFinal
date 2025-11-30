@@ -36,7 +36,10 @@ public class Clase {
     
     // Campos para la videoconferencia
     private String roomName;
+    
+    @Column(length = 2048) // Aumentar longitud para soportar URLs con JWT
     private String meetingUrl;
+    
     private Boolean asistenciaAutomatica;
     private Boolean preguntasAleatorias;
     private Integer cantidadPreguntas;

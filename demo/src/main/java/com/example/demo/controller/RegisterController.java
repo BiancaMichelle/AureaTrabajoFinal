@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -32,8 +33,12 @@ import com.example.demo.service.InstitucionService;
 import com.example.demo.service.LocacionAPIService;
 import com.example.demo.service.RegistroService;
 import com.example.demo.service.UsuarioJpaService;
+
 @Controller
 public class RegisterController {
+
+    @Value("${app.base-url}")
+    private String baseUrl;
 
     private final PaisRepository paisRepository;
     private final ProvinciaRepository provinciaRepository;
@@ -46,14 +51,14 @@ public class RegisterController {
     private final UsuarioJpaService usuarioJpaService; // ✅ Nuevo servicio
 
     public RegisterController(PaisRepository paisRepository,
-                                AlumnoRepository alumnoRepository,
-                              ProvinciaRepository provinciaRepository,
-                              CiudadRepository ciudadRepository,
-                              InstitucionRepository institucionAlumnoRepository,
-                              RegistroService registroService,
-                              InstitucionService institucionService,
-                              LocacionAPIService locacionApiService,
-                              UsuarioJpaService usuarioJpaService) { // ✅ Inyectar
+            AlumnoRepository alumnoRepository,
+            ProvinciaRepository provinciaRepository,
+            CiudadRepository ciudadRepository,
+            InstitucionRepository institucionAlumnoRepository,
+            RegistroService registroService,
+            InstitucionService institucionService,
+            LocacionAPIService locacionApiService,
+            UsuarioJpaService usuarioJpaService) { // ✅ Inyectar
         this.paisRepository = paisRepository;
         this.alumnoRepository = alumnoRepository;
         this.provinciaRepository = provinciaRepository;
@@ -90,16 +95,15 @@ public class RegisterController {
         return "screens/register";
     }
 
-
     @PostMapping("/register")
     public String registerAlumno(@ModelAttribute("alumno") Alumno alumno,
-                            BindingResult result,
-                            @RequestParam(value = "paisCodigo", required = false) String paisCodigo,
-                            @RequestParam(value = "provinciaCodigo", required = false) String provinciaCodigo,
-                            @RequestParam(value = "ciudadId", required = false) Long ciudadId,
-                            @RequestParam("confirmPassword") String confirmPassword,
-                            Model model) {
-        
+            BindingResult result,
+            @RequestParam(value = "paisCodigo", required = false) String paisCodigo,
+            @RequestParam(value = "provinciaCodigo", required = false) String provinciaCodigo,
+            @RequestParam(value = "ciudadId", required = false) Long ciudadId,
+            @RequestParam("confirmPassword") String confirmPassword,
+            Model model) {
+
         System.out.println("✅ FORMULARIO RECIBIDO - Iniciando validaciones");
         System.out.println("📝 Datos recibidos:");
         System.out.println("   - DNI: " + alumno.getDni());
@@ -122,10 +126,17 @@ public class RegisterController {
         if (alumno.getFechaNacimiento() == null) {
             result.rejectValue("fechaNacimiento", "error.alumno", "La fecha de nacimiento es obligatoria");
         }
-        
+
         // Validar que las contraseñas coincidan
         if (!alumno.getContraseña().equals(confirmPassword)) {
             result.rejectValue("contraseña", "error.alumno", "Las contraseñas no coinciden");
+        }
+
+        // Validar complejidad de la contraseña
+        String password = alumno.getContraseña();
+        // Al menos 8 caracteres, una mayúscula y un carácter especial (no letra ni número)
+        if (password == null || password.length() < 8 || !password.matches(".*[A-Z].*") || !password.matches(".*[^a-zA-Z0-9].*")) {
+             result.rejectValue("contraseña", "error.alumno", "La contraseña debe tener al menos 8 caracteres, una mayúscula y un carácter especial.");
         }
 
         // Validar edad mínima
@@ -138,10 +149,8 @@ public class RegisterController {
 
         if (result.hasErrors()) {
             System.out.println("❌ Errores de validación encontrados:");
-            result.getAllErrors().forEach(error -> 
-                System.out.println(" - " + error.getDefaultMessage())
-            );
-            
+            result.getAllErrors().forEach(error -> System.out.println(" - " + error.getDefaultMessage()));
+
             recargarDatosFormulario(model);
             return "screens/register";
         }
@@ -150,15 +159,16 @@ public class RegisterController {
             // DEBUG: Verificar el estado del alumno antes del registro
             System.out.println("🔍 Estado del alumno antes del registro:");
             System.out.println("   - País: " + (alumno.getPais() != null ? alumno.getPais().getCodigo() : "null"));
-            System.out.println("   - Provincia: " + (alumno.getProvincia() != null ? alumno.getProvincia().getCodigo() : "null"));
+            System.out.println(
+                    "   - Provincia: " + (alumno.getProvincia() != null ? alumno.getProvincia().getCodigo() : "null"));
             System.out.println("   - Ciudad: " + (alumno.getCiudad() != null ? alumno.getCiudad().getId() : "null"));
 
             // Pasar los códigos/IDs al servicio para que busque las entidades completas
             registroService.registrarUsuario(alumno, paisCodigo, provinciaCodigo, ciudadId);
-            
+
             System.out.println("🎉 Registro exitoso, redirigiendo a login...");
-            return "redirect:/login?success";
-            
+            return "redirect:" + baseUrl + "/login?success";
+
         } catch (Exception e) {
             System.out.println("❌ Error al registrar: " + e.getMessage());
             e.printStackTrace();
@@ -166,138 +176,138 @@ public class RegisterController {
             recargarDatosFormulario(model);
             return "screens/register";
         }
-    }   
+    }
 
     @PostMapping("/guardar-ubicaciones")
-@ResponseBody
-public String guardarUbicaciones(
-        @RequestParam String paisCodigo,
-        @RequestParam String provinciaCodigo,
-        @RequestParam Long ciudadId) {
-    
-    System.out.println("📍 Guardando ubicaciones:");
-    System.out.println("   - País: " + paisCodigo);
-    System.out.println("   - Provincia: " + provinciaCodigo);
-    System.out.println("   - Ciudad ID: " + ciudadId);
-    
-    try {
-        // 1. PAÍS - Buscar o crear
-        Pais pais = null;
-        Optional<Pais> paisExistente = paisRepository.findByCodigo(paisCodigo);
-        if (paisExistente.isPresent()) {
-            pais = paisExistente.get();
-            System.out.println("✅ País encontrado: " + pais.getNombre());
-        } else {
-            System.out.println("🌎 Creando nuevo país: " + paisCodigo);
-            try {
-                List<Pais> paises = locacionApiService.obtenerTodosPaises();
-                for (Pais p : paises) {
-                    if (paisCodigo.equals(p.getCodigo())) {
-                        pais = p;
-                        break;
+    @ResponseBody
+    public String guardarUbicaciones(
+            @RequestParam String paisCodigo,
+            @RequestParam String provinciaCodigo,
+            @RequestParam Long ciudadId) {
+
+        System.out.println("📍 Guardando ubicaciones:");
+        System.out.println("   - País: " + paisCodigo);
+        System.out.println("   - Provincia: " + provinciaCodigo);
+        System.out.println("   - Ciudad ID: " + ciudadId);
+
+        try {
+            // 1. PAÍS - Buscar o crear
+            Pais pais = null;
+            Optional<Pais> paisExistente = paisRepository.findByCodigo(paisCodigo);
+            if (paisExistente.isPresent()) {
+                pais = paisExistente.get();
+                System.out.println("✅ País encontrado: " + pais.getNombre());
+            } else {
+                System.out.println("🌎 Creando nuevo país: " + paisCodigo);
+                try {
+                    List<Pais> paises = locacionApiService.obtenerTodosPaises();
+                    for (Pais p : paises) {
+                        if (paisCodigo.equals(p.getCodigo())) {
+                            pais = p;
+                            break;
+                        }
                     }
-                }
-                if (pais == null) {
+                    if (pais == null) {
+                        pais = new Pais();
+                        pais.setCodigo(paisCodigo);
+                        pais.setNombre("País " + paisCodigo);
+                        pais.setCodigo(paisCodigo);
+                    }
+                    pais = paisRepository.save(pais);
+                    System.out.println("✅ País creado: " + pais.getNombre());
+                } catch (Exception e) {
                     pais = new Pais();
                     pais.setCodigo(paisCodigo);
                     pais.setNombre("País " + paisCodigo);
                     pais.setCodigo(paisCodigo);
+                    pais = paisRepository.save(pais);
+                    System.out.println("✅ País creado (fallback): " + pais.getNombre());
                 }
-                pais = paisRepository.save(pais);
-                System.out.println("✅ País creado: " + pais.getNombre());
-            } catch (Exception e) {
-                pais = new Pais();
-                pais.setCodigo(paisCodigo);
-                pais.setNombre("País " + paisCodigo);
-                pais.setCodigo(paisCodigo);
-                pais = paisRepository.save(pais);
-                System.out.println("✅ País creado (fallback): " + pais.getNombre());
             }
-        }
 
-        // 2. PROVINCIA - Buscar o crear
-        Provincia provincia = null;
-        Optional<Provincia> provinciaExistente = provinciaRepository.findByCodigo(provinciaCodigo);
-        if (provinciaExistente.isPresent()) {
-            provincia = provinciaExistente.get();
-            System.out.println("✅ Provincia encontrada: " + provincia.getNombre());
-        } else {
-            System.out.println("🏙️ Creando nueva provincia: " + provinciaCodigo);
-            try {
-                List<Provincia> provincias = locacionApiService.obtenerProvinciasPorPais(paisCodigo);
-                for (Provincia p : provincias) {
-                    if (provinciaCodigo.equals(p.getCodigo())) {
-                        provincia = p;
-                        provincia.setPais(pais); // Asegurar relación
-                        break;
+            // 2. PROVINCIA - Buscar o crear
+            Provincia provincia = null;
+            Optional<Provincia> provinciaExistente = provinciaRepository.findByCodigo(provinciaCodigo);
+            if (provinciaExistente.isPresent()) {
+                provincia = provinciaExistente.get();
+                System.out.println("✅ Provincia encontrada: " + provincia.getNombre());
+            } else {
+                System.out.println("🏙️ Creando nueva provincia: " + provinciaCodigo);
+                try {
+                    List<Provincia> provincias = locacionApiService.obtenerProvinciasPorPais(paisCodigo);
+                    for (Provincia p : provincias) {
+                        if (provinciaCodigo.equals(p.getCodigo())) {
+                            provincia = p;
+                            provincia.setPais(pais); // Asegurar relación
+                            break;
+                        }
                     }
-                }
-                if (provincia == null) {
+                    if (provincia == null) {
+                        provincia = new Provincia();
+                        provincia.setCodigo(provinciaCodigo);
+                        provincia.setNombre("Provincia " + provinciaCodigo);
+                        provincia.setPais(pais);
+                    }
+                    provincia = provinciaRepository.save(provincia);
+                    System.out.println("✅ Provincia creada: " + provincia.getNombre());
+                } catch (Exception e) {
                     provincia = new Provincia();
                     provincia.setCodigo(provinciaCodigo);
                     provincia.setNombre("Provincia " + provinciaCodigo);
                     provincia.setPais(pais);
+                    provincia = provinciaRepository.save(provincia);
+                    System.out.println("✅ Provincia creada (fallback): " + provincia.getNombre());
                 }
-                provincia = provinciaRepository.save(provincia);
-                System.out.println("✅ Provincia creada: " + provincia.getNombre());
-            } catch (Exception e) {
-                provincia = new Provincia();
-                provincia.setCodigo(provinciaCodigo);
-                provincia.setNombre("Provincia " + provinciaCodigo);
-                provincia.setPais(pais);
-                provincia = provinciaRepository.save(provincia);
-                System.out.println("✅ Provincia creada (fallback): " + provincia.getNombre());
             }
-        }
 
-        // 3. CIUDAD - Buscar o crear
-        Ciudad ciudad = null;
-        Optional<Ciudad> ciudadExistente = ciudadRepository.findById(ciudadId);
-        if (ciudadExistente.isPresent()) {
-            ciudad = ciudadExistente.get();
-            System.out.println("✅ Ciudad encontrada: " + ciudad.getNombre());
-        } else {
-            System.out.println("🏡 Creando nueva ciudad: " + ciudadId);
-            try {
-                List<Ciudad> ciudades = locacionApiService.obtenerCiudadesPorProvincia(paisCodigo, provinciaCodigo);
-                for (Ciudad c : ciudades) {
-                    if (ciudadId.equals(c.getId())) {
-                        ciudad = c;
-                        ciudad.setProvincia(provincia); // Asegurar relación
-                        break;
+            // 3. CIUDAD - Buscar o crear
+            Ciudad ciudad = null;
+            Optional<Ciudad> ciudadExistente = ciudadRepository.findById(ciudadId);
+            if (ciudadExistente.isPresent()) {
+                ciudad = ciudadExistente.get();
+                System.out.println("✅ Ciudad encontrada: " + ciudad.getNombre());
+            } else {
+                System.out.println("🏡 Creando nueva ciudad: " + ciudadId);
+                try {
+                    List<Ciudad> ciudades = locacionApiService.obtenerCiudadesPorProvincia(paisCodigo, provinciaCodigo);
+                    for (Ciudad c : ciudades) {
+                        if (ciudadId.equals(c.getId())) {
+                            ciudad = c;
+                            ciudad.setProvincia(provincia); // Asegurar relación
+                            break;
+                        }
                     }
-                }
-                if (ciudad == null) {
+                    if (ciudad == null) {
+                        ciudad = new Ciudad();
+                        ciudad.setId(ciudadId);
+                        ciudad.setNombre("Ciudad " + ciudadId);
+                        ciudad.setProvincia(provincia);
+                    }
+                    ciudad = ciudadRepository.save(ciudad);
+                    System.out.println("✅ Ciudad creada: " + ciudad.getNombre());
+                } catch (Exception e) {
                     ciudad = new Ciudad();
                     ciudad.setId(ciudadId);
                     ciudad.setNombre("Ciudad " + ciudadId);
                     ciudad.setProvincia(provincia);
+                    ciudad = ciudadRepository.save(ciudad);
+                    System.out.println("✅ Ciudad creada (fallback): " + ciudad.getNombre());
                 }
-                ciudad = ciudadRepository.save(ciudad);
-                System.out.println("✅ Ciudad creada: " + ciudad.getNombre());
-            } catch (Exception e) {
-                ciudad = new Ciudad();
-                ciudad.setId(ciudadId);
-                ciudad.setNombre("Ciudad " + ciudadId);
-                ciudad.setProvincia(provincia);
-                ciudad = ciudadRepository.save(ciudad);
-                System.out.println("✅ Ciudad creada (fallback): " + ciudad.getNombre());
             }
+
+            String mensaje = String.format("Ubicaciones guardadas: %s - %s - %s",
+                    pais.getNombre(), provincia.getNombre(), ciudad.getNombre());
+
+            System.out.println("✅ " + mensaje);
+            return mensaje;
+
+        } catch (Exception e) {
+            System.out.println("❌ Error guardando ubicaciones: " + e.getMessage());
+            e.printStackTrace();
+            return "Error: " + e.getMessage();
         }
-
-        String mensaje = String.format("Ubicaciones guardadas: %s - %s - %s", 
-            pais.getNombre(), provincia.getNombre(), ciudad.getNombre());
-        
-        System.out.println("✅ " + mensaje);
-        return mensaje;
-
-    } catch (Exception e) {
-        System.out.println("❌ Error guardando ubicaciones: " + e.getMessage());
-        e.printStackTrace();
-        return "Error: " + e.getMessage();
     }
-}
-    
+
     // ✅ Método auxiliar para recargar datos del formulario
     private void recargarDatosFormulario(Model model) {
         try {
@@ -306,7 +316,7 @@ public String guardarUbicaciones(
         } catch (Exception e) {
             model.addAttribute("paises", List.of());
         }
-        
+
         List<InstitucionAlumno> instituciones = institucionService.obtenerTodasLasInstituciones();
         model.addAttribute("instituciones", instituciones);
     }
@@ -317,12 +327,12 @@ public String guardarUbicaciones(
         try {
             System.out.println("🔍 Verificando DNI: " + dni);
             boolean existe = usuarioJpaService.existePorDni(dni);
-            
+
             Map<String, Object> response = new HashMap<>();
             response.put("existe", existe);
             response.put("mensaje", existe ? "Ya existe una cuenta con este DNI" : "DNI disponible");
             response.put("valido", !existe);
-            
+
             System.out.println("✅ Respuesta DNI: " + response);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -339,12 +349,12 @@ public String guardarUbicaciones(
         try {
             System.out.println("🔍 Verificando email: " + email);
             boolean existe = usuarioJpaService.existePorCorreo(email);
-            
+
             Map<String, Object> response = new HashMap<>();
             response.put("existe", existe);
             response.put("mensaje", existe ? "Ya existe una cuenta con este correo" : "Correo disponible");
             response.put("valido", !existe);
-            
+
             System.out.println("✅ Respuesta email: " + response);
             return ResponseEntity.ok(response);
         } catch (Exception e) {

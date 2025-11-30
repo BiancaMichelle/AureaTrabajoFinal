@@ -747,9 +747,10 @@ document.addEventListener("DOMContentLoaded", function () {
         const confirmPassword = document.getElementById('confirmPassword');
         const terms = document.getElementById('terms');
 
-        // Validar contraseña (mínimo 8 caracteres, al menos 1 mayúscula y 1 minúscula)
-        if (!/^(?=.*[a-z])(?=.*[A-Z]).{8,}$/.test(password.value)) {
-            showFieldError(password, 'La contraseña debe tener al menos 8 caracteres, incluyendo una mayúscula y una minúscula');
+        // Validar contraseña (mínimo 8 caracteres, al menos 1 mayúscula y 1 carácter especial)
+        // Regex: Al menos una mayúscula, al menos un carácter especial (no letra ni número), longitud 8+
+        if (!/^(?=.*[A-Z])(?=.*[^a-zA-Z0-9]).{8,}$/.test(password.value)) {
+            showFieldError(password, 'La contraseña debe tener al menos 8 caracteres, una mayúscula y un carácter especial');
             isValid = false;
         }
 
@@ -894,17 +895,20 @@ document.addEventListener("DOMContentLoaded", function () {
     // Manejar envío del formulario
     const form = document.getElementById('registerForm');
     if (form) {
-        form.addEventListener('submit', function (e) {
+        form.addEventListener('submit', async function (e) {
             console.log("📤 Formulario enviándose...");
             
+            // Prevenir envío por defecto para validar asíncronamente
+            e.preventDefault();
+            
             if (currentStep !== formSteps.length - 1) {
-                e.preventDefault();
                 console.log("❌ No es el último paso, previniendo envío");
                 return false;
             }
             
-            if (!validateStep(formSteps.length - 1)) {
-                e.preventDefault();
+            const isValid = await validateStep(formSteps.length - 1);
+            
+            if (!isValid) {
                 console.log("❌ Validación falló, previniendo envío");
                 return false;
             }
@@ -913,7 +917,8 @@ document.addEventListener("DOMContentLoaded", function () {
             submitBtn.disabled = true;
             submitBtn.textContent = "Registrando...";
             
-            return true;
+            // Enviar formulario manualmente una vez validado
+            form.submit();
         });
     }
 
