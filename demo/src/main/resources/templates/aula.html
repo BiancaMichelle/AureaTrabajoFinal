@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org" layout:decorate="~{layout/base}">
+
 <head>
     <title th:text="${curso.nombre + ' - Aula del Curso'}">Aula del Curso</title>
     <!-- CSRF Token -->
-    <meta name="_csrf" th:content="${_csrf.token}"/>
-    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+    <meta name="_csrf" th:content="${_csrf.token}" />
+    <meta name="_csrf_header" th:content="${_csrf.headerName}" />
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
@@ -16,7 +17,7 @@
                 extend: {
                     colors: {
                         customGrayLight: '#f8f9fa',
-                        customGrayDark: '#343a40', 
+                        customGrayDark: '#343a40',
                         customGrayText: '#212529',
                         customBlue: '#007bff',
                         customGreen: '#28a745'
@@ -31,46 +32,54 @@
             -moz-osx-font-smoothing: grayscale;
             background-color: #f8f9fa;
         }
-        #overlay, #toolsOverlay {
+
+        #overlay,
+        #toolsOverlay {
             transition: opacity 0.3s ease-in-out;
         }
-        #sidebar, #toolsSidebar {
+
+        #sidebar,
+        #toolsSidebar {
             transition: transform 0.3s ease-in-out;
         }
+
         .no-scroll {
             overflow: hidden;
         }
-        
+
         /* Estilos específicos para la navegación */
         .nav-tab-active {
             border-bottom-color: white;
             color: white;
             font-weight: 600;
         }
-        
+
         .nav-tab-inactive {
             border-bottom-color: transparent;
             color: rgba(255, 255, 255, 0.8);
             font-weight: 500;
         }
-        
+
         .nav-tab-inactive:hover {
             border-bottom-color: rgba(255, 255, 255, 0.3);
             color: white;
         }
     </style>
 </head>
+
 <body class="bg-customGrayLight font-sans text-customGrayText" layout:fragment="content">
 
     <div th:replace="~{fragments/modal-CrearClase}"></div>
     <!-- Panel Lateral Izquierdo (Herramientas de Modificación) -->
-    <aside id="toolsSidebar" class="fixed top-0 left-0 h-full w-72 bg-white border-r border-gray-200 shadow-xl transform -translate-x-full z-40 overflow-y-auto">
+    <aside id="toolsSidebar"
+        class="fixed top-0 left-0 h-full w-72 bg-white border-r border-gray-200 shadow-xl transform -translate-x-full z-40 overflow-y-auto">
         <div class="p-4 border-b border-gray-200">
             <h2 class="text-lg font-semibold text-gray-800">
                 <i class="fas fa-tools me-2"></i>Herramientas
             </h2>
             <button id="closeToolsButton" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
             </button>
@@ -78,17 +87,20 @@
         <nav class="p-4">
             <ul class="space-y-2">
                 <li>
-                    <button id="createModuleButton" class="w-full text-left py-2 px-3 rounded-md bg-customGreen text-white hover:bg-green-700 transition-colors duration-150">
+                    <button id="createModuleButton"
+                        class="w-full text-left py-2 px-3 rounded-md bg-customGreen text-white hover:bg-green-700 transition-colors duration-150">
                         <i class="fas fa-folder-plus me-2"></i>Crear Módulo
                     </button>
                 </li>
                 <li>
-                    <button id="createActivityButton" class="w-full text-left py-2 px-3 rounded-md bg-customGreen text-white hover:bg-green-700 transition-colors duration-150">
+                    <button id="createActivityButton"
+                        class="w-full text-left py-2 px-3 rounded-md bg-customGreen text-white hover:bg-green-700 transition-colors duration-150">
                         <i class="fas fa-tasks me-2"></i>Crear Actividad
                     </button>
                 </li>
                 <li>
-                    <button id="createClassButton" class="w-full text-left py-2 px-3 rounded-md bg-customGreen text-white hover:bg-green-700 transition-colors duration-150">
+                    <button id="createClassButton"
+                        class="w-full text-left py-2 px-3 rounded-md bg-customGreen text-white hover:bg-green-700 transition-colors duration-150">
                         <i class="fas fa-video me-2"></i>Crear Clase
                     </button>
                 </li>
@@ -105,59 +117,63 @@
             <form th:action="@{/crearModulo}" method="post">
                 <input type="hidden" name="cursoId" th:value="${curso.idOferta}">
                 <input type="hidden" name="_csrf" th:value="${_csrf.token}">
-                
+
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700">
                         <i class="fas fa-heading me-1"></i>Nombre del módulo *
                     </label>
-                    <input type="text" name="nombre" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2" 
-                           placeholder="Ej: Módulo 1: Introducción" required>
+                    <input type="text" name="nombre"
+                        class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                        placeholder="Ej: Módulo 1: Introducción" required>
                 </div>
-                
+
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700">
                         <i class="fas fa-align-left me-1"></i>Descripción *
                     </label>
-                    <textarea name="descripcion" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2" 
-                              rows="3" placeholder="Describe el contenido del módulo..." required></textarea>
+                    <textarea name="descripcion" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                        rows="3" placeholder="Describe el contenido del módulo..." required></textarea>
                 </div>
-                
+
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700">
                         <i class="fas fa-bullseye me-1"></i>Objetivos
                     </label>
-                    <textarea name="objetivos" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2" 
-                              rows="2" placeholder="Objetivos de aprendizaje del módulo..."></textarea>
+                    <textarea name="objetivos" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                        rows="2" placeholder="Objetivos de aprendizaje del módulo..."></textarea>
                 </div>
-                
+
                 <div class="grid grid-cols-2 gap-4 mb-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700">
                             <i class="fas fa-calendar-alt me-1"></i>Fecha de Inicio *
                         </label>
-                        <input type="date" name="fechaInicio" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2" required>
+                        <input type="date" name="fechaInicio"
+                            class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2" required>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">
                             <i class="fas fa-calendar-check me-1"></i>Fecha de Fin *
                         </label>
-                        <input type="date" name="fechaFin" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2" required>
+                        <input type="date" name="fechaFin"
+                            class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2" required>
                     </div>
                 </div>
-                
+
                 <div class="mb-4">
                     <label class="flex items-center">
-                        <input type="checkbox" name="visibilidad" value="true" checked 
-                               class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                        <input type="checkbox" name="visibilidad" value="true" checked
+                            class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
                         <span class="ml-2 text-sm font-medium text-gray-700">
                             <i class="fas fa-eye me-1"></i>Módulo visible para estudiantes
                         </span>
                     </label>
                     <small class="text-gray-500 ml-6">Si está desmarcado, solo los docentes podrán verlo</small>
                 </div>
-                
+
                 <div class="flex justify-end space-x-2 pt-4 border-t">
-                    <button type="button" onclick="closeModuleModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md">
+                    <button type="button" onclick="closeModuleModal()"
+                        class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md">
                         <i class="fas fa-times me-1"></i>Cancelar
                     </button>
                     <button type="submit" class="px-4 py-2 bg-customGreen text-white rounded-md hover:bg-green-700">
@@ -170,23 +186,25 @@
 
     <!-- Contenido principal -->
     <div id="main-container" class="relative min-h-screen">
-        
+
         <!-- Cabecera del Curso -->
         <header class="bg-customGrayDark text-white p-4 py-8 shadow-md relative z-10">
             <div class="max-w-7xl mx-auto flex justify-between items-center relative">
-                
+
                 <!-- Botón para modificar el curso (solo para admin/docente) -->
-                <button th:if="${puedeModificar}" id="modifyCourseButton" 
-                        class="absolute left-0 top-1/2 -translate-y-1/2 bg-customBlue text-white py-2 pr-3 pl-2 rounded-r-lg shadow hover:bg-blue-700 transition-colors duration-200 z-20 flex items-center">
+                <button th:if="${puedeModificar}" id="modifyCourseButton"
+                    class="absolute left-0 top-1/2 -translate-y-1/2 bg-customBlue text-white py-2 pr-3 pl-2 rounded-r-lg shadow hover:bg-blue-700 transition-colors duration-200 z-20 flex items-center">
                     <i class="fas fa-edit"></i>
                     <span class="ml-1 text-sm whitespace-nowrap">Modificar Curso</span>
                 </button>
-                
+
                 <h1 class="text-3xl font-bold tracking-wider mx-auto" th:text="${curso.nombre}">IMAGEN DEL CURSO</h1>
-                
+
                 <!-- Botón para abrir el índice -->
-                <button id="openButton" class="absolute right-0 top-1/2 -translate-y-1/2 bg-customBlue hover:bg-blue-700 text-white py-2 pl-3 pr-2 rounded-l-lg flex items-center transition-colors duration-200 shadow z-20">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <button id="openButton"
+                    class="absolute right-0 top-1/2 -translate-y-1/2 bg-customBlue hover:bg-blue-700 text-white py-2 pl-3 pr-2 rounded-l-lg flex items-center transition-colors duration-200 shadow z-20">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 rotate-180" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
                     <span class="ml-1 text-sm whitespace-nowrap">Contenido del curso</span>
@@ -200,28 +218,36 @@
                 <div class="flex items-center space-x-6">
                     <!-- Ícono de búsqueda -->
                     <div class="py-3 px-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                     </div>
-                    
+
                     <!-- Pestañas -->
-                    <a href="#" class="py-3 px-1 border-b-2 border-white text-white font-semibold text-sm nav-tab-active">
+                    <a href="#"
+                        class="py-3 px-1 border-b-2 border-white text-white font-semibold text-sm nav-tab-active">
                         Contenido
                     </a>
-                    <a href="#" class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
+                    <a href="#"
+                        class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
                         Descripción
                     </a>
-                    <a href="#" class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
+                    <a href="#"
+                        class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
                         Anuncios
                     </a>
-                    <a th:href="@{/aula/oferta/{id}/participantes(id=${curso.idOferta})}" class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
+                    <a th:href="@{/aula/oferta/{id}/participantes(id=${curso.idOferta})}"
+                        class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
                         Participantes
                     </a>
-                    <a href="#" class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
+                    <a href="#"
+                        class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
                         Calificaciones
                     </a>
-                    <a href="#" class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
+                    <a href="#"
+                        class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
                         Calendario
                     </a>
                 </div>
@@ -232,68 +258,80 @@
         <main class="p-8">
             <div class="max-w-4xl mx-auto" id="courseContent">
                 <!-- Módulos cargados desde la base de datos -->
-                <div th:each="modulo : ${modulos}" 
-                    class="mb-8 bg-white p-6 rounded-lg shadow"
-                    th:attr="data-modulo-id=${modulo.idModulo}">  <!-- AGREGAR ESTA LÍNEA -->
-                    
+                <div th:each="modulo : ${modulos}" class="mb-8 bg-white p-6 rounded-lg shadow"
+                    th:attr="data-modulo-id=${modulo.idModulo}"> <!-- AGREGAR ESTA LÍNEA -->
+
                     <h2 class="text-gray-500 text-xs font-semibold uppercase mb-1">
-                        <span th:text="${#temporals.format(modulo.fechaInicioModulo, 'dd/MM/yyyy')} + ' - ' + ${#temporals.format(modulo.fechaFinModulo, 'dd/MM/yyyy')}">
+                        <span
+                            th:text="${#temporals.format(modulo.fechaInicioModulo, 'dd/MM/yyyy')} + ' - ' + ${#temporals.format(modulo.fechaFinModulo, 'dd/MM/yyyy')}">
                             Fechas
                         </span>
                     </h2>
                     <h3 class="text-2xl font-bold tracking-wide mb-4" th:text="${modulo.nombre}">MÓDULO</h3>
                     <p class="text-gray-600 mb-4" th:text="${modulo.descripcion}">Descripción del módulo</p>
-                    
+
                     <!-- Clases del módulo -->
                     <div th:if="${not #lists.isEmpty(modulo.clases)}" class="ml-4 mb-4">
                         <h4 class="text-lg font-semibold text-gray-700 mb-2">Clases:</h4>
                         <div th:each="clase : ${modulo.clases}" class="bg-gray-50 p-4 rounded-lg mb-2 border">
                             <h5 class="font-medium text-customBlue" th:text="${clase.titulo}">Título de la clase</h5>
-                            <p class="text-sm text-gray-600 mt-1" th:text="${clase.descripcion}">Descripción de la clase</p>
-                            <p class="text-xs text-gray-500 mt-2" th:text="${'Inicio: ' + #temporals.format(clase.inicio, 'dd/MM/yyyy HH:mm')}">Fecha</p>
-                            <p class="text-xs text-gray-500" th:text="${'Fin: ' + #temporals.format(clase.fin, 'dd/MM/yyyy HH:mm')}">Fecha fin</p>
-                    <!-- Botón para unirse a la clase -->
-                        <div class="mt-3 flex justify-between items-center">
-                            <span class="text-xs text-gray-500" th:if="${clase.meetingUrl}">
-                                <i class="fas fa-video me-1"></i>Clase en vivo disponible
-                            </span>
-                            <a th:href="@{/clase/unirse/} + ${clase.idClase}" 
-                            class="px-4 py-2 bg-customBlue text-white rounded-md hover:bg-blue-700 text-sm transition-colors duration-200">
-                                <i class="fas fa-play me-1"></i>Unirse a la clase
-                            </a>
+                            <p class="text-sm text-gray-600 mt-1" th:text="${clase.descripcion}">Descripción de la clase
+                            </p>
+                            <p class="text-xs text-gray-500 mt-2"
+                                th:text="${'Inicio: ' + #temporals.format(clase.inicio, 'dd/MM/yyyy HH:mm')}">Fecha</p>
+                            <p class="text-xs text-gray-500"
+                                th:text="${'Fin: ' + #temporals.format(clase.fin, 'dd/MM/yyyy HH:mm')}">Fecha fin</p>
+                            <!-- Botón para unirse a la clase -->
+                            <div class="mt-3 flex justify-between items-center">
+                                <span class="text-xs text-gray-500" th:if="${clase.meetingUrl}">
+                                    <i class="fas fa-video me-1"></i>Clase en vivo disponible
+                                </span>
+                                <a th:href="@{/clase/unirse/} + ${clase.idClase}"
+                                    class="px-4 py-2 bg-customBlue text-white rounded-md hover:bg-blue-700 text-sm transition-colors duration-200">
+                                    <i class="fas fa-play me-1"></i>Unirse a la clase
+                                </a>
+                            </div>
                         </div>
                     </div>
-                </div>
                     <!-- Actividades del módulo -->
                     <div th:if="${not #lists.isEmpty(modulo.actividades)}" class="ml-4">
                         <h4 class="text-lg font-semibold text-gray-700 mb-2">Actividades:</h4>
-                        <div th:each="actividad : ${modulo.actividades}" class="bg-gray-50 p-4 rounded-lg mb-2 border hover:border-gray-300 transition-all">
+                        <div th:each="actividad : ${modulo.actividades}"
+                            class="bg-gray-50 p-4 rounded-lg mb-2 border hover:border-gray-300 transition-all">
                             <div class="flex justify-between items-start">
                                 <div class="flex-1">
                                     <!-- Icono según tipo de actividad -->
                                     <div class="flex items-center mb-2">
-                                        <span th:if="${#strings.contains(actividad.getClass().getName(), 'Examen')}" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                        <span th:if="${#strings.contains(actividad.getClass().getName(), 'Examen')}"
+                                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
                                             <i class="fas fa-clipboard-check mr-1"></i> Examen
                                         </span>
-                                        <span th:if="${#strings.contains(actividad.getClass().getName(), 'Tarea')}" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                        <span th:if="${#strings.contains(actividad.getClass().getName(), 'Tarea')}"
+                                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                             <i class="fas fa-tasks mr-1"></i> Tarea
                                         </span>
-                                        <span th:if="${#strings.contains(actividad.getClass().getName(), 'Material')}" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        <span th:if="${#strings.contains(actividad.getClass().getName(), 'Material')}"
+                                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                             <i class="fas fa-file-alt mr-1"></i> Material
                                         </span>
-                                        <span th:if="${#strings.contains(actividad.getClass().getName(), 'Carpeta')}" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                        <span th:if="${#strings.contains(actividad.getClass().getName(), 'Carpeta')}"
+                                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                                             <i class="fas fa-folder mr-1"></i> Carpeta
                                         </span>
                                     </div>
-                                    
-                                    <h5 class="font-medium text-gray-800 text-lg" th:text="${actividad.titulo}">Título de la actividad</h5>
-                                    <p class="text-sm text-gray-600 mt-1" th:text="${actividad.descripcion}">Descripción de la actividad</p>
-                                    
+
+                                    <h5 class="font-medium text-gray-800 text-lg" th:text="${actividad.titulo}">Título
+                                        de la actividad</h5>
+                                    <p class="text-sm text-gray-600 mt-1" th:text="${actividad.descripcion}">Descripción
+                                        de la actividad</p>
+
                                     <!-- Información específica para exámenes -->
-                                    <div th:if="${#strings.contains(actividad.getClass().getName(), 'Examen')}" class="mt-3 flex flex-wrap gap-3 text-xs text-gray-500">
+                                    <div th:if="${#strings.contains(actividad.getClass().getName(), 'Examen')}"
+                                        class="mt-3 flex flex-wrap gap-3 text-xs text-gray-500">
                                         <span th:if="${actividad.fechaApertura != null}">
                                             <i class="fas fa-calendar-day mr-1"></i>
-                                            <span th:text="${#temporals.format(actividad.fechaApertura, 'dd/MM/yyyy HH:mm')}"></span>
+                                            <span
+                                                th:text="${#temporals.format(actividad.fechaApertura, 'dd/MM/yyyy HH:mm')}"></span>
                                         </span>
                                         <span th:if="${actividad.tiempoRealizacion != null}">
                                             <i class="fas fa-clock mr-1"></i>
@@ -305,29 +343,31 @@
                                         </span>
                                     </div>
                                 </div>
-                                
+
                                 <!-- Botón de acción -->
                                 <div class="ml-4">
-                                    <a th:if="${#strings.contains(actividad.getClass().getName(), 'Examen')}" 
-                                       th:href="@{/examen/realizar/{id}(id=${actividad.idActividad})}"
-                                       class="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700 transition-colors">
+                                    <a th:if="${#strings.contains(actividad.getClass().getName(), 'Examen')}"
+                                        th:href="@{/examen/realizar/{id}(id=${actividad.idActividad})}"
+                                        class="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700 transition-colors">
                                         <i class="fas fa-play mr-2"></i>Realizar Examen
                                     </a>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Mensaje si no hay contenido -->
                     <div th:if="${#lists.isEmpty(modulo.clases) and #lists.isEmpty(modulo.actividades)}" class="ml-4">
                         <p class="text-gray-500 text-sm">No hay clases o actividades en este módulo.</p>
                     </div>
                 </div>
-                
+
                 <!-- Mensaje si no hay módulos -->
-                <div th:if="${#lists.isEmpty(modulos)}" class="text-center text-gray-500 py-8 bg-white rounded-lg shadow">
+                <div th:if="${#lists.isEmpty(modulos)}"
+                    class="text-center text-gray-500 py-8 bg-white rounded-lg shadow">
                     <p class="text-lg">No hay módulos disponibles para este curso.</p>
-                    <p class="text-sm mt-2" th:if="${puedeModificar}">Usa el botón "Modificar Curso" para agregar módulos.</p>
+                    <p class="text-sm mt-2" th:if="${puedeModificar}">Usa el botón "Modificar Curso" para agregar
+                        módulos.</p>
                 </div>
             </div>
         </main>
@@ -340,13 +380,15 @@
     <div id="overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 opacity-0 pointer-events-none"></div>
 
     <!-- Panel Lateral Derecho (Índice del Curso) -->
-    <aside id="sidebar" class="fixed top-0 right-0 h-full w-72 bg-white border-l border-gray-200 shadow-xl transform translate-x-full z-40 overflow-y-auto">
-        
+    <aside id="sidebar"
+        class="fixed top-0 right-0 h-full w-72 bg-white border-l border-gray-200 shadow-xl transform translate-x-full z-40 overflow-y-auto">
+
         <!-- Cabecera del Panel -->
         <div class="flex justify-between items-center p-4 border-b border-gray-200 sticky top-0 bg-white">
             <h2 class="text-lg font-semibold text-gray-800">ÍNDICE DEL CURSO</h2>
             <button id="closeButton" class="text-gray-500 hover:text-gray-800 transition-colors duration-200">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
             </button>
@@ -356,42 +398,48 @@
         <nav class="p-4">
             <ul class="space-y-1">
                 <li>
-                    <a href="#" class="block py-2 px-3 rounded-md text-gray-700 hover:bg-gray-100 transition-colors duration-150">
+                    <a href="#"
+                        class="block py-2 px-3 rounded-md text-gray-700 hover:bg-gray-100 transition-colors duration-150">
                         Inicio
                     </a>
                 </li>
                 <li>
-                    <a href="#" class="block py-2 px-3 rounded-md text-gray-700 hover:bg-gray-100 transition-colors duration-150">
+                    <a href="#"
+                        class="block py-2 px-3 rounded-md text-gray-700 hover:bg-gray-100 transition-colors duration-150">
                         Anuncios
                     </a>
                 </li>
                 <!-- Módulos en el índice -->
                 <li th:each="modulo : ${modulos}">
-                    <a href="#" class="block py-2 px-3 rounded-md text-gray-700 hover:bg-gray-100 transition-colors duration-150"
-                       th:class="${moduloStat.first} ? 'text-customBlue bg-blue-50 font-semibold' : 'text-gray-700 hover:bg-gray-100'"
-                       th:text="${'Módulo ' + moduloStat.count + ': ' + modulo.nombre}">
+                    <a href="#"
+                        class="block py-2 px-3 rounded-md text-gray-700 hover:bg-gray-100 transition-colors duration-150"
+                        th:class="${moduloStat.first} ? 'text-customBlue bg-blue-50 font-semibold' : 'text-gray-700 hover:bg-gray-100'"
+                        th:text="${'Módulo ' + moduloStat.count + ': ' + modulo.nombre}">
                         Módulo
                     </a>
                 </li>
                 <li>
-                    <a href="#" class="block py-2 px-3 rounded-md text-gray-700 hover:bg-gray-100 transition-colors duration-150">
+                    <a href="#"
+                        class="block py-2 px-3 rounded-md text-gray-700 hover:bg-gray-100 transition-colors duration-150">
                         Examen
                     </a>
                 </li>
                 <li>
-                    <a href="#" class="block py-2 px-3 rounded-md text-gray-700 hover:bg-gray-100 transition-colors duration-150">
+                    <a href="#"
+                        class="block py-2 px-3 rounded-md text-gray-700 hover:bg-gray-100 transition-colors duration-150">
                         Calificaciones
                     </a>
                 </li>
                 <li>
-                    <a href="#" class="block py-2 px-3 rounded-md text-gray-700 hover:bg-gray-100 transition-colors duration-150">
+                    <a href="#"
+                        class="block py-2 px-3 rounded-md text-gray-700 hover:bg-gray-100 transition-colors duration-150">
                         Foro de Dudas
                     </a>
                 </li>
             </ul>
         </nav>
     </aside>
-    
+
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -408,30 +456,30 @@
         const createClassButton = document.getElementById('createClassButton');
 
         if (createClassButton) {
-                createClassButton.addEventListener('click', () => {
-                    // Obtener todos los módulos
-                    const modulos = document.querySelectorAll('[data-modulo-id]');
-                    
-                    if (modulos.length > 0) {
-                        // Si hay múltiples módulos, preguntar cuál usar
-                        if (modulos.length === 1) {
-                            // Solo hay un módulo, usar ese
-                            const moduloId = modulos[0].getAttribute('data-modulo-id');
-                            openClassModal(moduloId);
-                        } else {
-                            // Hay múltiples módulos, mostrar selector
-                            mostrarSelectorModulos(modulos);
-                        }
-                    } else {
-                        alert('Primero debes crear un módulo');
-                    }
-                });
-            }
+            createClassButton.addEventListener('click', () => {
+                // Obtener todos los módulos
+                const modulos = document.querySelectorAll('[data-modulo-id]');
 
-            // Función para mostrar selector de módulos
-            function mostrarSelectorModulos(modulos) {
-                // Crear modal de selección
-                const modalHTML = `
+                if (modulos.length > 0) {
+                    // Si hay múltiples módulos, preguntar cuál usar
+                    if (modulos.length === 1) {
+                        // Solo hay un módulo, usar ese
+                        const moduloId = modulos[0].getAttribute('data-modulo-id');
+                        openClassModal(moduloId);
+                    } else {
+                        // Hay múltiples módulos, mostrar selector
+                        mostrarSelectorModulos(modulos);
+                    }
+                } else {
+                    alert('Primero debes crear un módulo');
+                }
+            });
+        }
+
+        // Función para mostrar selector de módulos
+        function mostrarSelectorModulos(modulos) {
+            // Crear modal de selección
+            const modalHTML = `
                     <div id="moduloSelectorModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                         <div class="bg-white rounded-lg p-6 w-96">
                             <h3 class="text-lg font-semibold mb-4">
@@ -454,25 +502,25 @@
                         </div>
                     </div>
                 `;
-                
-                document.body.insertAdjacentHTML('beforeend', modalHTML);
-                
-                // Agregar event listeners a los botones de módulo
-                document.querySelectorAll('.modulo-option').forEach(button => {
-                    button.addEventListener('click', function() {
-                        const moduloId = this.getAttribute('data-modulo-id');
-                        cerrarSelectorModulos();
-                        openClassModal(moduloId);
-                    });
-                });
-            }
 
-            function cerrarSelectorModulos() {
-                const modal = document.getElementById('moduloSelectorModal');
-                if (modal) {
-                    modal.remove();
-                }
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+            // Agregar event listeners a los botones de módulo
+            document.querySelectorAll('.modulo-option').forEach(button => {
+                button.addEventListener('click', function () {
+                    const moduloId = this.getAttribute('data-modulo-id');
+                    cerrarSelectorModulos();
+                    openClassModal(moduloId);
+                });
+            });
+        }
+
+        function cerrarSelectorModulos() {
+            const modal = document.getElementById('moduloSelectorModal');
+            if (modal) {
+                modal.remove();
             }
+        }
 
         // Mostrar/ocultar panel de herramientas (CON LA MISMA ANIMACIÓN)
         if (modifyCourseButton) {
@@ -524,12 +572,12 @@
         // CREAR ACTIVIDAD - Selector de Módulo y Tipo
         // ========================================
         const createActivityButton = document.getElementById('createActivityButton');
-        
+
         if (createActivityButton) {
             createActivityButton.addEventListener('click', () => {
                 // Obtener todos los módulos
                 const modulos = document.querySelectorAll('[data-modulo-id]');
-                
+
                 if (modulos.length > 0) {
                     // Si hay múltiples módulos, preguntar cuál usar
                     if (modulos.length === 1) {
@@ -574,12 +622,12 @@
                     </div>
                 </div>
             `;
-            
+
             document.body.insertAdjacentHTML('beforeend', modalHTML);
-            
+
             // Agregar event listeners a los botones de módulo
             document.querySelectorAll('.modulo-actividad-option').forEach(button => {
-                button.addEventListener('click', function() {
+                button.addEventListener('click', function () {
                     const moduloId = this.getAttribute('data-modulo-id');
                     const moduloNombre = this.getAttribute('data-modulo-nombre');
                     cerrarSelectorModulosActividad();
@@ -661,12 +709,12 @@
                     </div>
                 </div>
             `;
-            
+
             document.body.insertAdjacentHTML('beforeend', modalHTML);
-            
+
             // Agregar event listeners a los botones de tipo de actividad
             document.querySelectorAll('.tipo-actividad-btn').forEach(button => {
-                button.addEventListener('click', function() {
+                button.addEventListener('click', function () {
                     const tipo = this.getAttribute('data-tipo');
                     const moduloId = this.getAttribute('data-modulo-id');
                     cerrarSelectorTipoActividad();
@@ -685,8 +733,8 @@
         // Función para abrir el formulario específico según el tipo de actividad
         function abrirFormularioActividad(tipo, moduloId, moduloNombre) {
             let formularioHTML = '';
-            
-            switch(tipo) {
+
+            switch (tipo) {
                 case 'tarea':
                     formularioHTML = crearFormularioTarea(moduloId, moduloNombre);
                     break;
@@ -700,7 +748,7 @@
                     formularioHTML = crearFormularioMaterial(moduloId, moduloNombre);
                     break;
             }
-            
+
             document.body.insertAdjacentHTML('beforeend', formularioHTML);
         }
 
@@ -936,10 +984,10 @@
 
         // Variable global para almacenar los pools del examen actual
         let examenPools = [];
-        
+
         // Variable global con el ID de la oferta académica (se interpola desde Thymeleaf)
         const OFERTA_ID = /*[[${curso.idOferta}]]*/ 0;
-        
+
         console.log('🔍 OFERTA_ID cargado:', OFERTA_ID);
 
         function agregarPoolExamen() {
@@ -949,7 +997,7 @@
 
         function mostrarModalPool() {
             console.log('📋 Cargando pools para oferta:', OFERTA_ID);
-            
+
             // Primero cargamos los pools existentes de esta oferta
             fetch(`/pool/listar/${OFERTA_ID}`)
                 .then(response => response.json())
@@ -958,7 +1006,7 @@
                     console.log('Cantidad:', poolsExistentes.length);
                     console.log('Pools:', poolsExistentes);
                     console.log('========================');
-                    
+
                     const modalHTML = `
                         <div id="modalPool" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
                             <div class="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -1069,16 +1117,16 @@
                             </div>
                         </div>
                     `;
-                    
+
                     document.body.insertAdjacentHTML('beforeend', modalHTML);
-                    
+
                     // Event listener para el formulario de pool
-                    document.getElementById('formPool').addEventListener('submit', function(e) {
+                    document.getElementById('formPool').addEventListener('submit', function (e) {
                         e.preventDefault();
                         const formData = new FormData(e.target);
                         // Asociar el pool a la oferta actual
                         formData.append('ofertaId', OFERTA_ID);
-                        
+
                         // Persistir pool en el backend
                         fetch('/pool/crear', {
                             method: 'POST',
@@ -1087,36 +1135,36 @@
                             },
                             body: formData
                         })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                const poolIdReal = data.idPool;
-                                
-                                const nuevoPool = {
-                                    id: Date.now(), // ID temporal para el frontend
-                                    idReal: poolIdReal, // ID real del backend
-                                    nombre: formData.get('nombrePool'),
-                                    descripcion: formData.get('descripcionPool'),
-                                    cantidadPreguntas: parseInt(formData.get('cantidadPreguntas')),
-                                    preguntas: []
-                                };
-                                
-                                examenPools.push(nuevoPool);
-                                actualizarListaPools();
-                                cerrarModalPool();
-                                
-                                alert('✅ Pool creado y guardado exitosamente');
-                                
-                                // Abrir modal de preguntas para este pool
-                                setTimeout(() => mostrarModalPreguntas(nuevoPool.id, poolIdReal), 300);
-                            } else {
-                                alert('❌ Error: ' + data.message);
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error al crear pool:', error);
-                            alert('❌ Error al crear el pool. Por favor, intenta de nuevo.');
-                        });
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    const poolIdReal = data.idPool;
+
+                                    const nuevoPool = {
+                                        id: Date.now(), // ID temporal para el frontend
+                                        idReal: poolIdReal, // ID real del backend
+                                        nombre: formData.get('nombrePool'),
+                                        descripcion: formData.get('descripcionPool'),
+                                        cantidadPreguntas: parseInt(formData.get('cantidadPreguntas')),
+                                        preguntas: []
+                                    };
+
+                                    examenPools.push(nuevoPool);
+                                    actualizarListaPools();
+                                    cerrarModalPool();
+
+                                    alert('✅ Pool creado y guardado exitosamente');
+
+                                    // Abrir modal de preguntas para este pool
+                                    setTimeout(() => mostrarModalPreguntas(nuevoPool.id, poolIdReal), 300);
+                                } else {
+                                    alert('❌ Error: ' + data.message);
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error al crear pool:', error);
+                                alert('❌ Error al crear el pool. Por favor, intenta de nuevo.');
+                            });
                     });
                 })
                 .catch(error => {
@@ -1124,21 +1172,21 @@
                     alert('Error al cargar los pools existentes');
                 });
         }
-        
+
         function cambiarTabPool(tab) {
             // Actualizar clases de tabs
-            document.getElementById('tabCrear').className = tab === 'crear' 
+            document.getElementById('tabCrear').className = tab === 'crear'
                 ? 'tab-pool px-4 py-2 border-b-2 border-purple-600 text-purple-600 font-medium'
                 : 'tab-pool px-4 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700';
             document.getElementById('tabExistente').className = tab === 'existente'
                 ? 'tab-pool px-4 py-2 border-b-2 border-purple-600 text-purple-600 font-medium'
                 : 'tab-pool px-4 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700';
-            
+
             // Mostrar/ocultar contenidos
             document.getElementById('tabContenidoCrear').classList.toggle('hidden', tab !== 'crear');
             document.getElementById('tabContenidoExistente').classList.toggle('hidden', tab !== 'existente');
         }
-        
+
         function seleccionarPoolExistente(idPool, nombre, descripcion, cantidadPreguntas, preguntasCount) {
             const nuevoPool = {
                 id: Date.now(),
@@ -1150,7 +1198,7 @@
                 preguntasCount: typeof preguntasCount === 'number' ? preguntasCount : 0,
                 esExistente: true
             };
-            
+
             examenPools.push(nuevoPool);
             actualizarListaPools();
             cerrarModalPool();
@@ -1164,14 +1212,14 @@
         function actualizarListaPools() {
             const poolsList = document.getElementById('poolsList');
             const noPoolsMsg = document.getElementById('noPoolsMessage');
-            
+
             if (examenPools.length === 0) {
                 noPoolsMsg?.classList.remove('hidden');
                 return;
             }
-            
+
             noPoolsMsg?.classList.add('hidden');
-            
+
             poolsList.innerHTML = examenPools.map((pool, index) => `
                 <div class="border border-purple-200 rounded-lg p-3 bg-purple-50">
                     <div class="flex justify-between items-start">
@@ -1206,13 +1254,13 @@
                     </div>
                 </div>
             `).join('');
-            
+
             // Actualizar totales
             const totalPreguntas = examenPools.reduce((sum, pool) => sum + pool.cantidadPreguntas, 0);
             document.getElementById('totalPreguntas').textContent = totalPreguntas;
-            document.getElementById('calificacionInfo').textContent = 
+            document.getElementById('calificacionInfo').textContent =
                 totalPreguntas > 0 ? `${(100 / totalPreguntas).toFixed(2)} puntos por pregunta` : 'No configurada';
-            
+
             // Actualizar campo hidden con datos JSON
             document.getElementById('poolsData').value = JSON.stringify(examenPools);
         }
@@ -1227,7 +1275,7 @@
         function mostrarModalPreguntas(poolId, poolIdReal = null) {
             const pool = examenPools.find(p => p.id === poolId);
             if (!pool) return;
-            
+
             const modalHTML = `
                 <div id="modalPreguntas" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] overflow-y-auto">
                     <div class="bg-white rounded-lg p-6 w-full max-w-3xl my-8 max-h-[90vh] overflow-y-auto">
@@ -1239,9 +1287,9 @@
                         </p>
                         
                         <div id="preguntasList" class="space-y-2 mb-4 max-h-60 overflow-y-auto">
-                            ${pool.preguntas.length === 0 ? 
-                                '<p class="text-sm text-gray-500 italic">No hay preguntas agregadas</p>' :
-                                pool.preguntas.map((p, i) => `
+                            ${pool.preguntas.length === 0 ?
+                    '<p class="text-sm text-gray-500 italic">No hay preguntas agregadas</p>' :
+                    pool.preguntas.map((p, i) => `
                                     <div class="border border-gray-200 rounded p-2 bg-gray-50">
                                         <div class="flex justify-between items-start">
                                             <div class="flex-1">
@@ -1261,7 +1309,7 @@
                                         </div>
                                     </div>
                                 `).join('')
-                            }
+                }
                         </div>
                         
                         <form id="formPregunta" class="space-y-3 border-t pt-4">
@@ -1300,9 +1348,9 @@
                     </div>
                 </div>
             `;
-            
+
             document.body.insertAdjacentHTML('beforeend', modalHTML);
-            
+
             // Guardar el poolId en una variable global temporal
             window.currentPoolId = poolId;
             window.currentPoolIdReal = poolIdReal;
@@ -1311,14 +1359,14 @@
         function cambiarFormularioPregunta() {
             const tipo = document.getElementById('tipoPreguntaSelect').value;
             const formularioDinamico = document.getElementById('formularioDinamico');
-            
+
             if (!tipo) {
                 formularioDinamico.innerHTML = '<p class="text-sm text-gray-500 italic">Selecciona un tipo de pregunta para continuar</p>';
                 return;
             }
-            
+
             let html = '';
-            
+
             // Enunciado común para todos
             html += `
                 <div class="mb-3">
@@ -1338,7 +1386,7 @@
                            class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
                 </div>
             `;
-            
+
             // Sección específica según el tipo
             if (tipo === 'MULTIPLE_CHOICE' || tipo === 'UNICA_RESPUESTA') {
                 html += `
@@ -1395,31 +1443,31 @@
                     </div>
                 `;
             }
-            
+
             html += `
                 <button type="button" onclick="guardarPregunta()" 
                         class="w-full mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
                     <i class="fas fa-save me-1"></i>Guardar Pregunta
                 </button>
             `;
-            
+
             formularioDinamico.innerHTML = html;
-            
+
             // Si es múltiple choice o única respuesta, agregar la primera opción
             if (tipo === 'MULTIPLE_CHOICE' || tipo === 'UNICA_RESPUESTA') {
                 agregarOpcion();
                 agregarOpcion();
             }
         }
-        
+
         let opcionCounter = 0;
-        
+
         function agregarOpcion() {
             const tipo = document.getElementById('tipoPreguntaSelect').value;
             const container = document.getElementById('opcionesContainer');
             const opcionId = `opcion_${opcionCounter++}`;
             const esMultiple = tipo === 'MULTIPLE_CHOICE';
-            
+
             const opcionHTML = `
                 <div class="flex items-center space-x-2 p-2 border rounded bg-gray-50" id="${opcionId}_container">
                     <input type="text" id="${opcionId}" placeholder="Escribe la opción..." required
@@ -1437,52 +1485,52 @@
                     </button>
                 </div>
             `;
-            
+
             container.insertAdjacentHTML('beforeend', opcionHTML);
         }
-        
+
         function eliminarOpcion(opcionId) {
             document.getElementById(`${opcionId}_container`)?.remove();
         }
-        
+
         function guardarPregunta() {
             const pool = examenPools.find(p => p.id === window.currentPoolId);
             if (!pool) return;
-            
+
             const tipo = document.getElementById('tipoPreguntaSelect').value;
             const enunciado = document.getElementById('enunciadoPregunta').value;
             const puntaje = parseFloat(document.getElementById('puntajePregunta').value);
-            
+
             if (!enunciado || !puntaje) {
                 alert('Por favor completa todos los campos obligatorios');
                 return;
             }
-            
+
             const nuevaPregunta = {
                 enunciado: enunciado,
                 tipoPregunta: tipo,
                 puntaje: puntaje,
                 opciones: []
             };
-            
+
             // Recopilar opciones según el tipo
             if (tipo === 'MULTIPLE_CHOICE' || tipo === 'UNICA_RESPUESTA') {
                 const container = document.getElementById('opcionesContainer');
                 const inputs = container.querySelectorAll('input[type="text"]');
                 const correctas = container.querySelectorAll('input[name="opcionCorrecta"]:checked');
-                
+
                 if (inputs.length === 0) {
                     alert('Debes agregar al menos una opción');
                     return;
                 }
-                
+
                 if (correctas.length === 0) {
                     alert('Debes marcar al menos una opción como correcta');
                     return;
                 }
-                
+
                 const correctasSet = new Set(Array.from(correctas).map(c => c.value));
-                
+
                 inputs.forEach(input => {
                     if (input.value.trim()) {
                         nuevaPregunta.opciones.push({
@@ -1497,40 +1545,40 @@
                     alert('Debes seleccionar la respuesta correcta');
                     return;
                 }
-                
+
                 nuevaPregunta.opciones = [
                     { descripcion: 'Verdadero', esCorrecta: respuestaSeleccionada.value === 'Verdadero' },
                     { descripcion: 'Falso', esCorrecta: respuestaSeleccionada.value === 'Falso' }
                 ];
             }
-            
+
             pool.preguntas.push(nuevaPregunta);
-            
+
             // Persistir pregunta en el backend si el pool ya está guardado
             if (window.currentPoolIdReal) {
                 guardarPreguntaEnBackend(window.currentPoolIdReal, nuevaPregunta);
             }
-            
+
             // Recargar modal
             cerrarModalPreguntas();
             setTimeout(() => mostrarModalPreguntas(window.currentPoolId, window.currentPoolIdReal), 100);
         }
-        
+
         function guardarPreguntaEnBackend(poolIdReal, pregunta) {
             console.log('=== DEBUG GUARDAR PREGUNTA ===');
             console.log('Pool ID:', poolIdReal);
             console.log('Pregunta:', pregunta);
             console.log('Opciones:', pregunta.opciones);
             console.log('Opciones JSON:', JSON.stringify(pregunta.opciones || []));
-            
+
             const formData = new FormData();
             formData.append('enunciado', pregunta.enunciado);
             formData.append('tipoPregunta', pregunta.tipoPregunta);
             formData.append('puntaje', pregunta.puntaje);
             formData.append('opcionesData', JSON.stringify(pregunta.opciones || []));
-            
+
             console.log('FormData opcionesData:', formData.get('opcionesData'));
-            
+
             fetch(`/pool/agregarPregunta/${poolIdReal}`, {
                 method: 'POST',
                 headers: {
@@ -1538,16 +1586,16 @@
                 },
                 body: formData
             })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Respuesta del servidor:', data);
-                if (!data.success) {
-                    console.error('Error al guardar pregunta:', data.message);
-                }
-            })
-            .catch(error => console.error('Error:', error));
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Respuesta del servidor:', data);
+                    if (!data.success) {
+                        console.error('Error al guardar pregunta:', data.message);
+                    }
+                })
+                .catch(error => console.error('Error:', error));
         }
-                
+
         function cerrarModalPreguntas() {
             document.getElementById('modalPreguntas')?.remove();
             actualizarListaPools();
@@ -1767,30 +1815,30 @@
         // ========================================
         // EVENT LISTENERS PARA FORMULARIOS
         // ========================================
-        
+
         // Event delegation para manejar los submit de los formularios dinámicos
-        document.addEventListener('submit', function(e) {
+        document.addEventListener('submit', function (e) {
             if (e.target.id === 'formTarea') {
                 e.preventDefault();
                 const formData = new FormData(e.target);
                 console.log('📝 Datos de Tarea:', Object.fromEntries(formData));
-                alert('✅ Tarea creada (funcionalidad de guardado pendiente)\n\nDatos capturados:\n' + 
-                      'Título: ' + formData.get('titulo') + '\n' +
-                      'Fecha entrega: ' + formData.get('fechaEntrega') + '\n' +
-                      'Puntos: ' + formData.get('puntos'));
+                alert('✅ Tarea creada (funcionalidad de guardado pendiente)\n\nDatos capturados:\n' +
+                    'Título: ' + formData.get('titulo') + '\n' +
+                    'Fecha entrega: ' + formData.get('fechaEntrega') + '\n' +
+                    'Puntos: ' + formData.get('puntos'));
                 cerrarFormularioTarea();
             }
-            
+
             if (e.target.id === 'formExamen') {
                 e.preventDefault();
                 const formData = new FormData(e.target);
-                
+
                 // Validar que haya al menos un pool
                 if (examenPools.length === 0) {
                     alert('⚠️ Debes agregar al menos un pool de preguntas antes de crear el examen.');
                     return;
                 }
-                
+
                 // Verificar que los pools tengan preguntas (usar conteo para existentes)
                 const poolsSinPreguntas = examenPools.filter(p => {
                     const count = p.esExistente ? (typeof p.preguntasCount === 'number' ? p.preguntasCount : 0) : (p.preguntas ? p.preguntas.length : 0);
@@ -1800,9 +1848,9 @@
                     alert('⚠️ Todos los pools deben tener al menos una pregunta.');
                     return;
                 }
-                
+
                 console.log('📋 Enviando examen con pools:', examenPools);
-                
+
                 // Enviar al backend
                 fetch('/actividad/crearExamen', {
                     method: 'POST',
@@ -1811,40 +1859,40 @@
                     },
                     body: formData
                 })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('✅ Examen creado exitosamente');
-                        cerrarFormularioExamen();
-                        location.reload(); // Recargar para mostrar el examen en el módulo
-                    } else {
-                        alert('❌ Error: ' + data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error al crear examen:', error);
-                    alert('❌ Error al crear el examen. Por favor, intenta de nuevo.');
-                });
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('✅ Examen creado exitosamente');
+                            cerrarFormularioExamen();
+                            location.reload(); // Recargar para mostrar el examen en el módulo
+                        } else {
+                            alert('❌ Error: ' + data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error al crear examen:', error);
+                        alert('❌ Error al crear el examen. Por favor, intenta de nuevo.');
+                    });
             }
-            
+
             if (e.target.id === 'formCarpeta') {
                 e.preventDefault();
                 const formData = new FormData(e.target);
                 console.log('📁 Datos de Carpeta:', Object.fromEntries(formData));
-                alert('✅ Carpeta creada (funcionalidad de guardado pendiente)\n\nDatos capturados:\n' + 
-                      'Nombre: ' + formData.get('titulo'));
+                alert('✅ Carpeta creada (funcionalidad de guardado pendiente)\n\nDatos capturados:\n' +
+                    'Nombre: ' + formData.get('titulo'));
                 cerrarFormularioCarpeta();
             }
-            
+
             if (e.target.id === 'formMaterial') {
                 e.preventDefault();
                 const formData = new FormData(e.target);
                 console.log('📤 Datos de Material:', Object.fromEntries(formData));
                 const archivo = formData.get('archivo');
-                alert('✅ Material subido (funcionalidad de guardado pendiente)\n\nDatos capturados:\n' + 
-                      'Título: ' + formData.get('titulo') + '\n' +
-                      'URL: ' + (formData.get('contenido') || 'No especificada') + '\n' +
-                      'Archivo: ' + (archivo && archivo.name ? archivo.name : 'No seleccionado'));
+                alert('✅ Material subido (funcionalidad de guardado pendiente)\n\nDatos capturados:\n' +
+                    'Título: ' + formData.get('titulo') + '\n' +
+                    'URL: ' + (formData.get('contenido') || 'No especificada') + '\n' +
+                    'Archivo: ' + (archivo && archivo.name ? archivo.name : 'No seleccionado'));
                 cerrarFormularioMaterial();
             }
         });
@@ -1853,4 +1901,5 @@
     <!-- Incluir modal de crear clase -->
 
 </body>
+
 </html>

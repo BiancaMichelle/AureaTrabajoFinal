@@ -132,4 +132,5 @@ public class ClaseController {
         model.addAttribute("clase", claseOpt.get());
         return "clase-detalle";
     }
+
 }

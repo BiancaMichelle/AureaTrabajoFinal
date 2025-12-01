@@ -22,42 +22,43 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class Clase {
-    
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
     @Column(name = "id_clase", updatable = false, nullable = false, columnDefinition = "uuid")
     private UUID idClase;
-    
+
     private String titulo;
     private String descripcion;
     private LocalDateTime inicio;
     private LocalDateTime fin;
-    
+
     // Campos para la videoconferencia
     private String roomName;
-    
+
     @Column(length = 2048) // Aumentar longitud para soportar URLs con JWT
     private String meetingUrl;
-    
+
     private Boolean asistenciaAutomatica;
     private Boolean transcripcionHabilitada;
     private Boolean preguntasAleatorias;
     private Integer cantidadPreguntas;
-    
+
     @ManyToOne
     @JoinColumn(name = "curso_id")
     private OfertaAcademica curso; // Puede ser Curso, Formación, etc.
-    
+
     @ManyToOne
     @JoinColumn(name = "docente_dni")
     private Docente docente;
-    
+
     @ManyToOne
     @JoinColumn(name = "modulo_id")
     private Modulo modulo;
-    
+
     // Método para generar automáticamente el roomName si no existe
+
     public void generateRoomName() {
         if (this.roomName == null && this.titulo != null) {
             String baseName = this.titulo.toLowerCase()

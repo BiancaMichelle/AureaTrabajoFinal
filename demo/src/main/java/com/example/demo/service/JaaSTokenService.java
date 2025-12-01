@@ -1,13 +1,5 @@
 package com.example.demo.service;
 
-import com.auth0.jwt.JWT;
-import com.auth0.jwt.algorithms.Algorithm;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
-import org.springframework.stereotype.Service;
-import org.springframework.util.StreamUtils;
-
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.interfaces.RSAPrivateKey;
@@ -17,6 +9,15 @@ import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StreamUtils;
+
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.algorithms.Algorithm;
 
 @Service
 public class JaaSTokenService {
@@ -47,7 +48,7 @@ public class JaaSTokenService {
             user.put("email", userEmail);
             user.put("avatar", userAvatar);
             user.put("moderator", isModerator ? "true" : "false");
-            
+
             Map<String, Object> features = new HashMap<>();
             features.put("livestreaming", "true");
             features.put("recording", "true");
@@ -58,7 +59,7 @@ public class JaaSTokenService {
             context.put("features", features);
 
             Algorithm algorithm = Algorithm.RSA256(null, privateKey);
-            
+
             // Calculate expiration (e.g., 2 hours)
             Instant now = Instant.now();
             Instant exp = now.plusSeconds(7200);

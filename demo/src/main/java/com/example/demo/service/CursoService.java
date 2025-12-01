@@ -22,33 +22,34 @@ import com.example.demo.repository.OfertaAcademicaRepository;
 @Service
 @Transactional
 public class CursoService {
-    
+
     private final CursoRepository cursoRepository;
     private final OfertaAcademicaRepository ofertaAcademicaRepository;
     private final ModuloRepository moduloRepository;
-    
+
     public CursoService(CursoRepository cursoRepository,
-                       OfertaAcademicaRepository ofertaAcademicaRepository,
-                       ModuloRepository moduloRepository) {
+            OfertaAcademicaRepository ofertaAcademicaRepository,
+            ModuloRepository moduloRepository) {
         this.cursoRepository = cursoRepository;
         this.ofertaAcademicaRepository = ofertaAcademicaRepository;
         this.moduloRepository = moduloRepository;
     }
-    
+
     public Curso obtenerCursoPorId(Long cursoId) {
         return cursoRepository.findById(cursoId)
                 .orElseThrow(() -> new RuntimeException("Curso no encontrado"));
     }
-    
+
     public Modulo crearModulo(String nombre, String descripcion, String objetivos,
-                               LocalDate fechaInicio, LocalDate fechaFin, 
-                               Boolean visibilidad, Long cursoId) {
+            LocalDate fechaInicio, LocalDate fechaFin,
+            Boolean visibilidad, Long cursoId) {
         // ✅ Buscar en OfertaAcademicaRepository para soportar Cursos Y Formaciones
         OfertaAcademica curso = ofertaAcademicaRepository.findById(cursoId)
                 .orElseThrow(() -> new RuntimeException("Oferta académica no encontrada"));
-        
-        System.out.println("📚 Creando módulo para: " + curso.getNombre() + " (Tipo: " + curso.getClass().getSimpleName() + ")");
-        
+
+        System.out.println(
+                "📚 Creando módulo para: " + curso.getNombre() + " (Tipo: " + curso.getClass().getSimpleName() + ")");
+
         Modulo modulo = new Modulo();
         modulo.setNombre(nombre);
         modulo.setDescripcion(descripcion);
@@ -59,14 +60,14 @@ public class CursoService {
         modulo.setCurso(curso);
         modulo.setClases(new ArrayList<>());
         modulo.setActividades(new ArrayList<>());
-        
+
         return moduloRepository.save(modulo);
     }
-    
+
     public Clase crearClase(String titulo, String descripcion, UUID moduloId) {
         Modulo modulo = moduloRepository.findById(moduloId)
                 .orElseThrow(() -> new RuntimeException("Módulo no encontrado"));
-        
+
         Clase clase = new Clase();
         clase.setTitulo(titulo);
         clase.setDescripcion(descripcion);
@@ -76,7 +77,7 @@ public class CursoService {
         clase.setCantidadPreguntas(0);
         clase.setModulo(modulo);
         clase.setCurso(modulo.getCurso());
-        
+
         // Guardar la clase (necesitarías ClaseRepository)
         // return claseRepository.save(clase);
         return clase;
@@ -96,11 +97,11 @@ public class CursoService {
         // Validar datos antes de guardar
         List<String> errores = curso.validarDatos();
         errores.addAll(curso.validarDatosCurso());
-        
+
         if (!errores.isEmpty()) {
             throw new IllegalArgumentException("Datos del curso inválidos: " + String.join(", ", errores));
         }
-        
+
         return cursoRepository.save(curso);
     }
 
@@ -109,49 +110,47 @@ public class CursoService {
      */
     public boolean modificar(Long id, Curso datosNuevos) {
         Optional<Curso> cursoOpt = obtenerCursoPorIdOpt(id);
-        
+
         if (!cursoOpt.isPresent()) {
             return false;
         }
-        
+
         Curso cursoExistente = cursoOpt.get();
-        
+
         // Verificar si puede ser editado
         if (!cursoExistente.puedeSerEditada()) {
             return false;
         }
-        
+
         // Validar nuevos datos
         List<String> errores = datosNuevos.validarDatos();
         errores.addAll(datosNuevos.validarDatosCurso());
-        
+
         if (!errores.isEmpty()) {
             return false;
         }
-        
+
         // Aplicar modificaciones
         cursoExistente.modificarDatosBasicos(
-            datosNuevos.getNombre(),
-            datosNuevos.getDescripcion(),
-            datosNuevos.getDuracion(),
-            datosNuevos.getFechaInicio(),
-            datosNuevos.getFechaFin(),
-            datosNuevos.getModalidad(),
-            datosNuevos.getCupos(),
-            datosNuevos.getVisibilidad(),
-            datosNuevos.getCostoInscripcion(),
-            datosNuevos.getCertificado()
-        );
-        
+                datosNuevos.getNombre(),
+                datosNuevos.getDescripcion(),
+                datosNuevos.getDuracion(),
+                datosNuevos.getFechaInicio(),
+                datosNuevos.getFechaFin(),
+                datosNuevos.getModalidad(),
+                datosNuevos.getCupos(),
+                datosNuevos.getVisibilidad(),
+                datosNuevos.getCostoInscripcion(),
+                datosNuevos.getCertificado());
+
         cursoExistente.modificarDatosCurso(
-            datosNuevos.getTemario(),
-            datosNuevos.getDocentes(),
-            datosNuevos.getCostoCuota(),
-            datosNuevos.getCostoMora(),
-            datosNuevos.getNrCuotas(),
-            datosNuevos.getDiaVencimiento()
-        );
-        
+                datosNuevos.getTemario(),
+                datosNuevos.getDocentes(),
+                datosNuevos.getCostoCuota(),
+                datosNuevos.getCostoMora(),
+                datosNuevos.getNrCuotas(),
+                datosNuevos.getDiaVencimiento());
+
         cursoRepository.save(cursoExistente);
         return true;
     }
@@ -159,26 +158,27 @@ public class CursoService {
     /**
      * Modifica un curso con los parámetros del formulario
      */
-    public Curso modificar(Long idOferta, String nombre, String descripcion, 
-                          LocalDate fechaInicio, LocalDate fechaFin, Integer cupos, 
-                          Double costoCuota, Double costoMora, Integer nrCuotas, 
-                          Integer diaVencimiento, String modalidad, Boolean otorgaCertificado,
-                          org.springframework.web.multipart.MultipartFile imagen, String categorias, 
-                          String horarios, String docentes) {
+    public Curso modificar(Long idOferta, String nombre, String descripcion,
+            LocalDate fechaInicio, LocalDate fechaFin, Integer cupos,
+            Double costoCuota, Double costoMora, Integer nrCuotas,
+            Integer diaVencimiento, String modalidad, Boolean otorgaCertificado,
+            org.springframework.web.multipart.MultipartFile imagen, String categorias,
+            String horarios, String docentes) {
         try {
             // Buscar el curso existente
             Optional<Curso> cursoOpt = obtenerCursoPorIdOpt(idOferta);
             if (!cursoOpt.isPresent()) {
                 throw new RuntimeException("Curso no encontrado con ID: " + idOferta);
             }
-            
+
             Curso cursoExistente = cursoOpt.get();
-            
+
             // Verificar si puede ser modificado
             if (!cursoExistente.puedeSerEditada()) {
-                throw new RuntimeException("El curso no puede ser modificado porque ya finalizó o tiene inscripciones activas");
+                throw new RuntimeException(
+                        "El curso no puede ser modificado porque ya finalizó o tiene inscripciones activas");
             }
-            
+
             // Modificar datos básicos
             cursoExistente.setNombre(nombre);
             cursoExistente.setDescripcion(descripcion);
@@ -186,23 +186,23 @@ public class CursoService {
             cursoExistente.setFechaFin(fechaFin);
             cursoExistente.setCupos(cupos);
             cursoExistente.setCertificado(otorgaCertificado);
-            
+
             if (modalidad != null && !modalidad.isEmpty()) {
                 cursoExistente.setModalidad(com.example.demo.enums.Modalidad.valueOf(modalidad.toUpperCase()));
             }
-            
+
             // Modificar datos específicos del curso
             cursoExistente.setCostoCuota(costoCuota);
             cursoExistente.setCostoMora(costoMora);
             cursoExistente.setNrCuotas(nrCuotas);
             cursoExistente.setDiaVencimiento(diaVencimiento);
-            
+
             // TODO: Manejar imagen, categorías, horarios y docentes según sea necesario
             // Estas funcionalidades pueden agregarse después si es necesario
-            
+
             // Guardar cambios
             return cursoRepository.save(cursoExistente);
-            
+
         } catch (Exception e) {
             System.err.println("Error al modificar curso: " + e.getMessage());
             e.printStackTrace();
@@ -215,18 +215,18 @@ public class CursoService {
      */
     public boolean cambiarEstado(Long id, EstadoOferta nuevoEstado) {
         Optional<Curso> cursoOpt = obtenerCursoPorIdOpt(id);
-        
+
         if (!cursoOpt.isPresent()) {
             return false;
         }
-        
+
         Curso curso = cursoOpt.get();
         boolean exito = curso.cambiarEstado(nuevoEstado); // Método heredado de OfertaAcademica
-        
+
         if (exito) {
             cursoRepository.save(curso);
         }
-        
+
         return exito;
     }
 
@@ -249,17 +249,17 @@ public class CursoService {
      */
     public boolean eliminar(Long id) {
         Optional<Curso> cursoOpt = obtenerCursoPorIdOpt(id);
-        
+
         if (!cursoOpt.isPresent()) {
             return false;
         }
-        
+
         Curso curso = cursoOpt.get();
-        
+
         if (!curso.puedeSerEliminada()) { // Método heredado de OfertaAcademica
             return false;
         }
-        
+
         cursoRepository.deleteById(id);
         return true;
     }

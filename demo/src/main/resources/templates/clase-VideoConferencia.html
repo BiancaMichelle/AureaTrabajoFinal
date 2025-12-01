@@ -187,11 +187,6 @@
                 <p class="mb-6 text-gray-600">Gracias por participar.</p>
 
                 <div class="flex justify-center gap-4">
-                    <a th:href="@{/docente/aula/} + ${clase?.modulo?.curso?.idOferta}"
-                        class="bg-blue-600 text-white px-6 py-2.5 rounded-lg shadow-md hover:bg-blue-700 transition-all duration-200 inline-flex items-center gap-2 font-medium">
-                        <i class="fas fa-arrow-left me-2"></i>
-                        <span>Volver al aula</span>
-                    </a>
                     <button onclick="descargarTranscripcion()" id="btnDescargarTranscripcion"
                         class="hidden bg-green-600 text-white px-6 py-2.5 rounded-lg shadow-md hover:bg-green-700 transition-all duration-200 inline-flex items-center gap-2 font-medium">
                         <i class="fas fa-file-download me-2"></i>
