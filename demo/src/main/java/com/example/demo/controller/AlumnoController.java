@@ -1,8 +1,15 @@
 package com.example.demo.controller;
 
+import java.math.BigDecimal;
 import java.security.Principal;
+import java.text.NumberFormat;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -18,22 +25,27 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import com.example.demo.DTOMP.ReferenceRequest;
+import com.example.demo.DTOMP.ResponseDTO;
+import com.example.demo.enums.EstadoCuota;
+import com.example.demo.enums.EstadoPago;
 import com.example.demo.enums.TipoGenero;
 import com.example.demo.model.Alumno;
 import com.example.demo.model.Curso;
+import com.example.demo.model.Cuota;
 import com.example.demo.model.Formacion;
 import com.example.demo.model.Inscripciones;
 import com.example.demo.model.Modulo;
 import com.example.demo.model.OfertaAcademica;
+import com.example.demo.model.Pago;
 import com.example.demo.model.Usuario;
-import com.example.demo.repository.AlumnoRepository;
-import com.example.demo.repository.CursoRepository;
+import com.example.demo.repository.CuotaRepository;
 import com.example.demo.repository.InscripcionRepository;
 import com.example.demo.repository.ModuloRepository;
 import com.example.demo.repository.OfertaAcademicaRepository;
 import com.example.demo.repository.UsuarioRepository;
+import com.example.demo.repository.PagoRepository;
 import com.example.demo.service.MercadoPagoService;
-import com.example.demo.repository.UsuarioRepository;
 
 @Controller
 @RequestMapping("/alumno")
@@ -41,6 +53,9 @@ public class AlumnoController {
     
     @Value("${app.base-url}")
     private String baseUrl;
+
+    private static final Locale LOCALE_ES_AR = Locale.forLanguageTag("es-AR");
+    private static final DateTimeFormatter FORMATO_FECHA_RESUMEN = DateTimeFormatter.ofPattern("dd MMM yyyy", LOCALE_ES_AR);
 
     @GetMapping("/alumno")
     public String alumnoDashboard() {
@@ -63,10 +78,54 @@ public class AlumnoController {
         } catch (Exception e) {
             System.out.println("❌ Error en mi-espacio: " + e.getMessage());
             model.addAttribute("error", "Error al cargar tu espacio");
-            return "redirect:" + baseUrl + "/";
+            return "redirect:/";
         }
     }
     
+    @PostMapping("/mis-pagos/cuotas/{cuotaId}/pagar")
+    public String pagarCuota(@PathVariable Long cuotaId,
+            Principal principal,
+            RedirectAttributes redirectAttributes) {
+        try {
+            String dni = principal.getName();
+
+            Usuario alumno = usuarioRepository.findByDni(dni)
+                    .orElseThrow(() -> new RuntimeException("Alumno no encontrado"));
+
+                Long cuotaIdSeguro = Objects.requireNonNull(cuotaId, "cuotaId no puede ser nulo");
+
+                Cuota cuota = cuotaRepository.findById(cuotaIdSeguro)
+                    .orElseThrow(() -> new RuntimeException("Cuota no encontrada"));
+
+            if (cuota.getInscripcion() == null || cuota.getInscripcion().getAlumno() == null
+                    || !cuota.getInscripcion().getAlumno().getId().equals(alumno.getId())) {
+                redirectAttributes.addFlashAttribute("error", "No tienes acceso a esta cuota");
+                return "redirect:/alumno/mis-pagos";
+            }
+
+            BigDecimal saldoPendiente = calcularSaldoPendiente(cuota);
+            if (saldoPendiente.compareTo(BigDecimal.ZERO) <= 0) {
+                redirectAttributes.addFlashAttribute("success", "Esta cuota ya está al día");
+                return "redirect:/alumno/mis-pagos";
+            }
+
+            ReferenceRequest request = construirReferenciaCuota(cuota, alumno, saldoPendiente);
+
+            ResponseDTO response = mercadoPagoService.createPreferenceForCuota(
+                    request,
+                    alumno,
+                    cuota.getInscripcion().getOferta(),
+                    cuota);
+
+            return "redirect:" + response.redirectUrl();
+
+        } catch (Exception e) {
+            System.err.println("❌ Error al iniciar pago de cuota: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("error", "No pudimos iniciar el pago. Intenta nuevamente.");
+            return "redirect:/alumno/mis-pagos";
+        }
+    }
+
     // Mis Pagos
     @GetMapping("/mis-pagos")
     public String misPagos(Principal principal, Model model) {
@@ -75,41 +134,162 @@ public class AlumnoController {
             
             Usuario alumno = usuarioRepository.findByDni(dni)
                     .orElseThrow(() -> new RuntimeException("Alumno no encontrado"));
+
+            List<Inscripciones> inscripcionesAlumno = inscripcionRepository.findByAlumnoDni(dni);
+            for (Inscripciones inscripcion : inscripcionesAlumno) {
+                if (inscripcion.getIdInscripcion() != null &&
+                        cuotaRepository.findByInscripcionIdInscripcion(inscripcion.getIdInscripcion()).isEmpty()) {
+                    mercadoPagoService.generarCuotasParaInscripcion(inscripcion);
+                }
+            }
             
+            List<Pago> pagosRealizados = pagoRepository.findByUsuarioId(alumno.getId()).stream()
+                .sorted(Comparator.comparing(this::obtenerFechaReferencia,
+                    Comparator.nullsLast(Comparator.naturalOrder())).reversed())
+                .collect(Collectors.toList());
+
+            BigDecimal totalPagado = pagosRealizados.stream()
+                .filter(p -> p.getEstadoPago() == EstadoPago.COMPLETADO)
+                .map(Pago::getMonto)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            LocalDate hoy = LocalDate.now();
+
+            List<Cuota> cuotasActivas = cuotaRepository.findByUsuarioId(alumno.getId()).stream()
+                .filter(c -> c.getEstado() == EstadoCuota.PENDIENTE
+                    || c.getEstado() == EstadoCuota.PARCIALMENTE_PAGADA
+                    || c.getEstado() == EstadoCuota.VENCIDA)
+                .collect(Collectors.toList());
+
+            List<Cuota> cuotasOrdenadas = cuotasActivas.stream()
+                .sorted(Comparator.comparing(Cuota::getFechaVencimiento,
+                    Comparator.nullsLast(LocalDate::compareTo)))
+                .collect(Collectors.toList());
+
+            List<Cuota> cuotasDisponiblesParaPago = cuotasOrdenadas.stream()
+                .filter(c -> c.getFechaVencimiento() == null || !c.getFechaVencimiento().isAfter(hoy))
+                .collect(Collectors.toCollection(java.util.ArrayList::new));
+
+            if (cuotasDisponiblesParaPago.isEmpty()) {
+                cuotasOrdenadas.stream()
+                    .filter(c -> c.getEstado() == EstadoCuota.PENDIENTE
+                        || c.getEstado() == EstadoCuota.PARCIALMENTE_PAGADA)
+                    .filter(c -> c.getNumeroCuota() == null || c.getNumeroCuota() == 1)
+                    .findFirst()
+                    .ifPresent(cuotasDisponiblesParaPago::add);
+            }
+
+            Cuota cuotaPendiente = cuotasDisponiblesParaPago.isEmpty() ? null : cuotasDisponiblesParaPago.get(0);
+            BigDecimal montoCuotaPendiente = cuotaPendiente != null
+                ? calcularSaldoPendiente(cuotaPendiente)
+                : BigDecimal.ZERO;
+
+            BigDecimal totalPendiente = cuotasDisponiblesParaPago.stream()
+                .map(this::calcularSaldoPendiente)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            Optional<Cuota> proximaCuota = cuotasOrdenadas.stream().findFirst();
+            String proximoPagoTexto = proximaCuota.map(c -> String.format("%s - %s",
+                        formatearFecha(c.getFechaVencimiento()),
+                        formatearMoneda(calcularSaldoPendiente(c))))
+                .orElse("Sin cuotas pendientes");
+
             model.addAttribute("alumno", alumno);
-            // Aquí cargarías los pagos del alumno
-            
+            model.addAttribute("pagos", pagosRealizados);
+            model.addAttribute("cuotaPendiente", cuotaPendiente);
+            model.addAttribute("montoCuotaPendienteTexto", formatearMoneda(montoCuotaPendiente));
+            model.addAttribute("totalPagadoTexto", formatearMoneda(totalPagado));
+            model.addAttribute("totalPendienteTexto", formatearMoneda(totalPendiente));
+            model.addAttribute("proximoPagoTexto", proximoPagoTexto);
+
             return "alumno/mis-pagos";
             
         } catch (Exception e) {
             System.out.println("❌ Error en mis-pagos: " + e.getMessage());
             model.addAttribute("error", "Error al cargar tus pagos");
-            return "redirect:" + baseUrl + "/";
+            return "redirect:/";
         }
     }
 
     private final OfertaAcademicaRepository ofertaAcademicaRepository;
     private final InscripcionRepository inscripcionRepository;
     private final UsuarioRepository usuarioRepository;
-    private final AlumnoRepository alumnoRepository;
-    private final CursoRepository cursoRepository;
     private final ModuloRepository moduloRepository;
     private final MercadoPagoService mercadoPagoService;
+    private final PagoRepository pagoRepository;
+    private final CuotaRepository cuotaRepository;
 
     public AlumnoController(OfertaAcademicaRepository ofertaAcademicaRepository,
                           InscripcionRepository inscripcionRepository,
                           UsuarioRepository usuarioRepository,
-                          CursoRepository cursoRepository,
                           ModuloRepository moduloRepository,
-                          AlumnoRepository alumnoRepository,
-                          MercadoPagoService mercadoPagoService) {
+                          MercadoPagoService mercadoPagoService,
+                          PagoRepository pagoRepository,
+                          CuotaRepository cuotaRepository) {
         this.ofertaAcademicaRepository = ofertaAcademicaRepository;
         this.inscripcionRepository = inscripcionRepository;
         this.usuarioRepository = usuarioRepository;
-        this.cursoRepository = cursoRepository;
         this.moduloRepository = moduloRepository;
-        this.alumnoRepository = alumnoRepository;
         this.mercadoPagoService = mercadoPagoService;
+        this.pagoRepository = pagoRepository;
+        this.cuotaRepository = cuotaRepository;
+    }
+
+    private BigDecimal calcularSaldoPendiente(Cuota cuota) {
+        BigDecimal monto = Optional.ofNullable(cuota.getMonto()).orElse(BigDecimal.ZERO);
+        BigDecimal pagado = Optional.ofNullable(cuota.getMontoPagado()).orElse(BigDecimal.ZERO);
+        BigDecimal saldo = monto.subtract(pagado);
+        return saldo.compareTo(BigDecimal.ZERO) > 0 ? saldo : BigDecimal.ZERO;
+    }
+
+    private LocalDateTime obtenerFechaReferencia(Pago pago) {
+        if (pago == null) {
+            return null;
+        }
+        return Optional.ofNullable(pago.getFechaAprobacion())
+                .orElse(pago.getFechaPago());
+    }
+
+    private String formatearMoneda(BigDecimal valor) {
+        BigDecimal monto = valor != null ? valor : BigDecimal.ZERO;
+        NumberFormat formatter = NumberFormat.getCurrencyInstance(LOCALE_ES_AR);
+        return formatter.format(monto);
+    }
+
+    private String formatearFecha(LocalDate fecha) {
+        if (fecha == null) {
+            return "Sin fecha";
+        }
+        return FORMATO_FECHA_RESUMEN.format(fecha);
+    }
+
+    private ReferenceRequest construirReferenciaCuota(Cuota cuota, Usuario alumno, BigDecimal montoPendiente) {
+        ReferenceRequest.PayerDTO payer = new ReferenceRequest.PayerDTO(
+                alumno.getNombre() + " " + alumno.getApellido(),
+                alumno.getCorreo());
+
+        ReferenceRequest.BackUrlsDTO backUrls = new ReferenceRequest.BackUrlsDTO(
+                baseUrl + "/pago/success",
+                baseUrl + "/pago/failure",
+                baseUrl + "/pago/pending");
+
+        String titulo = String.format("Cuota %s - %s",
+                cuota.getNumeroCuota() != null ? cuota.getNumeroCuota() : "",
+                cuota.getInscripcion().getOferta().getNombre()).trim();
+
+        ReferenceRequest.ItemDTO item = new ReferenceRequest.ItemDTO(
+                "CUOTA-" + cuota.getIdCuota(),
+                titulo,
+                montoPendiente,
+                1);
+
+        return new ReferenceRequest(
+                alumno.getId(),
+                montoPendiente,
+                payer,
+                backUrls,
+                List.of(item));
     }
 
     // Inscribirse a una oferta académica - Inscripción directa (sin pago)
@@ -119,14 +299,15 @@ public class AlumnoController {
                                 RedirectAttributes redirectAttributes) {
         try {
             String dni = authentication.getName();
-            System.out.println("📝 Iniciando proceso de inscripción directa para oferta: " + ofertaId);
+            Long ofertaIdSeguro = Objects.requireNonNull(ofertaId, "ofertaId no puede ser nulo");
+            System.out.println("📝 Iniciando proceso de inscripción directa para oferta: " + ofertaIdSeguro);
             
             // Buscar el usuario (alumno)
             Usuario usuario = usuarioRepository.findByDni(dni)
                     .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
             
             // Buscar la oferta
-            OfertaAcademica oferta = ofertaAcademicaRepository.findById(ofertaId)
+            OfertaAcademica oferta = ofertaAcademicaRepository.findById(ofertaIdSeguro)
                     .orElseThrow(() -> new RuntimeException("Oferta no encontrada"));
 
             System.out.println("📚 Oferta encontrada: " + oferta.getNombre() + " (Tipo: " + oferta.getClass().getSimpleName() + ")");
@@ -134,11 +315,11 @@ public class AlumnoController {
             // Verificar si ya está inscrito
             List<Inscripciones> inscripcionesExistentes = inscripcionRepository.findByAlumnoDni(dni);
             boolean yaInscrito = inscripcionesExistentes.stream()
-                    .anyMatch(ins -> ins.getOferta().getIdOferta().equals(ofertaId));
+                    .anyMatch(ins -> ins.getOferta().getIdOferta().equals(ofertaIdSeguro));
             
             if (yaInscrito) {
                 redirectAttributes.addFlashAttribute("error", "Ya estás inscrito en esta oferta");
-                return "redirect:" + baseUrl + "/publico";
+                return "redirect:/publico";
             }
 
             // ✅ CREAR INSCRIPCIÓN DIRECTA usando Usuario
@@ -149,20 +330,21 @@ public class AlumnoController {
             nuevaInscripcion.setFechaInscripcion(LocalDate.now());
             
             inscripcionRepository.save(nuevaInscripcion);
+            mercadoPagoService.generarCuotasParaInscripcion(nuevaInscripcion);
             
             System.out.println("✅ Inscripción creada exitosamente para " + usuario.getNombre());
             
             redirectAttributes.addFlashAttribute("success", 
                 "¡Te has inscrito exitosamente a " + oferta.getNombre() + "!");
             
-            return "redirect:" + baseUrl + "/alumno/mis-ofertas";
+            return "redirect:/alumno/mis-ofertas";
             
         } catch (Exception e) {
             System.err.println("❌ Error al crear inscripción: " + e.getMessage());
             e.printStackTrace();
             redirectAttributes.addFlashAttribute("error", 
                 "Error al procesar la inscripción: " + e.getMessage());
-            return "redirect:" + baseUrl + "/publico";
+            return "redirect:/publico";
         }
     }
 
@@ -212,10 +394,11 @@ public class AlumnoController {
                               Model model) {
         try {
             String dni = authentication.getName();
-            System.out.println("🔍 Accediendo al aula para oferta ID: " + ofertaId + ", usuario: " + dni);
+            Long ofertaIdSeguro = Objects.requireNonNull(ofertaId, "ofertaId no puede ser nulo");
+            System.out.println("🔍 Accediendo al aula para oferta ID: " + ofertaIdSeguro + ", usuario: " + dni);
             
             // Buscar la inscripción del alumno en esta oferta
-            Inscripciones inscripcion = inscripcionRepository.findByAlumnoDniAndOfertaId(dni, ofertaId)
+            Inscripciones inscripcion = inscripcionRepository.findByAlumnoDniAndOfertaId(dni, ofertaIdSeguro)
                     .orElseThrow(() -> new RuntimeException("Inscripción no encontrada"));
 
             System.out.println("✅ Inscripción encontrada ID: " + inscripcion.getIdInscripcion());

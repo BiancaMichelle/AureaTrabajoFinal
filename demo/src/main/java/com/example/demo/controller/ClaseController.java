@@ -79,12 +79,12 @@ public class ClaseController {
 
             System.out.println("✅ Clase Jitsi creada exitosamente");
 
-            return "redirect:" + baseUrl + "/docente/aula/" + curso.getIdOferta();
+            return "redirect:/docente/aula/" + curso.getIdOferta();
 
         } catch (Exception e) {
             System.out.println("❌ Error al crear clase Jitsi: " + e.getMessage());
             e.printStackTrace();
-            return "redirect:" + baseUrl + "/docente/mis-ofertas?error=" + e.getMessage();
+            return "redirect:/docente/mis-ofertas?error=" + e.getMessage();
         }
     }
 

@@ -40,7 +40,7 @@ public class PagoResultadoController {
             mercadoPagoService.procesarNotificacionPago(payment_id);
         }
 
-        return "redirect:" + baseUrl + "/alumno/mis-ofertas";
+        return "redirect:/alumno/mis-ofertas";
     }
 
     @GetMapping("/pago/failure")
@@ -49,7 +49,7 @@ public class PagoResultadoController {
             @RequestParam(required = false) String external_reference,
             Model model) {
         log.info("❌ Pago fallido recibido - Status: {}, Ref: {}", collection_status, external_reference);
-        return "redirect:" + baseUrl + "/pago-resultado?status=failure&external_reference=" + external_reference;
+        return "redirect:/pago-resultado?status=failure&external_reference=" + external_reference;
     }
 
     @GetMapping("/pago/pending")
@@ -58,7 +58,7 @@ public class PagoResultadoController {
             @RequestParam(required = false) String external_reference,
             Model model) {
         log.info("⏳ Pago pendiente recibido - Status: {}, Ref: {}", collection_status, external_reference);
-        return "redirect:" + baseUrl + "/pago-resultado?status=pending&external_reference=" + external_reference;
+        return "redirect:/pago-resultado?status=pending&external_reference=" + external_reference;
     }
 
     @GetMapping("/pago-resultado")
@@ -81,19 +81,39 @@ public class PagoResultadoController {
                 pago = pagoRepository.findByPaymentId(payment_id).orElse(null);
             }
 
-            // Determinar el tipo de mensaje según el status
-            String tipo = "warning";
-            String mensaje = "Tu pago está siendo procesado";
+            // Determinar estado a mostrar tomando en cuenta el registro local
+            String estadoParaMostrar = status;
+            if ((estadoParaMostrar == null || estadoParaMostrar.isBlank()) && pago != null
+                    && pago.getEstadoPago() != null) {
+                estadoParaMostrar = pago.getEstadoPago().name().toLowerCase();
+            }
 
-            if ("success".equals(status) || "approved".equals(status)) {
-                tipo = "success";
-                mensaje = "¡Pago realizado con éxito!";
-            } else if ("failure".equals(status) || "rejected".equals(status)) {
-                tipo = "error";
-                mensaje = "El pago no pudo ser procesado";
-            } else if ("pending".equals(status)) {
-                tipo = "warning";
-                mensaje = "Tu pago está pendiente de aprobación";
+            String tipo;
+            String mensaje;
+            switch (estadoParaMostrar != null ? estadoParaMostrar : "") {
+                case "success":
+                case "approved":
+                case "completado":
+                    tipo = "success";
+                    mensaje = "¡Pago realizado con éxito!";
+                    break;
+                case "failure":
+                case "rejected":
+                case "cancelado":
+                case "fallido":
+                    tipo = "error";
+                    mensaje = "El pago no pudo ser procesado";
+                    break;
+                case "pending":
+                case "pendiente":
+                case "en_proceso":
+                    tipo = "warning";
+                    mensaje = "Tu pago está pendiente de aprobación";
+                    break;
+                default:
+                    tipo = "info";
+                    mensaje = "Tu pago está siendo procesado";
+                    break;
             }
 
             model.addAttribute("tipo", tipo);
@@ -112,7 +132,8 @@ public class PagoResultadoController {
                 }
 
                 log.info("✅ Pago encontrado - Estado: {}, Oferta: {}",
-                        pago.getEstadoPago(), pago.getOferta().getNombre());
+                    pago.getEstadoPago(),
+                    pago.getOferta() != null ? pago.getOferta().getNombre() : "-");
             } else {
                 log.warn("⚠️ No se encontró el pago en la base de datos");
             }

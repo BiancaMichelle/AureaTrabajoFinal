@@ -1,5 +1,6 @@
 package com.example.demo.controller;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,6 +12,9 @@ import com.example.demo.service.RecuperarContraseñaService;
 @Controller
 public class LoginController {
     
+    @Value("${app.base-url}")
+    private String baseUrl;
+
     private final RecuperarContraseñaService passwordRecoveryService;
     
     // Inyectar el servicio en el constructor

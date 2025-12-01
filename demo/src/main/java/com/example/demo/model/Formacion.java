@@ -7,6 +7,8 @@ import java.util.UUID;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.ManyToMany;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -18,14 +20,19 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class Formacion extends OfertaAcademica {
+    @NotBlank(message = "El plan de formación no puede estar vacío")
     private String plan;
     
     @ManyToMany(mappedBy = "formaciones")
     private List<Docente> docentes = new ArrayList<>();
     
+    @NotNull(message = "El costo por cuota no puede estar vacío")
     private Double costoCuota;
+    @NotNull(message = "El costo de mora no puede estar vacío")
     private Double costoMora;
+    @NotNull(message = "El número de cuotas no puede estar vacío")
     private Integer nrCuotas;
+    @NotNull(message = "El día de vencimiento no puede estar vacío")
     private Integer diaVencimiento; // Día del mes límite para pago sin mora
 
     /**

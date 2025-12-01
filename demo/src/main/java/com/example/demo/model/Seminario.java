@@ -3,7 +3,9 @@ package com.example.demo.model;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-
+import jakarta.annotation.Nonnull;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import lombok.AllArgsConstructor;
@@ -17,13 +19,17 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class Seminario extends OfertaAcademica {
+    @NotBlank(message = "El lugar no puede estar vacío si es presencial")
     private String lugar;
+    @NotBlank(message = "El enlace no puede estar vacío si es virtual")
     private String enlace;
+    @NotBlank(message = "El público objetivo no puede estar vacío")
     private String publicoObjetivo;
-
+    @Min(10)
     private Integer duracionMinutos; // en minutos
 
     @ElementCollection
+    @NotBlank(message = "Debe haber al menos un disertante")
     private List<String> disertantes;
 
     /**

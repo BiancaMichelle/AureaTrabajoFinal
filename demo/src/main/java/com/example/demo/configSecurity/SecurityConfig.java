@@ -60,7 +60,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .userDetailsService(usuarioJpaService)
                 .sessionManagement(session -> session
-                        .invalidSessionUrl(baseUrl + "/login?timeout"))
+                        .invalidSessionUrl("/login?timeout"))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/", "/publico", "/login", "/register", "/register/**",
                                 "/provincias/**", "/ciudades/**", "/api/ubicaciones/**",
@@ -80,7 +80,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated())
                 .formLogin(form -> form
                         .loginPage("/login")
-                        .failureUrl(baseUrl + "/login?error=true")
+                        .failureUrl("/login?error=true")
                         .successHandler((request, response, authentication) -> {
                             var roles = authentication.getAuthorities()
                                     .stream()
@@ -89,14 +89,14 @@ public class SecurityConfig {
 
                             // Admin va a su dashboard, los demás van a inicio
                             if (roles.contains("ADMIN")) {
-                                response.sendRedirect(baseUrl + "/admin/dashboard");
+                                response.sendRedirect("/admin/dashboard");
                             } else {
-                                response.sendRedirect(baseUrl + "/");
+                                response.sendRedirect("/");
                             }
                         })
                         .permitAll())
                 .logout(logout -> logout
-                        .logoutSuccessUrl(baseUrl + "/login?logout=true")
+                        .logoutSuccessUrl("/login?logout=true")
                         .permitAll());
         return http.build();
     }

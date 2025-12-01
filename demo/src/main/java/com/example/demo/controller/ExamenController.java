@@ -52,7 +52,7 @@ public class ExamenController {
 
         } catch (Exception e) {
             e.printStackTrace();
-            return "redirect:" + baseUrl + "/";
+            return "redirect:/";
         }
     }
 

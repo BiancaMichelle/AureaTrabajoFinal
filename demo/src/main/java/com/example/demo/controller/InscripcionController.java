@@ -214,13 +214,13 @@ public class InscripcionController {
                         e.printStackTrace();
                         redirectAttributes.addFlashAttribute("error",
                                         "Error al procesar el pago. Por favor, intenta nuevamente.");
-                        return "redirect:" + baseUrl + "/publico";
+                        return "redirect:/publico";
                 } catch (Exception e) {
                         System.err.println("❌ Error al crear inscripción: " + e.getMessage());
                         e.printStackTrace();
                         redirectAttributes.addFlashAttribute("error",
                                         "Hubo un error al procesar tu inscripción. Por favor, intenta nuevamente.");
-                        return "redirect:" + baseUrl + "/publico";
+                        return "redirect:/publico";
                 }
         }
 
@@ -229,9 +229,9 @@ public class InscripcionController {
          */
         private String redirectSegunRol(String rol) {
                 if ("DOCENTE".equals(rol)) {
-                        return "redirect:" + baseUrl + "/docente/mis-ofertas";
+                        return "redirect:/docente/mis-ofertas";
                 } else {
-                        return "redirect:" + baseUrl + "/alumno/mis-ofertas";
+                        return "redirect:/alumno/mis-ofertas";
                 }
         }
 }

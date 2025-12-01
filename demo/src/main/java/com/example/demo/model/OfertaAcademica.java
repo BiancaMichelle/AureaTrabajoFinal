@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import javax.validation.constraints.NotNull;
+
 import com.example.demo.enums.EstadoOferta;
 import com.example.demo.enums.Modalidad;
 
@@ -24,6 +26,10 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -35,14 +41,20 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 @Inheritance(strategy = InheritanceType.JOINED)
+@Table(name = "oferta_academica", uniqueConstraints = {@UniqueConstraint(name = "uk_oferta_nombre_instituto", columnNames = {"nombre", "instituto_id"})})
+
 public class OfertaAcademica {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long idOferta;
+    @NotBlank(message = "El nombre no puede estar vacío")
     private String nombre;
+    @NotBlank(message = "La descripción no puede estar vacía")
     private String descripcion;
     private String duracion;
+    @Min(1)
     private Integer duracionMeses; // Duración calculada en meses
+    @NotNull(message = "El costo de inscripción no puede estar vacío")
     private Double costoInscripcion;
     
 
@@ -52,14 +64,16 @@ public class OfertaAcademica {
     
     @Enumerated(EnumType.STRING)
     private Modalidad modalidad;
-    
+    @NotNull(message = "La fecha de inicio no puede estar vacía")
     private LocalDate fechaInicio;
+    @NotNull(message = "La fecha de fin no puede estar vacía")
     private LocalDate fechaFin;
+    @NotNull(message = "El campo certificado no puede estar vacío")
     private Boolean certificado;
     
     @Enumerated(EnumType.STRING)
     private EstadoOferta estado;
-    
+    @Min(5)
     private Integer cupos;
     private Boolean visibilidad;
     
@@ -332,6 +346,9 @@ public class OfertaAcademica {
                     contarInscripcionesActivas() > 0) {
                     return false;
                 }
+                break;
+            case ENCURSO:
+                // Estado intermedio sin validación adicional específica
                 break;
         }
 

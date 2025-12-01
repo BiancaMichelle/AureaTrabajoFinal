@@ -107,6 +107,7 @@
             </div>
             
             <form th:action="@{/admin/ofertas/registrar}" method="post" id="oferta-form" enctype="multipart/form-data" th:object="${ofertaEditar}">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                 <div class="form-content">
                     <!-- Columna Izquierda: Campos principales -->
                     <div class="form-left-column">
@@ -610,6 +611,13 @@
                                         th:data-nombre="${oferta.nombre}"
                                         onclick="modificarOferta(this.getAttribute('data-id'), this.getAttribute('data-nombre'))">
                                     <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn-accion btn-eliminar"
+                                        title="Eliminar"
+                                        th:data-id="${oferta.idOferta}"
+                                        th:data-nombre="${oferta.nombre}"
+                                        onclick="eliminarOferta(this.getAttribute('data-id'), this.getAttribute('data-nombre'))">
+                                    <i class="fas fa-trash"></i>
                                 </button>
                             </td>
                         </tr>
@@ -1273,34 +1281,6 @@
             
             // Cargar categorías al iniciar
             cargarCategoriasSelect();
-            
-            // Event listener para envío del formulario
-            const formulario = document.getElementById('oferta-form');
-            if (formulario) {
-                formulario.addEventListener('submit', function(e) {
-                    e.preventDefault(); // Prevenir envío tradicional
-                    console.log('📤 Formulario enviado');
-                    
-                    const tipoOferta = document.getElementById('tipoOferta').value;
-                    
-                    // Actualizar todos los campos hidden antes de enviar
-                    actualizarHorariosHidden();
-                    actualizarDocentesHidden('curso');
-                    actualizarDocentesHidden('formacion');
-                    actualizarDisertantesHidden('charla');
-                    actualizarDisertantesHidden('seminario');
-                    actualizarCategoriaHidden();
-                    actualizarCertificadoHidden();
-                    
-                    // Validar según tipo de oferta
-                    if (!validarFormulario(tipoOferta)) {
-                        return false;
-                    }
-                    
-                    // Enviar con AJAX
-                    enviarFormularioAjax();
-                });
-            }
             
             // Event listener para cerrar notificación
             const notificationClose = document.getElementById('notification-close');
@@ -2476,9 +2456,15 @@
             ofertas.forEach((oferta, index) => {
                 console.log(`📋 Procesando oferta ${index + 1}:`, oferta.nombre);
                 const fila = document.createElement('tr');
+
+                const rawId = oferta.id ?? oferta.idOferta ?? oferta.id_oferta;
+                const idLiteral = rawId != null ? JSON.stringify(rawId) : 'null';
+                const dataId = rawId != null ? rawId : '';
+                const nombreLiteral = JSON.stringify(oferta.nombre || '');
+
                 fila.innerHTML = `
                     <td>${oferta.nombre || '-'}</td>
-                    <td>${oferta.tipoOferta || '-'}</td>
+                    <td>${oferta.tipoOferta || oferta.tipo || '-'}</td>
                     <td>${oferta.modalidad || '-'}</td>
                     <td class="cupos-cell">
                         ${oferta.cupos ? 
@@ -2490,11 +2476,14 @@
                     <td>${oferta.fechaFin ? formatearFecha(oferta.fechaFin) : '-'}</td>
                     <td><span class="estado-badge">${oferta.estado || 'ACTIVA'}</span></td>
                     <td class="acciones-cell">
-                        <button class="btn-accion btn-ver" title="Ver información" data-id="${oferta.idOferta}" onclick="verDetalleOferta(${oferta.idOferta})">
+                        <button class="btn-accion btn-ver" title="Ver información" data-id="${dataId}" onclick="verDetalleOferta(${idLiteral})">
                             <i class="fas fa-eye"></i>
                         </button>
-                        <button class="btn-accion btn-modificar" title="Modificar" data-id="${oferta.idOferta}" onclick="modificarOferta(${oferta.idOferta})">
+                        <button class="btn-accion btn-modificar" title="Modificar" data-id="${dataId}" onclick='modificarOferta(${idLiteral}, ${nombreLiteral})'>
                             <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-accion btn-eliminar" title="Eliminar" data-id="${dataId}" onclick='eliminarOferta(${idLiteral}, ${nombreLiteral})'>
+                            <i class="fas fa-trash"></i>
                         </button>
                     </td>
                 `;
@@ -2948,18 +2937,11 @@
             
             // Obtener elementos del DOM
             const btnCambiarEstado = document.getElementById('btn-cambiar-estado');
-            const iconEstado = document.getElementById('icon-estado');
-            const textEstado = document.getElementById('text-estado');
             
-            // Verificar que los elementos existen
-            if (!btnCambiarEstado || !iconEstado || !textEstado) {
-                console.error('❌ No se encontraron los elementos del botón');
-                console.log('Elementos encontrados:', {
-                    btnCambiarEstado: !!btnCambiarEstado,
-                    iconEstado: !!iconEstado,
-                    textEstado: !!textEstado
-                });
-                mostrarNotificacion('Error: Elementos del botón no encontrados', 'error');
+            // Verificar que el botón existe
+            if (!btnCambiarEstado) {
+                console.error('❌ Botón cambiar estado no encontrado');
+                mostrarNotificacion('Error: Botón de estado no encontrado', 'error');
                 return;
             }
             
@@ -2967,6 +2949,10 @@
             const textoOriginal = btnCambiarEstado.innerHTML;
             btnCambiarEstado.disabled = true;
             btnCambiarEstado.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+            
+            const restaurarContenidoBoton = () => {
+                btnCambiarEstado.innerHTML = textoOriginal;
+            };
             
             // Realizar petición al servidor
             fetch(`/admin/ofertas/cambiar-estado/${ofertaActualId}`, {
@@ -2993,15 +2979,32 @@
                 if (data.success) {
                     console.log('🎉 Estado cambiado exitosamente a:', data.nuevoEstado);
                     
+                    restaurarContenidoBoton();
+                    
+                    const iconEstadoActual = document.getElementById('icon-estado');
+                    const textEstadoActual = document.getElementById('text-estado');
+                    
+                    if (!iconEstadoActual || !textEstadoActual) {
+                        console.warn('⚠️ No se pudieron recuperar los elementos del botón tras restaurar su contenido');
+                    }
+                    
                     // Actualizar interfaz del botón según el nuevo estado
                     if (data.nuevoEstado === 'ACTIVA') {
                         btnCambiarEstado.className = 'btn-danger';  // Rojo para dar de baja
-                        iconEstado.className = 'fas fa-times-circle';
-                        textEstado.textContent = 'Dar de Baja';
+                        if (iconEstadoActual) {
+                            iconEstadoActual.className = 'fas fa-times-circle';
+                        }
+                        if (textEstadoActual) {
+                            textEstadoActual.textContent = 'Dar de Baja';
+                        }
                     } else {
                         btnCambiarEstado.className = 'btn-success';  // Verde para dar de alta
-                        iconEstado.className = 'fas fa-check-circle';
-                        textEstado.textContent = 'Dar de Alta';
+                        if (iconEstadoActual) {
+                            iconEstadoActual.className = 'fas fa-check-circle';
+                        }
+                        if (textEstadoActual) {
+                            textEstadoActual.textContent = 'Dar de Alta';
+                        }
                     }
                     
                     // Actualizar badge de estado en el modal
@@ -3057,7 +3060,7 @@
                     alert(mensajeDetallado);
                     
                     // Restaurar botón original
-                    btnCambiarEstado.innerHTML = textoOriginal;
+                    restaurarContenidoBoton();
                 }
             })
             .catch(error => {
@@ -3067,7 +3070,7 @@
                 alert('Error de conexión al cambiar el estado de la oferta\n\nIntenta nuevamente en unos segundos.');
                 
                 // Restaurar botón original
-                btnCambiarEstado.innerHTML = textoOriginal;
+                restaurarContenidoBoton();
             })
             .finally(() => {
                 // Siempre rehabilitar el botón
@@ -3234,6 +3237,166 @@
         // Variable global para rastrear si está en modo edición
         let modoEdicion = false;
         let idOfertaModificar = null;
+
+        // Variables para manejar eliminaciones
+        let ofertaEliminarId = null;
+        let ofertaEliminarNombre = '';
+
+        function obtenerCsrfToken() {
+            const metaToken = document.querySelector('meta[name="_csrf"]');
+            if (metaToken) {
+                return metaToken.getAttribute('content');
+            }
+            const inputToken = document.querySelector('input[name="_csrf"]');
+            return inputToken ? inputToken.value : null;
+        }
+
+        function obtenerCsrfHeaderName() {
+            const metaHeader = document.querySelector('meta[name="_csrf_header"]');
+            if (metaHeader) {
+                return metaHeader.getAttribute('content');
+            }
+            return 'X-CSRF-TOKEN';
+        }
+
+        function mostrarModalConfirmacion() {
+            const modal = document.getElementById('confirmDeleteModal');
+            if (modal) {
+                modal.style.display = 'flex';
+            }
+        }
+
+        window.cerrarModalConfirmacion = function() {
+            const modal = document.getElementById('confirmDeleteModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+            ofertaEliminarId = null;
+            ofertaEliminarNombre = '';
+        };
+
+        window.cerrarModalVerOferta = function() {
+            const modal = document.getElementById('modal-ver-oferta');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        };
+
+        window.eliminarOferta = function(id, nombre) {
+            if (!id) {
+                console.error('❌ ID inválido para eliminar oferta');
+                mostrarNotificacion('No se pudo identificar la oferta a eliminar.', 'error');
+                return;
+            }
+
+            ofertaEliminarId = id;
+            ofertaEliminarNombre = nombre || '';
+
+            const nombreLabel = document.getElementById('nombre-oferta-eliminar');
+            if (nombreLabel) {
+                nombreLabel.textContent = ofertaEliminarNombre || 'esta oferta';
+            }
+
+            mostrarModalConfirmacion();
+        };
+
+        window.eliminarOfertaDesdeModal = function() {
+            if (!ofertaActualId) {
+                console.error('❌ No hay oferta seleccionada en el modal de detalle');
+                mostrarNotificacion('No se encontró la oferta seleccionada para eliminar.', 'error');
+                return;
+            }
+
+            const nombreDetalle = document.getElementById('detalle-nombre');
+            const nombre = nombreDetalle ? nombreDetalle.textContent : ofertaEliminarNombre;
+            eliminarOferta(ofertaActualId, nombre);
+        };
+
+        window.ejecutarEliminacion = function() {
+            if (!ofertaEliminarId) {
+                console.error('❌ No hay oferta pendiente de eliminación');
+                mostrarNotificacion('No se pudo procesar la eliminación.', 'error');
+                return;
+            }
+
+            const idAEliminar = ofertaEliminarId;
+            const token = obtenerCsrfToken();
+            const headerName = obtenerCsrfHeaderName();
+
+            const headers = {
+                'X-Requested-With': 'XMLHttpRequest'
+            };
+
+            if (token) {
+                headers[headerName] = token;
+            }
+
+            const btnConfirmar = document.getElementById('btn-confirmar-eliminar');
+            const textoOriginal = btnConfirmar ? btnConfirmar.innerHTML : '';
+
+            if (btnConfirmar) {
+                btnConfirmar.disabled = true;
+                btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Eliminando...';
+            }
+
+            fetch(`/admin/ofertas/eliminar/${idAEliminar}`, {
+                method: 'POST',
+                headers,
+                credentials: 'same-origin'
+            })
+            .then(response => response.text().then(texto => ({
+                ok: response.ok,
+                status: response.status,
+                body: texto
+            })))
+            .then(({ ok, status, body }) => {
+                let data = {};
+                if (body) {
+                    try {
+                        data = JSON.parse(body);
+                    } catch (err) {
+                        console.warn('⚠️ No se pudo parsear la respuesta JSON:', err);
+                    }
+                }
+
+                if (!ok) {
+                    const mensaje = data.message || `Error al eliminar la oferta (código ${status})`;
+                    mostrarNotificacion(`❌ ${mensaje}`, 'error');
+                    throw new Error(mensaje);
+                }
+
+                mostrarNotificacion(data.message || 'Oferta eliminada correctamente', 'success');
+
+                cerrarModalConfirmacion();
+                cerrarModalDetalle();
+                cerrarModalVerOferta();
+
+                if (modoEdicion && idOfertaModificar && String(idOfertaModificar) === String(idAEliminar)) {
+                    limpiarFormularioCompleto();
+                    resetearModoEdicion();
+                    cerrarFormulario();
+                }
+
+                if (ofertaActualId && String(ofertaActualId) === String(idAEliminar)) {
+                    ofertaActualId = null;
+                }
+
+                ofertaEliminarId = null;
+                ofertaEliminarNombre = '';
+
+                actualizarTablaOfertas();
+            })
+            .catch(error => {
+                console.error('❌ Error durante la eliminación:', error);
+                mostrarNotificacion('❌ Error al eliminar la oferta. Inténtalo nuevamente.', 'error');
+            })
+            .finally(() => {
+                if (btnConfirmar) {
+                    btnConfirmar.disabled = false;
+                    btnConfirmar.innerHTML = textoOriginal;
+                }
+            });
+        };
         
         /**
          * Función para modificar una oferta académica
@@ -3412,6 +3575,21 @@
             formularioOriginal.addEventListener('submit', function(e) {
                 e.preventDefault();
                 
+                // Sincronizar campos calculados antes de validar/enviar
+                const tipoOferta = document.getElementById('tipoOferta') ? document.getElementById('tipoOferta').value : '';
+                actualizarHorariosHidden();
+                actualizarDocentesHidden('curso');
+                actualizarDocentesHidden('formacion');
+                actualizarDisertantesHidden('charla');
+                actualizarDisertantesHidden('seminario');
+                actualizarCategoriaHidden();
+                actualizarCertificadoHidden();
+
+                if (!validarFormulario(tipoOferta)) {
+                    console.warn('❌ Validación fallida, formulario no enviado');
+                    return;
+                }
+
                 if (modoEdicion) {
                     console.log('📤 Enviando actualización de oferta');
                     enviarActualizacionOferta();

@@ -21,6 +21,8 @@ public interface CuotaRepository extends JpaRepository<Cuota, Long> {
     
     @Query("SELECT c FROM Cuota c JOIN c.inscripcion i JOIN i.alumno a WHERE a.id = :usuarioId")
     List<Cuota> findByUsuarioId(@Param("usuarioId") java.util.UUID usuarioId);
+
+    List<Cuota> findByPagoIdPago(Long pagoId);
     
     @Query("SELECT c FROM Cuota c WHERE c.fechaVencimiento BETWEEN :fechaInicio AND :fechaFin")
     List<Cuota> findCuotasEnRangoFecha(@Param("fechaInicio") LocalDate fechaInicio, 

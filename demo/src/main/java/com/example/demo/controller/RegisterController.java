@@ -167,7 +167,7 @@ public class RegisterController {
             registroService.registrarUsuario(alumno, paisCodigo, provinciaCodigo, ciudadId);
 
             System.out.println("🎉 Registro exitoso, redirigiendo a login...");
-            return "redirect:" + baseUrl + "/login?success";
+            return "redirect:/login?success";
 
         } catch (Exception e) {
             System.out.println("❌ Error al registrar: " + e.getMessage());

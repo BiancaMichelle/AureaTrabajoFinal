@@ -1,8 +1,13 @@
 package com.example.demo.service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -10,13 +15,18 @@ import org.springframework.stereotype.Service;
 import com.example.demo.DTOMP.ReferenceRequest;
 import com.example.demo.DTOMP.ResponseDTO;
 import com.example.demo.client.MPClient;
+import com.example.demo.enums.EstadoCuota;
 import com.example.demo.enums.EstadoPago;
+import com.example.demo.model.Curso;
+import com.example.demo.model.Cuota;
+import com.example.demo.model.Formacion;
 import com.example.demo.model.Inscripciones;
 import com.example.demo.model.OfertaAcademica;
 import com.example.demo.model.Pago;
 import com.example.demo.model.Usuario;
 import com.example.demo.repository.InscripcionRepository;
 import com.example.demo.repository.PagoRepository;
+import com.example.demo.repository.CuotaRepository;
 import com.mercadopago.client.payment.PaymentClient;
 import com.mercadopago.exceptions.MPApiException;
 import com.mercadopago.exceptions.MPException;
@@ -32,13 +42,16 @@ public class MercadoPagoService {
     private final PagoRepository pagoRepository;
     private final InscripcionRepository inscripcionRepository;
     private final EmailService emailService;
+    private final CuotaRepository cuotaRepository;
 
-    public MercadoPagoService(MPClient mpClient, PagoRepository pagoRepository,
-            InscripcionRepository inscripcionRepository, EmailService emailService) {
+        public MercadoPagoService(MPClient mpClient, PagoRepository pagoRepository,
+            InscripcionRepository inscripcionRepository, EmailService emailService,
+            CuotaRepository cuotaRepository) {
         this.mpClient = mpClient;
         this.pagoRepository = pagoRepository;
         this.inscripcionRepository = inscripcionRepository;
         this.emailService = emailService;
+        this.cuotaRepository = cuotaRepository;
     }
 
     public ResponseDTO createPreference(ReferenceRequest inputData, Usuario usuario, OfertaAcademica oferta)
@@ -77,6 +90,54 @@ public class MercadoPagoService {
         } catch (MPApiException e) {
             log.error("Error en crear el pago", e);
             throw new RuntimeException("Error en la API de MercadoPago: " + e.getMessage());
+        }
+    }
+
+    public ResponseDTO createPreferenceForCuota(ReferenceRequest inputData, Usuario usuario, OfertaAcademica oferta,
+            Cuota cuota) {
+        log.info("💵 Creando preferencia de cuota {} para inscripción {}", cuota.getNumeroCuota(),
+                cuota.getInscripcion().getIdInscripcion());
+
+        String orderNumber = generarNumeroOrden(usuario, oferta) + "-CUOTA-"
+                + (cuota.getNumeroCuota() != null ? cuota.getNumeroCuota() : "1");
+
+        try {
+            ResponseDTO response = mpClient.createPreference(inputData, orderNumber);
+
+            Pago pago = new Pago();
+            pago.setUsuario(usuario);
+            pago.setOferta(oferta);
+            pago.setMonto(inputData.totalAmount());
+            pago.setEstadoPago(EstadoPago.PENDIENTE);
+            pago.setMetodoPago("MERCADOPAGO");
+            pago.setDescripcion(String.format("Cuota %s - %s",
+                    cuota.getNumeroCuota() != null ? cuota.getNumeroCuota() : "",
+                    oferta.getNombre()));
+            pago.setPreferenceId(response.preferenceId());
+            pago.setExternalReference(orderNumber);
+            pago.setNombrePagador(inputData.payer().name());
+            pago.setEmailPagador(inputData.payer().email());
+            pago.setFechaPago(LocalDateTime.now());
+            pago.setEsCuotaMensual(true);
+            pago.setNumeroCuota(cuota.getNumeroCuota());
+
+            pagoRepository.save(pago);
+
+            cuota.setPago(pago);
+            cuotaRepository.save(cuota);
+
+            log.info("✅ Pago pendiente para cuota guardado con ID {}", pago.getIdPago());
+
+            return response;
+        } catch (MPException e) {
+            log.error("Error en crear la preferencia de pago para cuota", e);
+            throw new RuntimeException("Error al crear preferencia de cuota: " + e.getMessage());
+        } catch (MPApiException e) {
+            log.error("Error en crear el pago de cuota", e);
+            throw new RuntimeException("Error en la API de MercadoPago al crear cuota: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("Error inesperado al crear preferencia de cuota", e);
+            throw new RuntimeException("Error al crear preferencia de cuota: " + e.getMessage(), e);
         }
     }
 
@@ -155,7 +216,6 @@ public class MercadoPagoService {
                     pagoRepository.save(pagoLocal);
                     log.info("❌ Pago rechazado/cancelado: {}", paymentId);
                     break;
-
                 case "in_process":
                 case "pending":
                     pagoLocal.setEstadoPago(EstadoPago.PENDIENTE);
@@ -179,7 +239,6 @@ public class MercadoPagoService {
         try {
             log.info("✅ Procesando pago aprobado - ID: {}", payment.getId());
 
-            // Actualizar estado del pago
             pago.setEstadoPago(EstadoPago.COMPLETADO);
             pago.setFechaAprobacion(LocalDateTime.now());
             pago.setNumeroTransaccion(payment.getId().toString());
@@ -187,13 +246,18 @@ public class MercadoPagoService {
 
             log.info("💾 Pago actualizado a COMPLETADO");
 
-            // Verificar si ya existe una inscripción para este pago
-            if (pago.getInscripcion() != null) {
-                log.info("ℹ️ Ya existe una inscripción para este pago");
+            if (Boolean.TRUE.equals(pago.getEsCuotaMensual())) {
+                actualizarCuotasDePago(pago);
+                enviarComprobantePago(pago);
                 return;
             }
 
-            // Crear la inscripción ahora que el pago fue exitoso
+            if (pago.getInscripcion() != null) {
+                log.info("ℹ️ Ya existe una inscripción para este pago");
+                generarCuotasParaInscripcion(pago.getInscripcion());
+                return;
+            }
+
             Inscripciones nuevaInscripcion = new Inscripciones();
             nuevaInscripcion.setAlumno(pago.getUsuario());
             nuevaInscripcion.setOferta(pago.getOferta());
@@ -204,21 +268,166 @@ public class MercadoPagoService {
 
             inscripcionRepository.save(nuevaInscripcion);
 
-            // Actualizar la relación en el pago
             pago.setInscripcion(nuevaInscripcion);
             pagoRepository.save(pago);
+
+                generarCuotasParaInscripcion(nuevaInscripcion);
 
             log.info("✅ Inscripción creada exitosamente - ID: {}", nuevaInscripcion.getIdInscripcion());
             log.info("🎓 Usuario {} inscrito en {}",
                     pago.getUsuario().getNombre(),
                     pago.getOferta().getNombre());
 
-            // Enviar comprobante por email
             enviarComprobantePago(pago);
 
         } catch (Exception e) {
             log.error("❌ Error al crear inscripción para pago aprobado", e);
         }
+    }
+
+    private void actualizarCuotasDePago(Pago pago) {
+        try {
+            List<Cuota> cuotasVinculadas = new ArrayList<>(cuotaRepository.findByPagoIdPago(pago.getIdPago()));
+
+            if (cuotasVinculadas.isEmpty() && pago.getInscripcion() != null) {
+                List<Cuota> cuotasInscripcion = cuotaRepository
+                        .findByInscripcionIdInscripcion(pago.getInscripcion().getIdInscripcion());
+                for (Cuota cuota : cuotasInscripcion) {
+                    if (pago.getNumeroCuota() != null && pago.getNumeroCuota().equals(cuota.getNumeroCuota())) {
+                        cuotasVinculadas.add(cuota);
+                    }
+                }
+            }
+
+            if (cuotasVinculadas.isEmpty()) {
+                log.warn("⚠️ No se encontraron cuotas vinculadas al pago {}", pago.getIdPago());
+                return;
+            }
+
+            for (Cuota cuota : cuotasVinculadas) {
+                BigDecimal montoCuota = Optional.ofNullable(cuota.getMonto()).orElse(BigDecimal.ZERO);
+                BigDecimal montoPagadoPrevio = Optional.ofNullable(cuota.getMontoPagado()).orElse(BigDecimal.ZERO);
+                BigDecimal montoDelPago = Optional.ofNullable(pago.getMonto()).orElse(BigDecimal.ZERO);
+
+                BigDecimal nuevoTotalPagado = montoPagadoPrevio.add(montoDelPago);
+                cuota.setMontoPagado(nuevoTotalPagado);
+                cuota.setFechaPago(LocalDate.now());
+                cuota.setPago(pago);
+
+                if (nuevoTotalPagado.compareTo(montoCuota) >= 0) {
+                    cuota.setEstado(EstadoCuota.PAGADA);
+                } else {
+                    cuota.setEstado(EstadoCuota.PARCIALMENTE_PAGADA);
+                }
+
+                cuotaRepository.save(cuota);
+                log.info("💰 Cuota {} actualizada al estado {}", cuota.getIdCuota(), cuota.getEstado());
+            }
+
+        } catch (Exception e) {
+            log.error("❌ Error al actualizar cuotas para el pago {}", pago.getIdPago(), e);
+        }
+    }
+
+    public void generarCuotasParaInscripcion(Inscripciones inscripcion) {
+        try {
+            if (inscripcion == null || inscripcion.getIdInscripcion() == null) {
+                log.warn("⚠️ No se generaron cuotas: la inscripción es nula o no tiene ID persistido");
+                return;
+            }
+
+            OfertaAcademica oferta = inscripcion.getOferta();
+            if (oferta == null) {
+                log.warn("⚠️ No se generaron cuotas: la inscripción {} no tiene oferta asociada",
+                        inscripcion.getIdInscripcion());
+                return;
+            }
+
+            Double costoCuota = null;
+            Integer numeroCuotas = null;
+            Integer diaVencimiento = null;
+
+            if (oferta instanceof Curso curso) {
+                costoCuota = curso.getCostoCuota();
+                numeroCuotas = curso.getNrCuotas();
+                diaVencimiento = curso.getDiaVencimiento();
+            } else if (oferta instanceof Formacion formacion) {
+                costoCuota = formacion.getCostoCuota();
+                numeroCuotas = formacion.getNrCuotas();
+                diaVencimiento = formacion.getDiaVencimiento();
+            } else {
+                log.info("ℹ️ La oferta {} no maneja cuotas automáticas", oferta.getNombre());
+                return;
+            }
+
+            if (numeroCuotas == null || numeroCuotas <= 0 || costoCuota == null || costoCuota <= 0) {
+                log.info("ℹ️ La oferta {} no tiene configuración de cuotas válida", oferta.getNombre());
+                return;
+            }
+
+            List<Cuota> existentes = cuotaRepository
+                    .findByInscripcionIdInscripcion(inscripcion.getIdInscripcion());
+            if (!existentes.isEmpty()) {
+                log.info("ℹ️ La inscripción {} ya posee {} cuotas registradas", inscripcion.getIdInscripcion(),
+                        existentes.size());
+                return;
+            }
+
+            BigDecimal montoCuota = BigDecimal.valueOf(costoCuota).setScale(2, RoundingMode.HALF_UP);
+
+            LocalDate fechaReferencia = Optional.ofNullable(inscripcion.getFechaInscripcion()).orElse(LocalDate.now());
+            if (oferta.getFechaInicio() != null && fechaReferencia.isBefore(oferta.getFechaInicio())) {
+                fechaReferencia = oferta.getFechaInicio();
+            }
+
+            List<Cuota> nuevasCuotas = new ArrayList<>();
+            for (int i = 1; i <= numeroCuotas; i++) {
+                Cuota cuota = new Cuota();
+                cuota.setInscripcion(inscripcion);
+                cuota.setNumeroCuota(i);
+                cuota.setMonto(montoCuota);
+                cuota.setMontoPagado(BigDecimal.ZERO);
+                cuota.setEstado(EstadoCuota.PENDIENTE);
+                cuota.setFechaVencimiento(calcularFechaVencimientoParaCuota(diaVencimiento, fechaReferencia, i));
+                nuevasCuotas.add(cuota);
+            }
+
+            cuotaRepository.saveAll(nuevasCuotas);
+            inscripcion.setCuotas(nuevasCuotas);
+
+            log.info("✅ Generadas {} cuotas para la inscripción {}", nuevasCuotas.size(),
+                    inscripcion.getIdInscripcion());
+        } catch (Exception e) {
+            log.error("❌ Error al generar cuotas para la inscripción {}", inscripcion != null ? inscripcion.getIdInscripcion() : null, e);
+        }
+    }
+
+    private LocalDate calcularFechaVencimientoParaCuota(Integer diaVencimiento, LocalDate fechaReferencia,
+            int numeroCuota) {
+        LocalDate base = fechaReferencia != null ? fechaReferencia : LocalDate.now();
+
+        if (diaVencimiento == null || diaVencimiento < 1 || diaVencimiento > 31) {
+            return base.plusMonths(numeroCuota - 1);
+        }
+
+        LocalDate fechaInicioCuota = ajustarAlDiaDeVencimiento(base, diaVencimiento);
+        LocalDate fechaObjetivo = fechaInicioCuota.plusMonths(numeroCuota - 1);
+        int dia = Math.min(diaVencimiento, fechaObjetivo.lengthOfMonth());
+        return fechaObjetivo.withDayOfMonth(dia);
+    }
+
+    private LocalDate ajustarAlDiaDeVencimiento(LocalDate base, int diaVencimiento) {
+        LocalDate fecha = base != null ? base : LocalDate.now();
+        int diaDentroDeMes = Math.min(diaVencimiento, fecha.lengthOfMonth());
+        LocalDate ajustada = fecha.withDayOfMonth(diaDentroDeMes);
+
+        if (ajustada.isBefore(fecha)) {
+            LocalDate siguienteMes = fecha.plusMonths(1);
+            int diaSiguiente = Math.min(diaVencimiento, siguienteMes.lengthOfMonth());
+            ajustada = siguienteMes.withDayOfMonth(diaSiguiente);
+        }
+
+        return ajustada;
     }
 
     private void enviarComprobantePago(Pago pago) {

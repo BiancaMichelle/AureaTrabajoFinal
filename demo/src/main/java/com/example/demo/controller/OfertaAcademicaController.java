@@ -68,7 +68,7 @@ public class OfertaAcademicaController {
             @RequestParam Long cursoId) {
         cursoService.crearModulo(nombre, descripcion, objetivos, fechaInicio, fechaFin, visibilidad, cursoId);
         // ✅ Redirigir de vuelta al curso específico
-        return "redirect:" + baseUrl + "/ofertaAcademica/" + cursoId;
+        return "redirect:/ofertaAcademica/" + cursoId;
     }
 
     private boolean puedeModificarCurso(Authentication authentication) {

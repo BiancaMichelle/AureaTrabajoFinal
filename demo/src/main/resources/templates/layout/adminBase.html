@@ -2,6 +2,8 @@
 <html lang="es" xmlns:th="http://www.thymeleaf.org" th:fragment="layout(title, content)">
 <head>
     <meta charset="UTF-8">
+    <meta name="_csrf" th:content="${_csrf.token}">
+    <meta name="_csrf_header" th:content="${_csrf.headerName}">
     <title th:replace="${title}">Panel de Administrador</title>
     <link rel="stylesheet" th:href="@{/style/styleBase.css}">
     <link rel="stylesheet" th:href="@{/style/admin.css}">

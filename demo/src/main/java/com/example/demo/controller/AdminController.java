@@ -225,7 +225,7 @@ public class AdminController {
             
             if (ofertaOpt.isEmpty()) {
                 model.addAttribute("error", "Oferta no encontrada");
-                return "redirect:" + baseUrl + "/admin/gestion-ofertas";
+                return "redirect:/admin/gestion-ofertas";
             }
             
             OfertaAcademica oferta = ofertaOpt.get();
@@ -244,7 +244,7 @@ public class AdminController {
             return "admin/gestionOfertas";
         } catch (Exception e) {
             model.addAttribute("error", "Error al cargar la oferta para edición: " + e.getMessage());
-            return "redirect:" + baseUrl + "/admin/gestion-ofertas";
+            return "redirect:/admin/gestion-ofertas";
         }
     }
     
@@ -1573,7 +1573,7 @@ public class AdminController {
             if (imagenes == null || imagenes.length == 0) {
                 System.out.println("ERROR: No se han seleccionado imágenes");
                 model.addAttribute("error", "No se han seleccionado imágenes");
-                return "redirect:" + baseUrl + "/admin/configuracion?error=nofiles";
+                return "redirect:/admin/configuracion?error=nofiles";
             }
 
             for (int i = 0; i < imagenes.length; i++) {
@@ -1589,18 +1589,18 @@ public class AdminController {
             System.out.println("Imágenes guardadas exitosamente: " + imagenesGuardadas.size());
             
             model.addAttribute("mensaje", "Imágenes subidas exitosamente: " + imagenesGuardadas.size());
-            return "redirect:" + baseUrl + "/admin/configuracion?success=upload";
+            return "redirect:/admin/configuracion?success=upload";
             
         } catch (IOException e) {
             System.out.println("ERROR IOException: " + e.getMessage());
             e.printStackTrace();
             model.addAttribute("error", "Error al procesar las imágenes: " + e.getMessage());
-            return "redirect:" + baseUrl + "/admin/configuracion?error=processing";
+            return "redirect:/admin/configuracion?error=processing";
         } catch (Exception e) {
             System.out.println("ERROR Exception: " + e.getMessage());
             e.printStackTrace();
             model.addAttribute("error", "Error interno del servidor: " + e.getMessage());
-            return "redirect:" + baseUrl + "/admin/configuracion?error=server";
+            return "redirect:/admin/configuracion?error=server";
         }
     }
     
@@ -1609,14 +1609,14 @@ public class AdminController {
         try {
             Optional<CarruselImagen> imagen = imagenService.obtenerImagenCarrusel(id);
             if (!imagen.isPresent()) {
-                return "redirect:" + baseUrl + "/admin/configuracion?error=notfound";
+                return "redirect:/admin/configuracion?error=notfound";
             }
             
             imagenService.eliminarImagenCarrusel(id);
-            return "redirect:" + baseUrl + "/admin/configuracion?success=delete";
+            return "redirect:/admin/configuracion?success=delete";
             
         } catch (Exception e) {
-            return "redirect:" + baseUrl + "/admin/configuracion?error=deletefail";
+            return "redirect:/admin/configuracion?error=deletefail";
         }
     }
     

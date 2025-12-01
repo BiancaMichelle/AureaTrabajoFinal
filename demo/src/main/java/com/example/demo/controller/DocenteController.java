@@ -72,7 +72,7 @@ public class DocenteController {
         } catch (Exception e) {
             System.out.println("❌ Error en mi-espacio (docente): " + e.getMessage());
             model.addAttribute("error", "Error al cargar tu espacio");
-            return "redirect:" + baseUrl + "/";
+            return "redirect:/";
         }
     }
     
@@ -93,7 +93,7 @@ public class DocenteController {
         } catch (Exception e) {
             System.out.println("❌ Error en mis-pagos (docente): " + e.getMessage());
             model.addAttribute("error", "Error al cargar tus pagos");
-            return "redirect:" + baseUrl + "/";
+            return "redirect:/";
         }
     }
 
@@ -224,7 +224,7 @@ public class DocenteController {
             
             if (!esDocenteDeLaOferta) {
                 System.out.println("❌ Acceso denegado: el docente no está asignado a esta oferta");
-                return "redirect:" + baseUrl + "/docente/mis-ofertas";
+                return "redirect:/docente/mis-ofertas";
             }
 
             // Buscar módulos de esta oferta
@@ -248,7 +248,7 @@ public class DocenteController {
         } catch (Exception e) {
             System.out.println("❌ Error: " + e.getMessage());
             e.printStackTrace();
-            return "redirect:" + baseUrl + "/docente/mis-ofertas";
+            return "redirect:/docente/mis-ofertas";
         }
     }
 }
