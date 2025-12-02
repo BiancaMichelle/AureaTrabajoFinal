@@ -2,8 +2,11 @@ package com.example.demo.service;
 
 import java.sql.Time;
 import java.time.LocalDate;
+import java.time.Period;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 
@@ -29,6 +32,7 @@ import com.example.demo.repository.PaisRepository;
 import com.example.demo.repository.ProvinciaRepository;
 import com.example.demo.repository.RolRepository;
 import com.example.demo.repository.UsuarioRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
@@ -129,43 +133,32 @@ public class RegistroService {
     // 🌍 MÉTODOS PARA BUSCAR O CREAR UBICACIONES (NUEVOS - DE LA SEGUNDA VERSIÓN)
     // 🌍 MÉTODOS PARA BUSCAR O CREAR UBICACIONES (SIEMPRE DESDE API)
     private Pais buscarOCrearPais(String paisCodigo) {
-        System.out.println("🌎 Buscando/creando país desde API con código: " + paisCodigo);
-        
+        Objects.requireNonNull(paisCodigo, "paisCodigo no puede ser nulo");
+        System.out.println("🌎 Buscando país en BD con código: " + paisCodigo);
+
+        Optional<Pais> paisExistente = paisRepository.findByCodigo(paisCodigo);
+        if (paisExistente.isPresent()) {
+            System.out.println("✅ País encontrado en BD, se reutiliza: " + paisExistente.get().getNombre());
+            return paisExistente.get();
+        }
+
+        System.out.println("🔁 País no encontrado en BD, consultando API externa...");
+
         try {
             List<Pais> paises = locacionApiService.obtenerTodosPaises();
-            System.out.println("📋 Países obtenidos de API: " + paises.size());
-            
-            // Buscar el país en la API
             for (Pais p : paises) {
                 if (paisCodigo.equals(p.getCodigo())) {
-                    System.out.println("🎯 País encontrado en API: " + p.getNombre() + " (" + p.getCodigo() + ")");
-                    
-                    // Verificar si ya existe en BD con el mismo código
-                    Optional<Pais> paisExistente = paisRepository.findByCodigo(paisCodigo);
-                    if (paisExistente.isPresent()) {
-                        // Actualizar el nombre si es diferente
-                        Pais paisBD = paisExistente.get();
-                        if (!paisBD.getNombre().equals(p.getNombre())) {
-                            System.out.println("🔄 Actualizando nombre del país: " + paisBD.getNombre() + " → " + p.getNombre());
-                            paisBD.setNombre(p.getNombre());
-                            paisBD = paisRepository.save(paisBD);
-                        }
-                        System.out.println("✅ País encontrado/actualizado en BD: " + paisBD.getNombre());
-                        return paisBD;
-                    } else {
-                        // Crear nuevo país
-                        Pais nuevoPais = new Pais();
-                        nuevoPais.setCodigo(p.getCodigo());
-                        nuevoPais.setNombre(p.getNombre());
-                        nuevoPais = paisRepository.save(nuevoPais);
-                        System.out.println("✅ País creado desde API: " + nuevoPais.getNombre());
-                        return nuevoPais;
-                    }
+                    Pais nuevoPais = new Pais();
+                    nuevoPais.setCodigo(p.getCodigo());
+                    nuevoPais.setNombre(p.getNombre());
+                    nuevoPais = paisRepository.save(nuevoPais);
+                    System.out.println("✅ País creado desde API: " + nuevoPais.getNombre());
+                    return nuevoPais;
                 }
             }
-            
+
             throw new RuntimeException("❌ País con código '" + paisCodigo + "' no encontrado en API");
-            
+
         } catch (Exception e) {
             System.out.println("❌ Error obteniendo/creando país: " + e.getMessage());
             throw new RuntimeException("Error al obtener país desde API: " + e.getMessage(), e);
@@ -173,45 +166,39 @@ public class RegistroService {
     }
 
     private Provincia buscarOCrearProvincia(String provinciaCodigo, Pais pais) {
-        System.out.println("🏙️ Buscando/creando provincia desde API con código: " + provinciaCodigo + " para país: " + pais.getCodigo());
-        
+        Objects.requireNonNull(provinciaCodigo, "provinciaCodigo no puede ser nulo");
+        Objects.requireNonNull(pais, "pais no puede ser nulo");
+        System.out.println("🏙️ Buscando provincia en BD con código: " + provinciaCodigo);
+
+        Optional<Provincia> provinciaExistente = provinciaRepository.findByCodigo(provinciaCodigo);
+        if (provinciaExistente.isPresent()) {
+            Provincia provincia = provinciaExistente.get();
+            if (provincia.getPais() == null || !provincia.getPais().getCodigo().equals(pais.getCodigo())) {
+                provincia.setPais(pais);
+                provincia = provinciaRepository.save(provincia);
+            }
+            System.out.println("✅ Provincia encontrada en BD, se reutiliza: " + provincia.getNombre());
+            return provincia;
+        }
+
+        System.out.println("🔁 Provincia no encontrada en BD, consultando API externa...");
+
         try {
             List<Provincia> provincias = locacionApiService.obtenerProvinciasPorPais(pais.getCodigo());
-            System.out.println("📋 Provincias obtenidas de API: " + provincias.size());
-            
-            // Buscar la provincia en la API
             for (Provincia p : provincias) {
                 if (provinciaCodigo.equals(p.getCodigo())) {
-                    System.out.println("🎯 Provincia encontrada en API: " + p.getNombre() + " (" + p.getCodigo() + ")");
-                    
-                    // Verificar si ya existe en BD con el mismo código
-                    Optional<Provincia> provinciaExistente = provinciaRepository.findByCodigo(provinciaCodigo);
-                    if (provinciaExistente.isPresent()) {
-                        // Actualizar el nombre si es diferente
-                        Provincia provinciaBD = provinciaExistente.get();
-                        if (!provinciaBD.getNombre().equals(p.getNombre())) {
-                            System.out.println("🔄 Actualizando nombre de la provincia: " + provinciaBD.getNombre() + " → " + p.getNombre());
-                            provinciaBD.setNombre(p.getNombre());
-                            provinciaBD.setPais(pais); // Asegurar la relación
-                            provinciaBD = provinciaRepository.save(provinciaBD);
-                        }
-                        System.out.println("✅ Provincia encontrada/actualizada en BD: " + provinciaBD.getNombre());
-                        return provinciaBD;
-                    } else {
-                        // Crear nueva provincia
-                        Provincia nuevaProvincia = new Provincia();
-                        nuevaProvincia.setCodigo(p.getCodigo());
-                        nuevaProvincia.setNombre(p.getNombre());
-                        nuevaProvincia.setPais(pais);
-                        nuevaProvincia = provinciaRepository.save(nuevaProvincia);
-                        System.out.println("✅ Provincia creada desde API: " + nuevaProvincia.getNombre());
-                        return nuevaProvincia;
-                    }
+                    Provincia nuevaProvincia = new Provincia();
+                    nuevaProvincia.setCodigo(p.getCodigo());
+                    nuevaProvincia.setNombre(p.getNombre());
+                    nuevaProvincia.setPais(pais);
+                    nuevaProvincia = provinciaRepository.save(nuevaProvincia);
+                    System.out.println("✅ Provincia creada desde API: " + nuevaProvincia.getNombre());
+                    return nuevaProvincia;
                 }
             }
-            
+
             throw new RuntimeException("❌ Provincia con código '" + provinciaCodigo + "' no encontrada en API para país " + pais.getCodigo());
-            
+
         } catch (Exception e) {
             System.out.println("❌ Error obteniendo/creando provincia: " + e.getMessage());
             throw new RuntimeException("Error al obtener provincia desde API: " + e.getMessage(), e);
@@ -219,45 +206,41 @@ public class RegistroService {
     }
 
     private Ciudad buscarOCrearCiudad(Long ciudadId, Provincia provincia, String paisCodigo, String provinciaCodigo) {
-        System.out.println("🏡 Buscando/creando ciudad desde API con ID: " + ciudadId + " para provincia: " + provincia.getCodigo());
-        
+        Objects.requireNonNull(ciudadId, "ciudadId no puede ser nulo");
+        Objects.requireNonNull(provincia, "provincia no puede ser nula");
+        Objects.requireNonNull(paisCodigo, "paisCodigo no puede ser nulo");
+        Objects.requireNonNull(provinciaCodigo, "provinciaCodigo no puede ser nulo");
+        System.out.println("🏡 Buscando ciudad en BD con ID: " + ciudadId);
+
+        Optional<Ciudad> ciudadExistente = ciudadRepository.findById(ciudadId);
+        if (ciudadExistente.isPresent()) {
+            Ciudad ciudad = ciudadExistente.get();
+            if (ciudad.getProvincia() == null || !ciudad.getProvincia().getCodigo().equals(provincia.getCodigo())) {
+                ciudad.setProvincia(provincia);
+                ciudad = ciudadRepository.save(ciudad);
+            }
+            System.out.println("✅ Ciudad encontrada en BD, se reutiliza: " + ciudad.getNombre());
+            return ciudad;
+        }
+
+        System.out.println("🔁 Ciudad no encontrada en BD, consultando API externa...");
+
         try {
             List<Ciudad> ciudades = locacionApiService.obtenerCiudadesPorProvincia(paisCodigo, provinciaCodigo);
-            System.out.println("📋 Ciudades obtenidas de API: " + ciudades.size());
-            
-            // Buscar la ciudad en la API
             for (Ciudad c : ciudades) {
                 if (ciudadId.equals(c.getId())) {
-                    System.out.println("🎯 Ciudad encontrada en API: " + c.getNombre() + " (ID: " + c.getId() + ")");
-                    
-                    // Verificar si ya existe en BD con el mismo ID
-                    Optional<Ciudad> ciudadExistente = ciudadRepository.findById(ciudadId);
-                    if (ciudadExistente.isPresent()) {
-                        // Actualizar el nombre si es diferente
-                        Ciudad ciudadBD = ciudadExistente.get();
-                        if (!ciudadBD.getNombre().equals(c.getNombre())) {
-                            System.out.println("🔄 Actualizando nombre de la ciudad: " + ciudadBD.getNombre() + " → " + c.getNombre());
-                            ciudadBD.setNombre(c.getNombre());
-                            ciudadBD.setProvincia(provincia); // Asegurar la relación
-                            ciudadBD = ciudadRepository.save(ciudadBD);
-                        }
-                        System.out.println("✅ Ciudad encontrada/actualizada en BD: " + ciudadBD.getNombre());
-                        return ciudadBD;
-                    } else {
-                        // Crear nueva ciudad
-                        Ciudad nuevaCiudad = new Ciudad();
-                        nuevaCiudad.setId(c.getId());
-                        nuevaCiudad.setNombre(c.getNombre());
-                        nuevaCiudad.setProvincia(provincia);
-                        nuevaCiudad = ciudadRepository.save(nuevaCiudad);
-                        System.out.println("✅ Ciudad creada desde API: " + nuevaCiudad.getNombre());
-                        return nuevaCiudad;
-                    }
+                    Ciudad nuevaCiudad = new Ciudad();
+                    nuevaCiudad.setId(c.getId());
+                    nuevaCiudad.setNombre(c.getNombre());
+                    nuevaCiudad.setProvincia(provincia);
+                    nuevaCiudad = ciudadRepository.save(nuevaCiudad);
+                    System.out.println("✅ Ciudad creada desde API: " + nuevaCiudad.getNombre());
+                    return nuevaCiudad;
                 }
             }
-            
+
             throw new RuntimeException("❌ Ciudad con ID '" + ciudadId + "' no encontrada en API para provincia " + provinciaCodigo);
-            
+
         } catch (Exception e) {
             System.out.println("❌ Error obteniendo/creando ciudad: " + e.getMessage());
             throw new RuntimeException("Error al obtener ciudad desde API: " + e.getMessage(), e);
@@ -441,45 +424,199 @@ public class RegistroService {
         return usuarioGuardado;
     }
 
-    private void guardarHorariosDocente(Docente docente, List<Map<String, String>> horarios) {
-    try {
-        System.out.println("📅 Guardando " + horarios.size() + " horarios para docente ID: " + docente.getId());
-        
-        for (Map<String, String> horarioData : horarios) {
-            Horario horario = new Horario();
-            
-            // ✅ CONVERTIR STRING A ENUM DIAS
-            String diaString = horarioData.get("diaSemana");
-            Dias diaEnum = convertirStringADias(diaString);
-            horario.setDia(diaEnum);
-            
-            // ✅ CONVERTIR STRING A TIME
-            String horaInicioStr = horarioData.get("horaInicio");
-            String horaFinStr = horarioData.get("horaFin");
-            
-            if (horaInicioStr != null && horaFinStr != null) {
-                Time horaInicio = Time.valueOf(horaInicioStr + ":00");
-                Time horaFin = Time.valueOf(horaFinStr + ":00");
-                
-                horario.setHoraInicio(horaInicio);
-                horario.setHoraFin(horaFin);
-                horario.setDocente(docente);
-                
-                // Guardar el horario
-                horarioRepository.save(horario);
-                System.out.println("✅ Horario guardado: " + horario.getDia() + " " + 
-                                 horario.getHoraInicio() + " - " + horario.getHoraFin());
-            }
+    public Usuario actualizarUsuarioAdministrativo(
+            Usuario usuarioExistente,
+            String nuevoDni,
+            String nombre,
+            String apellido,
+            LocalDate fechaNacimiento,
+            TipoGenero genero,
+            String correo,
+            String telefono,
+            String paisCodigo,
+            String provinciaCodigo,
+            Long ciudadId,
+            String rolPrincipal,
+            String matricula,
+            Integer experiencia,
+            String colegioEgreso,
+            Integer añoEgreso,
+            String ultimosEstudios,
+            String horariosDisponibilidad,
+            String estadoLiteral) {
+
+        if (usuarioExistente == null) {
+            throw new IllegalArgumentException("El usuario a actualizar no existe");
         }
-        
-        System.out.println("🎯 Total de " + horarios.size() + " horarios guardados exitosamente");
-        
-    } catch (Exception e) {
-        System.out.println("❌ Error guardando horarios: " + e.getMessage());
-        e.printStackTrace();
-        // No lanzar excepción para no interrumpir el registro del usuario
+
+        try {
+            String rolActual = usuarioExistente.getRoles().stream()
+                    .findFirst()
+                    .map(Rol::getNombre)
+                    .orElse("")
+                    .toUpperCase();
+
+            String rolDestino = (rolPrincipal != null && !rolPrincipal.isBlank())
+                    ? rolPrincipal.toUpperCase()
+                    : rolActual;
+
+            if (!rolActual.equalsIgnoreCase(rolDestino)) {
+                throw new RuntimeException("No se permite cambiar el rol principal del usuario desde la edición");
+            }
+
+            if (!usuarioExistente.getDni().equals(nuevoDni) && usuarioRepository.existsByDni(nuevoDni)) {
+                throw new RuntimeException("El DNI ingresado ya está registrado en otro usuario");
+            }
+
+            if (!usuarioExistente.getCorreo().equalsIgnoreCase(correo) && usuarioRepository.existsByCorreo(correo)) {
+                throw new RuntimeException("El correo electrónico ingresado ya está registrado en otro usuario");
+            }
+
+            if (fechaNacimiento == null) {
+                throw new RuntimeException("La fecha de nacimiento es obligatoria");
+            }
+
+            if (Period.between(fechaNacimiento, LocalDate.now()).getYears() < 16) {
+                throw new RuntimeException("El usuario debe tener al menos 16 años");
+            }
+
+            Pais pais = buscarOCrearPais(paisCodigo);
+            Provincia provincia = buscarOCrearProvincia(provinciaCodigo, pais);
+            Ciudad ciudad = buscarOCrearCiudad(ciudadId, provincia, paisCodigo, provinciaCodigo);
+
+            usuarioExistente.setDni(nuevoDni);
+            usuarioExistente.setNombre(nombre);
+            usuarioExistente.setApellido(apellido);
+            usuarioExistente.setFechaNacimiento(fechaNacimiento);
+            usuarioExistente.setGenero(genero);
+            usuarioExistente.setCorreo(correo);
+
+            String telefonoFinal = (telefono != null && !telefono.isBlank())
+                    ? telefono
+                    : usuarioExistente.getNumTelefono();
+            usuarioExistente.setNumTelefono(telefonoFinal);
+
+            usuarioExistente.setPais(pais);
+            usuarioExistente.setProvincia(provincia);
+            usuarioExistente.setCiudad(ciudad);
+
+            boolean estadoActivo = estadoLiteral == null || estadoLiteral.isBlank() || !"INACTIVO".equalsIgnoreCase(estadoLiteral);
+            usuarioExistente.setEstado(estadoActivo);
+            usuarioExistente.setEstadoCuenta(estadoActivo);
+
+            asignarRoles(usuarioExistente, rolDestino);
+
+            List<Map<String, String>> horariosList = new ArrayList<>();
+            if ("DOCENTE".equalsIgnoreCase(rolDestino) && horariosDisponibilidad != null && !horariosDisponibilidad.isBlank()) {
+                horariosList = objectMapper.readValue(
+                        horariosDisponibilidad,
+                        new TypeReference<List<Map<String, String>>>() {}
+                );
+            }
+
+            switch (rolDestino) {
+                case "ALUMNO":
+                    if (!(usuarioExistente instanceof Alumno)) {
+                        throw new RuntimeException("El usuario seleccionado no es un alumno");
+                    }
+                    Alumno alumno = (Alumno) usuarioExistente;
+                    alumno.setColegioEgreso(colegioEgreso);
+                    alumno.setAñoEgreso(añoEgreso);
+                    alumno.setUltimosEstudios(ultimosEstudios);
+                    return alumnoRepository.save(alumno);
+
+                case "DOCENTE":
+                    if (!(usuarioExistente instanceof Docente)) {
+                        throw new RuntimeException("El usuario seleccionado no es un docente");
+                    }
+                    Docente docente = (Docente) usuarioExistente;
+                    docente.setMatricula(matricula);
+                    docente.setAñosExperiencia(experiencia);
+                    Docente docenteGuardado = docenteRepository.save(docente);
+                    actualizarHorariosDocente(docenteGuardado, horariosList);
+                    return docenteGuardado;
+
+                default:
+                    return usuarioRepository.save(usuarioExistente);
+            }
+
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("Error al actualizar usuario: " + e.getMessage(), e);
+        }
     }
-}
+
+    public void eliminarUsuarioAdministrativo(Usuario usuario) {
+        if (usuario == null) {
+            throw new IllegalArgumentException("El usuario a eliminar no existe");
+        }
+
+        if (usuario instanceof Docente) {
+            Docente docente = (Docente) usuario;
+            horarioRepository.deleteByDocente(docente);
+            docenteRepository.delete(docente);
+            return;
+        }
+
+        if (usuario instanceof Alumno) {
+            alumnoRepository.delete((Alumno) usuario);
+            return;
+        }
+
+        usuarioRepository.delete(usuario);
+    }
+
+    private void guardarHorariosDocente(Docente docente, List<Map<String, String>> horarios) {
+        try {
+            System.out.println("📅 Guardando " + horarios.size() + " horarios para docente ID: " + docente.getId());
+
+            for (Map<String, String> horarioData : horarios) {
+                Horario horario = new Horario();
+
+                // ✅ CONVERTIR STRING A ENUM DIAS
+                String diaString = horarioData.get("diaSemana");
+                Dias diaEnum = convertirStringADias(diaString);
+                horario.setDia(diaEnum);
+
+                // ✅ CONVERTIR STRING A TIME
+                String horaInicioStr = horarioData.get("horaInicio");
+                String horaFinStr = horarioData.get("horaFin");
+
+                if (horaInicioStr != null && horaFinStr != null) {
+                    Time horaInicio = Time.valueOf(horaInicioStr + ":00");
+                    Time horaFin = Time.valueOf(horaFinStr + ":00");
+
+                    horario.setHoraInicio(horaInicio);
+                    horario.setHoraFin(horaFin);
+                    horario.setDocente(docente);
+
+                    horarioRepository.save(horario);
+                    System.out.println("✅ Horario guardado: " + horario.getDia() + " " +
+                            horario.getHoraInicio() + " - " + horario.getHoraFin());
+                }
+            }
+
+            System.out.println("🎯 Total de " + horarios.size() + " horarios guardados exitosamente");
+
+        } catch (Exception e) {
+            System.out.println("❌ Error guardando horarios: " + e.getMessage());
+            e.printStackTrace();
+            // No lanzar excepción para no interrumpir el registro del usuario
+        }
+    }
+
+    private void actualizarHorariosDocente(Docente docente, List<Map<String, String>> horarios) {
+        if (docente == null) {
+            return;
+        }
+
+        horarioRepository.deleteByDocente(docente);
+
+        if (horarios != null && !horarios.isEmpty()) {
+            guardarHorariosDocente(docente, horarios);
+        }
+    }
 
     // ✅ MÉTODO AUXILIAR PARA CONVERTIR STRING A ENUM DIAS
     private Dias convertirStringADias(String diaString) {
@@ -511,15 +648,15 @@ public class RegistroService {
     }
 
     private Usuario guardarAlumno(Alumno alumno) {
-        return alumnoRepository.save(alumno);
+        return alumnoRepository.save(Objects.requireNonNull(alumno, "alumno no puede ser nulo"));
     }
 
     private Usuario guardarDocente(Docente docente) {
-        return docenteRepository.save(docente);
+        return docenteRepository.save(Objects.requireNonNull(docente, "docente no puede ser nulo"));
     }
 
     private Usuario guardarUsuarioBase(Usuario usuario) {
-        return usuarioRepository.save(usuario);
+        return usuarioRepository.save(Objects.requireNonNull(usuario, "usuario no puede ser nulo"));
     }
-    
 }
+

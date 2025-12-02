@@ -137,12 +137,18 @@ public class AlumnoController {
 
             List<Inscripciones> inscripcionesAlumno = inscripcionRepository.findByAlumnoDni(dni);
             for (Inscripciones inscripcion : inscripcionesAlumno) {
-                if (inscripcion.getIdInscripcion() != null &&
-                        cuotaRepository.findByInscripcionIdInscripcion(inscripcion.getIdInscripcion()).isEmpty()) {
-                    mercadoPagoService.generarCuotasParaInscripcion(inscripcion);
+                if (inscripcion.getIdInscripcion() != null) {
+                    // Generar la primera cuota si no existe
+                    if (cuotaRepository.findByInscripcionIdInscripcion(inscripcion.getIdInscripcion()).isEmpty()) {
+                        mercadoPagoService.generarCuotasParaInscripcion(inscripcion);
+                    } else {
+                        // Verificar si corresponde generar la siguiente cuota
+                        mercadoPagoService.generarSiguienteCuotaSiCorresponde(inscripcion);
+                    }
                 }
             }
             
+            // Obtener TODOS los pagos (de inscripción y de cuotas)
             List<Pago> pagosRealizados = pagoRepository.findByUsuarioId(alumno.getId()).stream()
                 .sorted(Comparator.comparing(this::obtenerFechaReferencia,
                     Comparator.nullsLast(Comparator.naturalOrder())).reversed())
@@ -156,47 +162,50 @@ public class AlumnoController {
 
             LocalDate hoy = LocalDate.now();
 
-            List<Cuota> cuotasActivas = cuotaRepository.findByUsuarioId(alumno.getId()).stream()
-                .filter(c -> c.getEstado() == EstadoCuota.PENDIENTE
-                    || c.getEstado() == EstadoCuota.PARCIALMENTE_PAGADA
-                    || c.getEstado() == EstadoCuota.VENCIDA)
-                .collect(Collectors.toList());
-
-            List<Cuota> cuotasOrdenadas = cuotasActivas.stream()
+            // Obtener todas las cuotas del alumno
+            List<Cuota> todasLasCuotas = cuotaRepository.findByUsuarioId(alumno.getId()).stream()
                 .sorted(Comparator.comparing(Cuota::getFechaVencimiento,
                     Comparator.nullsLast(LocalDate::compareTo)))
                 .collect(Collectors.toList());
 
-            List<Cuota> cuotasDisponiblesParaPago = cuotasOrdenadas.stream()
-                .filter(c -> c.getFechaVencimiento() == null || !c.getFechaVencimiento().isAfter(hoy))
-                .collect(Collectors.toCollection(java.util.ArrayList::new));
+            // Actualizar estados de cuotas vencidas
+            todasLasCuotas.forEach(cuota -> {
+                if (cuota.getEstado() == EstadoCuota.PENDIENTE && 
+                    cuota.getFechaVencimiento() != null && 
+                    cuota.getFechaVencimiento().isBefore(hoy)) {
+                    cuota.setEstado(EstadoCuota.VENCIDA);
+                    cuotaRepository.save(cuota);
+                }
+            });
 
-            if (cuotasDisponiblesParaPago.isEmpty()) {
-                cuotasOrdenadas.stream()
-                    .filter(c -> c.getEstado() == EstadoCuota.PENDIENTE
-                        || c.getEstado() == EstadoCuota.PARCIALMENTE_PAGADA)
-                    .filter(c -> c.getNumeroCuota() == null || c.getNumeroCuota() == 1)
-                    .findFirst()
-                    .ifPresent(cuotasDisponiblesParaPago::add);
-            }
+            // Filtrar solo cuotas NO pagadas
+            List<Cuota> cuotasActivas = todasLasCuotas.stream()
+                .filter(c -> c.getEstado() != EstadoCuota.PAGADA && c.getEstado() != EstadoCuota.CANCELADA)
+                .collect(Collectors.toList());
 
-            Cuota cuotaPendiente = cuotasDisponiblesParaPago.isEmpty() ? null : cuotasDisponiblesParaPago.get(0);
+            // Encontrar la primera cuota pendiente o vencida para mostrar el botón de pago
+            Cuota cuotaPendiente = cuotasActivas.stream()
+                .filter(c -> c.getEstado() == EstadoCuota.PENDIENTE || c.getEstado() == EstadoCuota.VENCIDA)
+                .min(Comparator.comparing(Cuota::getFechaVencimiento, Comparator.nullsLast(LocalDate::compareTo)))
+                .orElse(null);
+
             BigDecimal montoCuotaPendiente = cuotaPendiente != null
                 ? calcularSaldoPendiente(cuotaPendiente)
                 : BigDecimal.ZERO;
 
-            BigDecimal totalPendiente = cuotasDisponiblesParaPago.stream()
+            BigDecimal totalPendiente = cuotasActivas.stream()
                 .map(this::calcularSaldoPendiente)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-            Optional<Cuota> proximaCuota = cuotasOrdenadas.stream().findFirst();
-            String proximoPagoTexto = proximaCuota.map(c -> String.format("%s - %s",
-                        formatearFecha(c.getFechaVencimiento()),
-                        formatearMoneda(calcularSaldoPendiente(c))))
-                .orElse("Sin cuotas pendientes");
+            String proximoPagoTexto = cuotaPendiente != null 
+                ? String.format("%s - %s",
+                    formatearFecha(cuotaPendiente.getFechaVencimiento()),
+                    formatearMoneda(calcularSaldoPendiente(cuotaPendiente)))
+                : "Sin cuotas pendientes";
 
             model.addAttribute("alumno", alumno);
             model.addAttribute("pagos", pagosRealizados);
+            model.addAttribute("cuotas", todasLasCuotas); // Todas las cuotas para el historial
             model.addAttribute("cuotaPendiente", cuotaPendiente);
             model.addAttribute("montoCuotaPendienteTexto", formatearMoneda(montoCuotaPendiente));
             model.addAttribute("totalPagadoTexto", formatearMoneda(totalPagado));
@@ -417,14 +426,6 @@ public class AlumnoController {
             if (oferta instanceof Curso || oferta instanceof Formacion) {
                 System.out.println("🎓 Es un curso/formación: " + oferta.getNombre());
                 
-                // Cargar módulos de la oferta
-                List<Modulo> modulos = moduloRepository.findByCursoOrderByFechaInicioModuloAsc(oferta);
-                System.out.println("📦 Módulos encontrados: " + modulos.size());
-                
-                model.addAttribute("curso", oferta); // Mantener nombre "curso" para compatibilidad
-                model.addAttribute("modulos", modulos);
-                model.addAttribute("inscripcion", inscripcion);
-                
                 // Verificar permisos de modificación (solo admin o docente de la oferta)
                 boolean puedeModificar = authentication.getAuthorities().stream()
                         .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
@@ -440,6 +441,24 @@ public class AlumnoController {
                             .anyMatch(docente -> docente.getDni().equals(dni)));
                 }
                 
+                // Cargar módulos: todos para docentes/admin, solo visibles para alumnos
+                List<Modulo> modulos;
+                if (puedeModificar) {
+                    System.out.println("🔓 Usuario con permisos de modificación - cargando TODOS los módulos");
+                    modulos = moduloRepository.findByCursoOrderByFechaInicioModuloAsc(oferta);
+                } else {
+                    System.out.println("👤 Usuario alumno - cargando SOLO módulos visibles");
+                    modulos = moduloRepository.findByCursoAndVisibilidadTrueOrderByFechaInicioModuloAsc(oferta);
+                }
+                
+                System.out.println("📦 Módulos encontrados: " + modulos.size());
+                for (Modulo m : modulos) {
+                    System.out.println("  - " + m.getNombre() + " (visible: " + m.getVisibilidad() + ")");
+                }
+                
+                model.addAttribute("curso", oferta); // Mantener nombre "curso" para compatibilidad
+                model.addAttribute("modulos", modulos);
+                model.addAttribute("inscripcion", inscripcion);
                 model.addAttribute("puedeModificar", puedeModificar);
                 System.out.println("👤 Puede modificar: " + puedeModificar);
                 

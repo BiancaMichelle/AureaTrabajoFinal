@@ -15,24 +15,31 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.demo.enums.EstadoOferta;
 import com.example.demo.enums.Modalidad;
 import com.example.demo.enums.TipoGenero;
 import com.example.demo.enums.Dias;
+import com.example.demo.model.Alumno;
 import com.example.demo.model.CarruselImagen;
 import com.example.demo.model.Categoria;
 import com.example.demo.model.Charla;
@@ -1356,6 +1363,124 @@ public class AdminController {
         }
     }
 
+    @GetMapping("/admin/usuarios/{identificador}")
+    @ResponseBody
+    @Transactional(readOnly = true)
+    public ResponseEntity<Map<String, Object>> obtenerUsuarioPorIdentificador(@PathVariable String identificador) {
+        Map<String, Object> response = new HashMap<>();
+
+        Optional<Usuario> usuarioOpt = buscarUsuarioPorIdentificador(identificador);
+        if (usuarioOpt.isEmpty()) {
+            response.put("success", false);
+            response.put("message", "Usuario no encontrado");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        }
+
+        response.put("success", true);
+        response.put("data", mapearDetalleUsuario(usuarioOpt.get()));
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/admin/usuarios/{identificador}")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> actualizarUsuario(
+            @PathVariable String identificador,
+            @RequestParam String dni,
+            @RequestParam String nombre,
+            @RequestParam String apellido,
+            @RequestParam LocalDate fechaNacimiento,
+            @RequestParam TipoGenero genero,
+            @RequestParam String paisCodigo,
+            @RequestParam String provinciaCodigo,
+            @RequestParam String ciudadId,
+            @RequestParam String correo,
+            @RequestParam(required = false) String telefono,
+            @RequestParam String rol,
+            @RequestParam(required = false) String matricula,
+            @RequestParam(required = false) Integer experiencia,
+            @RequestParam(required = false) String horariosDisponibilidad,
+            @RequestParam(required = false) String estado,
+            @RequestParam(required = false, defaultValue = "false") Boolean notificacionesEmail,
+            @RequestParam(required = false) String colegioEgreso,
+            @RequestParam(required = false) Integer añoEgreso,
+            @RequestParam(required = false) String ultimosEstudios) {
+
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            Optional<Usuario> usuarioOpt = buscarUsuarioPorIdentificador(identificador);
+            if (usuarioOpt.isEmpty()) {
+                response.put("success", false);
+                response.put("message", "Usuario no encontrado");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            }
+
+            Long ciudadIdLong = Long.valueOf(ciudadId);
+
+            Usuario actualizado = registroService.actualizarUsuarioAdministrativo(
+                    usuarioOpt.get(),
+                    dni,
+                    nombre,
+                    apellido,
+                    fechaNacimiento,
+                    genero,
+                    correo,
+                    telefono,
+                    paisCodigo,
+                    provinciaCodigo,
+                    ciudadIdLong,
+                    rol,
+                    matricula,
+                    experiencia,
+                    colegioEgreso,
+                    añoEgreso,
+                    ultimosEstudios,
+                    horariosDisponibilidad,
+                    estado
+            );
+
+            response.put("success", true);
+            response.put("message", "Usuario actualizado correctamente");
+            response.put("data", mapearDetalleUsuario(actualizado));
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.put("success", false);
+            response.put("message", "Error al actualizar usuario: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @DeleteMapping("/admin/usuarios/{identificador}")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> eliminarUsuario(@PathVariable String identificador) {
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            Optional<Usuario> usuarioOpt = buscarUsuarioPorIdentificador(identificador);
+            if (usuarioOpt.isEmpty()) {
+                response.put("success", false);
+                response.put("message", "Usuario no encontrado");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            }
+
+            registroService.eliminarUsuarioAdministrativo(usuarioOpt.get());
+
+            response.put("success", true);
+            response.put("message", "Usuario eliminado correctamente");
+            return ResponseEntity.ok(response);
+        } catch (DataIntegrityViolationException ex) {
+            response.put("success", false);
+            response.put("message", "El usuario no puede eliminarse porque tiene registros asociados");
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "Error al eliminar usuario: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
     @GetMapping("/admin/usuarios/listar")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> listarUsuarios(
@@ -1464,6 +1589,100 @@ public class AdminController {
             case "COORDINADOR": return "Coordinador";
             default: return rol;
         }
+    }
+    
+    private Optional<Usuario> buscarUsuarioPorIdentificador(String identificador) {
+        if (identificador == null || identificador.isBlank()) {
+            return Optional.empty();
+        }
+
+        Optional<Usuario> usuarioPorDni = usuarioRepository.findByDni(identificador);
+        if (usuarioPorDni.isPresent()) {
+            return usuarioPorDni;
+        }
+
+        Optional<Usuario> usuarioPorCorreo = usuarioRepository.findByCorreo(identificador);
+        if (usuarioPorCorreo.isPresent()) {
+            return usuarioPorCorreo;
+        }
+
+        try {
+            UUID uuid = UUID.fromString(identificador);
+            return usuarioRepository.findById(uuid);
+        } catch (IllegalArgumentException ex) {
+            return Optional.empty();
+        }
+    }
+
+    private Map<String, Object> mapearDetalleUsuario(Usuario usuario) {
+        Map<String, Object> data = new HashMap<>();
+
+        data.put("id", usuario.getId());
+        data.put("dni", usuario.getDni());
+        data.put("nombre", usuario.getNombre());
+        data.put("apellido", usuario.getApellido());
+        data.put("nombreCompleto", usuario.getNombre() + " " + usuario.getApellido());
+        data.put("correo", usuario.getCorreo());
+        data.put("telefono", usuario.getNumTelefono());
+        data.put("fechaNacimiento", usuario.getFechaNacimiento());
+        data.put("genero", usuario.getGenero());
+        data.put("estado", usuario.getEstado());
+        data.put("estadoBoolean", usuario.isEstado());
+        data.put("fechaRegistro", usuario.getFechaRegistro());
+
+        List<String> rolesRaw = usuario.getRoles().stream()
+                .map(Rol::getNombre)
+                .collect(Collectors.toList());
+        data.put("roles", rolesRaw.stream().map(this::convertirRolALegible).collect(Collectors.toList()));
+        data.put("rolesRaw", rolesRaw);
+        data.put("rolPrincipal", rolesRaw.isEmpty() ? null : rolesRaw.get(0));
+
+        if (usuario.getPais() != null) {
+            Map<String, Object> pais = new HashMap<>();
+            pais.put("codigo", usuario.getPais().getCodigo());
+            pais.put("nombre", usuario.getPais().getNombre());
+            data.put("pais", pais);
+        }
+
+        if (usuario.getProvincia() != null) {
+            Map<String, Object> provincia = new HashMap<>();
+            provincia.put("codigo", usuario.getProvincia().getCodigo());
+            provincia.put("nombre", usuario.getProvincia().getNombre());
+            data.put("provincia", provincia);
+        }
+
+        if (usuario.getCiudad() != null) {
+            Map<String, Object> ciudad = new HashMap<>();
+            ciudad.put("id", usuario.getCiudad().getId());
+            ciudad.put("nombre", usuario.getCiudad().getNombre());
+            data.put("ciudad", ciudad);
+        }
+
+        if (usuario instanceof Alumno) {
+            Alumno alumno = (Alumno) usuario;
+            data.put("colegioEgreso", alumno.getColegioEgreso());
+            data.put("añoEgreso", alumno.getAñoEgreso());
+            data.put("ultimosEstudios", alumno.getUltimosEstudios());
+        }
+
+        if (usuario instanceof Docente) {
+            Docente docente = (Docente) usuario;
+            data.put("matricula", docente.getMatricula());
+            data.put("experiencia", docente.getAñosExperiencia());
+
+            if (docente.getHorario() != null) {
+                List<Map<String, Object>> horarios = docente.getHorario().stream().map(horario -> {
+                    Map<String, Object> horarioMap = new HashMap<>();
+                    horarioMap.put("diaSemana", horario.getDia() != null ? horario.getDia().name() : null);
+                    horarioMap.put("horaInicio", horario.getHoraInicio() != null ? horario.getHoraInicio().toString().substring(0, 5) : null);
+                    horarioMap.put("horaFin", horario.getHoraFin() != null ? horario.getHoraFin().toString().substring(0, 5) : null);
+                    return horarioMap;
+                }).collect(Collectors.toList());
+                data.put("horariosDisponibilidad", horarios);
+            }
+        }
+
+        return data;
     }
     
     

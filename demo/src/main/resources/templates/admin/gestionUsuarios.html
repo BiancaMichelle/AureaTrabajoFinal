@@ -2,6 +2,79 @@
 <html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/adminBase :: layout(~{::title}, ~{::main})}">
 <head>
     <title>Gestión de Usuarios</title>
+    <style>
+        .usuario-detalle-avatar-container {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .usuario-detalle-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid var(--primary-color, #2563eb);
+            background: #fff;
+        }
+
+        .usuario-detalle-avatar-placeholder {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: #f8fafc;
+            border: 2px dashed #cbd5f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: #64748b;
+            gap: 0.25rem;
+            font-size: 2rem;
+        }
+
+        .usuario-detalle-avatar-placeholder span {
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+
+        .detalle-roles-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .detalle-roles-container .role-badge {
+            margin: 0;
+        }
+
+        .usuario-detalle-horarios {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .usuario-detalle-horarios .horario-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 999px;
+            background: #f1f5f9;
+            color: #1f2937;
+            font-size: 0.9rem;
+        }
+
+        .usuario-detalle-horarios .horario-item i {
+            color: #2563eb;
+        }
+
+        .modal-footer .btn {
+            min-width: 140px;
+        }
+    </style>
 </head>
 <body>
 <main class="main-content">
@@ -405,6 +478,146 @@
                         Siguiente <i class="fas fa-chevron-right"></i>
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Detalle de Usuario -->
+    <div id="modalDetalleUsuario" class="modal-overlay" style="display: none;">
+        <div class="modal-content modal-xl">
+            <div class="modal-header">
+                <h3><i class="fas fa-user-circle"></i> Detalle del Usuario</h3>
+                <button type="button" class="btn-close" onclick="cerrarModalDetalleUsuario()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <!-- Información General -->
+                <div class="oferta-detalle-section">
+                    <div class="section-header">
+                        <h4><i class="fas fa-id-card"></i> Información General</h4>
+                    </div>
+                    <div class="usuario-detalle-avatar-container">
+                        <div>
+                            <img id="detalle-usuario-foto" src="" alt="Foto del usuario" class="usuario-detalle-avatar" style="display: none;">
+                            <div id="detalle-usuario-sin-foto" class="usuario-detalle-avatar-placeholder">
+                                <i class="fas fa-user"></i>
+                                <span>Sin foto</span>
+                            </div>
+                        </div>
+                        <div class="oferta-info-grid">
+                            <div class="info-item">
+                                <label>Nombre Completo:</label>
+                                <span id="detalle-usuario-nombre">-</span>
+                            </div>
+                            <div class="info-item">
+                                <label>DNI:</label>
+                                <span id="detalle-usuario-dni">-</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Correo:</label>
+                                <span id="detalle-usuario-correo">-</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Teléfono:</label>
+                                <span id="detalle-usuario-telefono">-</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Género:</label>
+                                <span id="detalle-usuario-genero">-</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Fecha de Nacimiento:</label>
+                                <span id="detalle-usuario-fecha-nacimiento">-</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Estado:</label>
+                                <span id="detalle-usuario-estado" class="status-badge">-</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Fecha de Registro:</label>
+                                <span id="detalle-usuario-fecha-registro">-</span>
+                            </div>
+                            <div class="info-item full-width">
+                                <label>Roles:</label>
+                                <div id="detalle-usuario-roles" class="detalle-roles-container">-</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ubicación -->
+                <div class="oferta-detalle-section">
+                    <div class="section-header">
+                        <h4><i class="fas fa-map-marker-alt"></i> Ubicación</h4>
+                    </div>
+                    <div class="oferta-info-grid">
+                        <div class="info-item">
+                            <label>País:</label>
+                            <span id="detalle-usuario-pais">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Provincia:</label>
+                            <span id="detalle-usuario-provincia">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Ciudad:</label>
+                            <span id="detalle-usuario-ciudad">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Información Académica (Alumno) -->
+                <div id="detalle-usuario-alumno" class="oferta-detalle-section tipo-especifico" style="display: none;">
+                    <div class="section-header">
+                        <h4><i class="fas fa-user-graduate"></i> Información Académica</h4>
+                    </div>
+                    <div class="oferta-info-grid">
+                        <div class="info-item">
+                            <label>Colegio de Egreso:</label>
+                            <span id="detalle-usuario-colegio">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Año de Egreso:</label>
+                            <span id="detalle-usuario-anio-egreso">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Últimos Estudios:</label>
+                            <span id="detalle-usuario-ultimos-estudios">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Información Profesional (Docente) -->
+                <div id="detalle-usuario-docente" class="oferta-detalle-section tipo-especifico" style="display: none;">
+                    <div class="section-header">
+                        <h4><i class="fas fa-chalkboard-teacher"></i> Información Profesional</h4>
+                    </div>
+                    <div class="oferta-info-grid">
+                        <div class="info-item">
+                            <label>Matrícula:</label>
+                            <span id="detalle-usuario-matricula">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Años de Experiencia:</label>
+                            <span id="detalle-usuario-experiencia">-</span>
+                        </div>
+                        <div class="info-item full-width">
+                            <label>Horarios Disponibles:</label>
+                            <div id="detalle-usuario-horarios" class="usuario-detalle-horarios">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="cerrarModalDetalleUsuario()">
+                    <i class="fas fa-times"></i> Cerrar
+                </button>
+                <button type="button" id="btn-editar-usuario-modal" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> Editar Usuario
+                </button>
             </div>
         </div>
     </div>

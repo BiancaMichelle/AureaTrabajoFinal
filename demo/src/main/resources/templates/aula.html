@@ -43,10 +43,6 @@
             transition: transform 0.3s ease-in-out;
         }
 
-        .no-scroll {
-            overflow: hidden;
-        }
-
         /* Estilos específicos para la navegación */
         .nav-tab-active {
             border-bottom-color: white;
@@ -63,6 +59,103 @@
         .nav-tab-inactive:hover {
             border-bottom-color: rgba(255, 255, 255, 0.3);
             color: white;
+        }
+
+        .editable-block {
+            position: relative;
+            transition: box-shadow 0.2s ease, transform 0.2s ease;
+        }
+
+        body.edit-mode .editable-block {
+            box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.28), 0 12px 24px -18px rgba(13, 110, 253, 0.45);
+            transform: translateY(-1px);
+            filter: brightness(1.04);
+        }
+
+        body.edit-mode .editable-block:hover {
+            box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.35), 0 18px 36px -16px rgba(13, 110, 253, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .edit-icon {
+            display: none;
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 34px;
+            height: 34px;
+            border-radius: 9999px;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(13, 110, 253, 0.12);
+            color: #0d6efd;
+            border: 1px solid rgba(13, 110, 253, 0.35);
+            transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+            cursor: pointer;
+            z-index: 5;
+        }
+
+        .edit-icon:hover {
+            background-color: #0d6efd;
+            color: white;
+            transform: scale(1.05);
+        }
+
+        body.edit-mode .edit-icon {
+            display: inline-flex;
+        }
+
+        .module-visibility-toggle {
+            position: absolute;
+            top: 12px;
+            right: 56px;
+            width: 34px;
+            height: 34px;
+            border-radius: 9999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(15, 118, 110, 0.1);
+            color: #0f766e;
+            border: 1px solid rgba(15, 118, 110, 0.35);
+            transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
+            cursor: default;
+            z-index: 5;
+        }
+
+        .module-visibility-toggle[data-visible="false"] {
+            background-color: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+            border-color: rgba(220, 53, 69, 0.35);
+        }
+
+        body.edit-mode .module-visibility-toggle {
+            cursor: pointer;
+            pointer-events: auto;
+        }
+
+        body.edit-mode .module-visibility-toggle:hover {
+            transform: scale(1.05);
+        }
+
+        body:not(.edit-mode) .module-visibility-toggle {
+            opacity: 0.85;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        #editModeHint {
+            display: none;
+        }
+
+        body.edit-mode #editModeHint {
+            display: flex;
+        }
+
+        body.edit-mode #toolsOverlay {
+            pointer-events: none;
+            background-color: rgba(13, 110, 253, 0.18) !important;
+            opacity: 1 !important;
         }
     </style>
 </head>
@@ -102,6 +195,12 @@
                     <button id="createClassButton"
                         class="w-full text-left py-2 px-3 rounded-md bg-customGreen text-white hover:bg-green-700 transition-colors duration-150">
                         <i class="fas fa-video me-2"></i>Crear Clase
+                    </button>
+                </li>
+                <li>
+                    <button id="toggleEditModeButton"
+                        class="w-full text-left py-2 px-3 rounded-md bg-blue-100 text-customBlue hover:bg-blue-200 transition-colors duration-150">
+                        <i class="fas fa-pen-to-square me-2"></i>Editar Contenido
                     </button>
                 </li>
             </ul>
@@ -184,6 +283,93 @@
         </div>
     </div>
 
+    <!-- Modal para editar módulo -->
+    <div id="editModuleModal"
+        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex items-start justify-between mb-4">
+                <h3 class="text-lg font-semibold">
+                    <i class="fas fa-pen-to-square me-2"></i>Editar módulo
+                </h3>
+                <button id="closeEditModuleButton" type="button"
+                    class="text-gray-500 hover:text-gray-800 transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <form id="editModuleForm" th:action="@{/modulo/actualizar}" method="post">
+                <input type="hidden" name="_csrf" th:value="${_csrf.token}">
+                <input type="hidden" name="cursoId" th:value="${curso.idOferta}">
+                <input type="hidden" name="moduloId" value="">
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">
+                        <i class="fas fa-heading me-1"></i>Nombre del módulo *
+                    </label>
+                    <input type="text" name="nombre" required
+                        class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                        placeholder="Nombre del módulo">
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">
+                        <i class="fas fa-align-left me-1"></i>Descripción *
+                    </label>
+                    <textarea name="descripcion" rows="3" required
+                        class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                        placeholder="Describe el contenido del módulo"></textarea>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">
+                        <i class="fas fa-bullseye me-1"></i>Objetivos
+                    </label>
+                    <textarea name="objetivos" rows="2"
+                        class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                        placeholder="Objetivos de aprendizaje"></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">
+                            <i class="fas fa-calendar-alt me-1"></i>Fecha de inicio *
+                        </label>
+                        <input type="date" name="fechaInicio" required
+                            class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">
+                            <i class="fas fa-calendar-check me-1"></i>Fecha de fin *
+                        </label>
+                        <input type="date" name="fechaFin" required
+                            class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2">
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="flex items-center">
+                        <input type="checkbox" name="visibilidad" value="true"
+                            class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                        <span class="ml-2 text-sm font-medium text-gray-700">
+                            <i class="fas fa-eye me-1"></i>Visible para estudiantes
+                        </span>
+                    </label>
+                </div>
+
+                <div class="flex justify-end space-x-2 pt-4 border-t">
+                    <button type="button" onclick="closeEditModuleModal()"
+                        class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md">
+                        <i class="fas fa-times me-1"></i>Cancelar
+                    </button>
+                    <button type="submit"
+                        class="px-4 py-2 bg-customBlue text-white rounded-md hover:bg-blue-700">
+                        <i class="fas fa-save me-1"></i>Actualizar módulo
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Contenido principal -->
     <div id="main-container" class="relative min-h-screen">
 
@@ -257,9 +443,33 @@
         <!-- Contenido Principal del Curso -->
         <main class="p-8">
             <div class="max-w-4xl mx-auto" id="courseContent">
+                <div id="editModeHint" role="status" aria-hidden="true" aria-live="polite"
+                    class="items-center gap-3 mb-6 px-4 py-3 rounded-md border border-dashed border-blue-400 bg-blue-50 text-blue-700 text-sm uppercase tracking-wide">
+                    <i class="fas fa-pen-to-square"></i>
+                    <span>Modo edición activo. Selecciona el ícono para modificar un elemento.</span>
+                </div>
                 <!-- Módulos cargados desde la base de datos -->
-                <div th:each="modulo : ${modulos}" class="mb-8 bg-white p-6 rounded-lg shadow"
-                    th:attr="data-modulo-id=${modulo.idModulo}"> <!-- AGREGAR ESTA LÍNEA -->
+                <div th:each="modulo, moduloStat : ${modulos}" class="mb-8 bg-white p-6 rounded-lg shadow editable-block"
+                    th:data-modulo-id="${modulo.idModulo}"
+                    th:data-modulo-nombre="${modulo.nombre}"
+                    th:data-modulo-descripcion="${modulo.descripcion != null ? modulo.descripcion : ''}"
+                    th:data-modulo-inicio="${#temporals.format(modulo.fechaInicioModulo, 'yyyy-MM-dd')}"
+                    th:data-modulo-fin="${#temporals.format(modulo.fechaFinModulo, 'yyyy-MM-dd')}"
+                    th:data-modulo-objetivos="${modulo.objetivos != null ? modulo.objetivos : ''}"
+                    th:data-modulo-visible="${modulo.visibilidad != null ? modulo.visibilidad : false}">
+                    <button type="button" class="module-visibility-toggle" data-visibility-toggle
+                        th:if="${puedeModificar}"
+                        th:attr="data-visible=${modulo.visibilidad != null ? modulo.visibilidad : false},
+                                 title=${(modulo.visibilidad != null ? modulo.visibilidad : false) ? 'Visible para estudiantes' : 'Oculto para estudiantes'}">
+                        <i class="fas"
+                            th:classappend="${modulo.visibilidad != null ? (modulo.visibilidad ? ' fa-eye' : ' fa-eye-slash') : ' fa-eye-slash'}"
+                            aria-hidden="true"></i>
+                        <span class="sr-only">Estado de visibilidad del módulo</span>
+                    </button>
+                    <button type="button" class="edit-icon" data-edit-type="module"
+                        th:data-modulo-id="${modulo.idModulo}" title="Editar módulo">
+                        <i class="fas fa-pen"></i>
+                    </button>
 
                     <h2 class="text-gray-500 text-xs font-semibold uppercase mb-1">
                         <span
@@ -273,7 +483,16 @@
                     <!-- Clases del módulo -->
                     <div th:if="${not #lists.isEmpty(modulo.clases)}" class="ml-4 mb-4">
                         <h4 class="text-lg font-semibold text-gray-700 mb-2">Clases:</h4>
-                        <div th:each="clase : ${modulo.clases}" class="bg-gray-50 p-4 rounded-lg mb-2 border">
+                        <div th:each="clase : ${modulo.clases}" class="bg-gray-50 p-4 rounded-lg mb-2 border editable-block"
+                            th:data-clase-id="${clase.idClase}"
+                            th:data-clase-titulo="${clase.titulo}"
+                            th:data-clase-descripcion="${clase.descripcion}"
+                            th:data-clase-inicio="${#temporals.format(clase.inicio, 'yyyy-MM-dd''T''HH:mm')}"
+                            th:data-clase-fin="${#temporals.format(clase.fin, 'yyyy-MM-dd''T''HH:mm')}">
+                            <button type="button" class="edit-icon" data-edit-type="clase"
+                                th:data-clase-id="${clase.idClase}" title="Editar clase">
+                                <i class="fas fa-pen"></i>
+                            </button>
                             <h5 class="font-medium text-customBlue" th:text="${clase.titulo}">Título de la clase</h5>
                             <p class="text-sm text-gray-600 mt-1" th:text="${clase.descripcion}">Descripción de la clase
                             </p>
@@ -297,7 +516,15 @@
                     <div th:if="${not #lists.isEmpty(modulo.actividades)}" class="ml-4">
                         <h4 class="text-lg font-semibold text-gray-700 mb-2">Actividades:</h4>
                         <div th:each="actividad : ${modulo.actividades}"
-                            class="bg-gray-50 p-4 rounded-lg mb-2 border hover:border-gray-300 transition-all">
+                            class="bg-gray-50 p-4 rounded-lg mb-2 border hover:border-gray-300 transition-all editable-block"
+                            th:data-actividad-id="${actividad.idActividad}"
+                            th:data-actividad-titulo="${actividad.titulo}"
+                            th:data-actividad-descripcion="${actividad.descripcion}"
+                            th:data-actividad-tipo="${actividad.getClass().getSimpleName()}">
+                            <button type="button" class="edit-icon" data-edit-type="actividad"
+                                th:data-actividad-id="${actividad.idActividad}" title="Editar actividad">
+                                <i class="fas fa-pen"></i>
+                            </button>
                             <div class="flex justify-between items-start">
                                 <div class="flex-1">
                                     <!-- Icono según tipo de actividad -->
@@ -454,6 +681,321 @@
         const moduleModal = document.getElementById('moduleModal');
         const toolsOverlay = document.getElementById('toolsOverlay');
         const createClassButton = document.getElementById('createClassButton');
+        const toggleEditModeButton = document.getElementById('toggleEditModeButton');
+        const editModuleModal = document.getElementById('editModuleModal');
+        const closeEditModuleButton = document.getElementById('closeEditModuleButton');
+        const editModuleForm = document.getElementById('editModuleForm');
+        const editModeHint = document.getElementById('editModeHint');
+        const moduleVisibilityButtons = document.querySelectorAll('.module-visibility-toggle');
+        const csrfTokenMeta = document.querySelector('meta[name="_csrf"]');
+        const csrfHeaderMeta = document.querySelector('meta[name="_csrf_header"]');
+        const csrfToken = csrfTokenMeta ? csrfTokenMeta.getAttribute('content') : '';
+        const csrfHeader = csrfHeaderMeta ? csrfHeaderMeta.getAttribute('content') : '';
+        let isEditModeEnabled = false;
+        const modifyCourseDefaultMarkup = modifyCourseButton ? modifyCourseButton.innerHTML : '';
+
+        function updateModifyCourseButtonLabel(enabled) {
+            if (!modifyCourseButton) {
+                return;
+            }
+
+            modifyCourseButton.innerHTML = enabled
+                ? '<i class="fas fa-check me-1"></i>Terminar edicion'
+                : modifyCourseDefaultMarkup;
+        }
+
+        function parseVisibilityFlag(value) {
+            if (value === undefined || value === null) {
+                return false;
+            }
+            return String(value).toLowerCase() === 'true' || value === true;
+        }
+
+        function updateVisibilityButtonState(button, visible) {
+            if (!button) {
+                return;
+            }
+
+            const icon = button.querySelector('i');
+            if (icon) {
+                icon.classList.toggle('fa-eye', visible);
+                icon.classList.toggle('fa-eye-slash', !visible);
+            }
+
+            const stateValue = visible ? 'true' : 'false';
+            button.dataset.visible = stateValue;
+            button.setAttribute('data-visible', stateValue);
+            button.setAttribute('aria-pressed', stateValue);
+
+            const baseLabel = visible ? 'Visible para estudiantes' : 'Oculto para estudiantes';
+            button.title = isEditModeEnabled ? `${baseLabel} · clic para cambiar` : baseLabel;
+            button.setAttribute('aria-label', isEditModeEnabled ? `${baseLabel}. Presiona para cambiar` : baseLabel);
+        }
+
+        function refreshVisibilityButtons() {
+            moduleVisibilityButtons.forEach((button) => {
+                const visible = parseVisibilityFlag(button.dataset.visible);
+                updateVisibilityButtonState(button, visible);
+            });
+        }
+
+        async function updateModuleVisibilityOnServer(moduloId, visible) {
+            if (!moduloId) {
+                throw new Error('Falta el identificador del módulo');
+            }
+
+            const payload = new URLSearchParams();
+            payload.set('visibilidad', visible);
+
+            const headers = {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            };
+
+            if (csrfHeader && csrfToken) {
+                headers[csrfHeader] = csrfToken;
+            }
+
+            const response = await fetch(`/modulo/${moduloId}/visibilidad`, {
+                method: 'POST',
+                headers,
+                body: payload.toString()
+            });
+
+            if (!response.ok) {
+                throw new Error('Respuesta no válida del servidor');
+            }
+
+            const result = await response.json().catch(() => ({ success: true }));
+
+            if (result && result.success === false) {
+                throw new Error(result.message || 'No se pudo actualizar la visibilidad');
+            }
+
+            return result;
+        }
+
+        async function toggleModuleVisibility(card, button) {
+            if (!card || !button) {
+                return;
+            }
+
+            const moduloId = card.getAttribute('data-modulo-id');
+            const currentVisible = parseVisibilityFlag(card.getAttribute('data-modulo-visible'));
+            const nextVisible = !currentVisible;
+
+            button.disabled = true;
+            button.classList.add('opacity-60');
+
+            try {
+                await updateModuleVisibilityOnServer(moduloId, nextVisible);
+
+                card.dataset.moduloVisible = String(nextVisible);
+                card.setAttribute('data-modulo-visible', String(nextVisible));
+
+                updateVisibilityButtonState(button, nextVisible);
+            } catch (error) {
+                console.error('Error al actualizar visibilidad del módulo', error);
+                alert('No se pudo actualizar la visibilidad del módulo. Intenta nuevamente.');
+                updateVisibilityButtonState(button, currentVisible);
+            } finally {
+                button.disabled = false;
+                button.classList.remove('opacity-60');
+            }
+        }
+
+        function registerVisibilityToggleHandlers() {
+            moduleVisibilityButtons.forEach((button) => {
+                const card = button.closest('div[data-modulo-id]');
+                const initialVisible = card ? parseVisibilityFlag(card.getAttribute('data-modulo-visible')) : false;
+                updateVisibilityButtonState(button, initialVisible);
+
+                button.addEventListener('click', async (event) => {
+                    event.preventDefault();
+                    if (!isEditModeEnabled) {
+                        return;
+                    }
+                    await toggleModuleVisibility(card, button);
+                });
+            });
+        }
+
+        function setEditModeState(enabled) {
+            isEditModeEnabled = enabled;
+            document.body.classList.toggle('edit-mode', enabled);
+
+            if (toggleEditModeButton) {
+                toggleEditModeButton.classList.toggle('bg-customBlue', enabled);
+                toggleEditModeButton.classList.toggle('text-white', enabled);
+                toggleEditModeButton.classList.toggle('hover:bg-blue-700', enabled);
+                toggleEditModeButton.classList.toggle('bg-blue-100', !enabled);
+                toggleEditModeButton.classList.toggle('text-customBlue', !enabled);
+                toggleEditModeButton.classList.toggle('hover:bg-blue-200', !enabled);
+                toggleEditModeButton.innerHTML = enabled
+                    ? '<i class="fas fa-xmark me-2"></i>Salir del modo edición'
+                    : '<i class="fas fa-pen-to-square me-2"></i>Editar Contenido';
+            }
+
+            if (editModeHint) {
+                editModeHint.setAttribute('aria-hidden', enabled ? 'false' : 'true');
+            }
+
+            if (!enabled) {
+                closeEditModuleModal();
+            }
+
+            updateModifyCourseButtonLabel(enabled);
+
+            refreshVisibilityButtons();
+
+            if (enabled) {
+                closeToolsSidebar();
+            }
+        }
+
+        if (toggleEditModeButton) {
+            toggleEditModeButton.addEventListener('click', () => {
+                setEditModeState(!isEditModeEnabled);
+            });
+        }
+
+        function openEditModuleModal(targetCard) {
+            if (!editModuleModal || !editModuleForm || !targetCard) {
+                return;
+            }
+
+            const dataset = targetCard.dataset || {};
+
+            const moduloId = dataset.moduloId || targetCard.getAttribute('data-modulo-id') || '';
+            const nombre = dataset.moduloNombre || '';
+            const descripcion = dataset.moduloDescripcion || '';
+            const objetivos = dataset.moduloObjetivos || '';
+            const fechaInicio = dataset.moduloInicio || '';
+            const fechaFin = dataset.moduloFin || '';
+            const visibleFlag = dataset.moduloVisible ?? targetCard.getAttribute('data-modulo-visible');
+            const visible = String(visibleFlag).toLowerCase() === 'true';
+
+            const moduloIdInput = editModuleForm.querySelector('[name="moduloId"]');
+            const nombreInput = editModuleForm.querySelector('[name="nombre"]');
+            const descripcionInput = editModuleForm.querySelector('[name="descripcion"]');
+            const objetivosInput = editModuleForm.querySelector('[name="objetivos"]');
+            const fechaInicioInput = editModuleForm.querySelector('[name="fechaInicio"]');
+            const fechaFinInput = editModuleForm.querySelector('[name="fechaFin"]');
+            const visibilidadInput = editModuleForm.querySelector('[name="visibilidad"]');
+
+            if (moduloIdInput) moduloIdInput.value = moduloId;
+            if (nombreInput) nombreInput.value = nombre;
+            if (descripcionInput) descripcionInput.value = descripcion;
+            if (objetivosInput) objetivosInput.value = objetivos;
+            if (fechaInicioInput) fechaInicioInput.value = fechaInicio;
+            if (fechaFinInput) fechaFinInput.value = fechaFin;
+            if (visibilidadInput) visibilidadInput.checked = visible;
+
+            editModuleModal.classList.remove('hidden');
+        }
+
+        function closeEditModuleModal() {
+            if (!editModuleModal || !editModuleForm) {
+                return;
+            }
+
+            editModuleModal.classList.add('hidden');
+            editModuleForm.reset();
+        }
+
+        if (closeEditModuleButton) {
+            closeEditModuleButton.addEventListener('click', closeEditModuleModal);
+        }
+
+        if (editModuleModal) {
+            editModuleModal.addEventListener('click', (event) => {
+                if (event.target === editModuleModal) {
+                    closeEditModuleModal();
+                }
+            });
+        }
+
+        function handlePendingEdit(typeLabel) {
+            alert(`⚠️ La edición de ${typeLabel} estará disponible próximamente.`);
+        }
+
+        function registerEditButtons() {
+            document.querySelectorAll('[data-edit-type="module"]').forEach((button) => {
+                button.addEventListener('click', (event) => {
+                    if (!isEditModeEnabled) {
+                        return;
+                    }
+                    event.preventDefault();
+                    // Buscamos el div contenedor que tiene todos los datos (nombre, descripcion, etc)
+                    // Usamos 'div[data-modulo-id]' para evitar seleccionar el propio botón que también tiene el ID
+                    const card = event.currentTarget.closest('div[data-modulo-id]');
+                    openEditModuleModal(card);
+                });
+            });
+
+            document.querySelectorAll('[data-edit-type="clase"]').forEach((button) => {
+                button.addEventListener('click', (event) => {
+                    if (!isEditModeEnabled) {
+                        return;
+                    }
+                    event.preventDefault();
+                    handlePendingEdit('clases');
+                });
+            });
+
+            document.querySelectorAll('[data-edit-type="actividad"]').forEach((button) => {
+                button.addEventListener('click', (event) => {
+                    if (!isEditModeEnabled) {
+                        return;
+                    }
+                    event.preventDefault();
+                    handlePendingEdit('actividades');
+                });
+            });
+        }
+
+        registerVisibilityToggleHandlers();
+        registerEditButtons();
+        window.closeEditModuleModal = closeEditModuleModal;
+
+        const HTML_ESCAPE_MAP = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+            '`': '&#96;'
+        };
+
+        const ESCAPE_REGEX = /[&<>"'`]/g;
+
+        function escapeHtml(texto) {
+            if (!texto) {
+                return '';
+            }
+            return texto.replace(ESCAPE_REGEX, (caracter) => HTML_ESCAPE_MAP[caracter] || caracter);
+        }
+
+        function escapeHtmlAtributo(texto) {
+            return escapeHtml(texto || '');
+        }
+
+        function obtenerNombreModuloElemento(modulo) {
+            if (!modulo) {
+                return 'Módulo sin nombre';
+            }
+
+            const nombreAttr = modulo.getAttribute('data-modulo-nombre');
+            if (nombreAttr && nombreAttr.trim().length > 0) {
+                return nombreAttr.trim();
+            }
+
+            const heading = modulo.querySelector('h3');
+            if (heading && heading.textContent && heading.textContent.trim().length > 0) {
+                return heading.textContent.trim();
+            }
+
+            return 'Módulo sin nombre';
+        }
 
         if (createClassButton) {
             createClassButton.addEventListener('click', () => {
@@ -478,6 +1020,21 @@
 
         // Función para mostrar selector de módulos
         function mostrarSelectorModulos(modulos) {
+            const opcionesHTML = Array.from(modulos).map((modulo) => {
+                const moduloId = modulo.getAttribute('data-modulo-id');
+                if (!moduloId) {
+                    return '';
+                }
+                const moduloNombre = escapeHtml(obtenerNombreModuloElemento(modulo));
+
+                return `
+                                    <button class="w-full text-left py-2 px-3 mb-2 rounded border hover:bg-gray-50 modulo-option"
+                                            data-modulo-id="${moduloId}">
+                                        <strong>${moduloNombre}</strong>
+                                    </button>
+                                `;
+            }).join('');
+
             // Crear modal de selección
             const modalHTML = `
                     <div id="moduloSelectorModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -487,12 +1044,7 @@
                             </h3>
                             <p class="text-gray-600 mb-4">Selecciona en qué módulo quieres crear la clase:</p>
                             <div id="moduloList" class="max-h-60 overflow-y-auto mb-4">
-                                ${Array.from(modulos).map(modulo => `
-                                    <button class="w-full text-left py-2 px-3 mb-2 rounded border hover:bg-gray-50 modulo-option"
-                                            data-modulo-id="${modulo.getAttribute('data-modulo-id')}">
-                                        <strong>${modulo.querySelector('h3').textContent}</strong>
-                                    </button>
-                                `).join('')}
+                                ${opcionesHTML}
                             </div>
                             <div class="flex justify-end">
                                 <button type="button" onclick="cerrarSelectorModulos()" class="px-4 py-2 text-gray-600 hover:text-gray-800">
@@ -522,9 +1074,34 @@
             }
         }
 
+        function closeToolsSidebar() {
+            if (!toolsSidebar || !toolsOverlay) {
+                return;
+            }
+
+            toolsSidebar.classList.add('-translate-x-full');
+            toolsSidebar.classList.remove('translate-x-0');
+            toolsOverlay.classList.add('opacity-0');
+            toolsOverlay.classList.remove('opacity-50');
+            setTimeout(() => {
+                toolsOverlay.classList.add('pointer-events-none');
+            }, 300);
+            document.body.classList.remove('no-scroll');
+        }
+
         // Mostrar/ocultar panel de herramientas (CON LA MISMA ANIMACIÓN)
         if (modifyCourseButton) {
             modifyCourseButton.addEventListener('click', () => {
+                if (isEditModeEnabled) {
+                    setEditModeState(false);
+                    closeToolsSidebar();
+                    return;
+                }
+
+                if (!toolsSidebar || !toolsOverlay) {
+                    return;
+                }
+
                 toolsSidebar.classList.remove('-translate-x-full');
                 toolsSidebar.classList.add('translate-x-0');
                 toolsOverlay.classList.remove('pointer-events-none', 'opacity-0');
@@ -536,28 +1113,18 @@
         // Cerrar panel de herramientas (CON LA MISMA ANIMACIÓN)
         if (closeToolsButton) {
             closeToolsButton.addEventListener('click', () => {
-                toolsSidebar.classList.add('-translate-x-full');
-                toolsSidebar.classList.remove('translate-x-0');
-                toolsOverlay.classList.add('opacity-0');
-                toolsOverlay.classList.remove('opacity-50');
-                setTimeout(() => {
-                    toolsOverlay.classList.add('pointer-events-none');
-                }, 300);
-                document.body.classList.remove('no-scroll');
+                setEditModeState(false);
+                closeToolsSidebar();
             });
         }
 
         // Cerrar panel de herramientas al hacer clic en el overlay
         if (toolsOverlay) {
             toolsOverlay.addEventListener('click', () => {
-                toolsSidebar.classList.add('-translate-x-full');
-                toolsSidebar.classList.remove('translate-x-0');
-                toolsOverlay.classList.add('opacity-0');
-                toolsOverlay.classList.remove('opacity-50');
-                setTimeout(() => {
-                    toolsOverlay.classList.add('pointer-events-none');
-                }, 300);
-                document.body.classList.remove('no-scroll');
+                if (isEditModeEnabled) {
+                    return;
+                }
+                closeToolsSidebar();
             });
         }
 
@@ -583,7 +1150,7 @@
                     if (modulos.length === 1) {
                         // Solo hay un módulo, ir directo a selección de tipo
                         const moduloId = modulos[0].getAttribute('data-modulo-id');
-                        const moduloNombre = modulos[0].querySelector('h3').textContent;
+                        const moduloNombre = obtenerNombreModuloElemento(modulos[0]);
                         mostrarSelectorTipoActividad(moduloId, moduloNombre);
                     } else {
                         // Hay múltiples módulos, mostrar selector
@@ -597,6 +1164,23 @@
 
         // Función para mostrar selector de módulos para actividad
         function mostrarSelectorModulosParaActividad(modulos) {
+            const opcionesHTML = Array.from(modulos).map((modulo) => {
+                const moduloId = modulo.getAttribute('data-modulo-id');
+                if (!moduloId) {
+                    return '';
+                }
+                const moduloNombre = obtenerNombreModuloElemento(modulo);
+
+                return `
+                                <button class="w-full text-left py-3 px-4 mb-2 rounded-lg border border-gray-200 hover:bg-green-50 hover:border-green-300 transition-colors duration-200 modulo-actividad-option"
+                                        data-modulo-id="${moduloId}"
+                                        data-modulo-nombre="${escapeHtmlAtributo(moduloNombre)}">
+                                    <i class="fas fa-folder text-gray-400 me-2"></i>
+                                    <strong>${escapeHtml(moduloNombre)}</strong>
+                                </button>
+                            `;
+            }).join('');
+
             const modalHTML = `
                 <div id="moduloActividadSelectorModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div class="bg-white rounded-lg p-6 w-96">
@@ -605,14 +1189,7 @@
                         </h3>
                         <p class="text-gray-600 mb-4">Selecciona en qué módulo quieres crear la actividad:</p>
                         <div id="moduloActividadList" class="max-h-60 overflow-y-auto mb-4">
-                            ${Array.from(modulos).map(modulo => `
-                                <button class="w-full text-left py-3 px-4 mb-2 rounded-lg border border-gray-200 hover:bg-green-50 hover:border-green-300 transition-colors duration-200 modulo-actividad-option"
-                                        data-modulo-id="${modulo.getAttribute('data-modulo-id')}"
-                                        data-modulo-nombre="${modulo.querySelector('h3').textContent}">
-                                    <i class="fas fa-folder text-gray-400 me-2"></i>
-                                    <strong>${modulo.querySelector('h3').textContent}</strong>
-                                </button>
-                            `).join('')}
+                            ${opcionesHTML}
                         </div>
                         <div class="flex justify-end">
                             <button type="button" onclick="cerrarSelectorModulosActividad()" class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md">
@@ -645,6 +1222,7 @@
 
         // Función para mostrar selector de tipo de actividad
         function mostrarSelectorTipoActividad(moduloId, moduloNombre) {
+            const moduloNombreSeguro = escapeHtml(moduloNombre);
             const modalHTML = `
                 <div id="tipoActividadModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div class="bg-white rounded-lg p-5 w-full max-w-md">
@@ -652,7 +1230,7 @@
                             <i class="fas fa-tasks me-2 text-customGreen"></i>Crear Actividad
                         </h3>
                         <p class="text-sm text-gray-500 mb-4">
-                            <i class="fas fa-folder text-gray-400 me-1"></i>${moduloNombre}
+                            <i class="fas fa-folder text-gray-400 me-1"></i>${moduloNombreSeguro}
                         </p>
                         
                         <div class="grid grid-cols-2 gap-3">

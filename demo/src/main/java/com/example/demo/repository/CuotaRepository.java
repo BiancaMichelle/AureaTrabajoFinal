@@ -16,10 +16,10 @@ public interface CuotaRepository extends JpaRepository<Cuota, Long> {
     
     List<Cuota> findByEstado(String estado);
     
-    @Query("SELECT c FROM Cuota c WHERE c.fechaVencimiento < :fecha AND c.estado = 'PENDIENTE'")
+    @Query("SELECT c FROM Cuota c LEFT JOIN FETCH c.pago WHERE c.fechaVencimiento < :fecha AND c.estado = 'PENDIENTE'")
     List<Cuota> findCuotasVencidas(@Param("fecha") LocalDate fecha);
     
-    @Query("SELECT c FROM Cuota c JOIN c.inscripcion i JOIN i.alumno a WHERE a.id = :usuarioId")
+    @Query("SELECT c FROM Cuota c LEFT JOIN FETCH c.pago JOIN c.inscripcion i JOIN i.alumno a WHERE a.id = :usuarioId")
     List<Cuota> findByUsuarioId(@Param("usuarioId") java.util.UUID usuarioId);
 
     List<Cuota> findByPagoIdPago(Long pagoId);

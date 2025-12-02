@@ -288,30 +288,55 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr th:if="${cuotaPendiente != null}">
-                        <td th:text="${cuotaPendiente.numeroCuota != null ? 'Cuota ' + cuotaPendiente.numeroCuota : 'Cuota pendiente'}">Cuota</td>
-                        <td th:text="${cuotaPendiente.inscripcion != null and cuotaPendiente.inscripcion.oferta != null ? cuotaPendiente.inscripcion.oferta.nombre : '-'}">Curso</td>
-                        <td th:text="${cuotaPendiente.fechaVencimiento != null ? #temporals.format(cuotaPendiente.fechaVencimiento, 'dd MMM yyyy') : 'Sin fecha'}">15 Nov</td>
-                        <td th:text="${montoCuotaPendienteTexto}">$0</td>
-                        <td><span class="status-badge pendiente">Pendiente</span></td>
+                    <!-- Cuotas (todas, con estados actualizados) -->
+                    <tr th:each="cuota : ${cuotas}">
+                        <td th:text="${cuota.numeroCuota != null ? 'Cuota ' + cuota.numeroCuota : 'Cuota'}">Cuota</td>
+                        <td th:text="${cuota.inscripcion != null and cuota.inscripcion.oferta != null ? cuota.inscripcion.oferta.nombre : '-'}">Curso</td>
+                        <td th:text="${cuota.fechaVencimiento != null ? #temporals.format(cuota.fechaVencimiento, 'dd MMM yyyy') : 'Sin fecha'}">15 Nov</td>
+                        <td th:text="${#numbers.formatCurrency(cuota.monto != null ? cuota.monto : T(java.math.BigDecimal).ZERO)}">$0</td>
                         <td>
-                            <form th:action="@{'/alumno/mis-pagos/cuotas/' + ${cuotaPendiente.idCuota} + '/pagar'}" method="post">
+                            <span class="status-badge"
+                                th:classappend="${cuota.estado.name() == 'PAGADA' ? ' pagado' : (cuota.estado.name() == 'VENCIDA' ? ' vencido' : ' pendiente')}"
+                                th:text="${cuota.estado.name() == 'VENCIDA' ? 'Mora' : cuota.estado.descripcion}">Estado</span>
+                        </td>
+                        <td>
+                            <!-- Botón de pagar solo si es la cuota pendiente -->
+                            <form th:if="${cuotaPendiente != null and cuotaPendiente.idCuota == cuota.idCuota}"
+                                  th:action="@{'/alumno/mis-pagos/cuotas/' + ${cuota.idCuota} + '/pagar'}" 
+                                  method="post"
+                                  style="display: inline;">
                                 <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                                 <button class="btn-pagar" type="submit">
                                     <i class="fas fa-credit-card"></i> Pagar
                                 </button>
                             </form>
+                            <!-- Para cuotas ya pagadas, mostrar comprobante -->
+                            <a th:if="${cuota.estado.name() == 'PAGADA' and cuota.pago != null}" 
+                               class="btn-ver"
+                               th:href="@{'/pago-resultado'(payment_id=${cuota.pago.paymentId}, external_reference=${cuota.pago.externalReference})}">
+                                <i class="fas fa-receipt"></i> Comprobante
+                            </a>
+                            <span th:if="${cuota.estado.name() == 'PAGADA' and cuota.pago == null}" style="color: #48bb78;">
+                                <i class="fas fa-check-circle"></i> Completado
+                            </span>
+                            <!-- Para otras cuotas, solo mostrar el estado -->
+                            <span th:if="${cuota.estado.name() != 'PAGADA' and (cuotaPendiente == null or cuotaPendiente.idCuota != cuota.idCuota)}" 
+                                  style="color: #a0aec0;">
+                                -
+                            </span>
                         </td>
                     </tr>
-                    <tr th:each="pago : ${pagos}">
-                        <td th:text="${pago.descripcion != null ? pago.descripcion : 'Pago de ' + (pago.oferta != null ? pago.oferta.nombre : 'inscripción')}">Inscripción</td>
+                    
+                    <!-- Pagos de inscripción (solo los que tienen esCuotaMensual = false o es null) -->
+                    <tr th:each="pago : ${pagos}" th:if="${pago.esCuotaMensual == null or pago.esCuotaMensual == false}">
+                        <td th:text="${pago.descripcion != null ? pago.descripcion : 'Inscripción'}">Inscripción</td>
                         <td th:text="${pago.oferta != null ? pago.oferta.nombre : '-'}">Curso</td>
                         <td th:text="${pago.fechaAprobacion != null ? #temporals.format(pago.fechaAprobacion, 'dd MMM yyyy HH:mm') : (pago.fechaPago != null ? #temporals.format(pago.fechaPago, 'dd MMM yyyy HH:mm') : 'Sin registro')}">01 Oct 2025</td>
                         <td th:text="${#numbers.formatCurrency(pago.monto != null ? pago.monto : T(java.math.BigDecimal).ZERO)}">$0</td>
                         <td>
-                                <span class="status-badge"
-                                    th:classappend="${pago.estadoPago.name() == 'COMPLETADO' ? ' pagado' : (pago.estadoPago.name() == 'PENDIENTE' or pago.estadoPago.name() == 'EN_PROCESO' ? ' pendiente' : ' vencido')}"
-                                  th:text="${pago.estadoPago.descripcion}">Pagado</span>
+                            <span class="status-badge"
+                                th:classappend="${pago.estadoPago.name() == 'COMPLETADO' ? ' pagado' : (pago.estadoPago.name() == 'PENDIENTE' or pago.estadoPago.name() == 'EN_PROCESO' ? ' pendiente' : ' vencido')}"
+                                th:text="${pago.estadoPago.descripcion}">Pagado</span>
                         </td>
                         <td>
                             <a class="btn-ver"
@@ -321,7 +346,8 @@
                             </a>
                         </td>
                     </tr>
-                    <tr th:if="${cuotaPendiente == null and #lists.isEmpty(pagos)}">
+                    
+                    <tr th:if="${#lists.isEmpty(cuotas) and #lists.isEmpty(pagos)}">
                         <td colspan="6">
                             <div class="empty-state">
                                 <i class="fas fa-receipt"></i>

@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -36,7 +37,9 @@ public class CursoService {
     }
 
     public Curso obtenerCursoPorId(Long cursoId) {
-        return cursoRepository.findById(cursoId)
+        Long cursoIdSeguro = Objects.requireNonNull(cursoId, "El identificador del curso no puede ser nulo");
+
+        return cursoRepository.findById(cursoIdSeguro)
                 .orElseThrow(() -> new RuntimeException("Curso no encontrado"));
     }
 
@@ -44,7 +47,10 @@ public class CursoService {
             LocalDate fechaInicio, LocalDate fechaFin,
             Boolean visibilidad, Long cursoId) {
         // ✅ Buscar en OfertaAcademicaRepository para soportar Cursos Y Formaciones
-        OfertaAcademica curso = ofertaAcademicaRepository.findById(cursoId)
+        Long cursoIdSeguro = Objects.requireNonNull(cursoId,
+            "El identificador de la oferta académica no puede ser nulo");
+
+        OfertaAcademica curso = ofertaAcademicaRepository.findById(cursoIdSeguro)
                 .orElseThrow(() -> new RuntimeException("Oferta académica no encontrada"));
 
         System.out.println(
@@ -64,8 +70,58 @@ public class CursoService {
         return moduloRepository.save(modulo);
     }
 
+    public Modulo actualizarModulo(UUID moduloId, String nombre, String descripcion, String objetivos,
+            LocalDate fechaInicio, LocalDate fechaFin, Boolean visibilidad) {
+        UUID moduloIdSeguro = Objects.requireNonNull(moduloId,
+                "El identificador del módulo es obligatorio");
+
+        Modulo modulo = moduloRepository.findById(moduloIdSeguro)
+                .orElseThrow(() -> new RuntimeException("Módulo no encontrado"));
+
+        if (nombre == null || nombre.trim().isEmpty()) {
+            throw new IllegalArgumentException("El nombre del módulo no puede estar vacío");
+        }
+
+        if (descripcion == null || descripcion.trim().isEmpty()) {
+            throw new IllegalArgumentException("La descripción del módulo no puede estar vacía");
+        }
+
+        if (fechaInicio == null || fechaFin == null) {
+            throw new IllegalArgumentException("Las fechas del módulo son obligatorias");
+        }
+
+        if (fechaFin.isBefore(fechaInicio)) {
+            throw new IllegalArgumentException("La fecha de fin no puede ser anterior a la fecha de inicio");
+        }
+
+        modulo.setNombre(nombre.trim());
+        modulo.setDescripcion(descripcion.trim());
+
+        String objetivosProcesados = objetivos != null ? objetivos.trim() : "";
+        modulo.setObjetivos(objetivosProcesados.isEmpty() ? null : objetivosProcesados);
+
+        modulo.setFechaInicioModulo(fechaInicio);
+        modulo.setFechaFinModulo(fechaFin);
+        modulo.setVisibilidad(Boolean.TRUE.equals(visibilidad));
+
+        return moduloRepository.save(modulo);
+    }
+
+    public Modulo actualizarVisibilidadModulo(UUID moduloId, Boolean visibilidad) {
+        UUID moduloIdSeguro = Objects.requireNonNull(moduloId, "El identificador del módulo es obligatorio");
+
+        Modulo modulo = moduloRepository.findById(moduloIdSeguro)
+                .orElseThrow(() -> new RuntimeException("Módulo no encontrado"));
+
+        modulo.setVisibilidad(Boolean.TRUE.equals(visibilidad));
+
+        return moduloRepository.save(modulo);
+    }
+
     public Clase crearClase(String titulo, String descripcion, UUID moduloId) {
-        Modulo modulo = moduloRepository.findById(moduloId)
+        UUID moduloIdSeguro = Objects.requireNonNull(moduloId, "El identificador del módulo no puede ser nulo");
+
+        Modulo modulo = moduloRepository.findById(moduloIdSeguro)
                 .orElseThrow(() -> new RuntimeException("Módulo no encontrado"));
 
         Clase clase = new Clase();
@@ -248,7 +304,9 @@ public class CursoService {
      * Elimina un curso con validaciones - usa método heredado
      */
     public boolean eliminar(Long id) {
-        Optional<Curso> cursoOpt = obtenerCursoPorIdOpt(id);
+        Long cursoIdSeguro = Objects.requireNonNull(id, "El identificador del curso no puede ser nulo");
+
+        Optional<Curso> cursoOpt = obtenerCursoPorIdOpt(cursoIdSeguro);
 
         if (!cursoOpt.isPresent()) {
             return false;
@@ -260,7 +318,7 @@ public class CursoService {
             return false;
         }
 
-        cursoRepository.deleteById(id);
+        cursoRepository.deleteById(cursoIdSeguro);
         return true;
     }
 
@@ -268,7 +326,8 @@ public class CursoService {
      * Obtiene un curso por ID (devuelve Optional)
      */
     public Optional<Curso> obtenerCursoPorIdOpt(Long id) {
-        return cursoRepository.findById(id);
+        Long cursoIdSeguro = Objects.requireNonNull(id, "El identificador del curso no puede ser nulo");
+        return cursoRepository.findById(cursoIdSeguro);
     }
 
     /**

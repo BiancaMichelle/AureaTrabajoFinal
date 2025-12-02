@@ -15,10 +15,12 @@ import com.example.demo.model.OfertaAcademica;
 @Repository
 public interface ModuloRepository extends JpaRepository<Modulo, UUID> {
     // Método para buscar módulos por curso ordenados por fecha de inicio (soporta Curso y Formación)
-    List<Modulo> findByCursoOrderByFechaInicioModuloAsc(OfertaAcademica curso);
+    @Query("SELECT m FROM Modulo m WHERE m.curso = :curso ORDER BY m.fechaInicioModulo ASC, m.idModulo ASC")
+    List<Modulo> findByCursoOrderByFechaInicioModuloAsc(@Param("curso") OfertaAcademica curso);
     
     // Métodos adicionales útiles
-    List<Modulo> findByCursoAndVisibilidadTrueOrderByFechaInicioModuloAsc(OfertaAcademica curso);
+    @Query("SELECT m FROM Modulo m WHERE m.curso = :curso AND m.visibilidad = true ORDER BY m.fechaInicioModulo ASC, m.idModulo ASC")
+    List<Modulo> findByCursoAndVisibilidadTrueOrderByFechaInicioModuloAsc(@Param("curso") OfertaAcademica curso);
     
     Optional<Modulo> findByIdModulo(UUID idModulo);
     

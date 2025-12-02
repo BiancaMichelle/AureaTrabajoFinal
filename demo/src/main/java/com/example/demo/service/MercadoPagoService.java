@@ -6,9 +6,11 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
@@ -367,6 +369,8 @@ public class MercadoPagoService {
 
             List<Cuota> existentes = cuotaRepository
                     .findByInscripcionIdInscripcion(inscripcion.getIdInscripcion());
+            
+            // Si ya existe alguna cuota, no generar más automáticamente
             if (!existentes.isEmpty()) {
                 log.info("ℹ️ La inscripción {} ya posee {} cuotas registradas", inscripcion.getIdInscripcion(),
                         existentes.size());
@@ -380,25 +384,116 @@ public class MercadoPagoService {
                 fechaReferencia = oferta.getFechaInicio();
             }
 
-            List<Cuota> nuevasCuotas = new ArrayList<>();
-            for (int i = 1; i <= numeroCuotas; i++) {
-                Cuota cuota = new Cuota();
-                cuota.setInscripcion(inscripcion);
-                cuota.setNumeroCuota(i);
-                cuota.setMonto(montoCuota);
-                cuota.setMontoPagado(BigDecimal.ZERO);
-                cuota.setEstado(EstadoCuota.PENDIENTE);
-                cuota.setFechaVencimiento(calcularFechaVencimientoParaCuota(diaVencimiento, fechaReferencia, i));
-                nuevasCuotas.add(cuota);
-            }
+            // ⭐ SOLO generar la PRIMERA cuota
+            Cuota primeraCuota = new Cuota();
+            primeraCuota.setInscripcion(inscripcion);
+            primeraCuota.setNumeroCuota(1);
+            primeraCuota.setMonto(montoCuota);
+            primeraCuota.setMontoPagado(BigDecimal.ZERO);
+            primeraCuota.setEstado(EstadoCuota.PENDIENTE);
+            primeraCuota.setFechaVencimiento(calcularFechaVencimientoParaCuota(diaVencimiento, fechaReferencia, 1));
 
-            cuotaRepository.saveAll(nuevasCuotas);
-            inscripcion.setCuotas(nuevasCuotas);
+            cuotaRepository.save(primeraCuota);
 
-            log.info("✅ Generadas {} cuotas para la inscripción {}", nuevasCuotas.size(),
-                    inscripcion.getIdInscripcion());
+            log.info("✅ Generada PRIMERA cuota para la inscripción {}", inscripcion.getIdInscripcion());
         } catch (Exception e) {
             log.error("❌ Error al generar cuotas para la inscripción {}", inscripcion != null ? inscripcion.getIdInscripcion() : null, e);
+        }
+    }
+
+    /**
+     * Genera la siguiente cuota si corresponde (cuota anterior pagada + fecha vencimiento pasada)
+     */
+    public void generarSiguienteCuotaSiCorresponde(Inscripciones inscripcion) {
+        try {
+            if (inscripcion == null || inscripcion.getIdInscripcion() == null) {
+                return;
+            }
+
+            OfertaAcademica oferta = inscripcion.getOferta();
+            if (oferta == null) {
+                return;
+            }
+
+            Double costoCuota = null;
+            Integer numeroCuotasTotal = null;
+            Integer diaVencimiento = null;
+
+            if (oferta instanceof Curso curso) {
+                costoCuota = curso.getCostoCuota();
+                numeroCuotasTotal = curso.getNrCuotas();
+                diaVencimiento = curso.getDiaVencimiento();
+            } else if (oferta instanceof Formacion formacion) {
+                costoCuota = formacion.getCostoCuota();
+                numeroCuotasTotal = formacion.getNrCuotas();
+                diaVencimiento = formacion.getDiaVencimiento();
+            } else {
+                return;
+            }
+
+            if (numeroCuotasTotal == null || numeroCuotasTotal <= 0 || costoCuota == null || costoCuota <= 0) {
+                return;
+            }
+
+            // Obtener todas las cuotas existentes de esta inscripción
+            List<Cuota> cuotasExistentes = cuotaRepository
+                    .findByInscripcionIdInscripcion(inscripcion.getIdInscripcion())
+                    .stream()
+                    .sorted(Comparator.comparing(Cuota::getNumeroCuota))
+                    .collect(Collectors.toList());
+
+            if (cuotasExistentes.isEmpty()) {
+                return; // No hay ni la primera cuota, esto no debería pasar
+            }
+
+            int ultimoNumeroCuota = cuotasExistentes.get(cuotasExistentes.size() - 1).getNumeroCuota();
+
+            // Si ya se generaron todas las cuotas, no hacer nada
+            if (ultimoNumeroCuota >= numeroCuotasTotal) {
+                return;
+            }
+
+            // Verificar que la última cuota esté PAGADA
+            Cuota ultimaCuota = cuotasExistentes.get(cuotasExistentes.size() - 1);
+            if (ultimaCuota.getEstado() != EstadoCuota.PAGADA) {
+                return; // La última cuota no está pagada, no generar la siguiente
+            }
+
+            // Calcular la fecha de vencimiento de la SIGUIENTE cuota
+            int siguienteNumero = ultimoNumeroCuota + 1;
+            LocalDate fechaReferencia = Optional.ofNullable(inscripcion.getFechaInscripcion()).orElse(LocalDate.now());
+            if (oferta.getFechaInicio() != null && fechaReferencia.isBefore(oferta.getFechaInicio())) {
+                fechaReferencia = oferta.getFechaInicio();
+            }
+
+            LocalDate fechaVencimientoSiguiente = calcularFechaVencimientoParaCuota(diaVencimiento, fechaReferencia, siguienteNumero);
+
+            // Solo generar si ya pasó la fecha de vencimiento de la siguiente cuota
+            LocalDate hoy = LocalDate.now();
+            if (fechaVencimientoSiguiente.isAfter(hoy)) {
+                log.info("⏳ Aún no es momento de generar la cuota {} (vence {})", siguienteNumero, fechaVencimientoSiguiente);
+                return;
+            }
+
+            // Generar la siguiente cuota
+            BigDecimal montoCuota = BigDecimal.valueOf(costoCuota).setScale(2, RoundingMode.HALF_UP);
+            
+            Cuota nuevaCuota = new Cuota();
+            nuevaCuota.setInscripcion(inscripcion);
+            nuevaCuota.setNumeroCuota(siguienteNumero);
+            nuevaCuota.setMonto(montoCuota);
+            nuevaCuota.setMontoPagado(BigDecimal.ZERO);
+            nuevaCuota.setEstado(EstadoCuota.PENDIENTE);
+            nuevaCuota.setFechaVencimiento(fechaVencimientoSiguiente);
+
+            cuotaRepository.save(nuevaCuota);
+
+            log.info("✅ Generada cuota {} para la inscripción {} (vencimiento: {})", 
+                siguienteNumero, inscripcion.getIdInscripcion(), fechaVencimientoSiguiente);
+
+        } catch (Exception e) {
+            log.error("❌ Error al generar siguiente cuota para la inscripción {}", 
+                inscripcion != null ? inscripcion.getIdInscripcion() : null, e);
         }
     }
 

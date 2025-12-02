@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const formContainer = document.getElementById('form-container');
     const btnCloseForm = document.getElementById('btn-close-form');
     const btnCancelForm = document.getElementById('btn-cancel-form');
+    const defaultCancelMarkup = btnCancelForm ? btnCancelForm.innerHTML : '';
     const rolSelect = document.getElementById('rol-select');
     const fieldsDocente = document.getElementById('fields-docente');
 
@@ -31,8 +32,43 @@ document.addEventListener('DOMContentLoaded', function () {
     const provinciaSelect = document.getElementById('provincia');
     const ciudadSelect = document.getElementById('ciudad');
 
+    const modalDetalleUsuario = document.getElementById('modalDetalleUsuario');
+    const modalEditarUsuarioBtn = document.getElementById('btn-editar-usuario-modal');
+    const modalDetalleRefs = {
+        foto: document.getElementById('detalle-usuario-foto'),
+        sinFoto: document.getElementById('detalle-usuario-sin-foto'),
+        nombre: document.getElementById('detalle-usuario-nombre'),
+        dni: document.getElementById('detalle-usuario-dni'),
+        correo: document.getElementById('detalle-usuario-correo'),
+        telefono: document.getElementById('detalle-usuario-telefono'),
+        genero: document.getElementById('detalle-usuario-genero'),
+        fechaNacimiento: document.getElementById('detalle-usuario-fecha-nacimiento'),
+        estado: document.getElementById('detalle-usuario-estado'),
+        fechaRegistro: document.getElementById('detalle-usuario-fecha-registro'),
+        roles: document.getElementById('detalle-usuario-roles'),
+        pais: document.getElementById('detalle-usuario-pais'),
+        provincia: document.getElementById('detalle-usuario-provincia'),
+        ciudad: document.getElementById('detalle-usuario-ciudad'),
+        alumnoColegio: document.getElementById('detalle-usuario-colegio'),
+        alumnoAnioEgreso: document.getElementById('detalle-usuario-anio-egreso'),
+        alumnoUltimosEstudios: document.getElementById('detalle-usuario-ultimos-estudios'),
+        docenteMatricula: document.getElementById('detalle-usuario-matricula'),
+        docenteExperiencia: document.getElementById('detalle-usuario-experiencia'),
+        docenteHorarios: document.getElementById('detalle-usuario-horarios')
+    };
+    const modalDetalleSections = {
+        alumno: document.getElementById('detalle-usuario-alumno'),
+        docente: document.getElementById('detalle-usuario-docente')
+    };
+
+    const csrfToken = document.querySelector('meta[name="_csrf"]')?.content || '';
+    const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.content || '';
+    const usuariosCache = new Map(); // Preserve hydrated rows when the table refreshes
+
     // Variables para roles seleccionados
     let selectedRoles = [];
+    let usuarioEnEdicion = null;
+    let locationSystemInitialized = false;
     
     // ✅ MOVER ESTAS REFERENCIAS A VARIABLES GLOBALES
     let selectedRolesContainer;
@@ -58,6 +94,7 @@ document.addEventListener('DOMContentLoaded', function () {
     initializeFilters();
     initializeTable();
     initializeDateInput(); // ✅ Nueva función para configurar el input de fecha
+    initializeDetalleUsuarioModal();
 
     // ✅ Configurar fecha máxima para el input de fecha (16 años atrás desde hoy)
     function initializeDateInput() {
@@ -71,6 +108,315 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    function initializeDetalleUsuarioModal() {
+        if (!modalDetalleUsuario) {
+            return;
+        }
+
+        modalDetalleUsuario.addEventListener('click', (event) => {
+            if (event.target === modalDetalleUsuario) {
+                cerrarModalDetalleUsuario();
+            }
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && modalDetalleUsuario.classList.contains('show')) {
+                cerrarModalDetalleUsuario();
+            }
+        });
+
+        if (modalEditarUsuarioBtn) {
+            modalEditarUsuarioBtn.addEventListener('click', () => {
+                const identifier = modalDetalleUsuario.dataset.identifier;
+                const nombre = modalDetalleUsuario.dataset.nombre;
+                cerrarModalDetalleUsuario();
+                if (identifier) {
+                    editUsuario({ identifier, nombre });
+                }
+            });
+        }
+    }
+
+    function mostrarModalDetalleUsuario(detalle, context = {}) {
+        if (!modalDetalleUsuario) {
+            return;
+        }
+
+        renderDetalleUsuario(detalle);
+
+        if (context.identifier) {
+            modalDetalleUsuario.dataset.identifier = context.identifier;
+        } else if (detalle?.dni) {
+            modalDetalleUsuario.dataset.identifier = String(detalle.dni);
+        } else {
+            delete modalDetalleUsuario.dataset.identifier;
+        }
+
+        if (context.nombre) {
+            modalDetalleUsuario.dataset.nombre = context.nombre;
+        } else if (detalle?.nombreCompleto) {
+            modalDetalleUsuario.dataset.nombre = detalle.nombreCompleto;
+        } else {
+            delete modalDetalleUsuario.dataset.nombre;
+        }
+
+        modalDetalleUsuario.style.display = 'flex';
+        requestAnimationFrame(() => {
+            modalDetalleUsuario.classList.add('show');
+        });
+    }
+
+    function cerrarModalDetalleUsuario() {
+        if (!modalDetalleUsuario) {
+            return;
+        }
+
+        modalDetalleUsuario.classList.remove('show');
+        setTimeout(() => {
+            modalDetalleUsuario.style.display = 'none';
+            delete modalDetalleUsuario.dataset.identifier;
+            delete modalDetalleUsuario.dataset.nombre;
+        }, 200);
+    }
+
+    window.cerrarModalDetalleUsuario = cerrarModalDetalleUsuario;
+
+    function renderDetalleUsuario(detalle = {}) {
+        if (!modalDetalleUsuario) {
+            return;
+        }
+
+        const rolesRaw = Array.isArray(detalle.rolesRaw) ? detalle.rolesRaw.map((rol) => `${rol}`.toUpperCase()) : [];
+
+        setModalTexto(modalDetalleRefs.nombre, detalle.nombreCompleto || combinarNombre(detalle.nombre, detalle.apellido));
+        setModalTexto(modalDetalleRefs.dni, detalle.dni);
+        setModalTexto(modalDetalleRefs.correo, detalle.correo);
+        setModalTexto(modalDetalleRefs.telefono, detalle.telefono || 'No registrado');
+        setModalTexto(modalDetalleRefs.genero, formatGenero(detalle.genero));
+        setModalTexto(modalDetalleRefs.fechaNacimiento, formatFechaLarga(detalle.fechaNacimiento));
+        setModalTexto(modalDetalleRefs.fechaRegistro, formatFechaLarga(detalle.fechaRegistro));
+
+        renderEstadoDetalle(detalle);
+        renderRolesDetalle(detalle.roles, rolesRaw);
+        renderFotoDetalle(detalle);
+        renderUbicacionDetalle(detalle);
+        renderAlumnoDetalle(detalle, rolesRaw);
+        renderDocenteDetalle(detalle, rolesRaw);
+    }
+
+    function setModalTexto(target, value) {
+        if (!target) {
+            return;
+        }
+        const texto = value != null && value !== '' ? value : '-';
+        target.textContent = texto;
+    }
+
+    function combinarNombre(nombre, apellido) {
+        if (!nombre && !apellido) {
+            return '';
+        }
+        return [nombre, apellido].filter(Boolean).join(' ');
+    }
+
+    function formatGenero(generoValor) {
+        if (!generoValor) {
+            return 'No especificado';
+        }
+
+        const generoStr = `${generoValor}`.toUpperCase();
+        const map = {
+            MASCULINO: 'Masculino',
+            FEMENINO: 'Femenino',
+            OTRO: 'Otro'
+        };
+        return map[generoStr] || capitalizarTexto(generoValor);
+    }
+
+    function capitalizarTexto(valor) {
+        if (!valor) {
+            return '';
+        }
+
+        const texto = `${valor}`.toLowerCase();
+        return texto.charAt(0).toUpperCase() + texto.slice(1);
+    }
+
+    function formatFechaLarga(valor) {
+        if (!valor) {
+            return '-';
+        }
+
+        const fecha = convertirAFecha(valor);
+        if (!fecha) {
+            return typeof valor === 'string' ? valor : '-';
+        }
+
+        return fecha.toLocaleDateString();
+    }
+
+    function convertirAFecha(valor) {
+        if (!valor) {
+            return null;
+        }
+
+        if (valor instanceof Date) {
+            return Number.isNaN(valor.getTime()) ? null : valor;
+        }
+
+        const fecha = new Date(valor);
+        return Number.isNaN(fecha.getTime()) ? null : fecha;
+    }
+
+    function renderEstadoDetalle(detalle) {
+        const estadoBadge = modalDetalleRefs.estado;
+        if (!estadoBadge) {
+            return;
+        }
+
+        const literal = inferirEstadoLiteral(detalle);
+        estadoBadge.textContent = literal === 'ACTIVO' ? 'Activo' : 'Inactivo';
+        estadoBadge.className = `status-badge status-${literal.toLowerCase()}`;
+    }
+
+    function inferirEstadoLiteral(detalle = {}) {
+        if (typeof detalle.estado === 'string') {
+            return detalle.estado.toUpperCase();
+        }
+        if (typeof detalle.estadoBoolean === 'boolean') {
+            return detalle.estadoBoolean ? 'ACTIVO' : 'INACTIVO';
+        }
+        if (typeof detalle.estado === 'boolean') {
+            return detalle.estado ? 'ACTIVO' : 'INACTIVO';
+        }
+        return 'ACTIVO';
+    }
+
+    function renderRolesDetalle(rolesLegibles = [], rolesCrudos = []) {
+        const container = modalDetalleRefs.roles;
+        if (!container) {
+            return;
+        }
+
+        container.innerHTML = '';
+
+        if (!Array.isArray(rolesLegibles) || rolesLegibles.length === 0) {
+            container.textContent = 'Sin roles asignados';
+            return;
+        }
+
+        rolesLegibles.forEach((rolLegible, index) => {
+            const rolCrudo = rolesCrudos[index] || `${rolLegible}`.toUpperCase();
+            const badge = document.createElement('span');
+            badge.className = `role-badge role-${rolCrudo.toLowerCase()}`;
+            const iconClass = roleIcons[rolCrudo] || 'fas fa-user';
+            badge.innerHTML = `<i class="${iconClass}"></i> ${rolLegible}`;
+            container.appendChild(badge);
+        });
+    }
+
+    function renderFotoDetalle(detalle = {}) {
+        const fotoElemento = modalDetalleRefs.foto;
+        const placeholder = modalDetalleRefs.sinFoto;
+
+        const posiblesCampos = [detalle.fotoUrl, detalle.foto, detalle.fotoPerfil, detalle.imagenPerfil];
+        const urlValida = posiblesCampos.find((valor) => valor && `${valor}`.trim() !== '');
+
+        if (fotoElemento && placeholder) {
+            if (urlValida) {
+                fotoElemento.src = urlValida;
+                fotoElemento.style.display = 'block';
+                placeholder.style.display = 'none';
+            } else {
+                fotoElemento.src = '';
+                fotoElemento.style.display = 'none';
+                placeholder.style.display = 'flex';
+            }
+        }
+    }
+
+    function renderUbicacionDetalle(detalle = {}) {
+        setModalTexto(modalDetalleRefs.pais, detalle?.pais?.nombre);
+        setModalTexto(modalDetalleRefs.provincia, detalle?.provincia?.nombre);
+        setModalTexto(modalDetalleRefs.ciudad, detalle?.ciudad?.nombre);
+    }
+
+    function renderAlumnoDetalle(detalle = {}, rolesRaw = []) {
+        const contenedor = modalDetalleSections.alumno;
+        if (!contenedor) {
+            return;
+        }
+
+        const esAlumno = rolesRaw.includes('ALUMNO');
+        contenedor.style.display = esAlumno ? 'block' : 'none';
+
+        if (!esAlumno) {
+            return;
+        }
+
+        setModalTexto(modalDetalleRefs.alumnoColegio, detalle.colegioEgreso || 'No registrado');
+        setModalTexto(modalDetalleRefs.alumnoAnioEgreso, detalle.añoEgreso || 'No especificado');
+        setModalTexto(modalDetalleRefs.alumnoUltimosEstudios, detalle.ultimosEstudios || 'No especificado');
+    }
+
+    function renderDocenteDetalle(detalle = {}, rolesRaw = []) {
+        const contenedor = modalDetalleSections.docente;
+        if (!contenedor) {
+            return;
+        }
+
+        const esDocente = rolesRaw.includes('DOCENTE');
+        contenedor.style.display = esDocente ? 'block' : 'none';
+
+        if (!esDocente) {
+            return;
+        }
+
+        setModalTexto(modalDetalleRefs.docenteMatricula, detalle.matricula || 'No registrada');
+        setModalTexto(modalDetalleRefs.docenteExperiencia, formatExperienciaDocente(detalle.experiencia));
+        renderHorariosDetalle(detalle.horariosDisponibilidad);
+    }
+
+    function renderHorariosDetalle(horarios = []) {
+        const contenedor = modalDetalleRefs.docenteHorarios;
+        if (!contenedor) {
+            return;
+        }
+
+        contenedor.innerHTML = '';
+
+        if (!Array.isArray(horarios) || horarios.length === 0) {
+            contenedor.textContent = 'Sin horarios cargados';
+            return;
+        }
+
+        horarios.forEach((horario) => {
+            const chip = document.createElement('div');
+            chip.className = 'horario-item';
+
+            const dia = formatearDiaParaMostrar(horario?.diaSemana || horario?.dia);
+            const inicio = (horario?.horaInicio || '').toString().substring(0, 5);
+            const fin = (horario?.horaFin || '').toString().substring(0, 5);
+
+            chip.innerHTML = `<i class="fas fa-clock"></i> ${dia || 'Día no especificado'} ${inicio || '--:--'} - ${fin || '--:--'}`;
+            contenedor.appendChild(chip);
+        });
+    }
+
+    function formatExperienciaDocente(valor) {
+        if (valor == null) {
+            return 'No especificado';
+        }
+
+        const numero = Number(valor);
+        if (Number.isNaN(numero)) {
+            return `${valor}`;
+        }
+
+        const sufijo = numero === 1 ? 'año' : 'años';
+        return `${numero} ${sufijo}`;
+    }
+
     function initializeLocationSystem() {
         console.log("📍 Inicializando sistema de ubicación...");
         
@@ -78,6 +424,11 @@ document.addEventListener('DOMContentLoaded', function () {
             console.error("❌ No se encontró el select de país");
             return;
         }
+
+        if (locationSystemInitialized) {
+            return;
+        }
+        locationSystemInitialized = true;
     
         // Configurar listener para país
         paisSelect.addEventListener('change', function(e) {
@@ -153,7 +504,7 @@ document.addEventListener('DOMContentLoaded', function () {
         provinciaSelect.innerHTML = '<option value="">Cargando provincias...</option>';
         provinciaSelect.disabled = true;
         
-        fetch(`/api/ubicaciones/provincias/${paisCode}`)
+        return fetch(`/api/ubicaciones/provincias/${paisCode}`)
             .then(response => {
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
@@ -190,10 +541,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 ciudadSelect.innerHTML = '<option value="">Primero selecciona una provincia</option>';
                 ciudadSelect.disabled = true;
                 document.getElementById('ciudadId').value = '';
+                return provincias;
             })
             .catch(error => {
                 console.error('❌ Error cargando provincias:', error);
                 provinciaSelect.innerHTML = '<option value="">Error al cargar provincias</option>';
+                throw error;
             });
     }
     
@@ -203,7 +556,7 @@ document.addEventListener('DOMContentLoaded', function () {
         ciudadSelect.innerHTML = '<option value="">Cargando ciudades...</option>';
         ciudadSelect.disabled = true;
         
-        fetch(`/api/ubicaciones/ciudades/${paisCode}/${provinciaCode}`)
+        return fetch(`/api/ubicaciones/ciudades/${paisCode}/${provinciaCode}`)
             .then(response => {
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
@@ -233,11 +586,67 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
                 
                 document.getElementById('ciudadId').value = '';
+                return ciudades;
             })
             .catch(error => {
                 console.error('❌ Error cargando ciudades:', error);
                 ciudadSelect.innerHTML = '<option value="">Error al cargar ciudades</option>';
+                throw error;
             });
+    }
+
+    async function setUbicacionDesdeDetalle(detalleUsuario) {
+        if (!detalleUsuario || !paisSelect) {
+            return;
+        }
+
+        const paisHidden = document.getElementById('paisCodigo');
+        const provinciaHidden = document.getElementById('provinciaCodigo');
+        const ciudadHidden = document.getElementById('ciudadId');
+
+        const paisCodigoValor = detalleUsuario.pais?.codigo || '';
+        const provinciaCodigoValor = detalleUsuario.provincia?.codigo || '';
+        const ciudadIdValor = detalleUsuario.ciudad?.id != null ? String(detalleUsuario.ciudad.id) : '';
+
+        try {
+            if (paisCodigoValor) {
+                const paisOption = Array.from(paisSelect.options).find(option => option.getAttribute('data-codigo') === paisCodigoValor);
+                if (paisOption) {
+                    paisSelect.value = paisOption.value;
+                    if (paisHidden) {
+                        paisHidden.value = paisCodigoValor;
+                    }
+                    await cargarProvinciasAdmin(paisCodigoValor);
+                }
+            }
+
+            if (provinciaCodigoValor) {
+                const provinciaOption = Array.from(provinciaSelect.options).find(option => option.getAttribute('data-code') === provinciaCodigoValor);
+                if (provinciaOption) {
+                    provinciaSelect.value = provinciaOption.value;
+                    if (provinciaHidden) {
+                        provinciaHidden.value = provinciaCodigoValor;
+                    }
+
+                    const paisCodigoActual = paisHidden ? paisHidden.value : paisCodigoValor;
+                    if (paisCodigoActual) {
+                        await cargarCiudadesAdmin(paisCodigoActual, provinciaCodigoValor);
+                    }
+                }
+            }
+
+            if (ciudadIdValor) {
+                const ciudadOption = Array.from(ciudadSelect.options).find(option => `${option.getAttribute('data-id')}` === ciudadIdValor);
+                if (ciudadOption) {
+                    ciudadSelect.value = ciudadOption.value;
+                    if (ciudadHidden) {
+                        ciudadHidden.value = ciudadIdValor;
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('❌ Error asignando ubicación del usuario:', error);
+        }
     }
     
     // Función para validar la ubicación en el formulario
@@ -293,6 +702,21 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    function clearFieldErrors() {
+        const form = document.getElementById('user-form');
+        if (!form) {
+            return;
+        }
+
+        form.querySelectorAll('.error').forEach(element => {
+            element.classList.remove('error');
+        });
+
+        form.querySelectorAll('.error-message').forEach(message => {
+            message.remove();
+        });
+    }
+
 
     // Mostrar/ocultar formulario
     function initializeFormHandlers() {
@@ -337,7 +761,34 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function resetForm() {
-        document.getElementById('user-form').reset();
+        const form = document.getElementById('user-form');
+        if (form) {
+            setFormReadOnly(false);
+            form.reset();
+            form.dataset.mode = 'create';
+            form.dataset.readonly = 'false';
+            delete form.dataset.identifier;
+            delete form.dataset.originalDni;
+        }
+
+        usuarioEnEdicion = null;
+
+        const headerTitle = document.querySelector('#form-container .form-header h3');
+        if (headerTitle) {
+            headerTitle.innerHTML = '<i class="fas fa-user-plus"></i> Registrar Nuevo Usuario';
+        }
+
+        if (form) {
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.innerHTML = '<i class="fas fa-save"></i> Registrar Usuario';
+            }
+        }
+
+        if (btnCancelForm && defaultCancelMarkup) {
+            btnCancelForm.innerHTML = defaultCancelMarkup;
+        }
+
         resetFotoUpload();
         clearHorariosDocenteTable();
         hideDocenteFields();
@@ -351,6 +802,81 @@ document.addEventListener('DOMContentLoaded', function () {
         const contador = document.getElementById('contador-horarios');
         if (contador) {
             contador.style.display = 'none';
+        }
+    }
+
+    function setFormReadOnly(readOnly) {
+        const form = document.getElementById('user-form');
+        if (!form) {
+            return;
+        }
+
+        form.dataset.readonly = readOnly ? 'true' : 'false';
+
+        const interactiveElements = form.querySelectorAll('input, select, textarea, button');
+        interactiveElements.forEach(element => {
+            const shouldSkip = element.id === 'btn-cancel-form' || element.id === 'btn-close-form';
+            if (shouldSkip) {
+                return;
+            }
+
+            if (readOnly) {
+                if (element.disabled) {
+                    element.dataset.disabledByView = 'persist';
+                } else {
+                    element.dataset.disabledByView = 'true';
+                    element.disabled = true;
+                }
+            } else if (element.dataset.disabledByView) {
+                if (element.dataset.disabledByView === 'true') {
+                    element.disabled = false;
+                }
+                delete element.dataset.disabledByView;
+            }
+        });
+
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            if (readOnly) {
+                submitBtn.dataset.hiddenByView = 'true';
+                submitBtn.style.display = 'none';
+            } else if (submitBtn.dataset.hiddenByView === 'true') {
+                submitBtn.style.display = '';
+                delete submitBtn.dataset.hiddenByView;
+            }
+        }
+
+        const addHorarioBtn = document.getElementById('btn-add-horario-docente');
+        if (addHorarioBtn) {
+            if (readOnly) {
+                if (!addHorarioBtn.disabled) {
+                    addHorarioBtn.dataset.disabledByView = 'true';
+                    addHorarioBtn.disabled = true;
+                } else {
+                    addHorarioBtn.dataset.disabledByView = 'persist';
+                }
+            } else if (addHorarioBtn.dataset.disabledByView) {
+                if (addHorarioBtn.dataset.disabledByView === 'true') {
+                    addHorarioBtn.disabled = false;
+                }
+                delete addHorarioBtn.dataset.disabledByView;
+            }
+        }
+
+        const horarioDeleteBtns = form.querySelectorAll('.btn-delete-horario');
+        horarioDeleteBtns.forEach(btn => {
+            if (readOnly) {
+                btn.dataset.hiddenByView = 'true';
+                btn.style.display = 'none';
+            } else if (btn.dataset.hiddenByView === 'true') {
+                btn.style.display = '';
+                delete btn.dataset.hiddenByView;
+            }
+        });
+
+        if (selectedChipsContainer) {
+            selectedChipsContainer.style.pointerEvents = readOnly ? 'none' : '';
+            selectedChipsContainer.style.opacity = readOnly ? '0.7' : '';
         }
     }
     
@@ -463,168 +989,149 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     
     function resetRoles() {
-        selectedRoles = [];
-        if (rolSelect) rolSelect.value = '';
-        updateSelectedRoles(); // ← AHORA SÍ ESTÁ DEFINIDA
-        hideAllSpecificFields();
-        removeAllSpecificRequired();
+        applyRoleSelection(null);
     }
 
     function initializeRoles() {
         selectedRolesContainer = document.getElementById('selected-roles');
         selectedChipsContainer = document.getElementById('selected-roles-chips');
-    
+
         if (rolSelect) {
             rolSelect.addEventListener('change', function() {
-                const selectedValue = this.value;
-                
-                if (selectedValue) {
-                    selectedRoles = [selectedValue];
-                    updateSelectedRoles(); // ← AHORA ESTÁ DISPONIBLE
-                    
-                    showDocenteFields(selectedValue === 'DOCENTE');
-                    showAlumnoFields(selectedValue === 'ALUMNO');
-                    manageRequiredFields(selectedValue);
-                } else {
-                    selectedRoles = [];
-                    updateSelectedRoles(); // ← AHORA ESTÁ DISPONIBLE
-                    hideAllSpecificFields();
-                    removeAllSpecificRequired();
-                }
+                applyRoleSelection(this.value || null);
             });
         }
-        
-        // ✅ NUEVA: Función para manejar campos requeridos según el rol
-        function manageRequiredFields(rol) {
-            // Primero quitar todos los requeridos específicos
-            removeAllSpecificRequired();
-            
-            // Luego agregar requeridos según el rol
-            switch(rol.toUpperCase()) {
-                case 'ALUMNO':
-                    addAlumnoRequired();
-                    break;
-                case 'DOCENTE':
-                    // Los campos de docente no son requeridos por ahora
-                    break;
-                case 'ADMIN':
-                case 'COORDINADOR':
-                    // No hay campos específicos requeridos
-                    break;
-            }
-        }
-    
-        // ✅ NUEVA: Agregar requeridos para alumno
-        function addAlumnoRequired() {
-            const colegioEgreso = document.getElementById('colegioEgreso');
-            const añoEgreso = document.getElementById('añoEgreso');
-            const ultimosEstudios = document.getElementById('ultimosEstudios');
-            
-            if (colegioEgreso) {
-                colegioEgreso.setAttribute('required', 'required');
-                colegioEgreso.setAttribute('aria-required', 'true');
-            }
-            if (añoEgreso) {
-                añoEgreso.setAttribute('required', 'required');
-                añoEgreso.setAttribute('aria-required', 'true');
-            }
-            if (ultimosEstudios) {
-                ultimosEstudios.setAttribute('required', 'required');
-                ultimosEstudios.setAttribute('aria-required', 'true');
-            }
-        }
-    
-        // ✅ MODIFICADA: Función para remover el rol seleccionado
+
         window.removeSelectedRole = function() {
-            selectedRoles = [];
-            rolSelect.value = ''; // Resetear el select
-            updateSelectedRoles();
-            hideAllSpecificFields();
-            removeAllSpecificRequired(); // ✅ Quitar requeridos al remover rol
+            applyRoleSelection(null);
         };
-    
-        // ✅ NUEVA: Función para obtener el rol seleccionado
+
         window.getSelectedRole = function() {
             return selectedRoles.length > 0 ? selectedRoles[0] : null;
         };
     }
-    
-        // ========== FUNCIONES GLOBALES (FUERA DE initializeRoles) ==========
-    
-        // ✅ Función para quitar requeridos de todos los campos específicos
-        function removeAllSpecificRequired() {
-            // Campos de alumno
-            const colegioEgreso = document.getElementById('colegioEgreso');
-            const añoEgreso = document.getElementById('añoEgreso');
-            const ultimosEstudios = document.getElementById('ultimosEstudios');
-            
-            if (colegioEgreso) {
-                colegioEgreso.removeAttribute('required');
-                colegioEgreso.removeAttribute('aria-required');
+
+    // ========== FUNCIONES GLOBALES (FUERA DE initializeRoles) ==========
+
+    function setAlumnoRequiredAttributes(isRequired) {
+        const colegioEgreso = document.getElementById('colegioEgreso');
+        const añoEgreso = document.getElementById('añoEgreso');
+        const ultimosEstudios = document.getElementById('ultimosEstudios');
+
+        const applyRequired = (element) => {
+            if (!element) return;
+            if (isRequired) {
+                element.setAttribute('required', 'required');
+                element.setAttribute('aria-required', 'true');
+            } else {
+                element.removeAttribute('required');
+                element.removeAttribute('aria-required');
             }
-            if (añoEgreso) {
-                añoEgreso.removeAttribute('required');
-                añoEgreso.removeAttribute('aria-required');
-            }
-            if (ultimosEstudios) {
-                ultimosEstudios.removeAttribute('required');
-                ultimosEstudios.removeAttribute('aria-required');
-            }
-            
-            // Campos de docente
-            const matricula = document.getElementById('matricula');
-            const experiencia = document.getElementById('experiencia');
-            
-            if (matricula) matricula.removeAttribute('required');
-            if (experiencia) experiencia.removeAttribute('required');
+        };
+
+        applyRequired(colegioEgreso);
+        applyRequired(añoEgreso);
+        applyRequired(ultimosEstudios);
+    }
+
+    function applyRoleSelection(rol) {
+        const normalizedRole = rol ? `${rol}`.toUpperCase() : '';
+
+        selectedRoles = normalizedRole ? [normalizedRole] : [];
+
+        if (rolSelect) {
+            rolSelect.value = normalizedRole;
         }
-    
-        // ✅ Función para mostrar campos de docente
-        function showDocenteFields(show) {
-            if (fieldsDocente) {
-                fieldsDocente.style.display = show ? 'block' : 'none';
-            }
+
+        updateSelectedRoles();
+
+        hideAllSpecificFields();
+        removeAllSpecificRequired();
+
+        if (!normalizedRole) {
+            return;
         }
-    
-        // ✅ Función para ocultar campos de docente
-        function hideDocenteFields() {
-            if (fieldsDocente) {
-                fieldsDocente.style.display = 'none';
-            }
+
+        switch (normalizedRole) {
+            case 'DOCENTE':
+                showDocenteFields(true);
+                break;
+            case 'ALUMNO':
+                showAlumnoFields(true);
+                setAlumnoRequiredAttributes(true);
+                break;
+            default:
+                break;
         }
-    
-        // ✅ Función para mostrar campos de alumno  
-        function showAlumnoFields(show) {
-            const fieldsAlumno = document.getElementById('fields-alumno');
-            if (fieldsAlumno) {
-                fieldsAlumno.style.display = show ? 'block' : 'none';
-            }
+    }
+
+    // ✅ Función para quitar requeridos de todos los campos específicos
+    function removeAllSpecificRequired() {
+        // Campos de alumno
+        const colegioEgreso = document.getElementById('colegioEgreso');
+        const añoEgreso = document.getElementById('añoEgreso');
+        const ultimosEstudios = document.getElementById('ultimosEstudios');
+        
+        if (colegioEgreso) {
+            colegioEgreso.removeAttribute('required');
+            colegioEgreso.removeAttribute('aria-required');
         }
-    
-        // ✅ Función para ocultar campos de alumno
-        function hideAlumnoFields() {
-            const fieldsAlumno = document.getElementById('fields-alumno');
-            if (fieldsAlumno) {
-                fieldsAlumno.style.display = 'none';
-            }
+        if (añoEgreso) {
+            añoEgreso.removeAttribute('required');
+            añoEgreso.removeAttribute('aria-required');
         }
-    
-        // ✅ Función para ocultar todos los campos específicos
-        function hideAllSpecificFields() {
-            hideDocenteFields();
-            hideAlumnoFields();
+        if (ultimosEstudios) {
+            ultimosEstudios.removeAttribute('required');
+            ultimosEstudios.removeAttribute('aria-required');
         }
-    
-        // ✅ Función para resetear roles
-        function resetRoles() {
-            selectedRoles = [];
-            if (rolSelect) rolSelect.value = '';
-            updateSelectedRoles();
-            hideAllSpecificFields();
-            removeAllSpecificRequired();
+        
+        setAlumnoRequiredAttributes(false);
+
+        // Campos de docente
+        const matricula = document.getElementById('matricula');
+        const experiencia = document.getElementById('experiencia');
+        
+        if (matricula) matricula.removeAttribute('required');
+        if (experiencia) experiencia.removeAttribute('required');
+    }
+
+    // ✅ Función para mostrar campos de docente
+    function showDocenteFields(show) {
+        if (fieldsDocente) {
+            fieldsDocente.style.display = show ? 'block' : 'none';
         }
-    
-        // ========== CONTINUACIÓN DEL CÓDIGO ==========
+    }
+
+    // ✅ Función para ocultar campos de docente
+    function hideDocenteFields() {
+        if (fieldsDocente) {
+            fieldsDocente.style.display = 'none';
+        }
+    }
+
+    // ✅ Función para mostrar campos de alumno  
+    function showAlumnoFields(show) {
+        const fieldsAlumno = document.getElementById('fields-alumno');
+        if (fieldsAlumno) {
+            fieldsAlumno.style.display = show ? 'block' : 'none';
+        }
+    }
+
+    // ✅ Función para ocultar campos de alumno
+    function hideAlumnoFields() {
+        const fieldsAlumno = document.getElementById('fields-alumno');
+        if (fieldsAlumno) {
+            fieldsAlumno.style.display = 'none';
+        }
+    }
+
+    // ✅ Función para ocultar todos los campos específicos
+    function hideAllSpecificFields() {
+        hideDocenteFields();
+        hideAlumnoFields();
+    }
+
+    // ========== CONTINUACIÓN DEL CÓDIGO ==========
     
         // Manejo de horarios para docente
         function initializeHorariosDocente() {
@@ -650,6 +1157,42 @@ document.addEventListener('DOMContentLoaded', function () {
     
         
         // ✅ FUNCIÓN addHorarioDocente MEJORADA
+        function formatearDiaParaMostrar(diaClave) {
+            if (!diaClave) {
+                return '';
+            }
+
+            const mapa = {
+                LUNES: 'Lunes',
+                MARTES: 'Martes',
+                MIERCOLES: 'Miércoles',
+                JUEVES: 'Jueves',
+                VIERNES: 'Viernes',
+                SABADO: 'Sábado',
+                DOMINGO: 'Domingo'
+            };
+
+            return mapa[diaClave.toUpperCase()] || diaClave;
+        }
+
+        function crearFilaHorario(dia, horaDesde, horaHasta) {
+            const diaClave = normalizarNombreDia(dia);
+            const diaMostrar = formatearDiaParaMostrar(diaClave);
+
+            const row = document.createElement('tr');
+            row.dataset.dia = diaClave;
+            row.innerHTML = `
+                <td>${diaMostrar}</td>
+                <td>${horaDesde} - ${horaHasta}</td>
+                <td class="actions">
+                    <button type="button" class="btn-icon btn-delete btn-delete-horario" title="Eliminar">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            return row;
+        }
+
         function addHorarioDocente() {
             const dia = diaSelect.value;
             const horaDesde = horaDesdeInput.value;
@@ -671,16 +1214,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
     
-            const newRow = document.createElement('tr');
-            newRow.innerHTML = `
-                <td>${dia}</td>
-                <td>${horaDesde} - ${horaHasta}</td>
-                <td class="actions">
-                    <button type="button" class="btn-icon btn-delete btn-delete-horario" title="Eliminar">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </td>
-            `;
+            const newRow = crearFilaHorario(dia, horaDesde, horaHasta);
             horariosDocenteTableBody.appendChild(newRow);
     
             // Limpiar campos
@@ -731,6 +1265,35 @@ document.addEventListener('DOMContentLoaded', function () {
                 actualizarContadorHorarios(); // ✅ Actualizar contador al limpiar
             }
         }
+
+        function populateHorariosDocente(horarios = []) {
+            clearHorariosDocenteTable();
+
+            if (!Array.isArray(horarios) || horarios.length === 0) {
+                return;
+            }
+
+            horarios.forEach(horario => {
+                if (!horariosDocenteTableBody) {
+                    return;
+                }
+
+                const dia = horario?.diaSemana || horario?.dia;
+                const horaInicioBruta = horario?.horaInicio;
+                const horaFinBruta = horario?.horaFin;
+
+                if (!dia || !horaInicioBruta || !horaFinBruta) {
+                    return;
+                }
+
+                const horaInicio = `${horaInicioBruta}`.substring(0, 5);
+                const horaFin = `${horaFinBruta}`.substring(0, 5);
+                const row = crearFilaHorario(dia, horaInicio, horaFin);
+                horariosDocenteTableBody.appendChild(row);
+            });
+
+            actualizarContadorHorarios();
+        }
     
         // Filtros y búsqueda
         function initializeFilters() {
@@ -764,16 +1327,9 @@ document.addEventListener('DOMContentLoaded', function () {
             if (filtroRol) filtroRol.value = '';
             if (filtroEstado) filtroEstado.value = '';
             if (filtroGenero) filtroGenero.value = '';
-            
-            // Mostrar todas las filas
-            const table = document.getElementById('usuarios-table');
-            if (table) {
-                const rows = table.querySelectorAll('tbody tr');
-                rows.forEach(row => {
-                    row.style.display = '';
-                });
-                updateTableStats(rows.length);
-            }
+
+            applyFilters();
+            loadUsuarios(1);
         }
     
         function filterTable(filters) {
@@ -782,34 +1338,41 @@ document.addEventListener('DOMContentLoaded', function () {
     
             const rows = table.querySelectorAll('tbody tr');
             let visibleCount = 0;
-    
+
+            const normalizedFilters = {
+                search: filters.search ? `${filters.search}`.toLowerCase() : '',
+                rol: filters.rol ? `${filters.rol}`.toUpperCase() : '',
+                estado: filters.estado ? `${filters.estado}`.toUpperCase() : '',
+                genero: filters.genero ? `${filters.genero}`.toUpperCase() : ''
+            };
+
             rows.forEach(row => {
                 const cells = row.querySelectorAll('td');
                 if (cells.length === 0) return;
-    
-                const nombre = cells[2]?.textContent?.toLowerCase() || '';
-                const dni = cells[3]?.textContent?.toLowerCase() || '';
-                const correo = cells[4]?.textContent?.toLowerCase() || '';
-                const roles = cells[5]?.textContent || '';
-                const estado = cells[6]?.textContent || '';
+
+                const dni = cells[0]?.textContent?.toLowerCase() || '';
+                const nombre = cells[1]?.textContent?.toLowerCase() || '';
+                const correo = cells[2]?.textContent?.toLowerCase() || '';
+                const roles = cells[3]?.textContent || '';
+                const estado = cells[4]?.textContent || '';
     
                 let showRow = true;
     
                 // Filtro de búsqueda
-                if (filters.search) {
-                    const searchMatch = nombre.includes(filters.search) ||
-                                      dni.includes(filters.search) ||
-                                      correo.includes(filters.search);
+                if (normalizedFilters.search) {
+                    const searchMatch = nombre.includes(normalizedFilters.search) ||
+                                      dni.includes(normalizedFilters.search) ||
+                                      correo.includes(normalizedFilters.search);
                     if (!searchMatch) showRow = false;
                 }
     
                 // Filtro de rol
-                if (filters.rol && !roles.includes(filters.rol)) {
+                if (normalizedFilters.rol && !roles.toUpperCase().includes(normalizedFilters.rol)) {
                     showRow = false;
                 }
     
                 // Filtro de estado
-                if (filters.estado && !estado.includes(filters.estado)) {
+                if (normalizedFilters.estado && !estado.toUpperCase().includes(normalizedFilters.estado)) {
                     showRow = false;
                 }
     
@@ -831,48 +1394,278 @@ document.addEventListener('DOMContentLoaded', function () {
         function initializeTable() {
             const table = document.getElementById('usuarios-table');
             if (table) {
-                table.addEventListener('click', function(e) {
-                    if (e.target.classList.contains('btn-edit') || 
-                        e.target.parentElement.classList.contains('btn-edit')) {
-                        const row = e.target.closest('tr');
-                        const id = row.cells[0].textContent;
-                        const nombre = row.cells[2].textContent;
-                        editUsuario(id, nombre);
-                    } else if (e.target.classList.contains('btn-delete') || 
-                              e.target.parentElement.classList.contains('btn-delete')) {
-                        const row = e.target.closest('tr');
-                        const id = row.cells[0].textContent;
-                        const nombre = row.cells[2].textContent;
-                        deleteUsuario(id, nombre);
-                    } else if (e.target.classList.contains('btn-view') || 
-                              e.target.parentElement.classList.contains('btn-view')) {
-                        const row = e.target.closest('tr');
-                        const id = row.cells[0].textContent;
-                        const nombre = row.cells[2].textContent;
-                        viewUsuario(id, nombre);
+                table.addEventListener('click', function(event) {
+                    const button = event.target.closest('button[data-action]');
+                    if (!button) {
+                        return;
+                    }
+
+                    const row = button.closest('tr');
+                    const action = button.dataset.action;
+                    const cacheKey = button.dataset.userKey || row?.dataset.userKey || button.dataset.dni || row?.dataset.dni || '';
+                    const usuario = cacheKey ? usuariosCache.get(cacheKey) : null;
+                    const nombre = button.dataset.nombre || row?.dataset.nombre || usuario?.nombreCompleto || '';
+                    const dni = button.dataset.dni || row?.dataset.dni || usuario?.dni || '';
+                    const identifier = cacheKey || dni;
+
+                    if (!identifier) {
+                        showNotification('No se pudo determinar el usuario seleccionado', 'error');
+                        return;
+                    }
+
+                    const context = {
+                        identifier,
+                        nombre,
+                        usuario,
+                        dni
+                    };
+
+                    if (action === 'edit') {
+                        editUsuario(context);
+                    } else if (action === 'delete') {
+                        deleteUsuario(context);
+                    } else if (action === 'view') {
+                        viewUsuario(context);
                     }
                 });
             }
-        
+
             // Cargar usuarios al inicializar (página 1)
             loadUsuarios(1);
         }
-    
-        function editUsuario(dni, nombre) {
-            console.log(`Editar usuario DNI ${dni}: ${nombre}`);
-            // Implementar lógica de edición usando DNI
-        }
-    
-        function viewUsuario(dni, nombre) {
-            console.log(`Ver usuario DNI ${dni}: ${nombre}`);
-            // Implementar lógica de visualización usando DNI
-        }
-    
-        function deleteUsuario(dni, nombre) {
-            if (confirm(`¿Está seguro de que desea eliminar el usuario "${nombre}" (DNI: ${dni})?`)) {
-                console.log(`Eliminar usuario DNI ${dni}: ${nombre}`);
-                // Implementar lógica de eliminación usando DNI
+
+        async function obtenerUsuarioDetalle(identifier) {
+            if (!identifier) {
+                throw new Error('Identificador inválido para consultar usuario');
             }
+
+            const headers = {
+                'Accept': 'application/json'
+            };
+
+            if (csrfToken && csrfHeader) {
+                headers[csrfHeader] = csrfToken;
+            }
+
+            const response = await fetch(`/admin/usuarios/${encodeURIComponent(identifier)}`, {
+                method: 'GET',
+                headers
+            });
+
+            const payload = await response.json().catch(() => ({}));
+
+            if (!response.ok || payload.success === false) {
+                const message = payload?.message || `Error al obtener el usuario (HTTP ${response.status})`;
+                throw new Error(message);
+            }
+
+            const detalle = payload.data || {};
+
+            usuariosCache.set(String(identifier), detalle);
+            if (detalle.dni) {
+                usuariosCache.set(String(detalle.dni), detalle);
+            }
+
+            return detalle;
+        }
+
+        async function hydrateUserForm(detalle, options = {}) {
+            const { mode = 'edit', identifier } = options;
+            const form = document.getElementById('user-form');
+
+            if (!form) {
+                return;
+            }
+
+            resetForm();
+
+            if (!locationSystemInitialized) {
+                initializeLocationSystem();
+            }
+
+            form.dataset.mode = mode;
+            form.dataset.readonly = mode === 'view' ? 'true' : 'false';
+
+            if (identifier) {
+                form.dataset.identifier = identifier;
+            }
+
+            if (detalle?.dni) {
+                form.dataset.originalDni = detalle.dni;
+            }
+
+            usuarioEnEdicion = detalle;
+
+            const headerTitle = document.querySelector('#form-container .form-header h3');
+            if (headerTitle) {
+                if (mode === 'edit') {
+                    headerTitle.innerHTML = '<i class="fas fa-user-edit"></i> Editar Usuario';
+                } else if (mode === 'view') {
+                    headerTitle.innerHTML = '<i class="fas fa-user"></i> Detalle del Usuario';
+                }
+            }
+
+            if (btnCancelForm) {
+                if (mode === 'view') {
+                    btnCancelForm.innerHTML = '<i class="fas fa-times"></i> Cerrar';
+                } else if (defaultCancelMarkup) {
+                    btnCancelForm.innerHTML = defaultCancelMarkup;
+                }
+            }
+
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn && mode === 'edit') {
+                submitBtn.innerHTML = '<i class="fas fa-save"></i> Guardar Cambios';
+            }
+
+            const setValue = (id, value) => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.value = value != null ? value : '';
+                }
+            };
+
+            const setSelectValue = (id, value) => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.value = value != null ? `${value}` : '';
+                }
+            };
+
+            setValue('dni', detalle?.dni);
+            setValue('nombre', detalle?.nombre);
+            setValue('apellido', detalle?.apellido);
+            setValue('correo', detalle?.correo);
+            setValue('telefono', detalle?.telefono);
+            setValue('fechaNacimiento', formatearFechaIso(detalle?.fechaNacimiento));
+            setSelectValue('genero', detalle?.genero);
+
+            const estadoInferido = typeof detalle?.estado === 'string'
+                ? detalle.estado
+                : (detalle?.estadoBoolean === false ? 'INACTIVO' : 'ACTIVO');
+            setSelectValue('estado', estadoInferido);
+
+            const rolPrincipal = (detalle?.rolPrincipal || (Array.isArray(detalle?.rolesRaw) ? detalle.rolesRaw[0] : '') || '').toUpperCase();
+            applyRoleSelection(rolPrincipal);
+
+            if (rolPrincipal === 'ALUMNO') {
+                setValue('colegioEgreso', detalle?.colegioEgreso);
+                setValue('añoEgreso', detalle?.añoEgreso);
+                setSelectValue('ultimosEstudios', detalle?.ultimosEstudios);
+            } else if (rolPrincipal === 'DOCENTE') {
+                setValue('matricula', detalle?.matricula);
+                setValue('experiencia', detalle?.experiencia);
+                populateHorariosDocente(detalle?.horariosDisponibilidad || []);
+            } else {
+                populateHorariosDocente([]);
+            }
+
+            await setUbicacionDesdeDetalle(detalle);
+
+            if (mode === 'view') {
+                setFormReadOnly(true);
+            } else {
+                setFormReadOnly(false);
+            }
+
+            setTimeout(() => {
+                if (mode === 'edit') {
+                    document.getElementById('nombre')?.focus();
+                }
+            }, 150);
+        }
+
+        async function editUsuario(context = {}) {
+            const { identifier, nombre } = context;
+
+            if (!identifier) {
+                showNotification('❌ No se pudo determinar el usuario a editar', 'error');
+                return;
+            }
+
+            try {
+                showLoading(`Cargando datos de ${nombre || 'usuario'}...`);
+                const detalle = await obtenerUsuarioDetalle(identifier);
+                await hydrateUserForm(detalle, { mode: 'edit', identifier });
+                showForm();
+            } catch (error) {
+                console.error('Error cargando usuario para edición:', error);
+                showNotification(`❌ ${error.message || 'No se pudo cargar el formulario de edición'}`, 'error', 10000);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function viewUsuario(context = {}) {
+            const { identifier, nombre } = context;
+
+            if (!identifier) {
+                showNotification('❌ No se pudo determinar el usuario a visualizar', 'error');
+                return;
+            }
+
+            try {
+                showLoading(`Cargando detalles de ${nombre || 'usuario'}...`);
+                const detalle = await obtenerUsuarioDetalle(identifier);
+                mostrarModalDetalleUsuario(detalle, context);
+            } catch (error) {
+                console.error('Error cargando usuario para visualización:', error);
+                showNotification(`❌ ${error.message || 'No se pudo mostrar el usuario seleccionado'}`, 'error', 10000);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function deleteUsuario(context = {}) {
+            const { identifier, nombre, dni } = context;
+
+            if (!identifier) {
+                showNotification('❌ No se pudo determinar el usuario a eliminar', 'error');
+                return;
+            }
+
+            const displayName = nombre || 'usuario';
+            const label = dni || identifier;
+
+            if (!confirm(`¿Está seguro de que desea eliminar el usuario "${displayName}" (ID: ${label})?`)) {
+                return;
+            }
+
+            const headers = {
+                'Accept': 'application/json'
+            };
+
+            if (csrfToken && csrfHeader) {
+                headers[csrfHeader] = csrfToken;
+            }
+
+            showLoading(`Eliminando ${displayName}...`);
+
+            fetch(`/admin/usuarios/${encodeURIComponent(identifier)}`, {
+                method: 'DELETE',
+                headers
+            })
+            .then(response => response.json().catch(() => ({})).then(body => ({ response, body })))
+            .then(({ response, body }) => {
+                if (!response.ok || body.success === false) {
+                    const message = body?.message || `Error al eliminar el usuario (HTTP ${response.status})`;
+                    throw new Error(message);
+                }
+
+                showNotification(body?.message || '✅ Usuario eliminado correctamente', 'success');
+                usuariosCache.delete(String(identifier));
+                if (dni) {
+                    usuariosCache.delete(String(dni));
+                }
+                loadUsuarios(Math.max(1, currentPage));
+            })
+            .catch(error => {
+                console.error('Error eliminando usuario:', error);
+                showNotification(`❌ ${error.message || 'No se pudo eliminar el usuario'}`, 'error', 10000);
+            })
+            .finally(() => {
+                hideLoading();
+            });
         }
     
         // Validación del formulario
@@ -975,6 +1768,10 @@ document.addEventListener('DOMContentLoaded', function () {
             form.addEventListener('submit', function(event) {
                 event.preventDefault();
                 
+                if (form.dataset.mode === 'view') {
+                    return;
+                }
+
                 if (validateForm()) {
                     submitForm();
                 }
@@ -986,33 +1783,48 @@ document.addEventListener('DOMContentLoaded', function () {
             
             const form = document.getElementById('user-form');
             const formData = new FormData(form);
-            
-            // ✅ MOSTRAR LOADING
-            showLoading('Registrando usuario...');
-            
-            // Deshabilitar el botón de envío
+
+            const isEditMode = form.dataset.mode === 'edit';
+            const identifier = form.dataset.identifier || form.dataset.originalDni || formData.get('dni');
+
+            if (isEditMode && (!identifier || `${identifier}`.trim() === '')) {
+                showNotification('❌ No se pudo determinar el usuario a editar', 'error');
+                return;
+            }
+
+            const loadingMessage = isEditMode ? 'Guardando cambios...' : 'Registrando usuario...';
+            showLoading(loadingMessage);
+
             const submitBtn = form.querySelector('button[type="submit"]');
             const originalText = submitBtn.innerHTML;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registrando...';
+            submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${isEditMode ? 'Guardando...' : 'Registrando...'}`;
             submitBtn.disabled = true;
             
-            // Agregar roles seleccionados
             if (selectedRoles.length > 0) {
-                formData.append('rol', selectedRoles[0]);
+                formData.set('rol', selectedRoles[0]);
             }
             
-            // Procesar horarios para docente
             if (selectedRoles.includes('DOCENTE')) {
                 const horarios = obtenerHorariosDeTabla();
                 if (horarios.length > 0) {
-                    formData.append('horariosDisponibilidad', JSON.stringify(horarios));
+                    formData.set('horariosDisponibilidad', JSON.stringify(horarios));
                     console.log('📅 Enviando horarios como JSON:', horarios);
                 }
+            } else {
+                formData.delete('horariosDisponibilidad');
             }
-        
-            // Enviar al servidor
-            fetch('/admin/usuarios/registrar', {
-                method: 'POST',
+
+            const headers = {};
+            if (csrfToken && csrfHeader) {
+                headers[csrfHeader] = csrfToken;
+            }
+
+            const url = isEditMode ? `/admin/usuarios/${encodeURIComponent(identifier)}` : '/admin/usuarios/registrar';
+            const method = isEditMode ? 'PUT' : 'POST';
+
+            fetch(url, {
+                method,
+                headers,
                 body: formData
             })
             .then(response => {
@@ -1029,10 +1841,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     showNotification('✅ ' + data.message, 'success', 8000);
                     resetForm();
                     hideForm();
-                    loadUsuarios();
+                    const nextPage = isEditMode ? currentPage : 1;
+                    loadUsuarios(nextPage || 1);
                 } else {
                     // ✅ CAPTURAR MENSAJES DE ERROR ESPECÍFICOS DEL BACKEND
-                    const errorMessage = data.message || 'Error desconocido al registrar usuario';
+                    const errorMessage = data.message || (isEditMode ? 'Error desconocido al actualizar usuario' : 'Error desconocido al registrar usuario');
                     showNotification('❌ ' + errorMessage, 'error', 10000);
                     
                     // ✅ RESALTAR CAMPOS ESPECÍFICOS SI HAY ERRORES DE VALIDACIÓN
@@ -1054,7 +1867,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.error('💥 Error:', error);
                 
                 // ✅ MEJOR MANEJO DE DIFERENTES TIPOS DE ERROR
-                let errorMessage = 'Error de conexión al registrar el usuario';
+                const accion = isEditMode ? 'actualizar' : 'registrar';
+                let errorMessage = `Error de conexión al ${accion} el usuario`;
                 
                 if (error.message.includes('correo electrónico')) {
                     errorMessage = 'El correo electrónico ya está registrado';
@@ -1196,9 +2010,19 @@ document.addEventListener('DOMContentLoaded', function () {
         // Función para cargar usuarios en la tabla
         function loadUsuarios(page = 1) {
             console.log(`🔄 Cargando usuarios página ${page}...`);
-            
-            currentPage = page;
-            
+
+            const serverPage = Math.max(0, page - 1);
+            const queryParams = new URLSearchParams();
+            queryParams.set('page', serverPage);
+            queryParams.set('size', pageSize);
+
+            const activeFilters = getCurrentFilters();
+            Object.entries(activeFilters).forEach(([key, value]) => {
+                if (value !== undefined && value !== null && `${value}`.trim() !== '') {
+                    queryParams.append(key, value);
+                }
+            });
+
             // Mostrar loading en la tabla
             const tableBody = document.querySelector('#usuarios-table tbody');
             if (tableBody) {
@@ -1212,12 +2036,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     </tr>
                 `;
             }
-            
-            fetch(`/admin/usuarios/listar?page=${page}&size=${pageSize}`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
+
+            fetch(`/admin/usuarios/listar?${queryParams.toString()}`, {
+                method: 'GET'
             })
             .then(response => {
                 if (!response.ok) {
@@ -1229,22 +2050,22 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.log('📊 RESPUESTA COMPLETA:', data);
                 
                 if (data.success) {
-                    populateUsuariosTable(data.data);
-                    
-                    // ✅ MANEJO MÁS ROBUSTO DE LA PAGINACIÓN
+                    const renderStats = populateUsuariosTable(data.data);
+
                     if (data.pagination) {
                         updatePagination(data.pagination);
                     } else {
-                        // Si no viene pagination, crear uno con valores por defecto
                         const defaultPagination = {
-                            totalElements: data.data?.totalElements || 0,
-                            totalPages: data.data?.totalPages || 1,
-                            currentPage: page,
+                            totalElements: renderStats.totalElements,
+                            totalPages: Math.max(1, Math.ceil(renderStats.totalElements / pageSize)),
+                            currentPage: serverPage,
                             pageSize: pageSize
                         };
                         updatePagination(defaultPagination);
                         console.log("⚠️ Usando paginación por defecto:", defaultPagination);
                     }
+
+                    filterTable(activeFilters);
                 } else {
                     console.error('Error del servidor:', data.message);
                     showNotification('❌ Error al cargar usuarios: ' + data.message, 'error', 10000);
@@ -1268,21 +2089,21 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         function updatePagination(pagination) {
-            // ✅ HACER EL CÓDIGO MÁS ROBUSTO
-            const totalElements = pagination?.totalElements || 0;
-            totalPages = pagination?.totalPages || 1;
-            
-            console.log("📊 Actualizando paginación:", pagination);
-            
-            // Actualizar información de paginación
+            const totalElements = pagination?.totalElements ?? 0;
+            pageSize = pagination?.pageSize ?? pageSize;
+            totalPages = Math.max(1, pagination?.totalPages ?? Math.ceil(totalElements / pageSize));
+            const serverCurrent = pagination?.currentPage ?? 0;
+            currentPage = Math.min(totalPages, serverCurrent + 1);
+
+            console.log('📊 Actualizando paginación:', pagination);
+
             const paginationInfo = document.querySelector('.pagination-info');
             if (paginationInfo) {
-                const startItem = ((currentPage - 1) * pageSize) + 1;
-                const endItem = Math.min(currentPage * pageSize, totalElements);
+                const startItem = totalElements === 0 ? 0 : ((currentPage - 1) * pageSize) + 1;
+                const endItem = totalElements === 0 ? 0 : Math.min(currentPage * pageSize, totalElements);
                 paginationInfo.textContent = `Mostrando ${startItem}-${endItem} de ${totalElements} usuarios`;
             }
-            
-            // Actualizar controles de paginación
+
             updatePaginationControls();
         }
         
@@ -1298,8 +2119,8 @@ document.addEventListener('DOMContentLoaded', function () {
             nextBtn.disabled = currentPage >= totalPages;
             
             // Agregar event listeners a los botones
-            prevBtn.onclick = () => loadUsuarios(currentPage - 1);
-            nextBtn.onclick = () => loadUsuarios(currentPage + 1);
+            prevBtn.onclick = () => loadUsuarios(Math.max(1, currentPage - 1));
+            nextBtn.onclick = () => loadUsuarios(Math.min(totalPages, currentPage + 1));
             
             // Generar números de página
             pagesContainer.innerHTML = '';
@@ -1315,21 +2136,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 pageBtn.onclick = () => loadUsuarios(i);
                 pagesContainer.appendChild(pageBtn);
             }
-        }
-
-        function applyFilters() {
-            // Volver a la primera página cuando se aplican filtros
-            loadUsuarios(1);
-        }
-
-        function clearFilters() {
-            if (searchInput) searchInput.value = '';
-            if (filtroRol) filtroRol.value = '';
-            if (filtroEstado) filtroEstado.value = '';
-            if (filtroGenero) filtroGenero.value = '';
-            
-            // Volver a la primera página cuando se limpian filtros
-            loadUsuarios(1);
         }
 
         function getCurrentFilters() {
@@ -1353,69 +2159,107 @@ document.addEventListener('DOMContentLoaded', function () {
     
         // Función para poblar la tabla con datos
         function populateUsuariosTable(responseData) {
-            console.log('📋 Poblando tabla con', responseData.content.length, 'usuarios');
-            
             const tableBody = document.querySelector('#usuarios-table tbody');
             if (!tableBody) {
                 console.error('No se encontró el tbody de la tabla de usuarios');
-                return;
+                return { totalElements: 0, displayed: 0 };
             }
-        
+
+            usuariosCache.clear();
+
             let usuarios = [];
             let totalElements = 0;
-        
-            if (responseData && responseData.content) {
+
+            if (responseData && Array.isArray(responseData.content)) {
                 usuarios = responseData.content;
-                totalElements = responseData.totalElements || usuarios.length;
+                totalElements = responseData.totalElements ?? usuarios.length;
             } else if (Array.isArray(responseData)) {
                 usuarios = responseData;
                 totalElements = usuarios.length;
+            } else if (responseData && typeof responseData === 'object') {
+                const maybeContent = Array.isArray(responseData.content) ? responseData.content : [];
+                usuarios = maybeContent;
+                totalElements = responseData.totalElements ?? usuarios.length;
             } else {
                 console.error('Estructura de datos no reconocida:', responseData);
             }
-        
+
             console.log('👥 Usuarios a mostrar:', usuarios.length);
-        
-            // Limpiar tabla existente
+
             tableBody.innerHTML = '';
-        
+
             if (usuarios.length === 0) {
                 tableBody.innerHTML = `
                     <tr>
-                        <td colspan="7" class="text-center">No hay usuarios registrados</td> <!-- ✅ 7 COLUMNAS: DNI, Nombre, Correo, Roles, Estado, Fecha, Acciones -->
+                        <td colspan="7" class="text-center">No hay usuarios registrados</td>
                     </tr>
                 `;
-                updateTableStats(0);
-                return;
+                return { totalElements, displayed: 0 };
             }
-        
-            // Crear filas para cada usuario
+
             usuarios.forEach(usuario => {
+                const userKey = resolveUsuarioKey(usuario);
+                const keyString = userKey != null ? String(userKey) : '';
+                const dniMostrar = usuario.dni || keyString || 'N/A';
+                const nombreMostrar = usuario.nombreCompleto || 'Sin nombre';
+                const correoMostrar = usuario.correo || 'N/A';
+                const estadoLiteral = (usuario.estado || 'ACTIVO').toString();
+
+                if (keyString) {
+                    usuariosCache.set(keyString, usuario);
+                }
+
                 const row = document.createElement('tr');
-                row.innerHTML = `
-                    <!-- ✅ NUEVO ORDEN: DNI primero, sin ID -->
-                    <td>${usuario.dni || 'N/A'}</td>
-                    <td>${usuario.nombreCompleto || 'Sin nombre'}</td>
-                    <td>${usuario.correo || 'N/A'}</td>
-                    <td>${formatRoles(usuario.roles || [])}</td>
-                    <td><span class="status-badge status-${(usuario.estado || 'activo').toLowerCase()}">${usuario.estado || 'ACTIVO'}</span></td>
-                    <td>${usuario.fechaRegistro ? new Date(usuario.fechaRegistro).toLocaleDateString() : 'N/A'}</td>
-                    <td class="actions">
-                        <button class="btn-icon btn-view" onclick="viewUsuario('${usuario.dni}', '${usuario.nombreCompleto}')" title="Ver">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                        <button class="btn-icon btn-edit" onclick="editUsuario('${usuario.dni}', '${usuario.nombreCompleto}')" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn-icon btn-delete" onclick="deleteUsuario('${usuario.dni}', '${usuario.nombreCompleto}')" title="Eliminar">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                `;
+                if (keyString) {
+                    row.dataset.userKey = keyString;
+                }
+                if (usuario.dni) {
+                    row.dataset.dni = usuario.dni;
+                }
+                if (usuario.nombreCompleto) {
+                    row.dataset.nombre = usuario.nombreCompleto;
+                }
+
+                const dniCell = document.createElement('td');
+                dniCell.textContent = dniMostrar;
+                row.appendChild(dniCell);
+
+                const nombreCell = document.createElement('td');
+                nombreCell.textContent = nombreMostrar;
+                row.appendChild(nombreCell);
+
+                const correoCell = document.createElement('td');
+                correoCell.textContent = correoMostrar;
+                row.appendChild(correoCell);
+
+                const rolesCell = document.createElement('td');
+                rolesCell.innerHTML = formatRoles(usuario.roles || []);
+                row.appendChild(rolesCell);
+
+                const estadoCell = document.createElement('td');
+                estadoCell.innerHTML = `<span class="status-badge status-${estadoLiteral.toLowerCase()}">${estadoLiteral}</span>`;
+                row.appendChild(estadoCell);
+
+                const fechaCell = document.createElement('td');
+                fechaCell.textContent = formatFechaRegistro(usuario.fechaRegistro);
+                row.appendChild(fechaCell);
+
+                const actionsCell = document.createElement('td');
+                actionsCell.className = 'actions';
+
+                const viewBtn = createActionButton('view', 'fas fa-eye', 'Ver', keyString, usuario);
+                const editBtn = createActionButton('edit', 'fas fa-edit', 'Editar', keyString, usuario);
+                const deleteBtn = createActionButton('delete', 'fas fa-trash', 'Eliminar', keyString, usuario);
+
+                actionsCell.appendChild(viewBtn);
+                actionsCell.appendChild(editBtn);
+                actionsCell.appendChild(deleteBtn);
+                row.appendChild(actionsCell);
+
                 tableBody.appendChild(row);
             });
-        
-            updateTableStats(totalElements);
+
+            return { totalElements, displayed: usuarios.length };
         }
     
         function formatRoles(roles) {
@@ -1432,6 +2276,63 @@ document.addEventListener('DOMContentLoaded', function () {
                 
                 return `<span class="role-badge role-${roleClass}"><i class="${roleIcon}"></i> ${role}</span>`;
             }).join(' ');
+        }
+
+        function resolveUsuarioKey(usuario = {}) {
+            return usuario.id ?? usuario.usuarioId ?? usuario.userId ?? usuario.dni ?? usuario.correo ?? null;
+        }
+
+        function createActionButton(kind, iconClass, title, userKey, usuario = {}) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = `btn-icon btn-${kind}`;
+            button.dataset.action = kind;
+            if (userKey) {
+                button.dataset.userKey = userKey;
+            }
+            if (usuario.dni) {
+                button.dataset.dni = usuario.dni;
+            }
+            if (usuario.nombreCompleto) {
+                button.dataset.nombre = usuario.nombreCompleto;
+            }
+            button.title = title;
+            button.innerHTML = `<i class="${iconClass}"></i>`;
+            return button;
+        }
+
+        function formatFechaRegistro(fechaValor) {
+            if (!fechaValor) {
+                return 'N/A';
+            }
+
+            if (typeof fechaValor === 'string' && fechaValor.toLowerCase().includes('no disponible')) {
+                return fechaValor;
+            }
+
+            const parsed = new Date(fechaValor);
+            if (Number.isNaN(parsed.getTime())) {
+                return typeof fechaValor === 'string' ? fechaValor : 'N/A';
+            }
+
+            return parsed.toLocaleDateString();
+        }
+
+        function formatearFechaIso(fechaValor) {
+            if (!fechaValor) {
+                return '';
+            }
+
+            if (typeof fechaValor === 'string') {
+                return fechaValor.length >= 10 ? fechaValor.substring(0, 10) : fechaValor;
+            }
+
+            const parsed = new Date(fechaValor);
+            if (Number.isNaN(parsed.getTime())) {
+                return '';
+            }
+
+            return parsed.toISOString().split('T')[0];
         }
     
         // Utility function for debouncing
@@ -1487,24 +2388,6 @@ document.addEventListener('DOMContentLoaded', function () {
             };
             
             return normalizaciones[dia] || dia.toUpperCase();
-        }
-    
-        // ✅ AGREGAR al resetForm para limpiar contador
-        function resetForm() {
-            document.getElementById('user-form').reset();
-            resetFotoUpload();
-            clearHorariosDocenteTable();
-            hideDocenteFields();
-            hideAlumnoFields();
-            resetRoles();
-            resetLocation();
-            removeAllSpecificRequired();
-            
-            // ✅ Asegurar que el contador se oculte
-            const contador = document.getElementById('contador-horarios');
-            if (contador) {
-                contador.style.display = 'none';
-            }
         }
     
         console.log('Gestión de Usuarios inicializada correctamente');
