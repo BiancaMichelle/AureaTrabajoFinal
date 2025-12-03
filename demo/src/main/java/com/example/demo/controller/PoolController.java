@@ -84,6 +84,36 @@ public class PoolController {
         }
     }
     
+    @PostMapping("/editar/{poolId}")
+    @PreAuthorize("hasAnyAuthority('DOCENTE', 'ADMIN')")
+    @ResponseBody
+    public ResponseEntity<String> editarPool(
+            @PathVariable String poolId,
+            @RequestParam("nombrePool") String nombre,
+            @RequestParam(value = "descripcionPool", required = false, defaultValue = "") String descripcion,
+            @RequestParam("cantidadPreguntas") Integer cantidadPreguntas) {
+        try {
+            Pool pool = poolRepository.findById(UUID.fromString(poolId))
+                .orElseThrow(() -> new RuntimeException("Pool no encontrado"));
+                
+            pool.setNombre(nombre);
+            pool.setDescripcion(descripcion);
+            pool.setCantidadPreguntas(cantidadPreguntas);
+            
+            poolRepository.save(pool);
+            
+            return ResponseEntity.ok()
+                .header("Content-Type", "application/json")
+                .body("{\"success\": true, \"message\": \"Pool actualizado exitosamente\"}");
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest()
+                .header("Content-Type", "application/json")
+                .body("{\"success\": false, \"message\": \"Error al actualizar el pool: " + e.getMessage().replace("\"", "'") + "\"}");
+        }
+    }
+    
     /**
      * Agregar pregunta a un pool existente
      */

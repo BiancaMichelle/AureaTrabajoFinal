@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" layout:decorate="~{layout/base}">
+
+<head>
+    <title th:text="${examen.titulo} + ' · Intento'">Detalle del intento</title>
+</head>
+
+<body layout:fragment="content" class="bg-gray-100">
+    <div class="max-w-5xl mx-auto px-6 py-8">
+        <div class="mb-6 flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800" th:text="${examen.titulo}">Detalle del intento</h1>
+                <p class="text-sm text-gray-500 mt-1">
+                    <span th:if="${intento.alumno != null}" th:text="'Alumno: ' + ${intento.alumno.nombre} + ' ' + ${intento.alumno.apellido}"></span>
+                    <span th:if="${intento.alumno != null}" th:text="' · DNI ' + ${intento.alumno.dni}"></span>
+                </p>
+            </div>
+            <div class="flex items-center gap-3">
+                <a th:href="@{/examen/{id}/intentos(id=${examen.idActividad})}"
+                   class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-gray-600 hover:bg-gray-700 rounded-md transition-colors">
+                    <i class="fas fa-arrow-left mr-2"></i>Volver a intentos
+                </a>
+                     <a th:if="${curso != null}" th:href="@{/alumno/aula/{id}(id=${curso.idOferta})}"
+                         class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors">
+                    Aula
+                </a>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-white shadow rounded-lg p-4">
+                <h3 class="text-xs uppercase text-gray-500 font-semibold">Estado</h3>
+                <p class="mt-2 text-lg font-semibold" th:text="${intento.estado}">FINALIZADO</p>
+            </div>
+            <div class="bg-white shadow rounded-lg p-4">
+                <h3 class="text-xs uppercase text-gray-500 font-semibold">Calificación</h3>
+                <p class="mt-2 text-lg font-semibold text-purple-700" th:text="${intento.calificacion != null ? T(java.lang.String).format('%.2f', intento.calificacion) : 'Pendiente'}"></p>
+            </div>
+            <div class="bg-white shadow rounded-lg p-4">
+                <h3 class="text-xs uppercase text-gray-500 font-semibold">Entregado</h3>
+                <p class="mt-2 text-lg font-semibold" th:text="${intento.fechaFin != null ? #temporals.format(intento.fechaFin, 'dd/MM/yyyy HH:mm') : 'En progreso'}"></p>
+            </div>
+        </div>
+
+        <div class="bg-white shadow rounded-lg overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-700">Respuestas</h2>
+                <p class="text-xs text-gray-500 mt-1">Resumen de las respuestas entregadas por el alumno.</p>
+            </div>
+
+            <div th:if="${#lists.isEmpty(respuestas)}" class="p-6 text-center text-gray-500">
+                <i class="fas fa-inbox text-3xl mb-3"></i>
+                <p>No se encontraron respuestas registradas.</p>
+            </div>
+
+            <div th:if="${!#lists.isEmpty(respuestas)}" class="divide-y divide-gray-200">
+                <div th:each="respuesta, iterStat : ${respuestas}" class="px-6 py-5">
+                    <div class="flex items-start justify-between gap-4">
+                        <div class="flex-1">
+                            <h3 class="text-sm font-semibold text-gray-800" th:text="${iterStat.index + 1} + '. ' + ${respuesta['pregunta'].enunciado}"></h3>
+                            <p class="mt-2 text-sm text-gray-600">
+                                <span class="font-medium">Respuesta:</span>
+                                <span th:text="${respuesta['respuestaTexto']}"></span>
+                            </p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm font-semibold text-gray-700">
+                                <span th:if="${respuesta['puntaje'] != null}" th:text="${T(java.lang.String).format('%.2f', respuesta['puntaje'])} + ' pts'"></span>
+                                <span th:if="${respuesta['puntaje'] == null}">-</span>
+                            </div>
+                            <div class="mt-1">
+                                <span th:if="${respuesta['requiereRevision']}"
+                                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    Revisión manual
+                                </span>
+                                <span th:if="${respuesta['requiereRevision'] == false}"
+                                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                      th:classappend="${respuesta['esCorrecta'] ? ' bg-green-100 text-green-800' : ' bg-red-100 text-red-700'}"
+                                      th:text="${respuesta['esCorrecta'] ? 'Correcta' : 'Incorrecta'}"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

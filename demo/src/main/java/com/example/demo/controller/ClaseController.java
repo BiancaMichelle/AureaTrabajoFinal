@@ -2,16 +2,20 @@ package com.example.demo.controller;
 
 import java.security.Principal;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -131,6 +135,29 @@ public class ClaseController {
 
         model.addAttribute("clase", claseOpt.get());
         return "clase-detalle";
+    }
+
+    @DeleteMapping("/{claseId}/eliminar")
+    public ResponseEntity<Map<String, Object>> eliminarClase(@PathVariable UUID claseId, Authentication authentication) {
+        if (!puedeModificar(authentication)) {
+            return ResponseEntity.status(403).body(Map.of("success", false, "error", "No autorizado"));
+        }
+
+        try {
+            claseService.eliminarClase(claseId);
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("success", false, "error", e.getMessage()));
+        }
+    }
+
+    private boolean puedeModificar(Authentication authentication) {
+        if (authentication == null)
+            return false;
+
+        return authentication.getAuthorities().stream()
+                .anyMatch(auth -> auth.getAuthority().equals("ADMIN") ||
+                        auth.getAuthority().equals("DOCENTE"));
     }
 
 }

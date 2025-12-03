@@ -105,15 +105,15 @@ public class DemoApplication implements CommandLineRunner {
         }
 
         // ✅ CREAR DOCENTE CON DNI 12345678
-        crearUsuarioDocente("12345678", "Roberto", "García", "roberto.garcia@demo.com");
+        crearUsuarioDocente("12345678", "Roberto", "García", "roberto.garcia@gmail.com");
 
         // Crear alumnos de prueba
-        crearUsuarioAlumno("22222222", "Juan", "Pérez", "juan@demo.com");
-        crearUsuarioAlumno("33333333", "María", "Gómez", "maria@demo.com");
-        crearUsuarioAlumno("44444444", "Carlos", "López", "carlos@demo.com");
+        crearUsuarioAlumno("22222222", "Juan", "Pérez", "juan@gmail.com");
+        crearUsuarioAlumno("33333333", "María", "Gómez", "maria@gmail.com");
+        crearUsuarioAlumno("44444444", "Carlos", "López", "carlos@gmail.com");
 
         // Crear otro docente de prueba
-        crearUsuarioDocente("55555555", "Ana", "Martínez", "ana@demo.com");
+        crearUsuarioDocente("55555555", "Ana", "Martínez", "ana@gmail.com");
     }
 
     private void crearUsuarioAlumno(String dni, String nombre, String apellido, String email) {

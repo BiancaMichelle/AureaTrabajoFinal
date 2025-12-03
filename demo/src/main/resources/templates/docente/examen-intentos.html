@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" layout:decorate="~{layout/base}">
+
+<head>
+    <title th:text="${examen.titulo} + ' · Intentos'">Intentos del examen</title>
+</head>
+
+<body layout:fragment="content" class="bg-gray-100">
+    <div class="max-w-6xl mx-auto px-6 py-8">
+        <div class="mb-6 flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800" th:text="${examen.titulo}">Intentos del examen</h1>
+                <p class="text-sm text-gray-500 mt-1">
+                    <span th:if="${modulo != null}" th:text="'Módulo: ' + ${modulo.nombre}"></span>
+                    <span th:if="${curso != null}" th:text="' · Aula: ' + ${curso.nombre}"></span>
+                </p>
+            </div>
+                <a th:if="${curso != null}" th:href="@{/alumno/aula/{id}(id=${curso.idOferta})}"
+                    class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors">
+                <i class="fas fa-arrow-left mr-2"></i>Volver al aula
+            </a>
+        </div>
+
+        <div class="bg-white shadow rounded-lg overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-700">Listado de intentos</h2>
+                <span class="text-sm text-gray-500" th:text="${intentos.size()} + ' registro(s)'"></span>
+            </div>
+
+            <div th:if="${#lists.isEmpty(intentos)}" class="p-8 text-center text-gray-500">
+                <i class="fas fa-clipboard-check text-3xl mb-3"></i>
+                <p>No se registran intentos para este examen todavía.</p>
+            </div>
+
+            <div th:if="${!#lists.isEmpty(intentos)}" class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alumno</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DNI</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha de entrega</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Calificación</th>
+                            <th class="px-6 py-3"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        <tr th:each="intento : ${intentos}">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900"
+                                     th:text="${intento.alumno != null ? intento.alumno.nombre + ' ' + intento.alumno.apellido : 'Alumno no disponible'}"></div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-600" th:text="${intento.alumno != null ? intento.alumno.dni : '-'}"></div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                <span th:if="${intento.fechaFin != null}" th:text="${#temporals.format(intento.fechaFin, 'dd/MM/yyyy HH:mm')}"
+                                      class="font-medium"></span>
+                                <span th:if="${intento.fechaFin == null}">En progreso</span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span th:switch="${intento.estado}">
+                                    <span th:case="${T(com.example.demo.enums.EstadoIntento).FINALIZADO}"
+                                          class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Finalizado</span>
+                                    <span th:case="${T(com.example.demo.enums.EstadoIntento).PENDIENTE_CORRECCION}"
+                                          class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Pendiente</span>
+                                    <span th:case="*"
+                                          class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">En progreso</span>
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                <span th:if="${intento.calificacion != null}" th:text="${T(java.lang.String).format('%.2f', intento.calificacion)}"></span>
+                                <span th:if="${intento.calificacion == null}">-</span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <a th:href="@{/examen/{examenId}/intentos/{intentoId}(examenId=${examen.idActividad}, intentoId=${intento.idIntento})}"
+                                   class="inline-flex items-center px-3 py-1.5 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors">
+                                    <i class="fas fa-eye mr-1"></i>Ver detalle
+                                </a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

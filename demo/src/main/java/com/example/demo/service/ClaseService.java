@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.demo.model.Clase;
 import com.example.demo.model.Docente;
@@ -105,6 +106,13 @@ public class ClaseService {
     // ✅ ELIMINAR métodos específicos de BigBlueButton
     // Ya no necesitas unirseComoEstudiante o unirseComoModerador
     // Con Jitsi todos usan la misma URL
+
+    @Transactional
+    public void eliminarClase(UUID claseId) {
+        Clase clase = claseRepository.findById(claseId)
+                .orElseThrow(() -> new RuntimeException("Clase no encontrada"));
+        claseRepository.delete(clase);
+    }
 
     public List<Clase> findByModulo(UUID moduloId) {
         return claseRepository.findByModuloIdModulo(moduloId);

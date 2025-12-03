@@ -1,23 +1,50 @@
 package com.example.demo.controller;
 
 import java.security.Principal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.server.ResponseStatusException;
 
+import com.example.demo.enums.EstadoIntento;
+import com.example.demo.enums.TipoPregunta;
+import com.example.demo.model.Alumno;
+import com.example.demo.model.Curso;
+import com.example.demo.model.Docente;
 import com.example.demo.model.Examen;
+import com.example.demo.model.Formacion;
+import com.example.demo.model.Intento;
+import com.example.demo.model.OfertaAcademica;
+import com.example.demo.model.Opcion;
 import com.example.demo.model.Pregunta;
+import com.example.demo.model.RespuestaIntento;
+import com.example.demo.repository.AlumnoRepository;
 import com.example.demo.repository.ExamenRepository;
+import com.example.demo.repository.IntentoRepository;
+import com.example.demo.repository.PreguntaRepository;
+import com.example.demo.repository.UsuarioRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
 
 @Controller
 @RequestMapping("/examen")
@@ -28,9 +55,24 @@ public class ExamenController {
 
     @Autowired
     private ExamenRepository examenRepository;
+    
+    @Autowired
+    private AlumnoRepository alumnoRepository;
+    
+    @Autowired
+    private IntentoRepository intentoRepository;
+    
+    @Autowired
+    private PreguntaRepository preguntaRepository;
+    
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+    
+    @Autowired
+    private ObjectMapper objectMapper;
 
     /**
-     * Muestra la vista del examen con todas las preguntas de todos los pools
+     * Muestra la vista del examen
      */
     @GetMapping("/realizar/{examenId}")
     public String realizarExamen(@PathVariable Long examenId, Principal principal, Model model) {
@@ -38,13 +80,7 @@ public class ExamenController {
             Examen examen = examenRepository.findById(examenId)
                     .orElseThrow(() -> new RuntimeException("Examen no encontrado"));
 
-            // Obtener todas las preguntas de todos los pools
-            List<Pregunta> todasLasPreguntas = examen.getPoolPreguntas().stream()
-                    .flatMap(pool -> pool.getPreguntas().stream())
-                    .collect(Collectors.toList());
-
             model.addAttribute("examen", examen);
-            model.addAttribute("preguntas", todasLasPreguntas);
             model.addAttribute("tiempoTotal",
                     examen.getTiempoRealizacion() != null ? examen.getTiempoRealizacion() : 60);
 
@@ -65,10 +101,6 @@ public class ExamenController {
             Examen examen = examenRepository.findById(examenId)
                     .orElseThrow(() -> new RuntimeException("Examen no encontrado"));
 
-            System.out.println("=== DEBUG EXAMEN ===");
-            System.out.println("Examen ID: " + examenId);
-            System.out.println("Pools: " + (examen.getPoolPreguntas() != null ? examen.getPoolPreguntas().size() : 0));
-
             // Construir el objeto de respuesta
             Map<String, Object> response = new HashMap<>();
             response.put("titulo", examen.getTitulo());
@@ -76,16 +108,19 @@ public class ExamenController {
             response.put("tiempoRealizacion",
                     examen.getTiempoRealizacion() != null ? examen.getTiempoRealizacion() : 60);
 
-            // Construir preguntas desde todos los pools
+            // Construir preguntas desde todos los pools (con selección aleatoria y límite)
             List<Map<String, Object>> preguntasDTO = examen.getPoolPreguntas().stream()
                     .flatMap(pool -> {
-                        System.out.println("Pool: " + pool.getNombre() + ", Preguntas: "
-                                + (pool.getPreguntas() != null ? pool.getPreguntas().size() : 0));
-                        return pool.getPreguntas().stream().map(pregunta -> {
-                            System.out.println("  Pregunta: " + pregunta.getEnunciado());
-                            System.out.println("  Opciones: "
-                                    + (pregunta.getOpciones() != null ? pregunta.getOpciones().size() : 0));
-
+                        List<Pregunta> preguntasDelPool = new ArrayList<>(pool.getPreguntas());
+                        Collections.shuffle(preguntasDelPool); // Mezclar preguntas
+                        
+                        // Limitar a la cantidad configurada en el pool
+                        int cantidad = pool.getCantidadPreguntas() != null ? pool.getCantidadPreguntas() : preguntasDelPool.size();
+                        List<Pregunta> preguntasSeleccionadas = preguntasDelPool.stream()
+                            .limit(cantidad)
+                            .collect(Collectors.toList());
+                            
+                        return preguntasSeleccionadas.stream().map(pregunta -> {
                             Map<String, Object> preguntaMap = new HashMap<>();
                             preguntaMap.put("id", pregunta.getIdPregunta().toString());
                             preguntaMap.put("tipo", pregunta.getTipoPregunta().name());
@@ -96,7 +131,6 @@ public class ExamenController {
                             if (pregunta.getOpciones() != null && !pregunta.getOpciones().isEmpty()) {
                                 List<Map<String, Object>> opciones = pregunta.getOpciones().stream()
                                         .map(opcion -> {
-                                            System.out.println("    Opcion: " + opcion.getDescripcion());
                                             Map<String, Object> opcionMap = new HashMap<>();
                                             opcionMap.put("id", opcion.getIdOpcion().toString());
                                             opcionMap.put("texto", opcion.getDescripcion());
@@ -105,7 +139,6 @@ public class ExamenController {
                                         .collect(Collectors.toList());
                                 preguntaMap.put("opciones", opciones);
                             } else {
-                                System.out.println("    Sin opciones!");
                                 preguntaMap.put("opciones", List.of());
                             }
 
@@ -113,11 +146,11 @@ public class ExamenController {
                         });
                     })
                     .collect(Collectors.toList());
+            
+            // Mezclar el orden final de las preguntas
+            Collections.shuffle(preguntasDTO);
 
             response.put("preguntas", preguntasDTO);
-
-            System.out.println("Total preguntas retornadas: " + preguntasDTO.size());
-            System.out.println("===================");
 
             return ResponseEntity.ok(response);
 
@@ -126,5 +159,256 @@ public class ExamenController {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "Error al cargar el examen: " + e.getMessage()));
         }
+    }
+    
+    @PostMapping("/entregar")
+    public ResponseEntity<?> entregarExamen(@RequestBody Map<String, Object> payload, Principal principal) {
+        try {
+            Long examenId = Long.valueOf(payload.get("examenId").toString());
+            List<Map<String, Object>> respuestas = (List<Map<String, Object>>) payload.get("respuestas");
+            
+            Examen examen = examenRepository.findById(examenId)
+                .orElseThrow(() -> new RuntimeException("Examen no encontrado"));
+                
+            Alumno alumno = alumnoRepository.findByDni(principal.getName())
+                .orElseThrow(() -> new RuntimeException("Alumno no encontrado"));
+                
+            Intento intento = new Intento();
+            intento.setExamen(examen);
+            intento.setAlumno(alumno);
+            intento.setFechaInicio(LocalDateTime.now().minusMinutes(60)); // TODO: Mejorar esto con fecha real de inicio
+            intento.setFechaFin(LocalDateTime.now());
+            intento.setEstado(EstadoIntento.FINALIZADO);
+            
+            List<RespuestaIntento> respuestasIntento = new ArrayList<>();
+            float puntajeTotal = 0;
+            boolean requiereRevision = false;
+            
+            for (Map<String, Object> resp : respuestas) {
+                String preguntaId = (String) resp.get("preguntaId");
+                Object respuestaUsuarioObj = resp.get("respuesta");
+                String respuestaUsuario = "";
+                
+                if (respuestaUsuarioObj instanceof List) {
+                    try {
+                        respuestaUsuario = objectMapper.writeValueAsString(respuestaUsuarioObj);
+                    } catch (Exception e) {
+                        respuestaUsuario = respuestaUsuarioObj.toString();
+                    }
+                } else if (respuestaUsuarioObj != null) {
+                    respuestaUsuario = respuestaUsuarioObj.toString();
+                }
+                
+                Pregunta pregunta = preguntaRepository.findById(UUID.fromString(preguntaId))
+                    .orElseThrow(() -> new RuntimeException("Pregunta no encontrada"));
+                    
+                RespuestaIntento respuestaIntento = new RespuestaIntento();
+                respuestaIntento.setIntento(intento);
+                respuestaIntento.setPregunta(pregunta);
+                respuestaIntento.setRespuestaUsuario(respuestaUsuario);
+                
+                // Lógica de corrección
+                if (Boolean.TRUE.equals(examen.getCalificacionAutomatica())) {
+                    if (esTipoManual(pregunta.getTipoPregunta())) {
+                        respuestaIntento.setRequiereRevisionManual(true);
+                        respuestaIntento.setPuntajeObtenido(0f);
+                        requiereRevision = true;
+                    } else {
+                        boolean esCorrecta = corregirAutomatica(pregunta, respuestaUsuarioObj);
+                        respuestaIntento.setEsCorrecta(esCorrecta);
+                        respuestaIntento.setPuntajeObtenido(esCorrecta ? pregunta.getPuntaje() : 0f);
+                        respuestaIntento.setRequiereRevisionManual(false);
+                        puntajeTotal += respuestaIntento.getPuntajeObtenido();
+                    }
+                } else {
+                    respuestaIntento.setRequiereRevisionManual(true);
+                    respuestaIntento.setPuntajeObtenido(0f);
+                    requiereRevision = true;
+                }
+                
+                respuestasIntento.add(respuestaIntento);
+            }
+            
+            intento.setRespuestas(respuestasIntento);
+            intento.setCalificacion(puntajeTotal);
+            
+            if (requiereRevision) {
+                intento.setEstado(EstadoIntento.PENDIENTE_CORRECCION);
+            }
+            
+            intentoRepository.save(intento);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            // Redirigir al aula del alumno asociado a la oferta del módulo
+            Long ofertaId = null;
+            if (examen.getModulo() != null && examen.getModulo().getCurso() != null) {
+                ofertaId = examen.getModulo().getCurso().getIdOferta();
+            }
+            String redirectPath = ofertaId != null ? "/alumno/aula/" + ofertaId : "/alumno/aula";
+            response.put("redirectUrl", redirectPath);
+            response.put("calificacion", puntajeTotal);
+            response.put("estado", intento.getEstado());
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+    
+    private boolean esTipoManual(TipoPregunta tipo) {
+        return tipo == TipoPregunta.RESPUESTA_CORTA || 
+               tipo == TipoPregunta.DESCRIPCION_LARGA || 
+               tipo == TipoPregunta.AUTOCOMPLETADO;
+    }
+    
+    private boolean corregirAutomatica(Pregunta pregunta, Object respuestaUsuarioObj) {
+        if (respuestaUsuarioObj == null) return false;
+        
+        TipoPregunta tipo = pregunta.getTipoPregunta();
+        List<Opcion> opcionesCorrectas = pregunta.getOpciones().stream()
+            .filter(Opcion::getEsCorrecta)
+            .collect(Collectors.toList());
+            
+        if (tipo == TipoPregunta.VERDADERO_FALSO || tipo == TipoPregunta.UNICA_RESPUESTA) {
+            String respuesta = respuestaUsuarioObj.toString();
+            return opcionesCorrectas.stream()
+                .anyMatch(op -> op.getDescripcion().equalsIgnoreCase(respuesta));
+        } else if (tipo == TipoPregunta.MULTIPLE_CHOICE) {
+            if (respuestaUsuarioObj instanceof List) {
+                List<String> respuestas = (List<String>) respuestaUsuarioObj;
+                // Verificar que todas las respuestas seleccionadas sean correctas y que no falte ninguna
+                // (Criterio estricto)
+                List<String> textosCorrectos = opcionesCorrectas.stream()
+                    .map(Opcion::getDescripcion)
+                    .collect(Collectors.toList());
+                    
+                if (respuestas.size() != textosCorrectos.size()) return false;
+                
+                return respuestas.containsAll(textosCorrectos);
+            }
+        }
+        
+        return false;
+    }
+
+    @GetMapping("/{examenId}/intentos")
+    @PreAuthorize("hasAnyAuthority('DOCENTE','ADMIN')")
+    public String verIntentosExamen(@PathVariable Long examenId,
+                                    Authentication authentication,
+                                    Model model) {
+        Examen examen = examenRepository.findById(examenId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Examen no encontrado"));
+
+        var usuario = usuarioRepository.findByDni(authentication.getName())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
+
+        if (!puedeGestionarExamen(authentication, usuario, examen)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+
+        List<Intento> intentos = intentoRepository.findByExamen_IdActividad(examenId);
+        intentos.sort(Comparator
+                .comparing(Intento::getFechaFin, Comparator.nullsLast(Comparator.naturalOrder()))
+                .reversed());
+
+        model.addAttribute("examen", examen);
+        model.addAttribute("modulo", examen.getModulo());
+        model.addAttribute("curso", examen.getModulo() != null ? examen.getModulo().getCurso() : null);
+        model.addAttribute("intentos", intentos);
+
+        return "docente/examen-intentos";
+    }
+
+    @GetMapping("/{examenId}/intentos/{intentoId}")
+    @PreAuthorize("hasAnyAuthority('DOCENTE','ADMIN')")
+    public String verDetalleIntento(@PathVariable Long examenId,
+                                    @PathVariable UUID intentoId,
+                                    Authentication authentication,
+                                    Model model) {
+        Examen examen = examenRepository.findById(examenId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Examen no encontrado"));
+
+        var usuario = usuarioRepository.findByDni(authentication.getName())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
+
+        if (!puedeGestionarExamen(authentication, usuario, examen)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+
+        Intento intento = intentoRepository.findByIdIntentoAndExamen_IdActividad(intentoId, examenId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Intento no encontrado"));
+
+        List<Map<String, Object>> respuestasDetalle = new ArrayList<>();
+        if (intento.getRespuestas() != null) {
+            for (RespuestaIntento respuesta : intento.getRespuestas()) {
+                Map<String, Object> detalle = new HashMap<>();
+                detalle.put("pregunta", respuesta.getPregunta());
+                detalle.put("respuestaTexto", formatearRespuestaUsuario(respuesta.getRespuestaUsuario()));
+                detalle.put("puntaje", respuesta.getPuntajeObtenido());
+                detalle.put("esCorrecta", respuesta.getEsCorrecta());
+                detalle.put("requiereRevision", respuesta.getRequiereRevisionManual());
+                respuestasDetalle.add(detalle);
+            }
+        }
+
+        model.addAttribute("examen", examen);
+        model.addAttribute("intento", intento);
+        model.addAttribute("modulo", examen.getModulo());
+        model.addAttribute("curso", examen.getModulo() != null ? examen.getModulo().getCurso() : null);
+        model.addAttribute("respuestas", respuestasDetalle);
+
+        return "docente/examen-intento-detalle";
+    }
+
+    private boolean puedeGestionarExamen(Authentication authentication, com.example.demo.model.Usuario usuario, Examen examen) {
+        boolean esAdmin = authentication.getAuthorities().stream()
+                .anyMatch(auth -> {
+                    String nombre = auth.getAuthority();
+                    return "ADMIN".equalsIgnoreCase(nombre) || "ROLE_ADMIN".equalsIgnoreCase(nombre);
+                });
+        if (esAdmin) {
+            return true;
+        }
+
+        if (!(usuario instanceof Docente docente)) {
+            return false;
+        }
+
+        OfertaAcademica oferta = examen.getModulo() != null ? examen.getModulo().getCurso() : null;
+        if (oferta instanceof Curso curso) {
+            return curso.getDocentes() != null && curso.getDocentes().stream()
+                    .anyMatch(d -> d.getId().equals(docente.getId()));
+        }
+        if (oferta instanceof Formacion formacion) {
+            return formacion.getDocentes() != null && formacion.getDocentes().stream()
+                    .anyMatch(d -> d.getId().equals(docente.getId()));
+        }
+        return false;
+    }
+
+    private String formatearRespuestaUsuario(String respuestaUsuario) {
+        if (respuestaUsuario == null || respuestaUsuario.isBlank()) {
+            return "Sin respuesta";
+        }
+
+        String valor = respuestaUsuario.trim();
+        try {
+            JsonNode node = objectMapper.readTree(valor);
+            if (node.isArray()) {
+                List<String> valores = new ArrayList<>();
+                node.forEach(n -> valores.add(n.isTextual() ? n.asText() : n.toString()));
+                return String.join(", ", valores);
+            }
+            if (node.isObject()) {
+                return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(node);
+            }
+        } catch (Exception ignored) {
+            // Si no es JSON, devolvemos el texto original.
+        }
+
+        return valor;
     }
 }

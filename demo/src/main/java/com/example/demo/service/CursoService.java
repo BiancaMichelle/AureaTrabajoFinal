@@ -118,6 +118,16 @@ public class CursoService {
         return moduloRepository.save(modulo);
     }
 
+    @Transactional
+    public void eliminarModulo(UUID moduloId) {
+        UUID moduloIdSeguro = Objects.requireNonNull(moduloId, "El identificador del módulo es obligatorio");
+
+        Modulo modulo = moduloRepository.findById(moduloIdSeguro)
+                .orElseThrow(() -> new RuntimeException("Módulo no encontrado"));
+
+        moduloRepository.delete(modulo);
+    }
+
     public Clase crearClase(String titulo, String descripcion, UUID moduloId) {
         UUID moduloIdSeguro = Objects.requireNonNull(moduloId, "El identificador del módulo no puede ser nulo");
 

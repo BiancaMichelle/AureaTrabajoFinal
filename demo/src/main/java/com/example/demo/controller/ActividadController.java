@@ -2,13 +2,17 @@ package com.example.demo.controller;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -107,6 +111,17 @@ public class ActividadController {
         preguntaDTO.setTipoPregunta(TipoPregunta.valueOf(request.getTipoPregunta()));
         preguntaDTO.setPuntaje(request.getPuntaje());
         return preguntaDTO;
+    }
+
+    @DeleteMapping("/{actividadId}/eliminar")
+    @PreAuthorize("hasAnyAuthority('DOCENTE', 'ADMIN')")
+    public ResponseEntity<Map<String, Object>> eliminarActividad(@PathVariable Long actividadId, Authentication authentication) {
+        try {
+            examenService.eliminarActividad(actividadId);
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("success", false, "error", e.getMessage()));
+        }
     }
     
     // Clases internas para recibir datos del frontend

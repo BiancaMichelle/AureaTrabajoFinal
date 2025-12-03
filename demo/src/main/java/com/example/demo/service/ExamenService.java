@@ -186,4 +186,11 @@ public class ExamenService {
             this.puntaje = puntaje;
         }
     }
+
+    @Transactional
+    public void eliminarActividad(Long actividadId) {
+        Examen examen = examenRepository.findById(actividadId)
+                .orElseThrow(() -> new RuntimeException("Actividad no encontrada"));
+        examenRepository.delete(examen);
+    }
 }

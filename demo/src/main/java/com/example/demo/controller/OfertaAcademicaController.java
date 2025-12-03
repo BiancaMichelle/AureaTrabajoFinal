@@ -15,6 +15,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import com.example.demo.model.Modulo;
@@ -116,6 +117,20 @@ public class OfertaAcademicaController {
                 "visibilidad", moduloActualizado.getVisibilidad());
 
         return ResponseEntity.ok(body);
+    }
+
+    @DeleteMapping("/modulo/{moduloId}/eliminar")
+    public ResponseEntity<Map<String, Object>> eliminarModulo(@PathVariable UUID moduloId, Authentication authentication) {
+        if (!puedeModificarCurso(authentication)) {
+            return ResponseEntity.status(403).body(Map.of("success", false, "error", "No autorizado"));
+        }
+
+        try {
+            cursoService.eliminarModulo(moduloId);
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("success", false, "error", e.getMessage()));
+        }
     }
 
     private boolean puedeModificarCurso(Authentication authentication) {

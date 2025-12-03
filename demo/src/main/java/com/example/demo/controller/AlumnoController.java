@@ -4,11 +4,14 @@ import java.math.BigDecimal;
 import java.security.Principal;
 import java.text.NumberFormat;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -28,11 +31,14 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import com.example.demo.DTOMP.ReferenceRequest;
 import com.example.demo.DTOMP.ResponseDTO;
 import com.example.demo.enums.EstadoCuota;
+import com.example.demo.enums.EstadoIntento;
 import com.example.demo.enums.EstadoPago;
 import com.example.demo.enums.TipoGenero;
 import com.example.demo.model.Alumno;
 import com.example.demo.model.Curso;
 import com.example.demo.model.Cuota;
+import com.example.demo.model.Examen;
+import com.example.demo.model.Intento;
 import com.example.demo.model.Formacion;
 import com.example.demo.model.Inscripciones;
 import com.example.demo.model.Modulo;
@@ -41,6 +47,7 @@ import com.example.demo.model.Pago;
 import com.example.demo.model.Usuario;
 import com.example.demo.repository.CuotaRepository;
 import com.example.demo.repository.InscripcionRepository;
+import com.example.demo.repository.IntentoRepository;
 import com.example.demo.repository.ModuloRepository;
 import com.example.demo.repository.OfertaAcademicaRepository;
 import com.example.demo.repository.UsuarioRepository;
@@ -225,6 +232,7 @@ public class AlumnoController {
     private final InscripcionRepository inscripcionRepository;
     private final UsuarioRepository usuarioRepository;
     private final ModuloRepository moduloRepository;
+    private final IntentoRepository intentoRepository;
     private final MercadoPagoService mercadoPagoService;
     private final PagoRepository pagoRepository;
     private final CuotaRepository cuotaRepository;
@@ -233,6 +241,7 @@ public class AlumnoController {
                           InscripcionRepository inscripcionRepository,
                           UsuarioRepository usuarioRepository,
                           ModuloRepository moduloRepository,
+                          IntentoRepository intentoRepository,
                           MercadoPagoService mercadoPagoService,
                           PagoRepository pagoRepository,
                           CuotaRepository cuotaRepository) {
@@ -240,6 +249,7 @@ public class AlumnoController {
         this.inscripcionRepository = inscripcionRepository;
         this.usuarioRepository = usuarioRepository;
         this.moduloRepository = moduloRepository;
+        this.intentoRepository = intentoRepository;
         this.mercadoPagoService = mercadoPagoService;
         this.pagoRepository = pagoRepository;
         this.cuotaRepository = cuotaRepository;
@@ -406,9 +416,14 @@ public class AlumnoController {
             Long ofertaIdSeguro = Objects.requireNonNull(ofertaId, "ofertaId no puede ser nulo");
             System.out.println("🔍 Accediendo al aula para oferta ID: " + ofertaIdSeguro + ", usuario: " + dni);
             
-            // Buscar la inscripción del alumno en esta oferta
-            Inscripciones inscripcion = inscripcionRepository.findByAlumnoDniAndOfertaId(dni, ofertaIdSeguro)
+                // Buscar la inscripción del alumno en esta oferta
+                Inscripciones inscripcion = inscripcionRepository.findByAlumnoDniAndOfertaId(dni, ofertaIdSeguro)
                     .orElseThrow(() -> new RuntimeException("Inscripción no encontrada"));
+
+                Usuario alumno = inscripcion.getAlumno();
+                if (alumno == null) {
+                throw new RuntimeException("Alumno no asociado a la inscripción");
+                }
 
             System.out.println("✅ Inscripción encontrada ID: " + inscripcion.getIdInscripcion());
 
@@ -456,8 +471,53 @@ public class AlumnoController {
                     System.out.println("  - " + m.getNombre() + " (visible: " + m.getVisibilidad() + ")");
                 }
                 
+                Map<Long, Map<String, Object>> examenesResumen = null;
+                if (!puedeModificar && modulos != null) {
+                    examenesResumen = new HashMap<>();
+                    for (Modulo moduloActual : modulos) {
+                        if (moduloActual.getActividades() == null) {
+                            continue;
+                        }
+                        for (var actividad : moduloActual.getActividades()) {
+                            if (actividad instanceof Examen examenActividad) {
+                                List<Intento> intentosAlumno = intentoRepository
+                                        .findByAlumno_IdAndExamen_IdActividad(alumno.getId(), examenActividad.getIdActividad());
+
+                                intentosAlumno.sort(Comparator
+                                        .comparing(Intento::getFechaFin, Comparator.nullsLast(Comparator.naturalOrder()))
+                                    .reversed());
+
+                                Intento ultimoIntento = intentosAlumno.isEmpty() ? null : intentosAlumno.get(0);
+                                Integer intentosPermitidos = examenActividad.getCantidadIntentos();
+                                int intentosRealizados = intentosAlumno.size();
+                                boolean puedeReintentar = intentosPermitidos == null || intentosRealizados < intentosPermitidos;
+
+                                Float calificacionValor = ultimoIntento != null ? ultimoIntento.getCalificacion() : null;
+                                String calificacionTexto = calificacionValor != null
+                                        ? String.format(LOCALE_ES_AR, "%.2f", calificacionValor)
+                                        : null;
+
+                                EstadoIntento ultimoEstado = ultimoIntento != null ? ultimoIntento.getEstado() : null;
+                                boolean requiereRevision = ultimoEstado == EstadoIntento.PENDIENTE_CORRECCION;
+
+                                Map<String, Object> resumen = new HashMap<>();
+                                resumen.put("intentosRealizados", intentosRealizados);
+                                resumen.put("intentosPermitidos", intentosPermitidos);
+                                resumen.put("puedeReintentar", puedeReintentar);
+                                resumen.put("ultimaCalificacion", calificacionValor);
+                                resumen.put("calificacionTexto", calificacionTexto);
+                                resumen.put("ultimoEstado", ultimoEstado);
+                                resumen.put("requiereRevision", requiereRevision);
+
+                                examenesResumen.put(examenActividad.getIdActividad(), resumen);
+                            }
+                        }
+                    }
+                }
+
                 model.addAttribute("curso", oferta); // Mantener nombre "curso" para compatibilidad
                 model.addAttribute("modulos", modulos);
+                model.addAttribute("examenIntentos", examenesResumen != null ? examenesResumen : Collections.emptyMap());
                 model.addAttribute("inscripcion", inscripcion);
                 model.addAttribute("puedeModificar", puedeModificar);
                 System.out.println("👤 Puede modificar: " + puedeModificar);

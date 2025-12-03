@@ -204,6 +204,7 @@ body {
 	min-height: calc(100vh - 180px); /* Ajusta este valor según la altura de tu header y footer */
 	border-radius: 20px;
 	box-shadow: 0 8px 32px 0 rgba(13, 27, 42, 0.25);
+    overflow: hidden;
 }
 
 /* ==================== LADO IZQUIERDO (BRANDING) ==================== */
@@ -376,6 +377,8 @@ body {
 	justify-content: center;
 	align-items: center;
 	padding: 3rem;
+    max-width: none;
+    border-radius: 0;
 }
 
 .form-wrapper {
