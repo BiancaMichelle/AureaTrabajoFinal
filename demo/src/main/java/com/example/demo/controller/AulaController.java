@@ -1,10 +1,14 @@
 package com.example.demo.controller;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.http.ResponseEntity;
@@ -16,15 +20,14 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.example.demo.enums.EstadoAsistencia;
 import com.example.demo.model.Asistencia;
-import com.example.demo.model.Horario;
 import com.example.demo.model.Inscripciones;
 import com.example.demo.model.OfertaAcademica;
 import com.example.demo.model.Usuario;
+import com.example.demo.repository.ClaseRepository;
 import com.example.demo.repository.InscripcionRepository;
 import com.example.demo.repository.OfertaAcademicaRepository;
 import com.example.demo.repository.UsuarioRepository;
@@ -38,20 +41,24 @@ public class AulaController {
     private final InscripcionRepository inscripcionRepository;
     private final UsuarioRepository usuarioRepository;
     private final AsistenciaService asistenciaService;
+    private final ClaseRepository claseRepository;
 
     public AulaController(OfertaAcademicaRepository ofertaRepository,
                           InscripcionRepository inscripcionRepository,
                           UsuarioRepository usuarioRepository,
-                          AsistenciaService asistenciaService) {
+                          AsistenciaService asistenciaService,
+                          ClaseRepository claseRepository) {
         this.ofertaRepository = ofertaRepository;
         this.inscripcionRepository = inscripcionRepository;
         this.usuarioRepository = usuarioRepository;
         this.asistenciaService = asistenciaService;
+        this.claseRepository = claseRepository;
     }
 
     @GetMapping("/oferta/{id}/participantes")
     public String verParticipantes(@PathVariable Long id, Model model, Authentication auth) {
-        OfertaAcademica oferta = ofertaRepository.findById(id)
+        Long ofertaIdSeguro = Objects.requireNonNull(id, "El id de la oferta es requerido");
+        OfertaAcademica oferta = ofertaRepository.findById(ofertaIdSeguro)
                 .orElseThrow(() -> new RuntimeException("Oferta no encontrada"));
         
         String currentUserDni = auth.getName(); // Assuming username is DNI or email, need to check
@@ -111,7 +118,8 @@ public class AulaController {
     @GetMapping("/api/oferta/{id}/calendario")
     @ResponseBody
     public Map<String, Object> getCalendarioOferta(@PathVariable Long id) {
-        OfertaAcademica oferta = ofertaRepository.findById(id)
+        Long ofertaIdSeguro = Objects.requireNonNull(id, "El id de la oferta es requerido");
+        OfertaAcademica oferta = ofertaRepository.findById(ofertaIdSeguro)
                 .orElseThrow(() -> new RuntimeException("Oferta no encontrada"));
         
         Map<String, Object> data = new HashMap<>();
@@ -125,22 +133,44 @@ public class AulaController {
                     .collect(Collectors.toList());
         }
         data.put("diasClase", diasClase);
+
+        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
+        Map<String, List<Map<String, Object>>> clasesPorFecha = new HashMap<>();
+        claseRepository.findByModuloCursoIdOferta(ofertaIdSeguro).stream()
+                .filter(clase -> clase.getInicio() != null)
+                .forEach(clase -> {
+                    LocalDateTime inicio = clase.getInicio();
+                    LocalDateTime fin = clase.getFin();
+                    String fechaKey = inicio.toLocalDate().toString();
+
+                    Map<String, Object> dto = new HashMap<>();
+                    dto.put("id", clase.getIdClase().toString());
+                    dto.put("titulo", clase.getTitulo());
+                    dto.put("horaInicio", timeFormatter.format(inicio.toLocalTime()));
+                    dto.put("horaFin", fin != null ? timeFormatter.format(fin.toLocalTime()) : null);
+
+                    clasesPorFecha.computeIfAbsent(fechaKey, k -> new ArrayList<>()).add(dto);
+                });
+        data.put("clasesPorFecha", clasesPorFecha);
         
         return data;
     }
 
     @GetMapping("/api/oferta/{id}/asistencia/{dni}")
     @ResponseBody
-    public Map<String, String> getAsistenciaAlumno(@PathVariable Long id, @PathVariable String dni) {
+    public Map<String, Map<String, String>> getAsistenciaAlumno(@PathVariable Long id, @PathVariable String dni) {
         List<Asistencia> asistencias = asistenciaService.getAsistenciasPorAlumnoYOferta(id, dni);
         
-        Map<String, String> records = new HashMap<>();
+        Map<String, Map<String, String>> records = new HashMap<>();
         for (Asistencia a : asistencias) {
             String status = "absent";
             if (a.getEstado() == EstadoAsistencia.PRESENTE) status = "present";
             else if (a.getEstado() == EstadoAsistencia.TARDANZA) status = "late";
-            
-            records.put(a.getFecha().toString(), status);
+
+            String dateKey = a.getFecha().toString();
+            String classKey = a.getClase() != null ? a.getClase().getIdClase().toString() : "__default__";
+
+            records.computeIfAbsent(dateKey, k -> new HashMap<>()).put(classKey, status);
         }
         return records;
     }
@@ -153,12 +183,19 @@ public class AulaController {
             String dni = payload.get("dni").toString();
             LocalDate fecha = LocalDate.parse(payload.get("fecha").toString());
             String estadoStr = payload.get("estado").toString();
+            UUID claseId = null;
+            if (payload.containsKey("claseId") && payload.get("claseId") != null) {
+                String claseIdStr = payload.get("claseId").toString();
+                if (!claseIdStr.isBlank()) {
+                    claseId = UUID.fromString(claseIdStr);
+                }
+            }
             
             EstadoAsistencia estado = EstadoAsistencia.AUSENTE;
             if ("present".equals(estadoStr)) estado = EstadoAsistencia.PRESENTE;
             else if ("late".equals(estadoStr)) estado = EstadoAsistencia.TARDANZA;
             
-            asistenciaService.registrarAsistencia(ofertaId, dni, fecha, estado);
+            asistenciaService.registrarAsistencia(ofertaId, dni, fecha, estado, claseId);
             
             return ResponseEntity.ok().body(Map.of("success", true));
         } catch (Exception e) {

@@ -177,6 +177,17 @@
                     </div>
                 </div>
 
+                <!-- Selección de Clase -->
+                <div id="class-selection" class="mb-6 hidden">
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                        Seleccionar Clase
+                    </label>
+                    <div id="class-options" class="space-y-2"></div>
+                    <p id="class-selection-hint" class="text-xs text-gray-500 mt-2 hidden">
+                        Seleccioná una clase para registrar la asistencia.
+                    </p>
+                </div>
+
                 <!-- Acciones de Estado -->
                 <div class="space-y-3">
                     <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
@@ -219,9 +230,12 @@
     <script th:inline="javascript">
         // --- DATOS ---
         const ofertaId = /*[[${oferta.idOferta}]]*/ 0;
+        const DEFAULT_CLASS_KEY = '__default__';
         let users = [];
         let attendanceRecords = {};
         let calendarData = {};
+        let classesByDate = {};
+        let selectedClassId = null;
 
         // Estado Global de la App
         let selectedUser = null;
@@ -262,8 +276,58 @@
             try {
                 const response = await fetch(`/aula/api/oferta/${ofertaId}/calendario`);
                 calendarData = await response.json();
+                classesByDate = calendarData.clasesPorFecha || {};
             } catch (error) {
                 console.error('Error loading calendar data:', error);
+            }
+        }
+
+        function normalizeAttendance(rawRecords) {
+            const normalized = {};
+            if (!rawRecords) return normalized;
+
+            Object.entries(rawRecords).forEach(([dateKey, value]) => {
+                if (value && typeof value === 'object' && !Array.isArray(value)) {
+                    normalized[dateKey] = { ...value };
+                } else if (typeof value === 'string') {
+                    normalized[dateKey] = { [DEFAULT_CLASS_KEY]: value };
+                }
+            });
+            return normalized;
+        }
+
+        function getClassesForDate(dateKey) {
+            const list = classesByDate && classesByDate[dateKey];
+            if (!list) return [];
+            return [...list].sort((a, b) => (a.horaInicio || '').localeCompare(b.horaInicio || ''));
+        }
+
+        function formatHour(hour) {
+            if (!hour) return '';
+            return hour.length >= 5 ? hour.substring(0, 5) : hour;
+        }
+
+        function buildStatusDots(statusMap) {
+            if (!statusMap) return '';
+            const orderMap = { present: 1, late: 2, absent: 3 };
+            const uniqueStatuses = [...new Set(Object.values(statusMap))]
+                .sort((a, b) => (orderMap[a] || 99) - (orderMap[b] || 99));
+            return uniqueStatuses.map(status => {
+                const colorClass = statusDotClass(status);
+                return `<div class="w-1.5 h-1.5 ${colorClass} rounded-full mt-1"></div>`;
+            }).join('');
+        }
+
+        function statusDotClass(status) {
+            switch (status) {
+                case 'present':
+                    return 'bg-green-500';
+                case 'late':
+                    return 'bg-yellow-500';
+                case 'absent':
+                    return 'bg-red-500';
+                default:
+                    return 'bg-gray-300';
             }
         }
 
@@ -327,6 +391,7 @@
             // Establecer fecha inicial válida (primer día de clase o hoy si es válido)
             currentDate = findInitialDate();
             viewDate = new Date(currentDate);
+            selectedClassId = null;
 
             // Llenar info de usuario
             const infoContainer = document.getElementById('modal-user-info');
@@ -344,7 +409,7 @@
             try {
                 const response = await fetch(`/aula/api/oferta/${ofertaId}/asistencia/${userDni}`);
                 const records = await response.json();
-                attendanceRecords[userDni] = records;
+                attendanceRecords[userDni] = normalizeAttendance(records);
             } catch (error) {
                 console.error('Error loading attendance:', error);
                 attendanceRecords[userDni] = {};
@@ -361,6 +426,7 @@
         function closeModal() {
             document.getElementById('attendance-modal').classList.add('hidden');
             selectedUser = null;
+            selectedClassId = null;
         }
 
         // --- LÓGICA DEL CALENDARIO ---
@@ -427,8 +493,14 @@
 
             if (check < start || check > end) return false;
 
+            const dateKey = formatDateKey(check);
+            if (classesByDate && classesByDate[dateKey] && classesByDate[dateKey].length > 0) {
+                return true;
+            }
+
             const dayName = daysOfWeek[date.getDay()];
-            return calendarData.diasClase.includes(dayName);
+            const scheduledDays = calendarData.diasClase || [];
+            return scheduledDays.includes(dayName);
         }
 
         function renderCalendar() {
@@ -451,15 +523,18 @@
                 daysContainer.appendChild(blank);
             }
 
+            const userRecords = selectedUser ? (attendanceRecords[selectedUser.dni] || {}) : {};
+
             // Días del mes
             for (let day = 1; day <= daysInMonth; day++) {
                 const date = new Date(year, month, day);
                 const dateStr = formatDateKey(date);
                 const isSelected = formatDateKey(currentDate) === dateStr;
-                const isClass = isClassDay(date);
+                const classesForDate = getClassesForDate(dateStr);
+                const isClass = classesForDate.length > 0 || isClassDay(date);
                 
                 // Verificar asistencia existente
-                const record = attendanceRecords[selectedUser.dni]?.[dateStr];
+                const recordMap = userRecords[dateStr];
 
                 const btn = document.createElement('button');
                 
@@ -475,12 +550,7 @@
                 btn.className = `p-2 rounded-lg text-sm relative transition-all w-full flex flex-col items-center justify-center ${bgClass}`;
                 
                 // Contenido del botón
-                let dotHTML = '';
-                if (!isSelected && isClass) {
-                    if (record === 'present') dotHTML = '<div class="w-1.5 h-1.5 bg-green-500 rounded-full mt-1"></div>';
-                    else if (record === 'absent') dotHTML = '<div class="w-1.5 h-1.5 bg-red-500 rounded-full mt-1"></div>';
-                    else if (record === 'late') dotHTML = '<div class="w-1.5 h-1.5 bg-yellow-500 rounded-full mt-1"></div>';
-                }
+                const dotHTML = (!isSelected && recordMap) ? buildStatusDots(recordMap) : '';
 
                 btn.innerHTML = `<span>${day}</span>${dotHTML}`;
                 
@@ -503,11 +573,81 @@
             document.getElementById('selected-date-display').innerText = currentDate.toLocaleDateString('es-ES', options);
         }
 
+        function renderClassOptions() {
+            const selectionWrapper = document.getElementById('class-selection');
+            const optionsContainer = document.getElementById('class-options');
+            const hint = document.getElementById('class-selection-hint');
+            if (!selectionWrapper || !optionsContainer) {
+                return;
+            }
+
+            const dateKey = formatDateKey(currentDate);
+            const classes = getClassesForDate(dateKey);
+
+            if (classes.length === 0) {
+                selectionWrapper.classList.add('hidden');
+                optionsContainer.innerHTML = '';
+                selectedClassId = DEFAULT_CLASS_KEY;
+                if (hint) hint.classList.add('hidden');
+                return;
+            }
+
+            selectionWrapper.classList.remove('hidden');
+
+            // Siempre auto-seleccionar la primera clase si no hay una selección válida
+            if (!selectedClassId || !classes.some(clase => clase.id === selectedClassId)) {
+                selectedClassId = classes[0].id;
+            }
+
+            optionsContainer.innerHTML = '';
+            classes.forEach(clase => {
+                const isSelected = clase.id === selectedClassId;
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = `w-full text-left border rounded-xl p-3 transition-all ${isSelected ? 'border-blue-500 bg-blue-50 shadow-sm' : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/50'}`;
+
+                const titulo = clase.titulo ? clase.titulo : 'Clase';
+                const horaInicio = formatHour(clase.horaInicio);
+                const horaFin = formatHour(clase.horaFin);
+                const rango = horaFin ? `${horaInicio} - ${horaFin}` : horaInicio;
+
+                button.innerHTML = `
+                    <div class="flex items-center justify-between gap-2">
+                        <div>
+                            <p class="text-sm font-semibold text-gray-800">${titulo}</p>
+                            <p class="text-xs text-gray-500">${rango}</p>
+                        </div>
+                        <i class="fas ${isSelected ? 'fa-circle-check text-blue-500' : 'fa-circle text-gray-300'} text-lg"></i>
+                    </div>
+                `;
+
+                button.addEventListener('click', () => {
+                    if (selectedClassId !== clase.id) {
+                        selectedClassId = clase.id;
+                        updateStatusUI();
+                    }
+                });
+
+                optionsContainer.appendChild(button);
+            });
+
+            // Mostrar hint solo si hay más de una clase
+            if (hint) {
+                hint.classList.toggle('hidden', classes.length <= 1);
+            }
+        }
+
         // --- LÓGICA DE ASISTENCIA ---
         function updateStatusUI() {
+            if (!selectedUser) return;
             const dateKey = formatDateKey(currentDate);
-            const status = attendanceRecords[selectedUser.dni]?.[dateKey];
+            const classes = getClassesForDate(dateKey);
             const isValidDay = isClassDay(currentDate);
+            renderClassOptions();
+
+            const classKey = classes.length > 0 ? selectedClassId : DEFAULT_CLASS_KEY;
+            const statusMap = attendanceRecords[selectedUser.dni]?.[dateKey] || {};
+            const status = classKey ? statusMap[classKey] : undefined;
 
             // Resetear estilos de botones
             const btns = {
@@ -523,7 +663,7 @@
 
             // Habilitar/Deshabilitar según si es día de clase
             Object.values(btns).forEach(btn => {
-                if (!isValidDay) {
+                if (!isValidDay || (classes.length > 0 && !selectedClassId)) {
                     btn.disabled = true;
                     btn.classList.add('opacity-50', 'cursor-not-allowed');
                     btn.classList.remove('hover:bg-gray-50', 'cursor-pointer');
@@ -545,9 +685,9 @@
             });
 
             // Si no es día válido, mostrar mensaje y salir
-            if (!isValidDay) {
+            if (!isValidDay || (classes.length > 0 && !selectedClassId)) {
                 const feedback = document.getElementById('feedback-msg');
-                feedback.innerText = "Este día no hay clases programadas.";
+                feedback.innerText = !isValidDay ? "Este día no hay clases programadas." : "Seleccioná una clase para registrar la asistencia.";
                 feedback.classList.remove('hidden');
                 return;
             }
@@ -581,14 +721,27 @@
             if (!selectedUser) return;
             
             const dateKey = formatDateKey(currentDate);
+            const classes = getClassesForDate(dateKey);
+            const classKey = classes.length > 0 ? selectedClassId : DEFAULT_CLASS_KEY;
+
+            if (classes.length > 0 && !classKey) {
+                updateStatusUI();
+                return;
+            }
+
+            const effectiveClassKey = classKey || DEFAULT_CLASS_KEY;
+            const claseId = effectiveClassKey === DEFAULT_CLASS_KEY ? null : effectiveClassKey;
             
             // Inicializar registro del usuario si no existe
             if (!attendanceRecords[selectedUser.dni]) {
                 attendanceRecords[selectedUser.dni] = {};
             }
+            if (!attendanceRecords[selectedUser.dni][dateKey]) {
+                attendanceRecords[selectedUser.dni][dateKey] = {};
+            }
 
             // Guardar estado localmente
-            attendanceRecords[selectedUser.dni][dateKey] = status;
+            attendanceRecords[selectedUser.dni][dateKey][effectiveClassKey] = status;
 
             // Guardar en servidor
             try {
@@ -602,7 +755,8 @@
                         ofertaId: ofertaId,
                         dni: selectedUser.dni,
                         fecha: dateKey,
-                        estado: status
+                        estado: status,
+                        claseId: claseId
                     })
                 });
                 

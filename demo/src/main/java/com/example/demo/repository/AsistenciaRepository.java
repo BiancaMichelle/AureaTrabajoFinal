@@ -14,4 +14,5 @@ import com.example.demo.model.Asistencia;
 public interface AsistenciaRepository extends JpaRepository<Asistencia, UUID> {
     List<Asistencia> findByOfertaIdOfertaAndAlumnoDni(Long ofertaId, String alumnoDni);
     Optional<Asistencia> findByOfertaIdOfertaAndAlumnoDniAndFecha(Long ofertaId, String alumnoDni, LocalDate fecha);
+    Optional<Asistencia> findByOfertaIdOfertaAndAlumnoDniAndClaseIdClase(Long ofertaId, String alumnoDni, UUID idClase);
 }

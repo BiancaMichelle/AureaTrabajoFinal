@@ -1,24 +1,36 @@
 package com.example.demo.controller;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.enums.TipoPregunta;
+import com.example.demo.model.Archivo;
 import com.example.demo.model.Examen;
+import com.example.demo.model.Material;
+import com.example.demo.model.Modulo;
+import com.example.demo.repository.ArchivoRepository;
+import com.example.demo.repository.MaterialRepository;
+import com.example.demo.repository.ModuloRepository;
 import com.example.demo.service.ExamenService;
 import com.example.demo.service.ExamenService.PoolDTO;
 import com.example.demo.service.ExamenService.PreguntaDTO;
@@ -34,6 +46,15 @@ public class ActividadController {
     
     @Autowired
     private ObjectMapper objectMapper;
+    
+    @Autowired
+    private ModuloRepository moduloRepository;
+    
+    @Autowired
+    private MaterialRepository materialRepository;
+    
+    @Autowired
+    private ArchivoRepository archivoRepository;
     
     @PostMapping("/crearExamen")
     @PreAuthorize("hasAnyAuthority('DOCENTE', 'ADMIN')")
@@ -122,6 +143,80 @@ public class ActividadController {
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("success", false, "error", e.getMessage()));
         }
+    }
+    
+    @PostMapping("/modulo/{moduloId}/material")
+    @PreAuthorize("hasAnyAuthority('DOCENTE', 'ADMIN')")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> crearMaterialEnModulo(
+            @PathVariable String moduloId,
+            @RequestParam String titulo,
+            @RequestParam(required = false) String descripcion,
+            @RequestParam(value = "archivos", required = false) List<MultipartFile> files) {
+        try {
+            UUID moduloUUID = Objects.requireNonNull(UUID.fromString(moduloId), "El id del módulo es requerido");
+            Modulo modulo = moduloRepository.findById(moduloUUID)
+                    .orElseThrow(() -> new RuntimeException("Módulo no encontrado"));
+
+            Material material = new Material();
+            material.setTitulo(titulo);
+            material.setDescripcion(descripcion);
+            material.setFechaCreacion(LocalDateTime.now());
+            material.setVisibilidad(true);
+            material.setModulo(modulo);
+            material.setCarpeta(null); // Sin carpeta, directamente en el módulo
+
+            // Si hay archivos, guardarlos
+            if (files != null && !files.isEmpty()) {
+                for (MultipartFile file : files) {
+                    if (!file.isEmpty()) {
+                        Archivo archivo = new Archivo();
+                        archivo.setNombre(file.getOriginalFilename());
+                        archivo.setTipoMime(file.getContentType());
+                        archivo.setTamano(file.getSize());
+                        archivo.setContenido(file.getBytes());
+                        archivo.setFechaSubida(LocalDateTime.now());
+                        archivo.setMaterial(material);
+                        archivo.setCarpeta(null); // Sin carpeta
+                        
+                        material.getArchivos().add(archivo);
+                    }
+                }
+            }
+
+            materialRepository.save(material);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Material creado exitosamente");
+            response.put("materialId", material.getIdActividad());
+
+            return ResponseEntity.ok(response);
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("success", false, "message", "Error al procesar los archivos: " + e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("success", false, "message", "Error al crear material: " + e.getMessage()));
+        }
+    }
+    
+    @GetMapping("/material/{materialId}/archivos")
+    @ResponseBody
+    public ResponseEntity<List<Map<String, Object>>> obtenerArchivosMaterial(@PathVariable Long materialId) {
+        List<Archivo> archivos = archivoRepository.findByMaterialIdActividad(materialId);
+        
+        List<Map<String, Object>> archivosInfo = archivos.stream().map(archivo -> {
+            Map<String, Object> info = new HashMap<>();
+            info.put("id", archivo.getIdArchivo());
+            info.put("nombre", archivo.getNombre());
+            info.put("tipoMime", archivo.getTipoMime());
+            info.put("tamano", archivo.getTamano());
+            info.put("fechaSubida", archivo.getFechaSubida());
+            return info;
+        }).toList();
+        
+        return ResponseEntity.ok(archivosInfo);
     }
     
     // Clases internas para recibir datos del frontend
