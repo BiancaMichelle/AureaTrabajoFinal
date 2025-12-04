@@ -54,7 +54,7 @@
             display: none;
             position: absolute;
             top: 12px;
-            right: 56px;
+            right: 12px;
             width: 34px;
             height: 34px;
             border-radius: 9999px;
@@ -72,6 +72,19 @@
             background-color: #007bff;
             color: white;
             transform: scale(1.05);
+        }
+
+        /* Posición específica para el icono de editar en módulos (para no solapar con el ojo) */
+        .edit-icon[data-edit-type="module"] {
+            right: 56px;
+        }
+
+        .editable-block {
+            position: relative;
+        }
+
+        body.edit-mode .editable-block {
+            padding-top: 3.5rem !important;
         }
 
         body.edit-mode .edit-icon {
@@ -134,6 +147,7 @@
             z-index: 5;
         }
 
+        /* Ajuste para elementos sin botón de visibilidad (clases y actividades) */
         .delete-icon.no-visibility {
             right: 56px;
         }
@@ -528,7 +542,7 @@
                             th:data-clase-descripcion="${clase.descripcion}"
                             th:data-clase-inicio="${#temporals.format(clase.inicio, 'yyyy-MM-dd''T''HH:mm')}"
                             th:data-clase-fin="${#temporals.format(clase.fin, 'yyyy-MM-dd''T''HH:mm')}">
-                            <button type="button" class="delete-icon" data-delete-type="clase"
+                            <button type="button" class="delete-icon no-visibility" data-delete-type="clase"
                                 th:data-clase-id="${clase.idClase}"
                                 th:data-clase-nombre="${clase.titulo}" title="Eliminar clase">
                                 <i class="fas fa-trash"></i>
