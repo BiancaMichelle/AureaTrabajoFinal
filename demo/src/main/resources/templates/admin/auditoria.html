@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/adminBase :: layout(~{::title}, ~{::main})}">
+<head>
+    <title>Auditoría del Sistema - Instituto Aurea</title>
+</head>
+<body>
+<main class="main-content">
+    <header class="main-header">
+        <h1><i class="fas fa-shield-alt"></i> Auditoría del Sistema</h1>
+        <p>Monitoreo completo de actividades y acciones en el sistema</p>
+    </header>
+
+    <!-- Filtros de Auditoría -->
+    <section class="audit-filters">
+        <div class="filters-grid">
+            <div class="filter-group">
+                <label for="filter-usuario">Usuario</label>
+                <input type="text" id="filter-usuario" class="filter-input" placeholder="DNI o nombre del usuario">
+            </div>
+
+            <div class="filter-group">
+                <label for="filter-accion">Acción</label>
+                <select id="filter-accion" class="filter-input">
+                    <option value="">Todas las acciones</option>
+                    <option value="LOGIN">Inicios de Sesión</option>
+                    <option value="LOGOUT">Cierres de Sesión</option>
+                    <option value="CREAR_USUARIO">Crear Usuario</option>
+                    <option value="ACTUALIZAR_USUARIO">Actualizar Usuario</option>
+                    <option value="ELIMINAR_USUARIO">Eliminar Usuario</option>
+                    <option value="CAMBIAR_ROL">Cambiar Rol</option>
+                    <option value="CREAR_OFERTA">Crear Oferta</option>
+                    <option value="MODIFICAR_OFERTA">Modificar Oferta</option>
+                    <option value="ELIMINAR_OFERTA">Eliminar Oferta</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="filter-entidad">Entidad Afectada</label>
+                <select id="filter-entidad" class="filter-input">
+                    <option value="">Todas las entidades</option>
+                    <option value="Usuario">Usuario</option>
+                    <option value="OfertaAcademica">Oferta Académica</option>
+                    <option value="Sesion">Sesión</option>
+                    <option value="Rol">Rol</option>
+                    <option value="Configuracion">Configuración</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="filter-fecha-desde">Desde</label>
+                <input type="date" id="filter-fecha-desde" class="filter-input">
+            </div>
+
+            <div class="filter-group">
+                <label for="filter-fecha-hasta">Hasta</label>
+                <input type="date" id="filter-fecha-hasta" class="filter-input">
+            </div>
+        </div>
+
+        <div class="filter-actions">
+            <button type="button" class="btn-filter secondary" onclick="limpiarFiltros()">
+                <i class="fas fa-times"></i>
+                Limpiar Filtros
+            </button>
+            <button type="button" class="btn-filter secondary" onclick="exportarCSV()">
+                <i class="fas fa-file-csv"></i>
+                Exportar CSV
+            </button>
+            <button type="button" class="btn-filter primary" onclick="aplicarFiltros()">
+                <i class="fas fa-search"></i>
+                Aplicar Filtros
+            </button>
+        </div>
+    </section>
+
+    <!-- Tabla de Auditoría usando estilos de admin.css -->
+    <section class="table-container">
+        <div class="table-header">
+            <h2><i class="fas fa-list-ul"></i> Registro de Actividades</h2>
+            <div class="audit-stats">
+                <span><i class="fas fa-database"></i> <span id="total-registros">0</span> registros</span>
+                <span><i class="fas fa-check-circle"></i> <span id="exitosos-count">0</span> exitosos</span>
+                <span><i class="fas fa-times-circle"></i> <span id="fallidos-count">0</span> fallidos</span>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loading-overlay" style="display: none;">
+            <div class="loading-spinner"></div>
+        </div>
+
+        <table class="data-table" id="audit-table">
+            <thead>
+                <tr>
+                    <th style="width: 12%;"><i class="fas fa-calendar"></i> Fecha</th>
+                    <th style="width: 10%;"><i class="fas fa-clock"></i> Hora</th>
+                    <th style="width: 20%;"><i class="fas fa-user"></i> Usuario</th>
+                    <th style="width: 12%;"><i class="fas fa-user-tag"></i> Rol</th>
+                    <th style="width: 15%;"><i class="fas fa-cogs"></i> Acción</th>
+                    <th style="width: 12%;"><i class="fas fa-cube"></i> Entidad</th>
+                    <th style="width: 25%;"><i class="fas fa-info-circle"></i> Detalles</th>
+                    <th style="width: 8%;"><i class="fas fa-check"></i> Estado</th>
+                </tr>
+            </thead>
+            <tbody id="audit-table-body">
+                <!-- Los datos se cargarán dinámicamente aquí -->
+            </tbody>
+        </table>
+
+        <!-- Empty State -->
+        <div class="empty-state" id="empty-state" style="display: none;">
+            <i class="fas fa-search"></i>
+            <h3>No se encontraron registros</h3>
+            <p>No hay datos de auditoría que coincidan con los filtros aplicados.</p>
+        </div>
+    </section>
+
+    <!-- Paginación -->
+    <div class="pagination-container" id="pagination-container">
+        <div class="pagination-info">
+            Mostrando <span id="showing-from">0</span> - <span id="showing-to">0</span> de <span id="total-records">0</span> registros
+        </div>
+        <div class="pagination-controls" id="pagination-controls">
+            <!-- Los controles de paginación se generarán dinámicamente -->
+        </div>
+    </div>
+</main>
+
+<script>
+    // === VARIABLES GLOBALES ===
+    let currentPage = 0;
+    let pageSize = 20;
+    let totalRecords = 0;
+    let currentFilters = {};
+
+    // === INICIALIZACIÓN ===
+    document.addEventListener('DOMContentLoaded', function() {
+        cargarDatosAuditoria();
+        cargarEstadisticasGenerales();
+        configurarEventos();
+        configurarFechasIniciales();
+    });
+
+    // === CONFIGURACIÓN INICIAL ===
+    function configurarFechasIniciales() {
+        // Establecer fecha hasta como hoy
+        const hoy = new Date().toISOString().split('T')[0];
+        document.getElementById('filter-fecha-hasta').value = hoy;
+        
+        // Establecer fecha desde como hace 30 días
+        const hace30Dias = new Date();
+        hace30Dias.setDate(hace30Dias.getDate() - 30);
+        document.getElementById('filter-fecha-desde').value = hace30Dias.toISOString().split('T')[0];
+    }
+
+    // === CONFIGURACIÓN DE EVENTOS ===
+    function configurarEventos() {
+        // Eventos de filtros
+        document.getElementById('filter-usuario').addEventListener('input', debounce(aplicarFiltros, 500));
+        document.getElementById('filter-accion').addEventListener('change', aplicarFiltros);
+        document.getElementById('filter-entidad').addEventListener('change', aplicarFiltros);
+        document.getElementById('filter-fecha-desde').addEventListener('change', aplicarFiltros);
+        document.getElementById('filter-fecha-hasta').addEventListener('change', aplicarFiltros);
+    }
+
+    // === FUNCIÓN PRINCIPAL DE CARGA ===
+    async function cargarDatosAuditoria() {
+        mostrarLoading(true);
+        
+        try {
+            console.log('=== INICIANDO CARGA DE AUDITORÍA ===');
+            
+            // Construir parámetros de consulta
+            const params = new URLSearchParams({
+                page: currentPage.toString(),
+                size: pageSize.toString()
+            });
+            
+            // Agregar filtros si están definidos
+            if (currentFilters.usuario) params.append('usuario', currentFilters.usuario);
+            if (currentFilters.accion) params.append('accion', currentFilters.accion);
+            if (currentFilters.entidad) params.append('entidad', currentFilters.entidad);
+            if (currentFilters.fechaDesde) params.append('fechaDesde', currentFilters.fechaDesde);
+            if (currentFilters.fechaHasta) params.append('fechaHasta', currentFilters.fechaHasta);
+            
+            const url = `/auditoria/api/logs?${params.toString()}`;
+            console.log('URL de consulta:', url);
+            
+            // Llamada real a la API
+            const response = await fetch(url);
+            console.log('Respuesta HTTP:', response.status, response.statusText);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const datos = await response.json();
+            console.log('Datos recibidos:', datos);
+            
+            if (datos.error) {
+                throw new Error(datos.message || 'Error desconocido del servidor');
+            }
+            
+            if (!datos.content) {
+                console.warn('No se recibió contenido en la respuesta');
+                mostrarMensaje('No se recibieron datos del servidor');
+                mostrarEstadoVacio();
+                return;
+            }
+            
+            if (datos.content.length === 0) {
+                console.log('No hay registros de auditoría');
+                mostrarMensaje('No hay registros de auditoría en la base de datos');
+                mostrarEstadoVacio();
+                return;
+            }
+            
+            console.log(`Mostrando ${datos.content.length} registros de ${datos.totalElements} totales`);
+            
+            actualizarTabla(datos.content || []);
+            actualizarEstadisticas(datos);
+            actualizarPaginacion(datos);
+            
+        } catch (error) {
+            console.error('Error al cargar datos de auditoría:', error);
+            mostrarError('Error al cargar los datos de auditoría: ' + error.message);
+            mostrarEstadoVacio();
+        } finally {
+            mostrarLoading(false);
+        }
+    }
+
+    function mostrarMensaje(mensaje) {
+        mostrarNotificacion(mensaje, 'info');
+    }
+
+    // === FUNCIÓN DE CARGA DE ESTADÍSTICAS ===
+    async function cargarEstadisticasGenerales() {
+        try {
+            const response = await fetch('/auditoria/api/estadisticas');
+            if (response.ok) {
+                const stats = await response.json();
+                document.getElementById('total-registros').textContent = stats.totalLogs || 0;
+                document.getElementById('exitosos-count').textContent = stats.logsExitosos || 0;
+                document.getElementById('fallidos-count').textContent = stats.logsFallidos || 0;
+            }
+        } catch (error) {
+            console.warn('No se pudieron cargar las estadísticas generales:', error);
+        }
+    }
+
+    function mostrarError(mensaje) {
+        mostrarNotificacion(mensaje, 'error');
+        mostrarEstadoVacio();
+    }
+
+    function mostrarNotificacion(mensaje, tipo = 'info') {
+        const alertClass = {
+            'info': 'alert-info',
+            'success': 'alert-success',
+            'warning': 'alert-warning',
+            'error': 'alert-danger'
+        };
+        
+        const errorDiv = document.createElement('div');
+        errorDiv.className = `alert ${alertClass[tipo]} alert-dismissible fade show`;
+        errorDiv.innerHTML = `
+            <strong>${tipo.toUpperCase()}:</strong> ${mensaje}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        const container = document.querySelector('.audit-container');
+        if (container) {
+            container.insertBefore(errorDiv, container.firstChild);
+        }
+        
+        // Auto-remover después de 5 segundos
+        setTimeout(() => {
+            if (errorDiv && errorDiv.parentNode) {
+                errorDiv.remove();
+            }
+        }, 5000);
+    }
+
+    // === ACTUALIZACIÓN DE LA TABLA ===
+    function actualizarTabla(datos) {
+        const tbody = document.getElementById('audit-table-body');
+        const emptyState = document.getElementById('empty-state');
+        
+        console.log('Actualizando tabla con datos:', datos);
+        
+        if (!datos || datos.length === 0) {
+            console.log('No hay datos para mostrar');
+            tbody.innerHTML = '';
+            emptyState.style.display = 'block';
+            return;
+        }
+        
+        emptyState.style.display = 'none';
+        
+        tbody.innerHTML = datos.map((item, index) => {
+            console.log(`Registro ${index}:`, item);
+            return `
+            <tr>
+                <td>${formatearFecha(item.fecha)}</td>
+                <td><strong>${formatearHora(item.hora)}</strong></td>
+                <td>
+                    <div>
+                        <strong>${item.usuarioNombre || 'N/A'}</strong>
+                        <br>
+                        <small style="color: #64748b;">DNI: ${item.usuarioDni || 'N/A'}</small>
+                    </div>
+                </td>
+                <td><span class="status-badge ${(item.rolNombre || 'default').toLowerCase()}">${item.rolNombre || 'N/A'}</span></td>
+                <td><span class="action-badge ${getActionClass(item.accion)}">${formatearAccion(item.accion)}</span></td>
+                <td><strong>${item.afecta || 'N/A'}</strong></td>
+                <td title="${item.detalles || ''}">${truncarTexto(item.detalles, 80)}</td>
+                <td>
+                    <span class="status-badge ${item.exito ? 'success' : 'error'}">
+                        <i class="fas fa-${item.exito ? 'check' : 'times'}"></i>
+                        ${item.exito ? 'Exitoso' : 'Fallido'}
+                    </span>
+                </td>
+            </tr>
+            `;
+        }).join('');
+        
+        console.log('Tabla actualizada con', datos.length, 'registros');
+    }
+
+    function mostrarEstadoVacio() {
+        const tbody = document.getElementById('audit-table-body');
+        const emptyState = document.getElementById('empty-state');
+        tbody.innerHTML = '';
+        emptyState.style.display = 'block';
+    }
+
+    // === FUNCIONES DE FILTROS ===
+    function aplicarFiltros() {
+        // Resetear página
+        currentPage = 0;
+        
+        // Capturar valores de filtros
+        currentFilters = {
+            usuario: document.getElementById('filter-usuario').value.trim() || null,
+            accion: document.getElementById('filter-accion').value || null,
+            entidad: document.getElementById('filter-entidad').value || null,
+            fechaDesde: document.getElementById('filter-fecha-desde').value || null,
+            fechaHasta: document.getElementById('filter-fecha-hasta').value || null
+        };
+        
+        // Cargar datos con nuevos filtros
+        cargarDatosAuditoria();
+    }
+
+    function limpiarFiltros() {
+        // Limpiar campos
+        document.getElementById('filter-usuario').value = '';
+        document.getElementById('filter-accion').value = '';
+        document.getElementById('filter-entidad').value = '';
+        document.getElementById('filter-fecha-desde').value = '';
+        document.getElementById('filter-fecha-hasta').value = '';
+        
+        // Resetear filtros y cargar datos
+        currentFilters = {};
+        currentPage = 0;
+        cargarDatosAuditoria();
+        configurarFechasIniciales();
+    }
+
+    // === FUNCIONES DE FORMATEO ===
+    function formatearFecha(fecha) {
+        if (!fecha) return 'N/A';
+        try {
+            // Si es un string ISO, parsearlo
+            if (typeof fecha === 'string') {
+                return new Date(fecha).toLocaleDateString('es-ES');
+            }
+            return new Date(fecha).toLocaleDateString('es-ES');
+        } catch (e) {
+            return fecha;
+        }
+    }
+
+    function formatearHora(hora) {
+        if (!hora) return 'N/A';
+        try {
+            // Si es un string en formato HH:MM:SS, extraer solo HH:MM
+            if (typeof hora === 'string') {
+                return hora.substring(0, 5);
+            }
+            // Si es un objeto Time, convertirlo
+            return hora.toString().substring(0, 5);
+        } catch (e) {
+            return hora;
+        }
+    }
+
+    function formatearAccion(accion) {
+        if (!accion) return 'N/A';
+        return accion.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+    }
+
+    function truncarTexto(texto, limite) {
+        if (!texto) return 'N/A';
+        return texto.length > limite ? texto.substring(0, limite) + '...' : texto;
+    }
+
+    function getActionClass(accion) {
+        if (!accion) return 'default';
+        
+        const actionMap = {
+            'CREAR_': 'create',
+            'ACTUALIZAR_': 'update',
+            'MODIFICAR_': 'update',
+            'ELIMINAR_': 'delete',
+            'LOGIN': 'login',
+            'LOGOUT': 'logout'
+        };
+        
+        for (const [key, className] of Object.entries(actionMap)) {
+            if (accion.includes(key) || accion === key) {
+                return className;
+            }
+        }
+        
+        return 'default';
+    }
+
+    // === FUNCIONES DE PAGINACIÓN ===
+    function actualizarPaginacion(datos) {
+        const paginationContainer = document.getElementById('pagination-container');
+        const paginationControls = document.getElementById('pagination-controls');
+        const showingFrom = document.getElementById('showing-from');
+        const showingTo = document.getElementById('showing-to');
+        const totalRecordsSpan = document.getElementById('total-records');
+        
+        totalRecords = datos.totalElements || 0;
+        
+        // Actualizar información de registros mostrados
+        const from = (datos.number * datos.size) + 1;
+        const to = Math.min((datos.number + 1) * datos.size, totalRecords);
+        
+        showingFrom.textContent = totalRecords > 0 ? from : 0;
+        showingTo.textContent = to;
+        totalRecordsSpan.textContent = totalRecords;
+        
+        // Generar controles de paginación
+        let paginationHTML = '';
+        
+        if (datos.totalPages > 1) {
+            // Botón anterior
+            paginationHTML += `
+                <button class="pagination-btn ${datos.number === 0 ? 'disabled' : ''}" 
+                        onclick="cambiarPagina(${datos.number - 1})" 
+                        ${datos.number === 0 ? 'disabled' : ''}>
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+            `;
+            
+            // Números de página
+            const startPage = Math.max(0, datos.number - 2);
+            const endPage = Math.min(datos.totalPages - 1, datos.number + 2);
+            
+            for (let i = startPage; i <= endPage; i++) {
+                paginationHTML += `
+                    <button class="pagination-btn ${i === datos.number ? 'active' : ''}" 
+                            onclick="cambiarPagina(${i})">
+                        ${i + 1}
+                    </button>
+                `;
+            }
+            
+            // Botón siguiente
+            paginationHTML += `
+                <button class="pagination-btn ${datos.number >= datos.totalPages - 1 ? 'disabled' : ''}" 
+                        onclick="cambiarPagina(${datos.number + 1})"
+                        ${datos.number >= datos.totalPages - 1 ? 'disabled' : ''}>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            `;
+        }
+        
+        paginationControls.innerHTML = paginationHTML;
+        paginationContainer.style.display = totalRecords > 0 ? 'flex' : 'none';
+    }
+
+    function cambiarPagina(nuevaPagina) {
+        currentPage = nuevaPagina;
+        cargarDatosAuditoria();
+    }
+
+    // === FUNCIONES DE ESTADÍSTICAS ===
+    function actualizarEstadisticas(datos) {
+        if (!datos.estadisticas) return;
+        
+        const stats = datos.estadisticas;
+        if (stats.totalLogs !== undefined) {
+            document.getElementById('total-registros').textContent = stats.totalLogs;
+        }
+        if (stats.logsExitosos !== undefined) {
+            document.getElementById('exitosos-count').textContent = stats.logsExitosos;
+        }
+        if (stats.logsFallidos !== undefined) {
+            document.getElementById('fallidos-count').textContent = stats.logsFallidos;
+        }
+    }
+
+    // === FUNCIONES DE UTILIDAD ===
+    function mostrarLoading(mostrar) {
+        const loading = document.getElementById('loading-overlay');
+        loading.style.display = mostrar ? 'flex' : 'none';
+    }
+
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    // === FUNCIONES DE NOTIFICACIÓN ===
+    function mostrarNotificacion(mensaje, tipo = 'info') {
+        // Crear área de notificaciones si no existe
+        let notificationArea = document.querySelector('.notification-area');
+        if (!notificationArea) {
+            notificationArea = document.createElement('div');
+            notificationArea.className = 'notification-area';
+            document.body.appendChild(notificationArea);
+        }
+
+        // Crear notificación
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${tipo}`;
+        
+        const icon = tipo === 'error' ? 'fas fa-exclamation-triangle' : 
+                    tipo === 'success' ? 'fas fa-check-circle' :
+                    tipo === 'warning' ? 'fas fa-exclamation-circle' : 'fas fa-info-circle';
+        
+        notification.innerHTML = `
+            <i class="${icon}"></i>
+            <span class="notification-message">${mensaje}</span>
+            <button class="notification-close" onclick="this.parentElement.remove()">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        
+        notificationArea.appendChild(notification);
+        
+        // Mostrar notificación
+        setTimeout(() => notification.classList.add('show'), 100);
+        
+        // Auto-ocultar después de 5 segundos
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
+            }
+        }, 5000);
+    }
+
+    // === FUNCIÓN DE EXPORTACIÓN ===
+    async function exportarCSV() {
+        try {
+            mostrarNotificacion('Generando archivo CSV...', 'info');
+            
+            // Construir parámetros con todos los filtros aplicados
+            const params = new URLSearchParams(currentFilters);
+            
+            const response = await fetch(`/auditoria/exportar/csv?${params.toString()}`);
+            
+            if (!response.ok) {
+                throw new Error('Error al generar el archivo CSV');
+            }
+            
+            const blob = await response.blob();
+            
+            // Crear enlace de descarga
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `auditoria-${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            mostrarNotificacion('Archivo CSV descargado exitosamente', 'success');
+            
+        } catch (error) {
+            console.error('Error al exportar CSV:', error);
+            mostrarNotificacion('Error al exportar el archivo CSV: ' + error.message, 'error');
+        }
+    }
+</script>
+</body>
+</html>

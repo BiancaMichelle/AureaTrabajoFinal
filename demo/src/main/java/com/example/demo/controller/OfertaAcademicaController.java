@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import com.example.demo.model.Auditable;
 import com.example.demo.model.Modulo;
 import com.example.demo.model.OfertaAcademica;
 import com.example.demo.repository.ModuloRepository;
@@ -78,6 +79,7 @@ public class OfertaAcademicaController {
     }
 
     @PostMapping("/crearModulo")
+    @Auditable(action = "CREAR_MODULO", entity = "Modulo")
     public String crearModulo(@RequestParam String nombre,
             @RequestParam String descripcion,
             @RequestParam(required = false) String objetivos,
@@ -93,6 +95,7 @@ public class OfertaAcademicaController {
     }
 
     @PostMapping("/modulo/actualizar")
+    @Auditable(action = "ACTUALIZAR_MODULO", entity = "Modulo")
     public String actualizarModulo(@RequestParam UUID moduloId,
             @RequestParam Long cursoId,
             @RequestParam String nombre,
@@ -108,6 +111,7 @@ public class OfertaAcademicaController {
     }
 
     @PostMapping("/modulo/{moduloId}/visibilidad")
+    @Auditable(action = "CAMBIAR_VISIBILIDAD_MODULO", entity = "Modulo")
     public ResponseEntity<Map<String, Object>> actualizarVisibilidadModulo(@PathVariable UUID moduloId,
             @RequestParam(defaultValue = "false") Boolean visibilidad) {
         Modulo moduloActualizado = cursoService.actualizarVisibilidadModulo(moduloId, visibilidad);
@@ -120,6 +124,7 @@ public class OfertaAcademicaController {
     }
 
     @DeleteMapping("/modulo/{moduloId}/eliminar")
+    @Auditable(action = "ELIMINAR_MODULO", entity = "Modulo")
     public ResponseEntity<Map<String, Object>> eliminarModulo(@PathVariable UUID moduloId, Authentication authentication) {
         if (!puedeModificarCurso(authentication)) {
             return ResponseEntity.status(403).body(Map.of("success", false, "error", "No autorizado"));

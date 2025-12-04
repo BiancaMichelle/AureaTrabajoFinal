@@ -41,6 +41,7 @@ import com.example.demo.enums.TipoGenero;
 import com.example.demo.enums.Dias;
 import com.example.demo.model.Alumno;
 import com.example.demo.model.CarruselImagen;
+import com.example.demo.model.Auditable;
 import com.example.demo.model.Categoria;
 import com.example.demo.model.Charla;
 import com.example.demo.model.Curso;
@@ -259,6 +260,7 @@ public class AdminController {
      * Endpoint para eliminar una oferta
      */
     @PostMapping("/admin/ofertas/eliminar/{id}")
+    @Auditable(action = "ELIMINAR_OFERTA", entity = "OfertaAcademica")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> eliminarOferta(@PathVariable Long id) {
         try {
@@ -301,6 +303,7 @@ public class AdminController {
      * Endpoint para cambiar el estado de una oferta (activar/desactivar)
      */
     @PostMapping("/admin/ofertas/cambiar-estado/{id}")
+    @Auditable(action = "CAMBIAR_ESTADO_OFERTA", entity = "OfertaAcademica")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> cambiarEstadoOferta(@PathVariable Long id) {
         try {
@@ -587,6 +590,7 @@ public class AdminController {
     }
 
     @PostMapping("/admin/ofertas/crear")
+    @Auditable(action = "CREAR_OFERTA", entity = "OfertaAcademica")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> crearOferta(@RequestBody Map<String, Object> datos) {
         try {
@@ -638,6 +642,7 @@ public class AdminController {
     }
 
     @PostMapping("/admin/ofertas/registrar")
+    @Auditable(action = "CREAR_OFERTA", entity = "OfertaAcademica")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> registrarOferta(
             @RequestParam String tipoOferta,
@@ -991,6 +996,7 @@ public class AdminController {
      * Endpoint para modificar una oferta académica existente
      */
     @PostMapping("/admin/ofertas/modificar")
+    @Auditable(action = "MODIFICAR_OFERTA", entity = "OfertaAcademica")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> modificarOferta(
             @RequestParam Long idOferta, // ID de la oferta a modificar

@@ -7,6 +7,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import com.example.demo.model.CustomUsuarioDetails;
 import com.example.demo.model.Rol;
 import com.example.demo.model.Usuario;
 import com.example.demo.repository.UsuarioRepository;
@@ -29,20 +30,16 @@ public class UsuarioJpaService implements UserDetailsService {
     public UserDetails loadUserByUsername(String dni)
         throws UsernameNotFoundException {
         
-        Usuario user = usuarioRepository.findByDni(dni)
+        // Usar la consulta que carga los roles para evitar lazy loading issues
+        Usuario user = usuarioRepository.findByDniWithRoles(dni)
             .orElseThrow(() -> new UsernameNotFoundException("No existe " + dni));
 
-        return org.springframework.security.core.userdetails.User
-            .withUsername(user.getDni())
-            .password(user.getContraseña())
-            .authorities(user.getRoles()
-                .stream()
-                .map(Rol::getNombre)
-                .toArray(String[]::new))
-            .accountExpired(false)
-            .accountLocked(false)
-            .credentialsExpired(false)
-            .build();
+        System.out.println("🔐 Cargando usuario: " + user.getNombre() + " " + user.getApellido());
+        System.out.println("🎭 Roles del usuario: " + user.getRoles().size());
+        user.getRoles().forEach(rol -> System.out.println("  - " + rol.getNombre()));
+
+        // Devolver CustomUsuarioDetails en lugar del UserDetails estándar
+        return new CustomUsuarioDetails(user);
     }
 
     public boolean existePorDni(String dni) {
