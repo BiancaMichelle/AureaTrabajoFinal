@@ -33,6 +33,7 @@ import com.example.demo.service.InstitucionService;
 import com.example.demo.service.LocacionAPIService;
 import com.example.demo.service.RegistroService;
 import com.example.demo.service.UsuarioJpaService;
+import com.example.demo.model.Auditable;
 
 @Controller
 public class RegisterController {
@@ -96,6 +97,7 @@ public class RegisterController {
     }
 
     @PostMapping("/register")
+    @Auditable(action = "REGISTRO_PUBLICO_ALUMNO", entity = "Usuario")
     public String registerAlumno(@ModelAttribute("alumno") Alumno alumno,
             BindingResult result,
             @RequestParam(value = "paisCodigo", required = false) String paisCodigo,

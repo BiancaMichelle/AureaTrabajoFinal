@@ -14,6 +14,10 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID>, JpaSpec
     boolean existsByDni(String dni);
     boolean existsByCorreo(String correo);
     Optional<Usuario> findByDni(String dni);
+    
+    // Método para cargar usuario con roles (evitar lazy loading issues)
+    @Query("SELECT u FROM Usuario u JOIN FETCH u.roles WHERE u.dni = :dni")
+    Optional<Usuario> findByDniWithRoles(@Param("dni") String dni);
     Optional<Usuario> findByCorreo(String correo);
     Optional<Usuario> findByDniOrCorreo(String dni, String correo);
     Optional<Usuario> findByTokenRecuperacion(String token);

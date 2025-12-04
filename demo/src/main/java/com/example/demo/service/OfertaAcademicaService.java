@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.demo.enums.EstadoOferta;
+import com.example.demo.model.Auditable;
 import com.example.demo.model.Charla;
 import com.example.demo.model.Curso;
 import com.example.demo.model.Formacion;
@@ -183,6 +184,7 @@ public class OfertaAcademicaService {
     /**
      * Modifica una oferta académica
      */
+    @Auditable(action = "MODIFICAR", entity = "OfertaAcadémica")
     @Transactional
     public boolean modificar(Long id, OfertaAcademica datosNuevos) {
         Optional<OfertaAcademica> ofertaOpt = obtenerPorId(id);
