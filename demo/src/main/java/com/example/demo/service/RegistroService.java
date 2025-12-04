@@ -523,7 +523,8 @@ public class RegistroService {
                     alumno.setColegioEgreso(colegioEgreso);
                     alumno.setAñoEgreso(añoEgreso);
                     alumno.setUltimosEstudios(ultimosEstudios);
-                    return alumnoRepository.save(alumno);
+                    Usuario alumnoActualizado = alumnoRepository.save(alumno);
+                    return alumnoActualizado;
 
                 case "DOCENTE":
                     if (!(usuarioExistente instanceof Docente)) {
@@ -537,7 +538,8 @@ public class RegistroService {
                     return docenteGuardado;
 
                 default:
-                    return usuarioRepository.save(usuarioExistente);
+                    Usuario usuarioActualizado = usuarioRepository.save(usuarioExistente);
+                    return usuarioActualizado;
             }
 
         } catch (RuntimeException e) {
@@ -552,19 +554,24 @@ public class RegistroService {
             throw new IllegalArgumentException("El usuario a eliminar no existe");
         }
 
-        if (usuario instanceof Docente) {
-            Docente docente = (Docente) usuario;
-            horarioRepository.deleteByDocente(docente);
-            docenteRepository.delete(docente);
-            return;
-        }
+        try {
+            if (usuario instanceof Docente) {
+                Docente docente = (Docente) usuario;
+                horarioRepository.deleteByDocente(docente);
+                docenteRepository.delete(docente);
+                return;
+            }
 
-        if (usuario instanceof Alumno) {
-            alumnoRepository.delete((Alumno) usuario);
-            return;
-        }
+            if (usuario instanceof Alumno) {
+                alumnoRepository.delete((Alumno) usuario);
+                return;
+            }
 
-        usuarioRepository.delete(usuario);
+            usuarioRepository.delete(usuario);
+            
+        } catch (Exception e) {
+            throw e;
+        }
     }
 
     private void guardarHorariosDocente(Docente docente, List<Map<String, String>> horarios) {

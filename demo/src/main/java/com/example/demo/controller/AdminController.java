@@ -1266,6 +1266,7 @@ public class AdminController {
     // =================== ENDPOINTS PARA USUARIOS ===================
 
     @PostMapping("/admin/usuarios/registrar")
+    @Auditable(action = "ALTA_USUARIO", entity = "Usuario")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> registrarUsuario(
             @RequestParam String dni,
@@ -1388,6 +1389,7 @@ public class AdminController {
     }
 
     @PutMapping("/admin/usuarios/{identificador}")
+    @Auditable(action = "MODIFICACION_USUARIO", entity = "Usuario")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> actualizarUsuario(
             @PathVariable String identificador,
@@ -1459,6 +1461,7 @@ public class AdminController {
     }
 
     @DeleteMapping("/admin/usuarios/{identificador}")
+    @Auditable(action = "BAJA_USUARIO", entity = "Usuario")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> eliminarUsuario(@PathVariable String identificador) {
         Map<String, Object> response = new HashMap<>();

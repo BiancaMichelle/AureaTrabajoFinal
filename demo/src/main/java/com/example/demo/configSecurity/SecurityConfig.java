@@ -25,12 +25,18 @@ import com.example.demo.service.UsuarioJpaService;
 public class SecurityConfig {
 
     private final UsuarioJpaService usuarioJpaService;
+    private final CustomLoginSuccessHandler loginSuccessHandler;
+    private final CustomLogoutSuccessHandler logoutSuccessHandler;
 
     @Value("${app.base-url}")
     private String baseUrl;
 
-    public SecurityConfig(UsuarioJpaService usuarioJpaService) {
+    public SecurityConfig(UsuarioJpaService usuarioJpaService, 
+                         CustomLoginSuccessHandler loginSuccessHandler,
+                         CustomLogoutSuccessHandler logoutSuccessHandler) {
         this.usuarioJpaService = usuarioJpaService;
+        this.loginSuccessHandler = loginSuccessHandler;
+        this.logoutSuccessHandler = logoutSuccessHandler;
     }
 
     @Bean
@@ -81,22 +87,10 @@ public class SecurityConfig {
                 .formLogin(form -> form
                         .loginPage("/login")
                         .failureUrl("/login?error=true")
-                        .successHandler((request, response, authentication) -> {
-                            var roles = authentication.getAuthorities()
-                                    .stream()
-                                    .map(a -> a.getAuthority())
-                                    .toList();
-
-                            // Admin va a su dashboard, los demás van a inicio
-                            if (roles.contains("ADMIN")) {
-                                response.sendRedirect("/admin/dashboard");
-                            } else {
-                                response.sendRedirect("/");
-                            }
-                        })
+                        .successHandler(loginSuccessHandler)
                         .permitAll())
                 .logout(logout -> logout
-                        .logoutSuccessUrl("/login?logout=true")
+                        .logoutSuccessHandler(logoutSuccessHandler)
                         .permitAll());
         return http.build();
     }
