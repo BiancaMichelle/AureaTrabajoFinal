@@ -13,7 +13,7 @@ public class IAConfig {
     @Value("${ia.ollama.base-url:http://localhost:11434}")
     private String ollamaBaseUrl;
 
-    @Value("${ia.ollama.model:llama3.2:3b}")
+    @Value("${ia.ollama.model:llama3.2:1b}")
     private String modelName;
     
     @Value("${ia.ollama.timeout:300000}")
