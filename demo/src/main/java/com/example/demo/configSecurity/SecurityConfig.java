@@ -57,6 +57,7 @@ public class SecurityConfig {
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                         .ignoringRequestMatchers(
                                 "/api/**",
+                                "/ia/**",
                                 "/clase/docente-entrar/**",
                                 "/clase/docente/salir/**",
                                 "/pago/webhook",
@@ -79,6 +80,7 @@ public class SecurityConfig {
                         .requestMatchers("/admin/**").hasAuthority("ADMIN")
                         .requestMatchers("/alumno/**", "/inscribirse/**").hasAnyAuthority("ALUMNO", "DOCENTE")
                         .requestMatchers("/docente/**").hasAuthority("DOCENTE")
+                        .requestMatchers("/ia/**").hasAnyAuthority("ALUMNO", "DOCENTE", "ADMIN")
                         .requestMatchers("/modulo/**", "/crearModulo", "/ofertaAcademica/**", "/actividad/**",
                                 "/pool/**")
                         .hasAnyAuthority("DOCENTE", "ADMIN")

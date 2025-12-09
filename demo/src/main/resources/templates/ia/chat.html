@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+
+<head>
+    <title>Asistente IA - Aurea</title>
+    <meta name="description" content="Chat con asistente de inteligencia artificial para ayuda académica">
+    
+    <!-- CSS específico del chat IA -->
+    <link th:href="@{/style/ia/chat.css}" rel="stylesheet">
+    
+    <!-- Font Awesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+    <div layout:fragment="content">
+        <!-- Contenido principal de la página de chat -->
+        <div class="container mt-4">
+            <div class="row justify-content-center">
+                <div class="col-md-8">
+                    <div class="card shadow">
+                        <div class="card-header bg-gradient-primary text-white">
+                            <h4 class="mb-0">
+                                <i class="fas fa-robot me-2"></i>
+                                Asistente Académico IA
+                            </h4>
+                            <small>Tu asistente inteligente para consultas educativas</small>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h5><i class="fas fa-lightbulb text-warning"></i> ¿En qué puedo ayudarte?</h5>
+                                    <ul class="list-unstyled">
+                                        <li><i class="fas fa-check text-success"></i> Consultas sobre cursos</li>
+                                        <li><i class="fas fa-check text-success"></i> Ayuda con materiales de estudio</li>
+                                        <li><i class="fas fa-check text-success"></i> Información sobre evaluaciones</li>
+                                        <li><i class="fas fa-check text-success"></i> Soporte general de la plataforma</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5><i class="fas fa-info-circle text-info"></i> Cómo usar el chat</h5>
+                                    <ol>
+                                        <li>Haz clic en el botón flotante 🤖</li>
+                                        <li>Escribe tu pregunta o consulta</li>
+                                        <li>Recibe respuestas instantáneas</li>
+                                        <li>Continúa la conversación</li>
+                                    </ol>
+                                </div>
+                            </div>
+                            
+                            <div class="alert alert-info mt-3">
+                                <i class="fas fa-brain"></i>
+                                <strong>Asistente siempre disponible:</strong>
+                                El bot flotante aparecerá en la esquina inferior derecha de todas las páginas.
+                                Puedes chatear desde cualquier parte de la plataforma.
+                            </div>
+                            
+                            <div class="text-center mt-4">
+                                <button class="btn btn-primary btn-lg" onclick="aiChat?.openChat() || initAIChat()">
+                                    <i class="fas fa-comments"></i>
+                                    Abrir Chat IA
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Ejemplos de preguntas -->
+                    <div class="card shadow mt-4">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-question-circle"></i> Preguntas de ejemplo</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <h6>Cursos y Materiales</h6>
+                                    <div class="d-grid gap-2">
+                                        <button class="btn btn-outline-primary btn-sm text-start" 
+                                                onclick="aiChat?.sendQuickMessage('¿Cómo puedo acceder a mis cursos?')">
+                                            ¿Cómo accedo a mis cursos?
+                                        </button>
+                                        <button class="btn btn-outline-primary btn-sm text-start" 
+                                                onclick="aiChat?.sendQuickMessage('¿Dónde encuentro los materiales de estudio?')">
+                                            ¿Dónde están los materiales?
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <h6>Evaluaciones</h6>
+                                    <div class="d-grid gap-2">
+                                        <button class="btn btn-outline-success btn-sm text-start" 
+                                                onclick="aiChat?.sendQuickMessage('¿Cuándo son mis próximos exámenes?')">
+                                            ¿Cuándo son mis exámenes?
+                                        </button>
+                                        <button class="btn btn-outline-success btn-sm text-start" 
+                                                onclick="aiChat?.sendQuickMessage('¿Cómo puedo ver mis calificaciones?')">
+                                            ¿Cómo veo mis notas?
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <h6>Soporte Técnico</h6>
+                                    <div class="d-grid gap-2">
+                                        <button class="btn btn-outline-warning btn-sm text-start" 
+                                                onclick="aiChat?.sendQuickMessage('Tengo problemas para acceder a la plataforma')">
+                                            Problemas de acceso
+                                        </button>
+                                        <button class="btn btn-outline-warning btn-sm text-start" 
+                                                onclick="aiChat?.sendQuickMessage('¿Cómo cambio mi contraseña?')">
+                                            Cambiar contraseña
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts específicos del chat IA -->
+    <div layout:fragment="scripts">
+        <!-- El script del chat ya se carga en el layout base para usuarios autenticados -->
+        <script>
+            // Si estamos en la página dedicada del chat, podemos abrirlo automáticamente
+            document.addEventListener('DOMContentLoaded', function() {
+                setTimeout(() => {
+                    if (window.aiChat && !window.aiChat.isOpen) {
+                        window.aiChat.toggleChat();
+                    }
+                }, 1000);
+            });
+        </script>
+    </div>
+</body>
+</html>
