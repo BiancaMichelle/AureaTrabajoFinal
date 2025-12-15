@@ -294,12 +294,13 @@
 }
 
 .categoria-chip {
-    background: var(--primary-color);
+    background: #2196F3;
     color: white;
     padding: 4px 10px;
     border-radius: 15px;
     font-size: 0.8rem;
     font-weight: 500;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 .docentes-list, .disertantes-list, .horarios-list {

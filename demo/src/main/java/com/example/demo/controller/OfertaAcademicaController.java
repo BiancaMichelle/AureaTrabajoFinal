@@ -89,7 +89,7 @@ public class OfertaAcademicaController {
             @RequestParam Long cursoId) {
         Long cursoIdSeguro = Objects.requireNonNull(cursoId, "El identificador de la oferta no puede ser nulo");
 
-        cursoService.crearModulo(nombre, descripcion, objetivos, fechaInicio, fechaFin, visibilidad, cursoIdSeguro);
+        cursoService.crearModulo(nombre, descripcion, fechaInicio, fechaFin, visibilidad, cursoIdSeguro);
         // ✅ Redirigir de vuelta al curso específico
         return "redirect:/ofertaAcademica/" + cursoIdSeguro;
     }
@@ -106,7 +106,7 @@ public class OfertaAcademicaController {
             @RequestParam(required = false, defaultValue = "false") Boolean visibilidad) {
         Long cursoIdSeguro = Objects.requireNonNull(cursoId, "El identificador de la oferta no puede ser nulo");
 
-        cursoService.actualizarModulo(moduloId, nombre, descripcion, objetivos, fechaInicio, fechaFin, visibilidad);
+        cursoService.actualizarModulo(moduloId, nombre, descripcion, fechaInicio, fechaFin, visibilidad);
         return "redirect:/ofertaAcademica/" + cursoIdSeguro;
     }
 

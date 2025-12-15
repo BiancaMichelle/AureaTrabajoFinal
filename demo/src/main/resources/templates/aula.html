@@ -319,14 +319,6 @@
                         rows="3" placeholder="Describe el contenido del módulo..." required></textarea>
                 </div>
 
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700">
-                        <i class="fas fa-bullseye me-1"></i>Objetivos
-                    </label>
-                    <textarea name="objetivos" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                        rows="2" placeholder="Objetivos de aprendizaje del módulo..."></textarea>
-                </div>
-
                 <div class="grid grid-cols-2 gap-4 mb-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700">
@@ -403,15 +395,6 @@
                     <textarea name="descripcion" rows="3" required
                         class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
                         placeholder="Describe el contenido del módulo"></textarea>
-                </div>
-
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700">
-                        <i class="fas fa-bullseye me-1"></i>Objetivos
-                    </label>
-                    <textarea name="objetivos" rows="2"
-                        class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                        placeholder="Objetivos de aprendizaje"></textarea>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4 mb-4">
@@ -570,7 +553,6 @@
                     th:data-modulo-descripcion="${modulo.descripcion != null ? modulo.descripcion : ''}"
                     th:data-modulo-inicio="${#temporals.format(modulo.fechaInicioModulo, 'yyyy-MM-dd')}"
                     th:data-modulo-fin="${#temporals.format(modulo.fechaFinModulo, 'yyyy-MM-dd')}"
-                    th:data-modulo-objetivos="${modulo.objetivos != null ? modulo.objetivos : ''}"
                     th:data-modulo-visible="${modulo.visibilidad != null ? modulo.visibilidad : false}">
                     <button type="button" class="module-visibility-toggle" data-visibility-toggle
                         th:if="${puedeModificar}"
@@ -717,7 +699,11 @@
                                 <!-- Botón de acción -->
                                 <div class="ml-4">
                                     <div th:if="${actividad instanceof T(com.example.demo.model.Examen)}"
-                                        th:with="resumen=${examenIntentos != null ? examenIntentos[actividad.idActividad] : null}">
+                                        th:with="resumen=${examenIntentos != null ? examenIntentos[actividad.idActividad] : null},
+                                                 ahora=${#temporals.createNow()},
+                                                 estaAbierto=${actividad.fechaApertura != null and actividad.fechaCierre != null and actividad.fechaApertura.isBefore(ahora) and actividad.fechaCierre.isAfter(ahora)},
+                                                 noHaAbierto=${actividad.fechaApertura != null and actividad.fechaApertura.isAfter(ahora)},
+                                                 yaCerro=${actividad.fechaCierre != null and actividad.fechaCierre.isBefore(ahora)}">
                                         <div th:if="${!puedeModificar and resumen != null and resumen['intentosRealizados'] > 0}"
                                             class="px-4 py-3 border border-purple-200 rounded-md text-center text-sm"
                                             th:classappend="${resumen['puedeReintentar']} ? ' bg-purple-50 mb-2' : ' bg-purple-100'">
@@ -730,11 +716,32 @@
                                             </div>
                                         </div>
 
-                                        <a th:if="${!puedeModificar and (resumen == null or resumen['puedeReintentar'])}"
+                                        <!-- Botón para realizar examen (solo si está abierto) -->
+                                        <a th:if="${!puedeModificar and (resumen == null or resumen['puedeReintentar']) and estaAbierto}"
                                             th:href="@{/examen/realizar/{id}(id=${actividad.idActividad})}"
                                             class="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700 transition-colors">
                                             <i class="fas fa-play mr-2"></i>Realizar Examen
                                         </a>
+
+                                        <!-- Mensaje si el examen aún no abre -->
+                                        <div th:if="${!puedeModificar and (resumen == null or resumen['puedeReintentar']) and noHaAbierto}"
+                                            class="px-4 py-3 bg-gray-100 text-gray-600 rounded-md text-sm text-center">
+                                            <i class="fas fa-clock text-gray-500 mb-2 text-lg block"></i>
+                                            <div class="font-semibold">Examen no disponible aún</div>
+                                            <div class="text-xs mt-1">
+                                                Abre: <span th:text="${#temporals.format(actividad.fechaApertura, 'dd/MM/yyyy HH:mm')}"></span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Mensaje si el examen ya cerró -->
+                                        <div th:if="${!puedeModificar and (resumen == null or resumen['puedeReintentar']) and yaCerro}"
+                                            class="px-4 py-3 bg-red-50 text-red-600 rounded-md text-sm text-center border border-red-200">
+                                            <i class="fas fa-lock text-red-500 mb-2 text-lg block"></i>
+                                            <div class="font-semibold">Examen cerrado</div>
+                                            <div class="text-xs mt-1">
+                                                Cerró: <span th:text="${#temporals.format(actividad.fechaCierre, 'dd/MM/yyyy HH:mm')}"></span>
+                                            </div>
+                                        </div>
 
                                         <div th:if="${!puedeModificar and resumen != null and !resumen['puedeReintentar']}"
                                             class="px-4 py-2 bg-purple-100 text-purple-700 rounded-md text-sm font-semibold text-center">
@@ -1052,7 +1059,6 @@
             const moduloId = dataset.moduloId || targetCard.getAttribute('data-modulo-id') || '';
             const nombre = dataset.moduloNombre || '';
             const descripcion = dataset.moduloDescripcion || '';
-            const objetivos = dataset.moduloObjetivos || '';
             const fechaInicio = dataset.moduloInicio || '';
             const fechaFin = dataset.moduloFin || '';
             const visibleFlag = dataset.moduloVisible ?? targetCard.getAttribute('data-modulo-visible');
@@ -1061,7 +1067,6 @@
             const moduloIdInput = editModuleForm.querySelector('[name="moduloId"]');
             const nombreInput = editModuleForm.querySelector('[name="nombre"]');
             const descripcionInput = editModuleForm.querySelector('[name="descripcion"]');
-            const objetivosInput = editModuleForm.querySelector('[name="objetivos"]');
             const fechaInicioInput = editModuleForm.querySelector('[name="fechaInicio"]');
             const fechaFinInput = editModuleForm.querySelector('[name="fechaFin"]');
             const visibilidadInput = editModuleForm.querySelector('[name="visibilidad"]');
@@ -1069,7 +1074,6 @@
             if (moduloIdInput) moduloIdInput.value = moduloId;
             if (nombreInput) nombreInput.value = nombre;
             if (descripcionInput) descripcionInput.value = descripcion;
-            if (objetivosInput) objetivosInput.value = objetivos;
             if (fechaInicioInput) fechaInicioInput.value = fechaInicio;
             if (fechaFinInput) fechaFinInput.value = fechaFin;
             if (visibilidadInput) visibilidadInput.checked = visible;
@@ -2945,7 +2949,7 @@
                                 </div>
                             </div>
                             <div class="flex space-x-2">
-                                <a href="/carpeta/archivo/${archivo.id}/descargar" target="_blank"
+                                <a href="/archivo/${archivo.id}/descargar" target="_blank"
                                    class="px-3 py-1.5 text-sm bg-blue-500 text-white rounded hover:bg-blue-600">
                                     <i class="fas fa-download"></i>
                                 </a>
@@ -3104,7 +3108,7 @@
                     alert('Este material no tiene archivos disponibles');
                 } else if (archivos.length === 1) {
                     // Si hay un solo archivo, descargarlo directamente
-                    window.open(`/carpeta/archivo/${archivos[0].id}/descargar`, '_blank');
+                    window.open(`/archivo/${archivos[0].id}/descargar`, '_blank');
                 } else {
                     // Si hay múltiples archivos, mostrar el modal
                     mostrarModalMaterial(materialId, materialNombre);
@@ -3176,7 +3180,7 @@
                                 </div>
                             </div>
                             <div class="flex space-x-2">
-                                <a href="/carpeta/archivo/${archivo.id}/descargar" target="_blank"
+                                <a href="/archivo/${archivo.id}/descargar" target="_blank"
                                    class="px-3 py-1.5 text-sm bg-blue-500 text-white rounded hover:bg-blue-600">
                                     <i class="fas fa-download"></i>
                                 </a>

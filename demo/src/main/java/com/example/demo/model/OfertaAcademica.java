@@ -41,7 +41,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 @Inheritance(strategy = InheritanceType.JOINED)
-@Table(name = "oferta_academica", uniqueConstraints = {@UniqueConstraint(name = "uk_oferta_nombre_instituto", columnNames = {"nombre", "instituto_id"})})
+@Table(name = "oferta_academica", uniqueConstraints = {@UniqueConstraint(name = "uk_oferta_nombre", columnNames = {"nombre"})})
 
 public class OfertaAcademica {
     @Id
@@ -76,7 +76,7 @@ public class OfertaAcademica {
     
     @Enumerated(EnumType.STRING)
     private EstadoOferta estado;
-    @Min(5)
+    @Min(1)
     private Integer cupos;
     private Boolean visibilidad;
     
@@ -172,6 +172,15 @@ public class OfertaAcademica {
     public Boolean tieneCuposDisponibles() {
         if (cupos == null) return true;
         return getPorcentajeOcupacion() < 100;
+    }
+    
+    /**
+     * Obtiene la cantidad de cupos disponibles
+     */
+    public Integer getCuposDisponibles() {
+        if (cupos == null) return null; // Sin límite
+        int ocupados = inscripciones != null ? inscripciones.size() : 0;
+        return Math.max(0, cupos - ocupados);
     }
     /**
      * Devuelve las categorías como texto para filtros

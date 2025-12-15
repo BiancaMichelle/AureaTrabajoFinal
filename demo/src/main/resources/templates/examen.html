@@ -495,17 +495,36 @@
                     }))
                 };
 
+                // Obtener token y header CSRF
+                const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+                const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+                
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                
+                if (csrfToken && csrfHeader) {
+                    headers[csrfHeader] = csrfToken;
+                }
+
+                console.log('📤 Finalizando examen...');
+
                 // Enviar al backend
                 fetch('/examen/entregar', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-XSRF-TOKEN': document.querySelector('meta[name="_csrf"]').getAttribute('content')
-                    },
+                    headers: headers,
                     body: JSON.stringify(payload)
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(errorData => {
+                            throw new Error(errorData.message || `Error HTTP: ${response.status}`);
+                        });
+                    }
+                    return response.json();
+                })
                 .then(data => {
+                    console.log('✅ Examen enviado:', data);
                     if (data.success) {
                         let mensaje = `
                             <h2 class="text-3xl font-bold text-green-600 mb-4">Examen Finalizado</h2>
@@ -543,14 +562,15 @@
                         document.querySelector('footer').style.display = 'none';
                         
                     } else {
-                        alert('Error al entregar el examen: ' + data.message);
+                        console.error('❌ Error:', data.message);
+                        alert('Error al entregar el examen: ' + (data.message || 'Error desconocido'));
                         prevBtn.disabled = false;
                         nextBtn.disabled = false;
                     }
                 })
                 .catch(error => {
-                    console.error('Error:', error);
-                    alert('Error de conexión al entregar el examen.');
+                    console.error('💥 Error al entregar:', error);
+                    alert('Error al entregar el examen: ' + error.message);
                     prevBtn.disabled = false;
                     nextBtn.disabled = false;
                 });

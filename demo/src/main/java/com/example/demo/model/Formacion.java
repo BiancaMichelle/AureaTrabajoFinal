@@ -259,7 +259,52 @@ public class Formacion extends OfertaAcademica {
         
         // Información específica de formación
         detalle.setPlan(this.plan);
-        detalle.setDocentes(this.docentes != null ? this.docentes : new ArrayList<>());
+        
+        // Convertir docentes a DTO simple (evitar referencia circular)
+        List<DocenteSimple> docentesSimples = new ArrayList<>();
+        if (this.docentes != null) {
+            for (Docente docente : this.docentes) {
+                docentesSimples.add(new DocenteSimple(
+                    docente.getId(),
+                    docente.getNombre(),
+                    docente.getApellido(),
+                    docente.getMatricula()
+                ));
+            }
+        }
+        detalle.setDocentes(docentesSimples);
+        
+        // Convertir horarios a DTO simple (evitar referencia circular)
+        List<HorarioSimple> horariosSimples = new ArrayList<>();
+        if (this.getHorarios() != null) {
+            for (Horario horario : this.getHorarios()) {
+                // Formatear hora para mostrar solo HH:mm (sin segundos)
+                String horaInicio = horario.getHoraInicio() != null ? 
+                    horario.getHoraInicio().toString().substring(0, 5) : null;
+                String horaFin = horario.getHoraFin() != null ? 
+                    horario.getHoraFin().toString().substring(0, 5) : null;
+                    
+                horariosSimples.add(new HorarioSimple(
+                    horario.getDia() != null ? horario.getDia().toString() : null,
+                    horaInicio,
+                    horaFin
+                ));
+            }
+        }
+        detalle.setHorarios(horariosSimples);
+        
+        // Convertir categorías a DTO simple
+        List<CategoriaSimple> categoriasSimples = new ArrayList<>();
+        if (this.getCategorias() != null) {
+            for (Categoria categoria : this.getCategorias()) {
+                categoriasSimples.add(new CategoriaSimple(
+                    categoria.getIdCategoria(),
+                    categoria.getNombre()
+                ));
+            }
+        }
+        detalle.setCategorias(categoriasSimples);
+        
         detalle.setCostoCuota(this.costoCuota);
         detalle.setCostoMora(this.costoMora);
         detalle.setNrCuotas(this.nrCuotas);
@@ -276,6 +321,78 @@ public class Formacion extends OfertaAcademica {
         return detalle;
     }
 
+    /**
+     * DTO simple para categorías (evita referencia circular)
+     */
+    public static class CategoriaSimple {
+        private Long id;
+        private String nombre;
+        
+        public CategoriaSimple(Long id, String nombre) {
+            this.id = id;
+            this.nombre = nombre;
+        }
+        
+        public Long getId() { return id; }
+        public void setId(Long id) { this.id = id; }
+        
+        public String getNombre() { return nombre; }
+        public void setNombre(String nombre) { this.nombre = nombre; }
+    }
+    
+    /**
+     * DTO simple para docentes (evita referencia circular)
+     */
+    public static class DocenteSimple {
+        private UUID id;
+        private String nombre;
+        private String apellido;
+        private String matricula;
+        
+        public DocenteSimple(UUID id, String nombre, String apellido, String matricula) {
+            this.id = id;
+            this.nombre = nombre;
+            this.apellido = apellido;
+            this.matricula = matricula;
+        }
+        
+        public UUID getId() { return id; }
+        public void setId(UUID id) { this.id = id; }
+        
+        public String getNombre() { return nombre; }
+        public void setNombre(String nombre) { this.nombre = nombre; }
+        
+        public String getApellido() { return apellido; }
+        public void setApellido(String apellido) { this.apellido = apellido; }
+        
+        public String getMatricula() { return matricula; }
+        public void setMatricula(String matricula) { this.matricula = matricula; }
+    }
+    
+    /**
+     * DTO simple para horarios (evita referencia circular)
+     */
+    public static class HorarioSimple {
+        private String dia;
+        private String horaInicio;
+        private String horaFin;
+        
+        public HorarioSimple(String dia, String horaInicio, String horaFin) {
+            this.dia = dia;
+            this.horaInicio = horaInicio;
+            this.horaFin = horaFin;
+        }
+        
+        public String getDia() { return dia; }
+        public void setDia(String dia) { this.dia = dia; }
+        
+        public String getHoraInicio() { return horaInicio; }
+        public void setHoraInicio(String horaInicio) { this.horaInicio = horaInicio; }
+        
+        public String getHoraFin() { return horaFin; }
+        public void setHoraFin(String horaFin) { this.horaFin = horaFin; }
+    }
+    
     /**
      * Clase interna para encapsular los detalles de la formación
      */
@@ -295,7 +412,9 @@ public class Formacion extends OfertaAcademica {
         
         // Específicos de formación
         private String plan;
-        private List<Docente> docentes;
+        private List<DocenteSimple> docentes;
+        private List<HorarioSimple> horarios;
+        private List<CategoriaSimple> categorias;
         private Double costoCuota;
         private Double costoMora;
         private Integer nrCuotas;
@@ -346,8 +465,14 @@ public class Formacion extends OfertaAcademica {
         public String getPlan() { return plan; }
         public void setPlan(String plan) { this.plan = plan; }
         
-        public List<Docente> getDocentes() { return docentes; }
-        public void setDocentes(List<Docente> docentes) { this.docentes = docentes; }
+        public List<DocenteSimple> getDocentes() { return docentes; }
+        public void setDocentes(List<DocenteSimple> docentes) { this.docentes = docentes; }
+        
+        public List<CategoriaSimple> getCategorias() { return categorias; }
+        public void setCategorias(List<CategoriaSimple> categorias) { this.categorias = categorias; }
+        
+        public List<HorarioSimple> getHorarios() { return horarios; }
+        public void setHorarios(List<HorarioSimple> horarios) { this.horarios = horarios; }
         
         public Double getCostoCuota() { return costoCuota; }
         public void setCostoCuota(Double costoCuota) { this.costoCuota = costoCuota; }

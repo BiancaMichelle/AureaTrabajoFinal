@@ -76,6 +76,7 @@ public class FormacionService {
             datosNuevos.getCupos(),
             datosNuevos.getVisibilidad(),
             datosNuevos.getCostoInscripcion(),
+            datosNuevos.getCostoMora() != null ? datosNuevos.getCostoMora() : 0.0,
             datosNuevos.getCertificado()
         );
         

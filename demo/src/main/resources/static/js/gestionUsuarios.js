@@ -1683,6 +1683,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 #provincia[required],
                 #ciudad[required],
                 #correo[required],
+                #telefono[required],
                 #rol-select[required]
             `);
             
@@ -1699,6 +1700,23 @@ document.addEventListener('DOMContentLoaded', function () {
                     hideFieldError(field);
                 }
             });
+            
+            // ✅ Validar número de teléfono (solo números, mínimo 10 dígitos)
+            const telefono = document.getElementById('telefono');
+            if (telefono && telefono.value.trim()) {
+                const telefonoLimpio = telefono.value.replace(/\D/g, ''); // Remover todo lo que no sea dígito
+                if (telefonoLimpio.length < 10) {
+                    showFieldError(telefono, 'El teléfono debe tener mínimo 10 dígitos');
+                    isValid = false;
+                } else if (!/^\d+$/.test(telefonoLimpio)) {
+                    showFieldError(telefono, 'El teléfono solo debe contener números');
+                    isValid = false;
+                } else {
+                    hideFieldError(telefono);
+                    // Actualizar el valor con solo números
+                    telefono.value = telefonoLimpio;
+                }
+            }
         
             // Validar que un rol esté seleccionado
             if (selectedRoles.length === 0) {

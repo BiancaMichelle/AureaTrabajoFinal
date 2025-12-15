@@ -240,7 +240,21 @@ public class AlumnoController {
                 .filter(c -> c.getEstado() != EstadoCuota.PAGADA && c.getEstado() != EstadoCuota.CANCELADA)
                 .collect(Collectors.toList());
 
-            // Encontrar la primera cuota pendiente o vencida para mostrar el botón de pago
+            // Encontrar la primera cuota pendiente POR INSCRIPCIÓN para mostrar el botón de pagar
+            Map<Long, Cuota> cuotasPendientesPorInscripcion = new java.util.HashMap<>();
+            for (Cuota cuota : cuotasActivas) {
+                if ((cuota.getEstado() == EstadoCuota.PENDIENTE || cuota.getEstado() == EstadoCuota.VENCIDA) 
+                    && cuota.getInscripcion() != null) {
+                    Long inscripcionId = cuota.getInscripcion().getIdInscripcion();
+                    // Si no hay cuota para esta inscripción o es anterior, guardar
+                    if (!cuotasPendientesPorInscripcion.containsKey(inscripcionId) ||
+                        cuota.getFechaVencimiento().isBefore(cuotasPendientesPorInscripcion.get(inscripcionId).getFechaVencimiento())) {
+                        cuotasPendientesPorInscripcion.put(inscripcionId, cuota);
+                    }
+                }
+            }
+
+            // Para retrocompatibilidad, obtener la primera cuota pendiente global
             Cuota cuotaPendiente = cuotasActivas.stream()
                 .filter(c -> c.getEstado() == EstadoCuota.PENDIENTE || c.getEstado() == EstadoCuota.VENCIDA)
                 .min(Comparator.comparing(Cuota::getFechaVencimiento, Comparator.nullsLast(LocalDate::compareTo)))
@@ -264,6 +278,7 @@ public class AlumnoController {
             model.addAttribute("pagos", pagosRealizados);
             model.addAttribute("cuotas", cuotasVisibles); // Usar cuotasVisibles en lugar de todasLasCuotas
             model.addAttribute("cuotaPendiente", cuotaPendiente);
+            model.addAttribute("cuotasPendientesPorInscripcion", cuotasPendientesPorInscripcion);
             model.addAttribute("montoCuotaPendienteTexto", formatearMoneda(montoCuotaPendiente));
             model.addAttribute("totalPagadoTexto", formatearMoneda(totalPagado));
             model.addAttribute("totalPendienteTexto", formatearMoneda(totalPendiente));
@@ -411,6 +426,12 @@ public class AlumnoController {
             
             if (yaInscrito) {
                 redirectAttributes.addFlashAttribute("error", "Ya estás inscrito en esta oferta");
+                return "redirect:/publico";
+            }
+            
+            // ✅ Verificar cupos disponibles
+            if (!oferta.tieneCuposDisponibles()) {
+                redirectAttributes.addFlashAttribute("error", "No hay cupos disponibles para esta oferta");
                 return "redirect:/publico";
             }
 

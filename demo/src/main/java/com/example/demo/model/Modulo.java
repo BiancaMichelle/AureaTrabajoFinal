@@ -37,7 +37,6 @@ public class Modulo {
     private String descripcion;
     private LocalDate fechaInicioModulo;
     private LocalDate fechaFinModulo;
-    private String objetivos;
     
     @OneToMany(mappedBy = "modulo", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Clase> clases;

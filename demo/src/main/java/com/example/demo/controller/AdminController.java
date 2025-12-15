@@ -551,9 +551,12 @@ public class AdminController {
     
     @GetMapping("/admin/docentes/buscar")
     @ResponseBody
-    public ResponseEntity<List<Map<String, Object>>> buscarDocentes(@RequestParam("q") String query) {
+    public ResponseEntity<List<Map<String, Object>>> buscarDocentes(@RequestParam(value = "q", defaultValue = "") String query) {
         try {
-            List<Docente> docentes = docenteRepository.buscarPorNombreApellidoOMatricula(query);
+            // Si la query está vacía, devolver todos los docentes
+            List<Docente> docentes = query.trim().isEmpty() ? 
+                docenteRepository.findAllDocentes() : 
+                docenteRepository.buscarPorNombreApellidoOMatricula(query);
             
             List<Map<String, Object>> resultado = new ArrayList<>();
             
@@ -823,6 +826,50 @@ public class AdminController {
             response.put("tipo", tipoOferta);
             
             return ResponseEntity.ok(response);
+            
+        } catch (DataIntegrityViolationException e) {
+            // Capturar error de duplicado (nombre único)
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            
+            String mensaje = e.getMessage();
+            if (mensaje != null && (mensaje.toLowerCase().contains("uk_oferta_nombre") || 
+                                   mensaje.toLowerCase().contains("duplicate key"))) {
+                response.put("message", "Ya existe una oferta académica con este nombre. Por favor, elija un nombre diferente.");
+            } else {
+                response.put("message", "Error: La oferta no pudo registrarse debido a una restricción de datos. Verifique que no exista una oferta duplicada.");
+            }
+            
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+            
+        } catch (jakarta.validation.ConstraintViolationException e) {
+            // Capturar errores de validación y convertirlos a mensajes amigables
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            
+            String mensajeError = e.getConstraintViolations().stream()
+                .map(violation -> {
+                    String campo = violation.getPropertyPath().toString();
+                    String mensaje = violation.getMessage();
+                    
+                    // Personalizar mensajes según el campo
+                    if (campo.equals("cupos")) {
+                        return "La cantidad mínima de cupos es de 1";
+                    } else if (campo.equals("costoInscripcion")) {
+                        return "El costo de inscripción " + mensaje;
+                    } else if (campo.equals("nombre")) {
+                        return "El nombre de la oferta es obligatorio";
+                    } else if (campo.equals("descripcion")) {
+                        return "La descripción de la oferta es obligatoria";
+                    } else {
+                        return "El campo " + campo + " " + mensaje;
+                    }
+                })
+                .findFirst()
+                .orElse("Error de validación en los datos ingresados");
+            
+            response.put("message", mensajeError);
+            return ResponseEntity.badRequest().body(response);
             
         } catch (Exception e) {
             Map<String, Object> response = new HashMap<>();
@@ -2025,14 +2072,19 @@ public class AdminController {
      */
     private void asociarHorarios(OfertaAcademica oferta, String horariosJson) {
         try {
+            System.out.println("🕒 ASOCIANDO HORARIOS - JSON recibido: " + horariosJson);
+            
             // Parsear JSON manualmente (implementación simple)
             List<Map<String, String>> horariosData = parseHorariosJson(horariosJson);
+            System.out.println("🕒 HORARIOS PARSEADOS: " + horariosData.size() + " horarios");
             
             for (Map<String, String> horarioData : horariosData) {
+                System.out.println("  📅 Procesando horario: " + horarioData);
                 Horario horario = new Horario();
                 
                 // Configurar día
                 String diaStr = horarioData.get("dia");
+                System.out.println("    - Día: " + diaStr);
                 if (diaStr != null && !diaStr.isEmpty()) {
                     horario.setDia(Dias.valueOf(diaStr.toUpperCase()));
                 }
@@ -2040,13 +2092,27 @@ public class AdminController {
                 // Configurar horas
                 String horaInicioStr = horarioData.get("horaInicio");
                 String horaFinStr = horarioData.get("horaFin");
+                System.out.println("    - Hora inicio (string): " + horaInicioStr);
+                System.out.println("    - Hora fin (string): " + horaFinStr);
                 
                 if (horaInicioStr != null && !horaInicioStr.isEmpty()) {
-                    horario.setHoraInicio(Time.valueOf(horaInicioStr + ":00"));
+                    try {
+                        Time horaInicio = Time.valueOf(horaInicioStr + ":00");
+                        horario.setHoraInicio(horaInicio);
+                        System.out.println("    - ✅ Hora inicio guardada: " + horaInicio);
+                    } catch (Exception e) {
+                        System.err.println("    - ❌ Error al parsear hora inicio: " + e.getMessage());
+                    }
                 }
                 
                 if (horaFinStr != null && !horaFinStr.isEmpty()) {
-                    horario.setHoraFin(Time.valueOf(horaFinStr + ":00"));
+                    try {
+                        Time horaFin = Time.valueOf(horaFinStr + ":00");
+                        horario.setHoraFin(horaFin);
+                        System.out.println("    - ✅ Hora fin guardada: " + horaFin);
+                    } catch (Exception e) {
+                        System.err.println("    - ❌ Error al parsear hora fin: " + e.getMessage());
+                    }
                 }
                 
                 // Asociar docente si se especifica
@@ -2066,8 +2132,17 @@ public class AdminController {
                 // Asociar oferta
                 horario.setOfertaAcademica(oferta);
                 
+                // Debug: mostrar estado antes de guardar
+                System.out.println("    🔍 ESTADO ANTES DE GUARDAR:");
+                System.out.println("       - Día: " + horario.getDia());
+                System.out.println("       - Hora inicio: " + horario.getHoraInicio());
+                System.out.println("       - Hora fin: " + horario.getHoraFin());
+                System.out.println("       - Docente: " + (horario.getDocente() != null ? horario.getDocente().getNombre() : "null"));
+                System.out.println("       - Oferta: " + (horario.getOfertaAcademica() != null ? horario.getOfertaAcademica().getNombre() : "null"));
+                
                 // Guardar horario
-                horarioRepository.save(horario);
+                Horario horarioGuardado = horarioRepository.save(horario);
+                System.out.println("    ✅ Horario guardado con ID: " + horarioGuardado.getIdHorario());
             }
             
         } catch (Exception e) {
@@ -2087,6 +2162,8 @@ public class AdminController {
         }
         
         try {
+            System.out.println("📋 Parseando JSON: " + json);
+            
             // Remover corchetes
             json = json.trim();
             if (json.startsWith("[")) json = json.substring(1);
@@ -2104,25 +2181,37 @@ public class AdminController {
                 if (objeto.startsWith("{")) objeto = objeto.substring(1);
                 if (objeto.endsWith("}")) objeto = objeto.substring(0, objeto.length() - 1);
                 
+                System.out.println("  📝 Procesando objeto: " + objeto);
+                
                 Map<String, String> horario = new HashMap<>();
-                String[] pares = objeto.split(",");
+                
+                // Dividir por comas que NO estén dentro de comillas
+                String[] pares = objeto.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
                 
                 for (String par : pares) {
-                    String[] keyValue = par.split(":");
-                    if (keyValue.length == 2) {
-                        String key = keyValue[0].trim().replaceAll("\"", "");
-                        String value = keyValue[1].trim().replaceAll("\"", "");
+                    par = par.trim();
+                    System.out.println("    🔍 Par: " + par);
+                    
+                    // Encontrar la primera ocurrencia de : que separa clave de valor
+                    int colonIndex = par.indexOf(":");
+                    if (colonIndex > 0) {
+                        String key = par.substring(0, colonIndex).trim().replaceAll("\"", "");
+                        String value = par.substring(colonIndex + 1).trim().replaceAll("\"", "");
+                        
+                        System.out.println("      ✅ Key: " + key + ", Value: " + value);
                         horario.put(key, value);
                     }
                 }
                 
                 if (!horario.isEmpty()) {
+                    System.out.println("  ✅ Horario parseado: " + horario);
                     horarios.add(horario);
                 }
             }
             
         } catch (Exception e) {
-            System.err.println("Error al parsear JSON de horarios: " + e.getMessage());
+            System.err.println("❌ Error al parsear JSON de horarios: " + e.getMessage());
+            e.printStackTrace();
         }
         
         return horarios;
