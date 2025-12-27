@@ -144,6 +144,28 @@ public class Usuario {
     return Period.between(fechaNacimiento, LocalDate.now()).getYears() >= 16;
   }
 
+  @Column(name = "intentos_fallidos_chat")
+  private int intentosFallidosChat = 0;
+
+  @Column(name = "bloqueo_chat_hasta")
+  private LocalDateTime bloqueoChatHasta;
+
+  public int getIntentosFallidosChat() {
+      return intentosFallidosChat;
+  }
+
+  public void setIntentosFallidosChat(int intentosFallidosChat) {
+      this.intentosFallidosChat = intentosFallidosChat;
+  }
+
+  public LocalDateTime getBloqueoChatHasta() {
+      return bloqueoChatHasta;
+  }
+
+  public void setBloqueoChatHasta(LocalDateTime bloqueoChatHasta) {
+      this.bloqueoChatHasta = bloqueoChatHasta;
+  }
+
   @PrePersist
   protected void onCreate() {
     if (fechaRegistro == null) {

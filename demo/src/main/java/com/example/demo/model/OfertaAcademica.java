@@ -123,9 +123,6 @@ public class OfertaAcademica {
         return getTipoOferta();
     }
 
-
-
-
     /**
      * Devuelve el ícono CSS según el tipo para la interfaz
      */

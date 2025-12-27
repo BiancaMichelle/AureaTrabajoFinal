@@ -32,27 +32,83 @@ public class ChatServiceSimple {
     @Autowired
     private IAConfig iaConfig;
     
+    @Autowired
+    private com.example.demo.repository.UsuarioRepository usuarioRepository;
+
+    @Autowired
+    private com.example.demo.repository.InscripcionRepository inscripcionRepository;
+    
     private final ObjectMapper objectMapper = new ObjectMapper();
     
     private static final int MAX_MESSAGES_PER_HOUR = 50;
     private static final int MAX_CONTEXT_MESSAGES = 10;
+    private static final int MAX_INTENTOS_INSULTOS = 3;
     
+    // Lista básica de palabras prohibidas
+    private static final List<String> PALABRAS_PROHIBIDAS = Arrays.asList(
+        "idiota", "estupido", "imbecil", "mierda", "basura", "inutil", 
+        "tonto", "tarado", "maldito", "puta", "carajo", "verga", "pendejo",
+        "zorra", "cabron", "chinga", "coño", "gilipollas"
+    );
+    
+    // Regex para PII
+    private static final String DNI_REGEX = "\\b\\d{7,8}\\b";
+    private static final String EMAIL_REGEX = "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b";
+    private static final String CARD_REGEX = "\\b(?:\\d[ -]*?){13,16}\\b";
+
     public ChatMessage procesarMensaje(String userMessage, String userDni, String sessionId) {
-        System.out.println("🚀 Procesando mensaje de usuario: " + userDni + " - " + userMessage);
+        // Saneamiento de PII antes de procesar
+        String mensajeSaneado = sanearMensaje(userMessage);
+        System.out.println("🚀 Procesando mensaje de usuario: " + userDni + " - " + mensajeSaneado);
         
+        com.example.demo.model.Usuario usuario = null;
+        
+        // Verificar si el usuario está bloqueado (solo si no es anónimo)
+        if (!"ANONIMO".equals(userDni)) {
+            usuario = usuarioRepository.findByDni(userDni).orElse(null);
+            if (usuario != null && usuario.getBloqueoChatHasta() != null) {
+                if (usuario.getBloqueoChatHasta().isAfter(LocalDateTime.now())) {
+                    throw new RuntimeException("Tu acceso al chat está bloqueado temporalmente por conducta inapropiada hasta: " + 
+                        usuario.getBloqueoChatHasta().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
+                } else {
+                    // Desbloquear si ya pasó el tiempo
+                    usuario.setBloqueoChatHasta(null);
+                    usuario.setIntentosFallidosChat(0);
+                    usuarioRepository.save(usuario);
+                }
+            }
+        }
+
+        // 1. VALIDACIÓN DE CONTENIDO INAPROPIADO
+        if (contieneLenguajeInapropiado(userMessage)) {
+            if (usuario != null) {
+                manejarLenguajeInapropiado(usuario);
+            }
+            
+            ChatMessage chatMessage = new ChatMessage(userDni, sessionId, "Mensaje bloqueado por contenido inapropiado");
+            chatMessage.setAiResponse("⚠️ **ADVERTENCIA DE CONDUCTA**\n\n" +
+                "Hemos detectado lenguaje inapropiado u ofensivo en tu mensaje. " +
+                "En Aurea mantenemos un ambiente de respeto mutuo.\n\n" +
+                (usuario != null ? "Advertencia " + usuario.getIntentosFallidosChat() + " de " + MAX_INTENTOS_INSULTOS + ".\n" +
+                "Si continúas, tu acceso al chat será bloqueado." : ""));
+            chatMessage.setResponseTimeMs(0L);
+            chatMessage.setMessageType(ChatMessage.MessageType.SOPORTE_TECNICO);
+            return chatMessageRepository.save(chatMessage);
+        }
+
         // Verificar límites de uso
         if (verificarLimitesUso(userDni)) {
             throw new RuntimeException("Has excedido el límite de mensajes por hora. Intenta más tarde.");
         }
         
-        // Crear mensaje del usuario
-        ChatMessage chatMessage = new ChatMessage(userDni, sessionId, userMessage);
+        // Crear mensaje del usuario (guardamos el saneado por seguridad)
+        ChatMessage chatMessage = new ChatMessage(userDni, sessionId, mensajeSaneado);
         
         try {
             long startTime = System.currentTimeMillis();
             
             // Obtener contexto de la conversación
-            List<Map<String, Object>> messages = construirHistorialMensajes(sessionId, userMessage);
+            List<Map<String, Object>> messages = construirHistorialMensajes(sessionId, mensajeSaneado, userDni);
             System.out.println("📚 Historial construido con " + messages.size() + " mensajes");
             
             // Generar respuesta de IA usando el patrón de chat de Ollama
@@ -78,22 +134,74 @@ public class ChatServiceSimple {
         }
     }
     
-    private List<Map<String, Object>> construirHistorialMensajes(String sessionId, String userMessage) {
+    private String sanearMensaje(String mensaje) {
+        if (mensaje == null) return "";
+        return mensaje.replaceAll(DNI_REGEX, "[DNI_OCULTO]")
+                      .replaceAll(EMAIL_REGEX, "[EMAIL_OCULTO]")
+                      .replaceAll(CARD_REGEX, "[TARJETA_OCULTA]");
+    }
+    
+    // Método auxiliar para detectar malas palabras
+    private boolean contieneLenguajeInapropiado(String mensaje) {
+        if (mensaje == null || mensaje.trim().isEmpty()) return false;
+        
+        String mensajeNormalizado = mensaje.toLowerCase();
+        // Eliminar acentos para mejor detección
+        mensajeNormalizado = java.text.Normalizer.normalize(mensajeNormalizado, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+
+        for (String palabra : PALABRAS_PROHIBIDAS) {
+            if (mensajeNormalizado.contains(palabra)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void manejarLenguajeInapropiado(com.example.demo.model.Usuario usuario) {
+        if (usuario != null) {
+            int intentos = usuario.getIntentosFallidosChat() + 1;
+            usuario.setIntentosFallidosChat(intentos);
+            
+            if (intentos >= MAX_INTENTOS_INSULTOS) {
+                // Bloquear por 24 horas
+                usuario.setBloqueoChatHasta(LocalDateTime.now().plusHours(24));
+            }
+            
+            usuarioRepository.save(usuario);
+        }
+    }
+
+    private List<Map<String, Object>> construirHistorialMensajes(String sessionId, String userMessage, String userDni) {
         List<Map<String, Object>> messages = new ArrayList<>();
         
-        // Obtener información de ofertas académicas activas para el contexto
+        // Obtener información de ofertas académicas activas para el contexto (PÚBLICO)
         String contextoOfertas = obtenerContextoOfertas();
+        
+        // Contexto específico del usuario (PRIVADO - solo si autenticado)
+        String contextoUsuario = "";
+        if (!"ANONIMO".equals(userDni)) {
+            contextoUsuario = obtenerContextoUsuario(userDni);
+        }
+        
+        String systemPrompt = "Eres un asistente académico inteligente para una plataforma educativa llamada Aurea. " +
+            "Ayudas a estudiantes y docentes con consultas sobre cursos, materiales de estudio, " +
+            "evaluaciones y contenido académico. Responde de forma clara, profesional y educativa. " +
+            "Mantén las respuestas concisas pero informativas. Usa formato markdown cuando sea apropiado.\n\n" +
+            "INFORMACIÓN PÚBLICA DE LA PLATAFORMA:\n" + contextoOfertas + "\n\n";
+            
+        if (!contextoUsuario.isEmpty()) {
+            systemPrompt += "INFORMACIÓN DEL USUARIO (PRIVADO - NO COMPARTIR CON TERCEROS):\n" + contextoUsuario + "\n" +
+                            "NOTA: No tienes acceso a notas, pagos detallados ni contraseñas. Si el usuario pregunta por ello, indica que deben consultar su panel personal.\n";
+        } else {
+            systemPrompt += "NOTA: El usuario es ANÓNIMO. Solo puedes responder sobre información pública de ofertas académicas. " +
+                            "Si pregunta por su situación personal, materiales internos o clases, indícale que debe iniciar sesión.\n";
+        }
         
         // Mensaje del sistema
         Map<String, Object> systemMessage = new HashMap<>();
         systemMessage.put("role", "system");
-        systemMessage.put("content", 
-            "Eres un asistente académico inteligente para una plataforma educativa llamada Aurea. " +
-            "Ayudas a estudiantes y docentes con consultas sobre cursos, materiales de estudio, " +
-            "evaluaciones y contenido académico. Responde de forma clara, profesional y educativa. " +
-            "Mantén las respuestas concisas pero informativas. Usa formato markdown cuando sea apropiado.\n\n" +
-            "INFORMACIÓN ACTUAL DE LA PLATAFORMA:\n" + contextoOfertas
-        );
+        systemMessage.put("content", systemPrompt);
         messages.add(systemMessage);
         
         // Obtener contexto de conversaciones anteriores
@@ -127,6 +235,28 @@ public class ChatServiceSimple {
         messages.add(currentUserMessage);
         
         return messages;
+    }
+    
+    private String obtenerContextoUsuario(String userDni) {
+        try {
+            com.example.demo.model.Usuario usuario = usuarioRepository.findByDni(userDni).orElse(null);
+            if (usuario == null) return "";
+            
+            List<com.example.demo.model.Inscripciones> inscripciones = inscripcionRepository.findByAlumno(usuario);
+            
+            if (inscripciones.isEmpty()) {
+                return "El usuario " + usuario.getNombre() + " " + usuario.getApellido() + " no está inscrito en ningún curso actualmente.";
+            }
+            
+            StringBuilder sb = new StringBuilder("El usuario " + usuario.getNombre() + " " + usuario.getApellido() + " está inscrito en:\n");
+            for (com.example.demo.model.Inscripciones inscripcion : inscripciones) {
+                sb.append("- ").append(inscripcion.getOferta().getNombre())
+                  .append(" (Estado: ").append(inscripcion.getEstadoInscripcion()).append(")\n");
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            return "Error obteniendo contexto de usuario.";
+        }
     }
     
     private String obtenerContextoOfertas() {

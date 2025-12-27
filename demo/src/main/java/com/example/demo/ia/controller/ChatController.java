@@ -49,7 +49,7 @@ public class ChatController {
                 sessionId = chatServiceSimple.generarSessionId();
             }
             
-            String userDni = userDetails.getUsername();
+            String userDni = (userDetails != null) ? userDetails.getUsername() : "ANONIMO";
             
             ChatMessage chatMessage = chatServiceSimple.procesarMensaje(userMessage, userDni, sessionId);
             

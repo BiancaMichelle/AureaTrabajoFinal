@@ -130,7 +130,7 @@ class SimpleChat {
             // Obtener información del usuario
             const userInfo = this.getUserInfo();
             
-            const response = await fetch('/ia/chat', {
+            const response = await fetch('/ia/chat/message', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

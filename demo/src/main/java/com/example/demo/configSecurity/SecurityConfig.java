@@ -80,6 +80,7 @@ public class SecurityConfig {
                         .requestMatchers("/admin/**").hasAuthority("ADMIN")
                         .requestMatchers("/alumno/**", "/inscribirse/**").hasAnyAuthority("ALUMNO", "DOCENTE")
                         .requestMatchers("/docente/**").hasAuthority("DOCENTE")
+                        .requestMatchers("/ia/chat/**", "/ia/status", "/ia/health").permitAll()
                         .requestMatchers("/ia/**").hasAnyAuthority("ALUMNO", "DOCENTE", "ADMIN")
                         .requestMatchers("/modulo/**", "/crearModulo", "/ofertaAcademica/**", "/actividad/**",
                                 "/pool/**")
