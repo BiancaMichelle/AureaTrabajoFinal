@@ -147,10 +147,16 @@
                                 <div class="form-group">
                                     <label for="fechaInicio">Fecha de Inicio *</label>
                                     <input type="date" id="fechaInicio" name="fechaInicio" class="form-control" required>
+                                    <small class="form-text text-muted">
+                                        <i class="fas fa-info-circle"></i> La fecha debe ser desde hoy en adelante
+                                    </small>
                                 </div>
                                 <div class="form-group">
                                     <label for="fechaFin">Fecha de Fin *</label>
                                     <input type="date" id="fechaFin" name="fechaFin" class="form-control" required>
+                                    <small class="form-text text-muted">
+                                        <i class="fas fa-info-circle"></i> Debe ser posterior a la fecha de inicio
+                                    </small>
                                 </div>
                             </div>
                             
@@ -278,19 +284,9 @@
                         <div id="fields-curso" class="form-section tipo-specific" style="display: none;">
                             <h4><i class="fas fa-book"></i> Información del Curso</h4>
                             <div class="form-group">
-                                <label for="planEstudio">Plan de Estudio</label>
-                                <textarea id="planEstudio" name="planEstudio" rows="4" class="form-control" 
-                                          placeholder="Detalle del plan de estudios del curso"></textarea>
-                            </div>
-                            <div class="form-group">
                                 <label for="temario">Temario</label>
                                 <textarea id="temario" name="temario" rows="4" class="form-control" 
                                           placeholder="Temario detallado del curso"></textarea>
-                            </div>
-                            <div class="form-group">
-                                <label for="requisitos">Requisitos Previos</label>
-                                <textarea id="requisitos" name="requisitos" rows="2" class="form-control" 
-                                          placeholder="Conocimientos o cursos previos necesarios"></textarea>
                             </div>
                             
                             <!-- Docentes a cargo -->
@@ -325,21 +321,6 @@
                                 <textarea id="planFormacion" name="planFormacion" rows="4" class="form-control" 
                                           placeholder="Plan detallado de la formación profesional"></textarea>
                             </div>
-                            <div class="form-group">
-                                <label for="temarioFormacion">Temario</label>
-                                <textarea id="temarioFormacion" name="temarioFormacion" rows="4" class="form-control" 
-                                          placeholder="Temario de la formación"></textarea>
-                            </div>
-                            <div class="form-group">
-                                <label for="estructuraModular">Estructura Modular</label>
-                                <textarea id="estructuraModular" name="estructuraModular" rows="4" class="form-control" 
-                                          placeholder="Descripción de los módulos que componen la formación"></textarea>
-                            </div>
-                            <div class="form-group">
-                                <label for="requisitosFormacion">Requisitos</label>
-                                <textarea id="requisitosFormacion" name="requisitosFormacion" rows="2" class="form-control" 
-                                          placeholder="Requisitos para ingresar a la formación"></textarea>
-                            </div>
                             
                             <!-- Docentes para formación también -->
                             <div class="docentes-section">
@@ -369,6 +350,21 @@
                         <div id="fields-charla" class="form-section tipo-specific" style="display: none;">
                             <h4><i class="fas fa-microphone"></i> Información de la Charla</h4>
                             <div class="form-group">
+                                <label for="lugarCharla">Lugar</label>
+                                <input type="text" id="lugarCharla" name="lugarCharla" class="form-control" 
+                                       placeholder="Dirección física del evento">
+                            </div>
+                            <div class="form-group">
+                                <label for="enlaceCharla">Enlace</label>
+                                <input type="url" id="enlaceCharla" name="enlaceCharla" class="form-control" 
+                                       placeholder="Enlace de acceso virtual">
+                            </div>
+                            <div class="form-group">
+                                <label for="publicoObjetivo">Público Objetivo</label>
+                                <input type="text" id="publicoObjetivo" name="publicoObjetivo" class="form-control" 
+                                       placeholder="A quién está dirigida la charla">
+                            </div>
+                            <div class="form-group">
                                 <label for="disertantesCharla">Disertantes</label>
                                 <div class="input-with-button">
                                     <input type="text" id="disertantesCharlaInput" class="form-control" 
@@ -380,31 +376,26 @@
                                 <div id="disertantes-charla-list" class="chips-container"></div>
                                 <input type="hidden" id="disertantesCharlaHidden" name="disertantesCharla" value="">
                             </div>
-                            <div class="form-group">
-                                <label for="duracionEstimada">Duración Estimada</label>
-                                <input type="text" id="duracionEstimada" name="duracionEstimada" class="form-control" 
-                                       placeholder="Ej: 2 horas, 90 minutos">
-                            </div>
-                            <div class="form-group">
-                                <label for="publicoObjetivo">Público Objetivo</label>
-                                <input type="text" id="publicoObjetivo" name="publicoObjetivo" class="form-control" 
-                                       placeholder="A quién está dirigida la charla">
-                            </div>
-                            <div class="form-group">
-                                <label for="lugarCharla">Lugar o Enlace</label>
-                                <input type="text" id="lugarCharla" name="lugarCharla" class="form-control" 
-                                       placeholder="Dirección física o enlace de acceso">
-                            </div>
-                            <div class="form-group">
-                                <label for="materialesApoyo">Materiales de Apoyo</label>
-                                <textarea id="materialesApoyo" name="materialesApoyo" rows="2" class="form-control" 
-                                          placeholder="Descripción de materiales que se proporcionarán"></textarea>
-                            </div>
                         </div>
 
                         <!-- Campos para SEMINARIO -->
                         <div id="fields-seminario" class="form-section tipo-specific" style="display: none;">
                             <h4><i class="fas fa-users"></i> Información del Seminario</h4>
+                            <div class="form-group">
+                                <label for="lugarSeminario">Lugar</label>
+                                <input type="text" id="lugarSeminario" name="lugarSeminario" class="form-control" 
+                                       placeholder="Dirección física del seminario">
+                            </div>
+                            <div class="form-group">
+                                <label for="enlaceSeminario">Enlace</label>
+                                <input type="url" id="enlaceSeminario" name="enlaceSeminario" class="form-control" 
+                                       placeholder="Enlace de acceso virtual">
+                            </div>
+                            <div class="form-group">
+                                <label for="publicoObjetivoSeminario">Público Objetivo</label>
+                                <input type="text" id="publicoObjetivoSeminario" name="publicoObjetivoSeminario" class="form-control" 
+                                       placeholder="A quién está dirigido el seminario">
+                            </div>
                             <div class="form-group">
                                 <label for="disertantesSeminario">Disertantes</label>
                                 <div class="input-with-button">
@@ -416,29 +407,6 @@
                                 </div>
                                 <div id="disertantes-seminario-list" class="chips-container"></div>
                                 <input type="hidden" id="disertantesSeminarioHidden" name="disertantesSeminario" value="">
-                            </div>
-                            <div class="form-group">
-                                <label for="fechaSeminario">Fecha del Seminario</label>
-                                <input type="date" id="fechaSeminario" name="fechaSeminario" class="form-control">
-                            </div>
-                            <div class="form-group">
-                                <label for="horaSeminario">Hora del Seminario</label>
-                                <input type="time" id="horaSeminario" name="horaSeminario" class="form-control">
-                            </div>
-                            <div class="form-group">
-                                <label for="duracionSeminario">Duración Estimada</label>
-                                <input type="text" id="duracionSeminario" name="duracionSeminario" class="form-control" 
-                                       placeholder="Ej: 4 horas, medio día">
-                            </div>
-                            <div class="form-group">
-                                <label for="requisitosParticipacion">Requisitos de Participación</label>
-                                <textarea id="requisitosParticipacion" name="requisitosParticipacion" rows="2" 
-                                          class="form-control" placeholder="Requisitos para participar (opcional)"></textarea>
-                            </div>
-                            <div class="form-group">
-                                <label for="lugarSeminario">Lugar o Enlace</label>
-                                <input type="text" id="lugarSeminario" name="lugarSeminario" class="form-control" 
-                                       placeholder="Dirección física o enlace de acceso">
                             </div>
                         </div>
                     </div>
@@ -965,7 +933,7 @@
                 <!-- Fechas -->
                 <div class="oferta-detalle-section">
                     <div class="section-header">
-                        <h4><i class="fas fa-calendar"></i> Fechas Importantes</h4>
+                        <h4><i class="fas fa-calendar"></i> Fechas</h4>
                     </div>
                     <div class="oferta-info-grid">
                         <div class="info-item">
@@ -976,29 +944,17 @@
                             <label>Fecha de Fin:</label>
                             <span id="detalle-fecha-fin">-</span>
                         </div>
-                        <div class="info-item">
-                            <label>Fecha de Inscripción:</label>
-                            <span id="detalle-fecha-inscripcion">-</span>
-                        </div>
-                        <div class="info-item">
-                            <label>Fecha Límite de Inscripción:</label>
-                            <span id="detalle-fecha-limite">-</span>
-                        </div>
                     </div>
                 </div>
 
-                <!-- Capacidad -->
+                <!-- Cupos -->
                 <div class="oferta-detalle-section">
                     <div class="section-header">
-                        <h4><i class="fas fa-users"></i> Capacidad</h4>
+                        <h4><i class="fas fa-users"></i> Cupos</h4>
                     </div>
                     <div class="oferta-info-grid">
                         <div class="info-item">
-                            <label>Capacidad Mínima:</label>
-                            <span id="detalle-capacidad-min">-</span>
-                        </div>
-                        <div class="info-item">
-                            <label>Capacidad Máxima:</label>
+                            <label>Cupos Disponibles:</label>
                             <span id="detalle-capacidad-max">-</span>
                         </div>
                     </div>
@@ -1012,15 +968,7 @@
                     <div class="oferta-info-grid">
                         <div class="info-item">
                             <label>Otorga Certificado:</label>
-                            <span id="detalle-otorga-certificado">-</span>
-                        </div>
-                        <div class="info-item">
-                            <label>Costo de Certificado:</label>
-                            <span id="detalle-costo-certificado" class="precio">-</span>
-                        </div>
-                        <div class="info-item full-width">
-                            <label>Descripción del Certificado:</label>
-                            <div id="detalle-descripcion-certificado">-</div>
+                            <span id="detalle-otorga-certificado">Sí</span>
                         </div>
                     </div>
                 </div>
@@ -1032,29 +980,13 @@
                         <h4><i class="fas fa-book"></i> Información del Curso</h4>
                     </div>
                     <div class="oferta-info-grid">
-                        <div class="info-item">
-                            <label>Costo por Cuota:</label>
-                            <span id="detalle-curso-costo-cuota" class="precio">-</span>
-                        </div>
-                        <div class="info-item">
-                            <label>Número de Cuotas:</label>
-                            <span id="detalle-curso-nro-cuotas">-</span>
-                        </div>
-                        <div class="info-item">
-                            <label>Costo de Mora:</label>
-                            <span id="detalle-curso-costo-mora" class="precio">-</span>
-                        </div>
-                        <div class="info-item">
-                            <label>Día de Vencimiento:</label>
-                            <span id="detalle-curso-dia-vencimiento">-</span>
+                        <div class="info-item full-width">
+                            <label>Temario:</label>
+                            <div id="detalle-curso-temario" style="white-space: pre-wrap;">-</div>
                         </div>
                         <div class="info-item full-width">
-                            <label>Docentes:</label>
+                            <label>Docentes a Cargo:</label>
                             <div id="detalle-curso-docentes" class="docentes-list">-</div>
-                        </div>
-                        <div class="info-item full-width">
-                            <label>Horarios:</label>
-                            <div id="detalle-curso-horarios" class="horarios-list">-</div>
                         </div>
                     </div>
                 </div>
@@ -1062,32 +994,16 @@
                 <!-- Datos para FORMACIÓN -->
                 <div id="datos-formacion" class="oferta-detalle-section tipo-especifico" style="display: none;">
                     <div class="section-header">
-                        <h4><i class="fas fa-graduation-cap"></i> Información de la Formación</h4>
+                        <h4><i class="fas fa-graduation-cap"></i> Formación Profesional</h4>
                     </div>
                     <div class="oferta-info-grid">
-                        <div class="info-item">
-                            <label>Costo por Cuota:</label>
-                            <span id="detalle-formacion-costo-cuota" class="precio">-</span>
-                        </div>
-                        <div class="info-item">
-                            <label>Número de Cuotas:</label>
-                            <span id="detalle-formacion-nro-cuotas">-</span>
-                        </div>
-                        <div class="info-item">
-                            <label>Costo de Mora:</label>
-                            <span id="detalle-formacion-costo-mora" class="precio">-</span>
-                        </div>
-                        <div class="info-item">
-                            <label>Día de Vencimiento:</label>
-                            <span id="detalle-formacion-dia-vencimiento">-</span>
+                        <div class="info-item full-width">
+                            <label>Plan de Formación:</label>
+                            <div id="detalle-formacion-plan" style="white-space: pre-wrap;">-</div>
                         </div>
                         <div class="info-item full-width">
-                            <label>Docentes:</label>
+                            <label>Docentes a Cargo:</label>
                             <div id="detalle-formacion-docentes" class="docentes-list">-</div>
-                        </div>
-                        <div class="info-item full-width">
-                            <label>Horarios:</label>
-                            <div id="detalle-formacion-horarios" class="horarios-list">-</div>
                         </div>
                     </div>
                 </div>
@@ -1098,6 +1014,18 @@
                         <h4><i class="fas fa-microphone"></i> Información de la Charla</h4>
                     </div>
                     <div class="oferta-info-grid">
+                        <div class="info-item">
+                            <label>Lugar:</label>
+                            <span id="detalle-charla-lugar">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Enlace:</label>
+                            <span id="detalle-charla-enlace">-</span>
+                        </div>
+                        <div class="info-item full-width">
+                            <label>Público Objetivo:</label>
+                            <div id="detalle-charla-publico" style="white-space: pre-wrap;">-</div>
+                        </div>
                         <div class="info-item full-width">
                             <label>Disertantes:</label>
                             <div id="detalle-charla-disertantes" class="disertantes-list">-</div>
@@ -1111,6 +1039,18 @@
                         <h4><i class="fas fa-chalkboard-teacher"></i> Información del Seminario</h4>
                     </div>
                     <div class="oferta-info-grid">
+                        <div class="info-item">
+                            <label>Lugar:</label>
+                            <span id="detalle-seminario-lugar">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Enlace:</label>
+                            <span id="detalle-seminario-enlace">-</span>
+                        </div>
+                        <div class="info-item full-width">
+                            <label>Público Objetivo:</label>
+                            <div id="detalle-seminario-publico" style="white-space: pre-wrap;">-</div>
+                        </div>
                         <div class="info-item full-width">
                             <label>Disertantes:</label>
                             <div id="detalle-seminario-disertantes" class="disertantes-list">-</div>
@@ -1440,14 +1380,16 @@
                 clearTimeout(timeoutId);
                 const query = this.value.trim();
                 
-                if (query.length < 2) {
-                    resultsDiv.style.display = 'none';
-                    return;
-                }
-                
                 timeoutId = setTimeout(() => {
                     buscarDocentes(query, resultsDiv, tableId);
                 }, 300);
+            });
+            
+            // Agregar evento focus para mostrar todos los docentes al hacer click
+            searchInput.addEventListener('focus', function() {
+                console.log('👁️ Focus en buscador de docentes');
+                const query = this.value.trim();
+                buscarDocentes(query, resultsDiv, tableId);
             });
             
             // Ocultar resultados al hacer click fuera
@@ -1465,8 +1407,11 @@
         function buscarDocentes(query, resultsDiv, tableId) {
             console.log('🔍 Buscando docentes:', query);
             
+            // Si no hay query, usar cadena vacía para obtener todos
+            const searchQuery = query || '';
+            
             // Buscar docentes reales desde la base de datos
-            fetch(`/admin/docentes/buscar?q=${encodeURIComponent(query)}`)
+            fetch(`/admin/docentes/buscar?q=${encodeURIComponent(searchQuery)}`)
                 .then(response => {
                     if (!response.ok) {
                         throw new Error('Error en la respuesta del servidor');
@@ -1842,6 +1787,7 @@
                 
                 const form = document.getElementById('categoriaForm');
                 const formData = new FormData(form);
+                const categoriaId = document.getElementById('categoriaId').value;
                 
                 const categoria = {
                     nombre: formData.get('categoriaNombre'),
@@ -1859,8 +1805,16 @@
                     return;
                 }
                 
-                fetch('/api/categorias', {
-                    method: 'POST',
+                // Determinar si es creación o actualización
+                const url = categoriaId ? `/api/categorias/${categoriaId}` : '/api/categorias';
+                const method = categoriaId ? 'PUT' : 'POST';
+                
+                if (categoriaId) {
+                    categoria.id = parseInt(categoriaId);
+                }
+                
+                fetch(url, {
+                    method: method,
                     headers: {
                         'Content-Type': 'application/json'
                     },
@@ -1876,9 +1830,11 @@
                 .then(data => {
                     console.log('✅ Categoría guardada:', data);
                     form.reset();
+                    document.getElementById('categoriaId').value = '';
+                    document.getElementById('btnGuardarText').textContent = 'Crear Categoría';
                     cargarCategorias();
                     cargarCategoriasSelect();
-                    alert('Categoría guardada exitosamente');
+                    alert(categoriaId ? 'Categoría actualizada exitosamente' : 'Categoría creada exitosamente');
                 })
                 .catch(error => {
                     console.error('❌ Error:', error);
@@ -1890,6 +1846,9 @@
                 const form = document.getElementById('categoriaForm');
                 if (form) {
                     form.reset();
+                    document.getElementById('categoriaId').value = '';
+                    document.getElementById('btnGuardarText').textContent = 'Crear Categoría';
+                    console.log('✅ Formulario cancelado y limpiado');
                 }
             }
         };
@@ -1897,7 +1856,22 @@
         // Funciones globales para botones
         window.editarCategoria = function(id) {
             console.log('✏️ Editando categoría:', id);
-            // TODO: Implementar edición
+            
+            fetch(`/api/categorias/${id}`)
+                .then(response => response.json())
+                .then(categoria => {
+                    document.getElementById('categoriaId').value = categoria.id;
+                    document.getElementById('categoriaNombre').value = categoria.nombre;
+                    document.getElementById('categoriaDescripcion').value = categoria.descripcion;
+                    document.getElementById('btnGuardarText').textContent = 'Actualizar Categoría';
+                    
+                    // Scroll al formulario
+                    document.querySelector('.categoria-form-section').scrollIntoView({ behavior: 'smooth' });
+                })
+                .catch(error => {
+                    console.error('Error al cargar categoría:', error);
+                    alert('Error al cargar la categoría para editar');
+                });
         };
         
         window.eliminarCategoria = function(id) {
@@ -1906,14 +1880,16 @@
                 fetch(`/api/categorias/${id}`, {
                     method: 'DELETE'
                 })
-                .then(response => {
-                    if (response.ok) {
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
                         console.log('✅ Categoría eliminada');
                         cargarCategorias();
                         cargarCategoriasSelect();
-                        alert('Categoría eliminada exitosamente');
+                        alert(data.message || 'Categoría eliminada exitosamente');
                     } else {
-                        throw new Error('Error en la respuesta del servidor');
+                        console.error('❌ Error:', data.message);
+                        alert(data.message || 'Error al eliminar la categoría');
                     }
                 })
                 .catch(error => {
@@ -2180,8 +2156,8 @@
                 chip.className = 'horario-chip';
                 chip.innerHTML = `
                     <div class="horario-info">
-                        <strong>${horario.dia}</strong><br>
-                        ${horario.horaInicio} - ${horario.horaFin}
+                        <strong>${horario.dia || 'Sin día'}</strong><br>
+                        ${horario.horaInicio || '--:--'} - ${horario.horaFin || '--:--'}
                     </div>
                     <button type="button" class="remove-horario" onclick="removerHorario(${index})">
                         <i class="fas fa-times"></i>
@@ -2229,8 +2205,24 @@
                 return false;
             }
             
+            // ✅ Validar que las fechas no sean pasadas
+            const hoy = new Date();
+            hoy.setHours(0, 0, 0, 0); // Resetear horas para comparar solo fechas
+            const fechaInicioObj = new Date(fechaInicio + 'T00:00:00');
+            const fechaFinObj = new Date(fechaFin + 'T00:00:00');
+            
+            if (fechaInicioObj < hoy) {
+                mostrarNotificacion('❌ La fecha de inicio no puede ser anterior a hoy', 'error');
+                return false;
+            }
+            
+            if (fechaFinObj < hoy) {
+                mostrarNotificacion('❌ La fecha de fin no puede ser anterior a hoy', 'error');
+                return false;
+            }
+            
             // Validar que la fecha de inicio no sea posterior a la fecha de fin
-            if (new Date(fechaInicio) > new Date(fechaFin)) {
+            if (fechaInicioObj > fechaFinObj) {
                 mostrarNotificacion('❌ La fecha de inicio no puede ser posterior a la fecha de fin', 'error');
                 return false;
             }
@@ -2660,18 +2652,8 @@
                 console.error('❌ Elemento detalle-fecha-fin no encontrado');
             }
             
-            // Para fechas de inscripción, pueden no estar en CursoDetalle
-            const fechaInscripcionElement = document.getElementById('detalle-fecha-inscripcion');
-            if (fechaInscripcionElement) fechaInscripcionElement.textContent = '-';
-            
-            const fechaLimiteElement = document.getElementById('detalle-fecha-limite');
-            if (fechaLimiteElement) fechaLimiteElement.textContent = '-';
-            
-            // Capacidad - usar cupos que es el campo real
+            // Cupos
             const cupos = oferta.cupos || '-';
-            const capacidadMinElement = document.getElementById('detalle-capacidad-min');
-            if (capacidadMinElement) capacidadMinElement.textContent = '-'; // No disponible en CursoDetalle
-            
             const capacidadMaxElement = document.getElementById('detalle-capacidad-max');
             if (capacidadMaxElement) {
                 capacidadMaxElement.textContent = cupos;
@@ -2684,9 +2666,10 @@
             const categoriasContainer = document.getElementById('detalle-categorias');
             if (categoriasContainer) {
                 if (oferta.categorias && oferta.categorias.length > 0) {
-                    categoriasContainer.innerHTML = oferta.categorias.map(cat => 
-                        `<span class="categoria-chip">${cat}</span>`
-                    ).join('');
+                    categoriasContainer.innerHTML = oferta.categorias.map(cat => {
+                        const nombre = typeof cat === 'object' ? (cat.nombre || cat) : cat;
+                        return `<span class="categoria-chip">${nombre}</span>`;
+                    }).join('');
                 } else {
                     categoriasContainer.innerHTML = '<span class="text-muted">Sin categorías</span>';
                 }
@@ -2758,14 +2741,10 @@
             const seccion = document.getElementById('datos-curso');
             seccion.style.display = 'block';
             
-            document.getElementById('detalle-curso-costo-cuota').textContent = 
-                oferta.costoCuota ? `$${oferta.costoCuota.toLocaleString()}` : '-';
-            document.getElementById('detalle-curso-nro-cuotas').textContent = oferta.nrCuotas || '-';
-            document.getElementById('detalle-curso-costo-mora').textContent = 
-                oferta.costoMora ? `$${oferta.costoMora.toLocaleString()}` : '-';
-            document.getElementById('detalle-curso-dia-vencimiento').textContent = oferta.diaVencimiento || '-';
+            // Temario
+            document.getElementById('detalle-curso-temario').textContent = oferta.temario || 'Sin temario definido';
             
-            // Docentes
+            // Docentes a Cargo
             const docentesContainer = document.getElementById('detalle-curso-docentes');
             if (oferta.docentes && oferta.docentes.length > 0) {
                 docentesContainer.innerHTML = oferta.docentes.map(docente => `
@@ -2773,26 +2752,12 @@
                         <i class="fas fa-user-tie"></i>
                         <div class="docente-info">
                             <div class="docente-nombre">${docente.nombre} ${docente.apellido || ''}</div>
-                            <div class="docente-especialidad">${docente.especialidad || 'Sin especialidad'}</div>
+                            ${docente.matricula ? `<div class="docente-especialidad">Matrícula: ${docente.matricula}</div>` : ''}
                         </div>
                     </div>
                 `).join('');
             } else {
                 docentesContainer.innerHTML = '<span class="text-muted">Sin docentes asignados</span>';
-            }
-            
-            // Horarios (si están disponibles)
-            const horariosContainer = document.getElementById('detalle-curso-horarios');
-            if (oferta.horarios && oferta.horarios.length > 0) {
-                horariosContainer.innerHTML = oferta.horarios.map(horario => `
-                    <div class="horario-item">
-                        <i class="fas fa-clock"></i>
-                        <span class="horario-dia">${horario.dia}</span>
-                        <span class="horario-horas">${horario.horaInicio} - ${horario.horaFin}</span>
-                    </div>
-                `).join('');
-            } else {
-                horariosContainer.innerHTML = '<span class="text-muted">Sin horarios definidos</span>';
             }
             
             console.log('📚 Datos de curso cargados');
@@ -2802,14 +2767,10 @@
             const seccion = document.getElementById('datos-formacion');
             seccion.style.display = 'block';
             
-            document.getElementById('detalle-formacion-costo-cuota').textContent = 
-                oferta.costoCuota ? `$${oferta.costoCuota.toLocaleString()}` : '-';
-            document.getElementById('detalle-formacion-nro-cuotas').textContent = oferta.nrCuotas || '-';
-            document.getElementById('detalle-formacion-costo-mora').textContent = 
-                oferta.costoMora ? `$${oferta.costoMora.toLocaleString()}` : '-';
-            document.getElementById('detalle-formacion-dia-vencimiento').textContent = oferta.diaVencimiento || '-';
+            // Plan de Formación
+            document.getElementById('detalle-formacion-plan').textContent = oferta.plan || 'Sin plan definido';
             
-            // Docentes
+            // Docentes a Cargo
             const docentesContainer = document.getElementById('detalle-formacion-docentes');
             if (oferta.docentes && oferta.docentes.length > 0) {
                 docentesContainer.innerHTML = oferta.docentes.map(docente => `
@@ -2817,26 +2778,12 @@
                         <i class="fas fa-user-tie"></i>
                         <div class="docente-info">
                             <div class="docente-nombre">${docente.nombre} ${docente.apellido || ''}</div>
-                            <div class="docente-especialidad">${docente.especialidad || 'Sin especialidad'}</div>
+                            ${docente.matricula ? `<div class="docente-especialidad">Matrícula: ${docente.matricula}</div>` : ''}
                         </div>
                     </div>
                 `).join('');
             } else {
                 docentesContainer.innerHTML = '<span class="text-muted">Sin docentes asignados</span>';
-            }
-            
-            // Horarios
-            const horariosContainer = document.getElementById('detalle-formacion-horarios');
-            if (oferta.horarios && oferta.horarios.length > 0) {
-                horariosContainer.innerHTML = oferta.horarios.map(horario => `
-                    <div class="horario-item">
-                        <i class="fas fa-clock"></i>
-                        <span class="horario-dia">${horario.dia}</span>
-                        <span class="horario-horas">${horario.horaInicio} - ${horario.horaFin}</span>
-                    </div>
-                `).join('');
-            } else {
-                horariosContainer.innerHTML = '<span class="text-muted">Sin horarios definidos</span>';
             }
             
             console.log('🎓 Datos de formación cargados');
@@ -2846,6 +2793,21 @@
             const seccion = document.getElementById('datos-charla');
             seccion.style.display = 'block';
             
+            // Lugar
+            document.getElementById('detalle-charla-lugar').textContent = oferta.lugar || '-';
+            
+            // Enlace
+            const enlaceSpan = document.getElementById('detalle-charla-enlace');
+            if (oferta.enlace) {
+                enlaceSpan.innerHTML = `<a href="${oferta.enlace}" target="_blank">${oferta.enlace}</a>`;
+            } else {
+                enlaceSpan.textContent = '-';
+            }
+            
+            // Público Objetivo
+            document.getElementById('detalle-charla-publico').textContent = oferta.publicoObjetivo || 'No especificado';
+            
+            // Disertantes
             const disertantesContainer = document.getElementById('detalle-charla-disertantes');
             if (oferta.disertantes && oferta.disertantes.length > 0) {
                 disertantesContainer.innerHTML = oferta.disertantes.map(disertante => `
@@ -2867,6 +2829,21 @@
             const seccion = document.getElementById('datos-seminario');
             seccion.style.display = 'block';
             
+            // Lugar
+            document.getElementById('detalle-seminario-lugar').textContent = oferta.lugar || '-';
+            
+            // Enlace
+            const enlaceSpan = document.getElementById('detalle-seminario-enlace');
+            if (oferta.enlace) {
+                enlaceSpan.innerHTML = `<a href="${oferta.enlace}" target="_blank">${oferta.enlace}</a>`;
+            } else {
+                enlaceSpan.textContent = '-';
+            }
+            
+            // Público Objetivo
+            document.getElementById('detalle-seminario-publico').textContent = oferta.publicoObjetivo || 'No especificado';
+            
+            // Disertantes
             const disertantesContainer = document.getElementById('detalle-seminario-disertantes');
             if (oferta.disertantes && oferta.disertantes.length > 0) {
                 disertantesContainer.innerHTML = oferta.disertantes.map(disertante => `
@@ -3500,32 +3477,196 @@
                     }
                 }
                 
-                // Mostrar campos específicos según el tipo
-                mostrarCamposEspecificos(oferta.tipo || oferta.tipoOferta);
-                
-                // Campos específicos según el tipo
-                const tipoOferta = oferta.tipo || oferta.tipoOferta;
-                if (tipoOferta === 'CURSO') {
-                    if (document.getElementById('costoCuota')) document.getElementById('costoCuota').value = oferta.costoCuota || '';
-                    if (document.getElementById('costoMora')) document.getElementById('costoMora').value = oferta.costoMora || '';
-                    if (document.getElementById('nrCuotas')) document.getElementById('nrCuotas').value = oferta.nrCuotas || '';
-                    if (document.getElementById('diaVencimiento')) document.getElementById('diaVencimiento').value = oferta.diaVencimiento || '';
-                    
-                } else if (tipoOferta === 'FORMACION') {
-                    if (document.getElementById('costoCuotaFormacion')) document.getElementById('costoCuotaFormacion').value = oferta.costoCuota || '';
-                    if (document.getElementById('costoMoraFormacion')) document.getElementById('costoMoraFormacion').value = oferta.costoMora || '';
-                    if (document.getElementById('nrCuotasFormacion')) document.getElementById('nrCuotasFormacion').value = oferta.nrCuotas || '';
-                    if (document.getElementById('diaVencimientoFormacion')) document.getElementById('diaVencimientoFormacion').value = oferta.diaVencimiento || '';
-                    
-                } else if (tipoOferta === 'CHARLA') {
-                    if (document.getElementById('costoInscripcionCharla')) document.getElementById('costoInscripcionCharla').value = oferta.costoInscripcion || oferta.costo || '';
-                    
-                } else if (tipoOferta === 'SEMINARIO') {
-                    if (document.getElementById('costoInscripcionSeminario')) document.getElementById('costoInscripcionSeminario').value = oferta.costoInscripcion || oferta.costo || '';
+                // Costo de inscripción general
+                if (document.getElementById('costoInscripcion')) {
+                    document.getElementById('costoInscripcion').value = oferta.costoInscripcion || '';
                 }
                 
-                // TODO: Cargar categorías
-                // TODO: Mostrar imagen existente si la hay
+                // Mostrar campos específicos según el tipo
+                const tipoOferta = oferta.tipo || oferta.tipoOferta;
+                mostrarCamposEspecificos(tipoOferta);
+                
+                // Dar tiempo a que se muestren los campos antes de poblarlos
+                setTimeout(() => {
+                    // Campos específicos según el tipo
+                    if (tipoOferta === 'CURSO') {
+                        console.log('📚 Cargando datos de CURSO');
+                        if (document.getElementById('temario')) {
+                            document.getElementById('temario').value = oferta.temario || '';
+                            console.log('✅ Temario cargado:', oferta.temario);
+                        }
+                        if (document.getElementById('costoCuota')) {
+                            document.getElementById('costoCuota').value = oferta.costoCuota || '';
+                        }
+                        if (document.getElementById('costoMora')) {
+                            document.getElementById('costoMora').value = oferta.costoMora || '';
+                        }
+                        if (document.getElementById('nrCuotas')) {
+                            document.getElementById('nrCuotas').value = oferta.nrCuotas || '';
+                        }
+                        if (document.getElementById('diaVencimiento')) {
+                            document.getElementById('diaVencimiento').value = oferta.diaVencimiento || '';
+                        }
+                        
+                        // Cargar docentes de CURSO
+                        if (oferta.docentes && Array.isArray(oferta.docentes)) {
+                            console.log('👨‍🏫 Cargando docentes de CURSO:', oferta.docentes.length);
+                            docentesSeleccionados.curso = [];
+                            const tablaCurso = document.getElementById('docentes-table');
+                            if (tablaCurso) {
+                                const tbody = tablaCurso.querySelector('tbody');
+                                tbody.innerHTML = '';
+                                
+                                oferta.docentes.forEach(docente => {
+                                    const id = docente.id;
+                                    const nombre = `${docente.nombre} ${docente.apellido}`;
+                                    docentesSeleccionados.curso.push({ id, nombre });
+                                    
+                                    const fila = document.createElement('tr');
+                                    fila.innerHTML = `
+                                        <td>${nombre}</td>
+                                        <td>
+                                            <button type="button" class="btn-remove" 
+                                                    onclick="removerDocente('${id}', 'docentes-table', this)">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </td>
+                                    `;
+                                    tbody.appendChild(fila);
+                                });
+                                
+                                actualizarDocentesHidden('curso');
+                                console.log('✅ Docentes de CURSO cargados:', docentesSeleccionados.curso.length);
+                            }
+                        }
+                        
+                    } else if (tipoOferta === 'FORMACION') {
+                        console.log('🎓 Cargando datos de FORMACION');
+                        if (document.getElementById('planFormacion')) {
+                            document.getElementById('planFormacion').value = oferta.plan || '';
+                            console.log('✅ Plan cargado:', oferta.plan);
+                        }
+                        if (document.getElementById('costoCuotaFormacion')) {
+                            document.getElementById('costoCuotaFormacion').value = oferta.costoCuota || '';
+                            console.log('✅ Costo cuota cargado:', oferta.costoCuota);
+                        }
+                        if (document.getElementById('costoMoraFormacion')) {
+                            document.getElementById('costoMoraFormacion').value = oferta.costoMora || '';
+                            console.log('✅ Costo mora cargado:', oferta.costoMora);
+                        }
+                        if (document.getElementById('nrCuotasFormacion')) {
+                            document.getElementById('nrCuotasFormacion').value = oferta.nrCuotas || '';
+                            console.log('✅ Nro cuotas cargado:', oferta.nrCuotas);
+                        }
+                        if (document.getElementById('diaVencimientoFormacion')) {
+                            document.getElementById('diaVencimientoFormacion').value = oferta.diaVencimiento || '';
+                            console.log('✅ Día vencimiento cargado:', oferta.diaVencimiento);
+                        }
+                        
+                        // Cargar docentes si existen
+                        if (oferta.docentes && Array.isArray(oferta.docentes)) {
+                            console.log('👨‍🏫 Cargando docentes:', oferta.docentes.length);
+                            docentesSeleccionados.formacion = [];
+                            const tablaFormacion = document.getElementById('docentes-table-formacion');
+                            if (tablaFormacion) {
+                                const tbody = tablaFormacion.querySelector('tbody');
+                                tbody.innerHTML = '';
+                                
+                                oferta.docentes.forEach(docente => {
+                                    const id = docente.id;
+                                    const nombre = `${docente.nombre} ${docente.apellido}`;
+                                    docentesSeleccionados.formacion.push({ id, nombre });
+                                    
+                                    const fila = document.createElement('tr');
+                                    fila.innerHTML = `
+                                        <td>${nombre}</td>
+                                        <td>
+                                            <button type="button" class="btn-remove" 
+                                                    onclick="removerDocente('${id}', 'docentes-table-formacion', this)">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </td>
+                                    `;
+                                    tbody.appendChild(fila);
+                                });
+                                
+                                actualizarDocentesHidden('formacion');
+                                console.log('✅ Docentes cargados:', docentesSeleccionados.formacion.length);
+                            }
+                        }
+                        
+                    } else if (tipoOferta === 'CHARLA') {
+                        console.log('🎤 Cargando datos de CHARLA');
+                        if (document.getElementById('lugarCharla')) {
+                            document.getElementById('lugarCharla').value = oferta.lugar || '';
+                        }
+                        if (document.getElementById('enlaceCharla')) {
+                            document.getElementById('enlaceCharla').value = oferta.enlace || '';
+                        }
+                        if (document.getElementById('duracionEstimada')) {
+                            document.getElementById('duracionEstimada').value = oferta.duracionEstimada || '';
+                        }
+                        if (document.getElementById('publicoObjetivoCharla')) {
+                            document.getElementById('publicoObjetivoCharla').value = oferta.publicoObjetivo || '';
+                        }
+                        
+                        // Cargar disertantes
+                        if (oferta.disertantes && Array.isArray(oferta.disertantes)) {
+                            disertantesCharla = [...oferta.disertantes];
+                            actualizarDisertantesChips('charla');
+                            console.log('✅ Disertantes charla cargados:', disertantesCharla.length);
+                        }
+                        
+                    } else if (tipoOferta === 'SEMINARIO') {
+                        console.log('🏛️ Cargando datos de SEMINARIO');
+                        if (document.getElementById('lugarSeminario')) {
+                            document.getElementById('lugarSeminario').value = oferta.lugar || '';
+                        }
+                        if (document.getElementById('enlaceSeminario')) {
+                            document.getElementById('enlaceSeminario').value = oferta.enlace || '';
+                        }
+                        if (document.getElementById('duracionMinutos')) {
+                            document.getElementById('duracionMinutos').value = oferta.duracionMinutos || '';
+                        }
+                        if (document.getElementById('publicoObjetivoSeminario')) {
+                            document.getElementById('publicoObjetivoSeminario').value = oferta.publicoObjetivo || '';
+                        }
+                        
+                        // Cargar disertantes
+                        if (oferta.disertantes && Array.isArray(oferta.disertantes)) {
+                            disertantesSeminario = [...oferta.disertantes];
+                            actualizarDisertantesChips('seminario');
+                            console.log('✅ Disertantes seminario cargados:', disertantesSeminario.length);
+                        }
+                    }
+                    
+                    console.log('✅ Campos específicos cargados');
+                }, 100);
+                
+                // Cargar categorías
+                if (oferta.categorias && Array.isArray(oferta.categorias)) {
+                    categoriasSeleccionadas = oferta.categorias.map(cat => ({
+                        id: cat.id.toString(),
+                        nombre: cat.nombre
+                    }));
+                    actualizarCategoriasChips();
+                    console.log('✅ Categorías cargadas:', categoriasSeleccionadas.length);
+                }
+                
+                // Cargar horarios si existen
+                if (oferta.horarios && Array.isArray(oferta.horarios)) {
+                    console.log('🕒 Horarios recibidos:', oferta.horarios);
+                    horariosSeleccionados = oferta.horarios.map(h => {
+                        console.log('  - Horario individual:', h);
+                        return {
+                            dia: h.dia || h.diaSemana,
+                            horaInicio: h.horaInicio,
+                            horaFin: h.horaFin
+                        };
+                    });
+                    actualizarHorariosChips();
+                    console.log('✅ Horarios cargados:', horariosSeleccionados.length, horariosSeleccionados);
+                }
                 
                 console.log('✅ Formulario poblado exitosamente');
                 
@@ -3543,6 +3684,13 @@
             if (formContainer) {
                 formContainer.style.display = 'block';
                 formContainer.classList.add('show');
+                
+                // ✅ Establecer fecha mínima como hoy
+                const hoy = new Date().toISOString().split('T')[0];
+                const fechaInicio = document.getElementById('fechaInicio');
+                const fechaFin = document.getElementById('fechaFin');
+                if (fechaInicio) fechaInicio.setAttribute('min', hoy);
+                if (fechaFin) fechaFin.setAttribute('min', hoy);
                 
                 // Scroll hasta el formulario
                 formContainer.scrollIntoView({ behavior: 'smooth' });

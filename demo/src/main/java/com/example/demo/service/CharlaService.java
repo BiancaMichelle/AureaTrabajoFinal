@@ -76,6 +76,7 @@ public class CharlaService {
             datosNuevos.getCupos(),
             datosNuevos.getVisibilidad(),
             datosNuevos.getCostoInscripcion(),
+            0.0,
             datosNuevos.getCertificado()
         );
         

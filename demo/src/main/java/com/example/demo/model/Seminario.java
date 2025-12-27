@@ -298,6 +298,18 @@ public class Seminario extends OfertaAcademica {
         detalle.setDuracionMinutos(this.duracionMinutos);
         detalle.setDisertantes(this.disertantes != null ? this.disertantes : new ArrayList<>());
         
+        // Convertir categorías a DTO simple
+        List<CategoriaSimple> categoriasSimples = new ArrayList<>();
+        if (this.getCategorias() != null) {
+            for (Categoria categoria : this.getCategorias()) {
+                categoriasSimples.add(new CategoriaSimple(
+                    categoria.getIdCategoria(),
+                    categoria.getNombre()
+                ));
+            }
+        }
+        detalle.setCategorias(categoriasSimples);
+        
         // Información adicional
         detalle.setTotalInscripciones(this.getInscripciones() != null ? this.getInscripciones().size() : 0);
         detalle.setInscripcionesActivas(this.getInscripciones() != null ? 
@@ -309,6 +321,25 @@ public class Seminario extends OfertaAcademica {
         return detalle;
     }
 
+    /**
+     * DTO simple para categorías (evita referencia circular)
+     */
+    public static class CategoriaSimple {
+        private Long id;
+        private String nombre;
+        
+        public CategoriaSimple(Long id, String nombre) {
+            this.id = id;
+            this.nombre = nombre;
+        }
+        
+        public Long getId() { return id; }
+        public void setId(Long id) { this.id = id; }
+        
+        public String getNombre() { return nombre; }
+        public void setNombre(String nombre) { this.nombre = nombre; }
+    }
+    
     /**
      * Clase interna para encapsular los detalles del seminario
      */
@@ -332,6 +363,7 @@ public class Seminario extends OfertaAcademica {
         private String publicoObjetivo;
         private Integer duracionMinutos;
         private List<String> disertantes;
+        private List<CategoriaSimple> categorias;
         
         // Información adicional
         private int totalInscripciones;
@@ -389,6 +421,9 @@ public class Seminario extends OfertaAcademica {
         
         public List<String> getDisertantes() { return disertantes; }
         public void setDisertantes(List<String> disertantes) { this.disertantes = disertantes; }
+        
+        public List<CategoriaSimple> getCategorias() { return categorias; }
+        public void setCategorias(List<CategoriaSimple> categorias) { this.categorias = categorias; }
         
         public int getTotalInscripciones() { return totalInscripciones; }
         public void setTotalInscripciones(int totalInscripciones) { this.totalInscripciones = totalInscripciones; }

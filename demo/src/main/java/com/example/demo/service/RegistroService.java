@@ -107,18 +107,72 @@ public class RegistroService {
     // 📧 MÉTODO PARA ENVIAR EMAIL (se mantiene igual)
     private void enviarCredencialesPorEmail(String correo, String nombre, String contraseña, String rol) {
         try {
-            String subject = "Bienvenido a Espacio Virtual ICEP - Sus Credenciales de Acceso";
+            String subject = "🎓 Bienvenido a Espacio Virtual ICEP - Sus Credenciales de Acceso";
             String body = String.format(
-                "Estimado/a %s,\n\n" +
-                "Le damos la bienvenida a Espacio Virtual ICEP.\n\n" +
-                "Sus credenciales de acceso son:\n" +
-                "Correo electrónico: %s\n" +
-                "Contraseña temporal: %s\n" +
-                "Rol: %s\n\n" +
-                "Por su seguridad, le recomendamos cambiar su contraseña después del primer acceso.\n\n" +
-                "Puede acceder al sistema en: http://localhost:8080/login\n\n" +
-                "Saludos cordiales,\n" +
-                "Equipo Espacio Virtual ICEP",
+                "<!DOCTYPE html>" +
+                "<html>" +
+                "<head>" +
+                "    <meta charset='UTF-8'>" +
+                "    <style>" +
+                "        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }" +
+                "        .container { max-width: 600px; margin: 30px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }" +
+                "        .header { background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); color: white; padding: 30px; text-align: center; }" +
+                "        .header h1 { margin: 0; font-size: 28px; }" +
+                "        .content { padding: 30px; color: #333; }" +
+                "        .welcome { font-size: 18px; color: #555; margin-bottom: 20px; }" +
+                "        .credentials-box { background: #f8f9fa; border-left: 4px solid #667eea; padding: 20px; margin: 20px 0; border-radius: 5px; }" +
+                "        .credential-item { margin: 10px 0; font-size: 15px; }" +
+                "        .credential-label { font-weight: bold; color: #667eea; display: inline-block; width: 180px; }" +
+                "        .credential-value { color: #333; font-family: 'Courier New', monospace; background: white; padding: 5px 10px; border-radius: 3px; }" +
+                "        .alert-box { background: #fff3cd; border: 1px solid #ffc107; border-radius: 5px; padding: 15px; margin: 20px 0; }" +
+                "        .alert-icon { color: #ff9800; font-size: 20px; }" +
+                "        .btn { display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }" +
+                "        .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #777; font-size: 13px; }" +
+                "        .divider { height: 2px; background: linear-gradient(to right, transparent, #667eea, transparent); margin: 20px 0; }" +
+                "    </style>" +
+                "</head>" +
+                "<body>" +
+                "    <div class='container'>" +
+                "        <div class='header'>" +
+                "            <h1>🎓 Espacio Virtual ICEP</h1>" +
+                "            <p style='margin: 10px 0 0 0; font-size: 14px;'>Tu plataforma de educación virtual</p>" +
+                "        </div>" +
+                "        <div class='content'>" +
+                "            <p class='welcome'>Estimado/a <strong>%s</strong>,</p>" +
+                "            <p>¡Le damos la más cordial bienvenida a <strong>Espacio Virtual ICEP</strong>! Nos complace tenerle como parte de nuestra comunidad educativa.</p>" +
+                "            <div class='divider'></div>" +
+                "            <h3 style='color: #667eea;'>📋 Sus Credenciales de Acceso</h3>" +
+                "            <div class='credentials-box'>" +
+                "                <div class='credential-item'>" +
+                "                    <span class='credential-label'>📧 Correo electrónico:</span>" +
+                "                    <span class='credential-value'>%s</span>" +
+                "                </div>" +
+                "                <div class='credential-item'>" +
+                "                    <span class='credential-label'>🔑 Contraseña temporal:</span>" +
+                "                    <span class='credential-value'>%s</span>" +
+                "                </div>" +
+                "                <div class='credential-item'>" +
+                "                    <span class='credential-label'>👤 Rol asignado:</span>" +
+                "                    <span class='credential-value'>%s</span>" +
+                "                </div>" +
+                "            </div>" +
+                "            <div class='alert-box'>" +
+                "                <p style='margin: 0;'><span class='alert-icon'>⚠️</span> <strong>Importante:</strong> Por su seguridad, le recomendamos cambiar su contraseña después del primer acceso al sistema.</p>" +
+                "            </div>" +
+                "            <div style='text-align: center;'>" +
+                "                <a href='http://localhost:8080/login' class='btn'>🚀 Acceder al Sistema</a>" +
+                "            </div>" +
+                "            <div class='divider'></div>" +
+                "            <p style='font-size: 14px; color: #777;'>Si tiene alguna dificultad para acceder o necesita asistencia, no dude en contactarnos.</p>" +
+                "        </div>" +
+                "        <div class='footer'>" +
+                "            <p style='margin: 5px 0;'><strong>Espacio Virtual ICEP</strong></p>" +
+                "            <p style='margin: 5px 0;'>© 2025 - Todos los derechos reservados</p>" +
+                "            <p style='margin: 5px 0; font-size: 11px;'>Este es un mensaje automático, por favor no responda a este correo.</p>" +
+                "        </div>" +
+                "    </div>" +
+                "</body>" +
+                "</html>",
                 nombre, correo, contraseña, rol
             );
             

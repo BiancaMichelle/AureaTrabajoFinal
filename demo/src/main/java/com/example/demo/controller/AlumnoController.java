@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.time.temporal.ChronoUnit;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -41,6 +42,7 @@ import com.example.demo.model.Examen;
 import com.example.demo.model.Intento;
 import com.example.demo.model.Formacion;
 import com.example.demo.model.Inscripciones;
+import com.example.demo.model.Instituto;
 import com.example.demo.model.Modulo;
 import com.example.demo.model.OfertaAcademica;
 import com.example.demo.model.Pago;
@@ -53,6 +55,7 @@ import com.example.demo.repository.OfertaAcademicaRepository;
 import com.example.demo.repository.UsuarioRepository;
 import com.example.demo.repository.PagoRepository;
 import com.example.demo.service.MercadoPagoService;
+import com.example.demo.service.InstitutoService;
 
 @Controller
 @RequestMapping("/alumno")
@@ -155,14 +158,14 @@ public class AlumnoController {
                 }
             }
             
-            // Obtener TODOS los pagos (de inscripción y de cuotas)
+            // Obtener SOLO pagos COMPLETADOS (inscripciones y cuotas pagadas)
             List<Pago> pagosRealizados = pagoRepository.findByUsuarioId(alumno.getId()).stream()
+                .filter(p -> p.getEstadoPago() == EstadoPago.COMPLETADO)
                 .sorted(Comparator.comparing(this::obtenerFechaReferencia,
                     Comparator.nullsLast(Comparator.naturalOrder())).reversed())
                 .collect(Collectors.toList());
 
             BigDecimal totalPagado = pagosRealizados.stream()
-                .filter(p -> p.getEstadoPago() == EstadoPago.COMPLETADO)
                 .map(Pago::getMonto)
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -175,22 +178,83 @@ public class AlumnoController {
                     Comparator.nullsLast(LocalDate::compareTo)))
                 .collect(Collectors.toList());
 
-            // Actualizar estados de cuotas vencidas
+            // Actualizar estados de cuotas vencidas y aplicar MORA
             todasLasCuotas.forEach(cuota -> {
                 if (cuota.getEstado() == EstadoCuota.PENDIENTE && 
                     cuota.getFechaVencimiento() != null && 
                     cuota.getFechaVencimiento().isBefore(hoy)) {
+                    
                     cuota.setEstado(EstadoCuota.VENCIDA);
+                    
+                    // Aplicar recargo por mora si existe en la oferta
+                    if (cuota.getInscripcion() != null && cuota.getInscripcion().getOferta() != null) {
+                        Double recargo = cuota.getInscripcion().getOferta().getRecargoMora();
+                        if (recargo != null && recargo > 0) {
+                            BigDecimal recargoBD = BigDecimal.valueOf(recargo);
+                            // Sumar recargo al monto actual
+                            cuota.setMonto(cuota.getMonto().add(recargoBD));
+                        }
+                    }
+                    
                     cuotaRepository.save(cuota);
                 }
             });
 
-            // Filtrar solo cuotas NO pagadas
-            List<Cuota> cuotasActivas = todasLasCuotas.stream()
+            // Filtrar cuotas visibles según lógica de fechas
+            // Regla: Mostrar cuota 1. Mostrar cuota N solo si hoy > fechaVencimiento(N-1).
+            List<Cuota> cuotasVisibles = new java.util.ArrayList<>();
+            if (!todasLasCuotas.isEmpty()) {
+                // Agrupar cuotas por inscripción para aplicar la lógica por curso
+                Map<Long, List<Cuota>> cuotasPorInscripcion = todasLasCuotas.stream()
+                    .filter(c -> c.getInscripcion() != null)
+                    .collect(Collectors.groupingBy(c -> c.getInscripcion().getIdInscripcion()));
+
+                for (List<Cuota> cuotasCurso : cuotasPorInscripcion.values()) {
+                    // Ordenar por fecha de vencimiento
+                    cuotasCurso.sort(Comparator.comparing(Cuota::getFechaVencimiento));
+                    
+                    for (int i = 0; i < cuotasCurso.size(); i++) {
+                        Cuota actual = cuotasCurso.get(i);
+                        if (i == 0) {
+                            // La primera cuota siempre es visible
+                            cuotasVisibles.add(actual);
+                        } else {
+                            // Cuotas subsiguientes: visibles solo si la anterior ya venció Y está pagada
+                            Cuota anterior = cuotasCurso.get(i - 1);
+                            boolean anteriorPagada = anterior.getEstado() == EstadoCuota.PAGADA;
+                            boolean fechaVencida = anterior.getFechaVencimiento() != null && hoy.isAfter(anterior.getFechaVencimiento());
+                            
+                            if (anteriorPagada && fechaVencida) {
+                                cuotasVisibles.add(actual);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Ordenar cuotas visibles para la vista
+            cuotasVisibles.sort(Comparator.comparing(Cuota::getFechaVencimiento, Comparator.nullsLast(LocalDate::compareTo)));
+
+            // Filtrar solo cuotas NO pagadas de las visibles
+            List<Cuota> cuotasActivas = cuotasVisibles.stream()
                 .filter(c -> c.getEstado() != EstadoCuota.PAGADA && c.getEstado() != EstadoCuota.CANCELADA)
                 .collect(Collectors.toList());
 
-            // Encontrar la primera cuota pendiente o vencida para mostrar el botón de pago
+            // Encontrar la primera cuota pendiente POR INSCRIPCIÓN para mostrar el botón de pagar
+            Map<Long, Cuota> cuotasPendientesPorInscripcion = new java.util.HashMap<>();
+            for (Cuota cuota : cuotasActivas) {
+                if ((cuota.getEstado() == EstadoCuota.PENDIENTE || cuota.getEstado() == EstadoCuota.VENCIDA) 
+                    && cuota.getInscripcion() != null) {
+                    Long inscripcionId = cuota.getInscripcion().getIdInscripcion();
+                    // Si no hay cuota para esta inscripción o es anterior, guardar
+                    if (!cuotasPendientesPorInscripcion.containsKey(inscripcionId) ||
+                        cuota.getFechaVencimiento().isBefore(cuotasPendientesPorInscripcion.get(inscripcionId).getFechaVencimiento())) {
+                        cuotasPendientesPorInscripcion.put(inscripcionId, cuota);
+                    }
+                }
+            }
+
+            // Para retrocompatibilidad, obtener la primera cuota pendiente global
             Cuota cuotaPendiente = cuotasActivas.stream()
                 .filter(c -> c.getEstado() == EstadoCuota.PENDIENTE || c.getEstado() == EstadoCuota.VENCIDA)
                 .min(Comparator.comparing(Cuota::getFechaVencimiento, Comparator.nullsLast(LocalDate::compareTo)))
@@ -212,8 +276,9 @@ public class AlumnoController {
 
             model.addAttribute("alumno", alumno);
             model.addAttribute("pagos", pagosRealizados);
-            model.addAttribute("cuotas", todasLasCuotas); // Todas las cuotas para el historial
+            model.addAttribute("cuotas", cuotasVisibles); // Usar cuotasVisibles en lugar de todasLasCuotas
             model.addAttribute("cuotaPendiente", cuotaPendiente);
+            model.addAttribute("cuotasPendientesPorInscripcion", cuotasPendientesPorInscripcion);
             model.addAttribute("montoCuotaPendienteTexto", formatearMoneda(montoCuotaPendiente));
             model.addAttribute("totalPagadoTexto", formatearMoneda(totalPagado));
             model.addAttribute("totalPendienteTexto", formatearMoneda(totalPendiente));
@@ -236,6 +301,7 @@ public class AlumnoController {
     private final MercadoPagoService mercadoPagoService;
     private final PagoRepository pagoRepository;
     private final CuotaRepository cuotaRepository;
+    private final InstitutoService institutoService;
 
     public AlumnoController(OfertaAcademicaRepository ofertaAcademicaRepository,
                           InscripcionRepository inscripcionRepository,
@@ -244,7 +310,8 @@ public class AlumnoController {
                           IntentoRepository intentoRepository,
                           MercadoPagoService mercadoPagoService,
                           PagoRepository pagoRepository,
-                          CuotaRepository cuotaRepository) {
+                          CuotaRepository cuotaRepository,
+                          InstitutoService institutoService) {
         this.ofertaAcademicaRepository = ofertaAcademicaRepository;
         this.inscripcionRepository = inscripcionRepository;
         this.usuarioRepository = usuarioRepository;
@@ -253,6 +320,7 @@ public class AlumnoController {
         this.mercadoPagoService = mercadoPagoService;
         this.pagoRepository = pagoRepository;
         this.cuotaRepository = cuotaRepository;
+        this.institutoService = institutoService;
     }
 
     private BigDecimal calcularSaldoPendiente(Cuota cuota) {
@@ -281,6 +349,26 @@ public class AlumnoController {
             return "Sin fecha";
         }
         return FORMATO_FECHA_RESUMEN.format(fecha);
+    }
+
+    private int obtenerMaxDiasMora(Inscripciones inscripcion) {
+        try {
+            List<Cuota> cuotas = cuotaRepository.findByInscripcionIdInscripcion(inscripcion.getIdInscripcion());
+            if (cuotas == null || cuotas.isEmpty()) {
+                return 0;
+            }
+            LocalDate hoy = LocalDate.now();
+            return cuotas.stream()
+                    .filter(c -> c.getFechaVencimiento() != null)
+                    .filter(c -> c.getEstado() != EstadoCuota.PAGADA)
+                    .mapToInt(c -> (int) ChronoUnit.DAYS.between(c.getFechaVencimiento(), hoy))
+                    .filter(dias -> dias > 0)
+                    .max()
+                    .orElse(0);
+        } catch (Exception e) {
+            System.out.println("⚠️ No se pudo calcular días de mora: " + e.getMessage());
+            return 0;
+        }
     }
 
     private ReferenceRequest construirReferenciaCuota(Cuota cuota, Usuario alumno, BigDecimal montoPendiente) {
@@ -338,6 +426,12 @@ public class AlumnoController {
             
             if (yaInscrito) {
                 redirectAttributes.addFlashAttribute("error", "Ya estás inscrito en esta oferta");
+                return "redirect:/publico";
+            }
+            
+            // ✅ Verificar cupos disponibles
+            if (!oferta.tieneCuposDisponibles()) {
+                redirectAttributes.addFlashAttribute("error", "No hay cupos disponibles para esta oferta");
                 return "redirect:/publico";
             }
 
@@ -436,6 +530,30 @@ public class AlumnoController {
 
             OfertaAcademica oferta = inscripcion.getOferta();
             System.out.println("📚 Oferta encontrada: " + oferta.getNombre() + ", tipo: " + oferta.getClass().getSimpleName());
+
+            // Verificar bloqueo por mora en aula
+            Instituto instituto = institutoService.obtenerInstituto();
+            Integer limiteMoraAula = instituto != null ? instituto.getDiasMoraBloqueoAula() : null;
+            int diasMora = obtenerMaxDiasMora(inscripcion);
+            boolean bloqueadoPorMora = limiteMoraAula != null && limiteMoraAula > 0 && diasMora >= limiteMoraAula;
+
+            System.out.println("🔍 DEBUG BLOQUEO MORA:");
+            System.out.println("   - Días de mora: " + diasMora);
+            System.out.println("   - Límite configurado: " + limiteMoraAula);
+            System.out.println("   - ¿Bloqueado?: " + bloqueadoPorMora);
+
+            if (bloqueadoPorMora) {
+                System.out.println("🚫 RETORNANDO VISTA BLOQUEADA");
+                model.addAttribute("curso", oferta);
+                model.addAttribute("diasMora", Integer.valueOf(diasMora));
+                model.addAttribute("limiteMoraAula", limiteMoraAula);
+                
+                // Retornar vista especial sin layout
+                return "aula-bloqueada";
+            }
+            
+            System.out.println("✅ No hay bloqueo por mora, cargando contenido normal");
+            model.addAttribute("bloqueadoPorMora", Boolean.FALSE);
             
             // Si es un curso o formación, cargar módulos y contenido
             if (oferta instanceof Curso || oferta instanceof Formacion) {

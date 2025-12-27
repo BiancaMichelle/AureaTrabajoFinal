@@ -120,9 +120,12 @@
                     <div th:each="oferta : ${ofertas}" class="col-lg-4 col-md-6">
                         <div class="card h-100 border-0 shadow-sm">
                             <div class="card-header bg-primary text-white">
-                                <span class="badge bg-light text-primary me-2" 
-                                      th:text="${oferta.categorias != null and not #lists.isEmpty(oferta.categorias)} ? ${oferta.categorias[0].nombre} : 'General'">Categoría</span>
-                                <h5 class="card-title mb-0" th:text="${oferta.nombre}">Título de la Oferta</h5>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="badge bg-light text-primary me-2" 
+                                          th:text="${oferta.categorias != null and not #lists.isEmpty(oferta.categorias)} ? ${oferta.categorias[0].nombre} : 'General'">Categoría</span>
+                                    <span class="badge bg-warning text-dark" th:text="${oferta.tipoOferta}">TIPO</span>
+                                </div>
+                                <h5 class="card-title mb-0 mt-2" th:text="${oferta.nombre}">Título de la Oferta</h5>
                             </div>
                             <div class="card-body">
                                 <p class="card-text" th:text="${oferta.descripcion}">
@@ -145,6 +148,32 @@
                                         <small class="text-success">
                                             <i class="fas fa-certificate me-1"></i>
                                             Con Certificado
+                                        </small>
+                                    </div>
+                                    <div class="col-6" th:if="${oferta.cuposDisponibles != null}">
+                                        <small class="text-info">
+                                            <i class="fas fa-users me-1"></i>
+                                            <span th:text="${oferta.cuposDisponibles} + ' cupos'">Cupos</span>
+                                        </small>
+                                    </div>
+                                    <div class="col-6" th:if="${oferta.cuposDisponibles == null}">
+                                        <small class="text-info">
+                                            <i class="fas fa-users me-1"></i>
+                                            Sin límite
+                                        </small>
+                                    </div>
+                                    <!-- Costo mensual para Curso (usa costoCuota) -->
+                                    <div class="col-12" th:if="${oferta.tipoOferta == 'CURSO' and oferta.costoCuota != null and oferta.costoCuota > 0}">
+                                        <small class="text-primary fw-bold">
+                                            <i class="fas fa-calendar-alt me-1"></i>
+                                            Costo mensual: $<span th:text="${#numbers.formatDecimal(oferta.costoCuota, 0, 'COMMA', 2, 'POINT')}">0</span>
+                                        </small>
+                                    </div>
+                                    <!-- Costo mensual para Formación (usa costoMensual si existe) -->
+                                    <div class="col-12" th:if="${oferta.tipoOferta == 'FORMACION' and oferta.costoMensual != null and oferta.costoMensual > 0}">
+                                        <small class="text-primary fw-bold">
+                                            <i class="fas fa-calendar-alt me-1"></i>
+                                            Costo mensual: $<span th:text="${#numbers.formatDecimal(oferta.costoMensual, 0, 'COMMA', 2, 'POINT')}">0</span>
                                         </small>
                                     </div>
                                 </div>

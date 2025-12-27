@@ -20,4 +20,9 @@ public interface DocenteRepository extends JpaRepository<Docente, UUID> {
            "LOWER(d.matricula) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
            "EXISTS (SELECT r FROM d.roles r WHERE r.nombre = 'DOCENTE')")
     List<Docente> buscarPorNombreApellidoOMatricula(@Param("query") String query);
+    
+    @Query("SELECT d FROM Docente d WHERE " +
+           "EXISTS (SELECT r FROM d.roles r WHERE r.nombre = 'DOCENTE') " +
+           "ORDER BY d.apellido, d.nombre")
+    List<Docente> findAllDocentes();
 }

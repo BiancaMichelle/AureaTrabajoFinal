@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso Restringido - Aula</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mora-container {
+            max-width: 600px;
+            width: 100%;
+            padding: 20px;
+        }
+
+        .mora-card {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .mora-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 40px;
+        }
+
+        .mora-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 16px;
+        }
+
+        .mora-description {
+            color: #6b7280;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        .mora-stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 30px 0;
+            padding: 20px;
+            background: #f9fafb;
+            border-radius: 12px;
+        }
+
+        .mora-stat {
+            text-align: center;
+        }
+
+        .mora-stat-label {
+            font-size: 12px;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .mora-stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #dc2626;
+        }
+
+        .mora-stat-value.limit {
+            color: #059669;
+        }
+
+        .mora-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            color: white;
+            padding: 14px 32px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 16px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+        }
+
+        .mora-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
+            color: white;
+        }
+
+        .mora-footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        @media (max-width: 640px) {
+            .mora-card {
+                padding: 30px 20px;
+            }
+
+            .mora-stats {
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .mora-title {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="mora-container">
+        <div class="mora-card">
+            <div class="mora-icon">
+                <i class="fas fa-ban"></i>
+            </div>
+            
+            <h1 class="mora-title">Acceso Restringido</h1>
+            
+            <p class="mora-description">
+                No puede acceder al aula debido a pagos pendientes. Por favor, regularice su situación para continuar con sus estudios.
+            </p>
+
+            <div class="mora-stats">
+                <div class="mora-stat">
+                    <div class="mora-stat-label">Días de Mora</div>
+                    <div class="mora-stat-value" th:text="${diasMora != null ? diasMora : '0'}">47</div>
+                </div>
+                <div class="mora-stat">
+                    <div class="mora-stat-label">Límite Permitido</div>
+                    <div class="mora-stat-value limit" th:text="${limiteMoraAula != null ? limiteMoraAula : '0'}">16</div>
+                </div>
+            </div>
+
+            <a href="/alumno/mis-pagos" class="mora-button">
+                <i class="fas fa-credit-card"></i>
+                Ver mis pagos
+            </a>
+
+            <div class="mora-footer">
+                <p><i class="fas fa-info-circle"></i> Una vez acreditado el pago, podrá volver a acceder al aula automáticamente.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

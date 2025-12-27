@@ -41,7 +41,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 @Inheritance(strategy = InheritanceType.JOINED)
-@Table(name = "oferta_academica", uniqueConstraints = {@UniqueConstraint(name = "uk_oferta_nombre_instituto", columnNames = {"nombre", "instituto_id"})})
+@Table(name = "oferta_academica", uniqueConstraints = {@UniqueConstraint(name = "uk_oferta_nombre", columnNames = {"nombre"})})
 
 public class OfertaAcademica {
     @Id
@@ -56,6 +56,9 @@ public class OfertaAcademica {
     private Integer duracionMeses; // Duración calculada en meses
     @NotNull(message = "El costo de inscripción no puede estar vacío")
     private Double costoInscripcion;
+    
+    @Min(0)
+    private Double recargoMora;
     
 
     @OneToMany(mappedBy = "ofertaAcademica", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
@@ -73,7 +76,7 @@ public class OfertaAcademica {
     
     @Enumerated(EnumType.STRING)
     private EstadoOferta estado;
-    @Min(5)
+    @Min(1)
     private Integer cupos;
     private Boolean visibilidad;
     
@@ -166,6 +169,15 @@ public class OfertaAcademica {
     public Boolean tieneCuposDisponibles() {
         if (cupos == null) return true;
         return getPorcentajeOcupacion() < 100;
+    }
+    
+    /**
+     * Obtiene la cantidad de cupos disponibles
+     */
+    public Integer getCuposDisponibles() {
+        if (cupos == null) return null; // Sin límite
+        int ocupados = inscripciones != null ? inscripciones.size() : 0;
+        return Math.max(0, cupos - ocupados);
     }
     /**
      * Devuelve las categorías como texto para filtros
@@ -373,7 +385,7 @@ public class OfertaAcademica {
     public void modificarDatosBasicos(String nombre, String descripcion, String duracion,
                                     LocalDate fechaInicio, LocalDate fechaFin, 
                                     Modalidad modalidad, Integer cupos, Boolean visibilidad,
-                                    Double costoInscripcion, Boolean certificado) {
+                                    Double costoInscripcion, Double recargoMora, Boolean certificado) {
         if (nombre != null && !nombre.trim().isEmpty()) {
             this.nombre = nombre.trim();
         }
@@ -410,6 +422,10 @@ public class OfertaAcademica {
         
         if (costoInscripcion != null && costoInscripcion >= 0) {
             this.costoInscripcion = costoInscripcion;
+        }
+
+        if (recargoMora != null && recargoMora >= 0) {
+            this.recargoMora = recargoMora;
         }
         
         if (certificado != null) {

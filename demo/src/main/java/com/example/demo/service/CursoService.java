@@ -43,7 +43,7 @@ public class CursoService {
                 .orElseThrow(() -> new RuntimeException("Curso no encontrado"));
     }
 
-    public Modulo crearModulo(String nombre, String descripcion, String objetivos,
+    public Modulo crearModulo(String nombre, String descripcion,
             LocalDate fechaInicio, LocalDate fechaFin,
             Boolean visibilidad, Long cursoId) {
         // ✅ Buscar en OfertaAcademicaRepository para soportar Cursos Y Formaciones
@@ -61,7 +61,6 @@ public class CursoService {
         modulo.setDescripcion(descripcion);
         modulo.setFechaInicioModulo(fechaInicio);
         modulo.setFechaFinModulo(fechaFin);
-        modulo.setObjetivos(objetivos != null && !objetivos.trim().isEmpty() ? objetivos : "Objetivos del módulo");
         modulo.setVisibilidad(visibilidad != null ? visibilidad : true);
         modulo.setCurso(curso);
         modulo.setClases(new ArrayList<>());
@@ -70,7 +69,7 @@ public class CursoService {
         return moduloRepository.save(modulo);
     }
 
-    public Modulo actualizarModulo(UUID moduloId, String nombre, String descripcion, String objetivos,
+    public Modulo actualizarModulo(UUID moduloId, String nombre, String descripcion,
             LocalDate fechaInicio, LocalDate fechaFin, Boolean visibilidad) {
         UUID moduloIdSeguro = Objects.requireNonNull(moduloId,
                 "El identificador del módulo es obligatorio");
@@ -96,9 +95,6 @@ public class CursoService {
 
         modulo.setNombre(nombre.trim());
         modulo.setDescripcion(descripcion.trim());
-
-        String objetivosProcesados = objetivos != null ? objetivos.trim() : "";
-        modulo.setObjetivos(objetivosProcesados.isEmpty() ? null : objetivosProcesados);
 
         modulo.setFechaInicioModulo(fechaInicio);
         modulo.setFechaFinModulo(fechaFin);
@@ -207,6 +203,7 @@ public class CursoService {
                 datosNuevos.getCupos(),
                 datosNuevos.getVisibilidad(),
                 datosNuevos.getCostoInscripcion(),
+                datosNuevos.getCostoMora() != null ? datosNuevos.getCostoMora() : 0.0,
                 datosNuevos.getCertificado());
 
         cursoExistente.modificarDatosCurso(

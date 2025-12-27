@@ -551,9 +551,12 @@ public class AdminController {
     
     @GetMapping("/admin/docentes/buscar")
     @ResponseBody
-    public ResponseEntity<List<Map<String, Object>>> buscarDocentes(@RequestParam("q") String query) {
+    public ResponseEntity<List<Map<String, Object>>> buscarDocentes(@RequestParam(value = "q", defaultValue = "") String query) {
         try {
-            List<Docente> docentes = docenteRepository.buscarPorNombreApellidoOMatricula(query);
+            // Si la query está vacía, devolver todos los docentes
+            List<Docente> docentes = query.trim().isEmpty() ? 
+                docenteRepository.findAllDocentes() : 
+                docenteRepository.buscarPorNombreApellidoOMatricula(query);
             
             List<Map<String, Object>> resultado = new ArrayList<>();
             
@@ -749,7 +752,7 @@ public class AdminController {
                 case "FORMACION":
                     oferta = crearFormacion(nombre, descripcion, cupos, costoInscripcion, fechaInicio, fechaFin, modalidad,
                                           planFormacion, docentesFormacion, 
-                                          costoCuota, costoMora, nrCuotas, diaVencimiento); // ✅ Usar los mismos parámetros que Curso
+                                          costoCuotaFormacion, costoMoraFormacion, nrCuotasFormacion, diaVencimientoFormacion);
                     break;
                 case "CHARLA":
                     oferta = crearCharla(nombre, descripcion, cupos, costoInscripcion, fechaInicio, fechaFin, modalidad,
@@ -824,6 +827,50 @@ public class AdminController {
             
             return ResponseEntity.ok(response);
             
+        } catch (DataIntegrityViolationException e) {
+            // Capturar error de duplicado (nombre único)
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            
+            String mensaje = e.getMessage();
+            if (mensaje != null && (mensaje.toLowerCase().contains("uk_oferta_nombre") || 
+                                   mensaje.toLowerCase().contains("duplicate key"))) {
+                response.put("message", "Ya existe una oferta académica con este nombre. Por favor, elija un nombre diferente.");
+            } else {
+                response.put("message", "Error: La oferta no pudo registrarse debido a una restricción de datos. Verifique que no exista una oferta duplicada.");
+            }
+            
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+            
+        } catch (jakarta.validation.ConstraintViolationException e) {
+            // Capturar errores de validación y convertirlos a mensajes amigables
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            
+            String mensajeError = e.getConstraintViolations().stream()
+                .map(violation -> {
+                    String campo = violation.getPropertyPath().toString();
+                    String mensaje = violation.getMessage();
+                    
+                    // Personalizar mensajes según el campo
+                    if (campo.equals("cupos")) {
+                        return "La cantidad mínima de cupos es de 1";
+                    } else if (campo.equals("costoInscripcion")) {
+                        return "El costo de inscripción " + mensaje;
+                    } else if (campo.equals("nombre")) {
+                        return "El nombre de la oferta es obligatorio";
+                    } else if (campo.equals("descripcion")) {
+                        return "La descripción de la oferta es obligatoria";
+                    } else {
+                        return "El campo " + campo + " " + mensaje;
+                    }
+                })
+                .findFirst()
+                .orElse("Error de validación en los datos ingresados");
+            
+            response.put("message", mensajeError);
+            return ResponseEntity.badRequest().body(response);
+            
         } catch (Exception e) {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
@@ -844,7 +891,10 @@ public class AdminController {
         // Campos específicos del curso
         curso.setTemario(temario);
         if (costoCuota != null) curso.setCostoCuota(costoCuota);
-        if (costoMora != null) curso.setCostoMora(costoMora);
+        if (costoMora != null) {
+            curso.setCostoMora(costoMora);
+            curso.setRecargoMora(costoMora);
+        }
         if (nrCuotas != null) curso.setNrCuotas(nrCuotas);
         if (diaVencimiento != null) curso.setDiaVencimiento(diaVencimiento);
         
@@ -870,6 +920,9 @@ public class AdminController {
         // ✅ Asegurar que los valores no sean null
         formacion.setCostoCuota(costoCuota != null ? costoCuota : 0.0);
         formacion.setCostoMora(costoMora != null ? costoMora : 0.0);
+        if (costoMora != null) {
+            formacion.setRecargoMora(costoMora);
+        }
         formacion.setNrCuotas(nrCuotas != null ? nrCuotas : 0);
         formacion.setDiaVencimiento(diaVencimiento != null ? diaVencimiento : 0);
         
@@ -1134,7 +1187,10 @@ public class AdminController {
                     if (ofertaExistente instanceof Curso) {
                         Curso curso = (Curso) ofertaExistente;
                         if (costoCuota != null) curso.setCostoCuota(costoCuota);
-                        if (costoMora != null) curso.setCostoMora(costoMora);
+                        if (costoMora != null) {
+                            curso.setCostoMora(costoMora);
+                            curso.setRecargoMora(costoMora);
+                        }
                         if (nrCuotas != null) curso.setNrCuotas(nrCuotas);
                         if (diaVencimiento != null) curso.setDiaVencimiento(diaVencimiento);
                     }
@@ -1144,7 +1200,10 @@ public class AdminController {
                     if (ofertaExistente instanceof Formacion) {
                         Formacion formacion = (Formacion) ofertaExistente;
                         if (costoCuotaFormacion != null) formacion.setCostoCuota(costoCuotaFormacion);
-                        if (costoMoraFormacion != null) formacion.setCostoMora(costoMoraFormacion);
+                        if (costoMoraFormacion != null) {
+                            formacion.setCostoMora(costoMoraFormacion);
+                            formacion.setRecargoMora(costoMoraFormacion);
+                        }
                         if (nrCuotasFormacion != null) formacion.setNrCuotas(nrCuotasFormacion);
                         if (diaVencimientoFormacion != null) formacion.setDiaVencimiento(diaVencimientoFormacion);
                     }
@@ -1718,6 +1777,9 @@ public class AdminController {
             @RequestParam(value = "logo", required = false) MultipartFile logo) {
         
         try {
+            System.out.println("=== GUARDANDO CONFIGURACIÓN ===");
+            System.out.println("Parámetros recibidos: " + params.keySet());
+            
             Map<String, Object> response = new HashMap<>();
             
             // Validar campos requeridos
@@ -1729,8 +1791,9 @@ public class AdminController {
             
             // Obtener instituto actual
             Instituto instituto = institutoService.obtenerInstituto();
+            System.out.println("Instituto actual ID: " + instituto.getIdInstituto());
             
-            // Actualizar campos
+            // Actualizar campos básicos
             instituto.setNombreInstituto(params.get("nombreInstituto"));
             instituto.setDescripcion(params.get("descripcion"));
             instituto.setMision(params.get("mision"));
@@ -1745,33 +1808,108 @@ public class AdminController {
             instituto.setCuentaBancaria(params.get("cuentaBancaria"));
             instituto.setPoliticaPagos(params.get("politicaPagos"));
             
-            // Configuraciones automáticas
+            // Configuraciones automáticas - Los checkboxes solo envían valor si están marcados
             instituto.setPermisoBajaAutomatica("on".equals(params.get("permisoBajaAutomatica")));
-            if (params.get("minimoAlumnoBaja") != null && !params.get("minimoAlumnoBaja").isEmpty()) {
-                instituto.setMinimoAlumnoBaja(Integer.parseInt(params.get("minimoAlumnoBaja")));
+            System.out.println("Baja automática: " + instituto.getPermisoBajaAutomatica());
+            
+            if (params.get("minimoAlumnoBaja") != null && !params.get("minimoAlumnoBaja").trim().isEmpty()) {
+                try {
+                    instituto.setMinimoAlumnoBaja(Integer.parseInt(params.get("minimoAlumnoBaja").trim()));
+                } catch (NumberFormatException e) {
+                    System.out.println("Error parseando minimoAlumnoBaja: " + params.get("minimoAlumnoBaja"));
+                }
             }
-            if (params.get("inactividadBaja") != null && !params.get("inactividadBaja").isEmpty()) {
-                instituto.setInactividadBaja(Integer.parseInt(params.get("inactividadBaja")));
+            if (params.get("inactividadBaja") != null && !params.get("inactividadBaja").trim().isEmpty()) {
+                try {
+                    instituto.setInactividadBaja(Integer.parseInt(params.get("inactividadBaja").trim()));
+                } catch (NumberFormatException e) {
+                    System.out.println("Error parseando inactividadBaja: " + params.get("inactividadBaja"));
+                }
             }
+            
+            // Configuración de bloqueos por mora
+            System.out.println("=== BLOQUEOS POR MORA ===");
+            if (params.get("diasMoraBloqueoExamen") != null && !params.get("diasMoraBloqueoExamen").trim().isEmpty()) {
+                try {
+                    int dias = Integer.parseInt(params.get("diasMoraBloqueoExamen").trim());
+                    instituto.setDiasMoraBloqueoExamen(dias);
+                    System.out.println("Días mora examen: " + dias);
+                } catch (NumberFormatException e) {
+                    System.out.println("Error parseando diasMoraBloqueoExamen: " + params.get("diasMoraBloqueoExamen"));
+                }
+            } else {
+                instituto.setDiasMoraBloqueoExamen(null);
+                System.out.println("Días mora examen: null (campo vacío)");
+            }
+            
+            if (params.get("diasMoraBloqueoMaterial") != null && !params.get("diasMoraBloqueoMaterial").trim().isEmpty()) {
+                try {
+                    int dias = Integer.parseInt(params.get("diasMoraBloqueoMaterial").trim());
+                    instituto.setDiasMoraBloqueoMaterial(dias);
+                    System.out.println("Días mora material: " + dias);
+                } catch (NumberFormatException e) {
+                    System.out.println("Error parseando diasMoraBloqueoMaterial: " + params.get("diasMoraBloqueoMaterial"));
+                }
+            } else {
+                instituto.setDiasMoraBloqueoMaterial(null);
+                System.out.println("Días mora material: null (campo vacío)");
+            }
+            
+            if (params.get("diasMoraBloqueoActividad") != null && !params.get("diasMoraBloqueoActividad").trim().isEmpty()) {
+                try {
+                    int dias = Integer.parseInt(params.get("diasMoraBloqueoActividad").trim());
+                    instituto.setDiasMoraBloqueoActividad(dias);
+                    System.out.println("Días mora actividad: " + dias);
+                } catch (NumberFormatException e) {
+                    System.out.println("Error parseando diasMoraBloqueoActividad: " + params.get("diasMoraBloqueoActividad"));
+                }
+            } else {
+                instituto.setDiasMoraBloqueoActividad(null);
+                System.out.println("Días mora actividad: null (campo vacío)");
+            }
+
+            if (params.get("diasMoraBloqueoAula") != null && !params.get("diasMoraBloqueoAula").trim().isEmpty()) {
+                try {
+                    int dias = Integer.parseInt(params.get("diasMoraBloqueoAula").trim());
+                    instituto.setDiasMoraBloqueoAula(dias);
+                    System.out.println("Días mora aula: " + dias);
+                } catch (NumberFormatException e) {
+                    System.out.println("Error parseando diasMoraBloqueoAula: " + params.get("diasMoraBloqueoAula"));
+                }
+            } else {
+                instituto.setDiasMoraBloqueoAula(null);
+                System.out.println("Días mora aula: null (campo vacío)");
+            }
+
             instituto.setHabilitarIA("on".equals(params.get("habilitarIA")));
             instituto.setReportesAutomaticos("on".equals(params.get("reportesAutomaticos")));
             
+            System.out.println("Habilitar IA: " + instituto.getHabilitarIA());
+            System.out.println("Reportes automáticos: " + instituto.getReportesAutomaticos());
+            
             // Guardar colores institucionales
-            List<String> colores = List.of(
+            List<String> colores = new ArrayList<>(List.of(
                 params.get("colorPrimario") != null ? params.get("colorPrimario") : "#1f2937",
                 params.get("colorSecundario") != null ? params.get("colorSecundario") : "#f8fafc",
                 params.get("colorTexto") != null ? params.get("colorTexto") : "#374151"
-            );
+            ));
             instituto.setColores(colores);
+            System.out.println("Colores: " + colores);
             
             // Procesar logo si se subió
             if (logo != null && !logo.isEmpty()) {
                 String logoPath = guardarLogo(logo);
                 instituto.setLogoPath(logoPath);
+                System.out.println("Logo guardado: " + logoPath);
             }
             
             // Guardar instituto
-            institutoService.guardarInstituto(instituto);
+            Instituto institutoGuardado = institutoService.guardarInstituto(instituto);
+            System.out.println("=== INSTITUTO GUARDADO EXITOSAMENTE ===");
+            System.out.println("ID: " + institutoGuardado.getIdInstituto());
+            System.out.println("Días mora examen guardado: " + institutoGuardado.getDiasMoraBloqueoExamen());
+            System.out.println("Días mora material guardado: " + institutoGuardado.getDiasMoraBloqueoMaterial());
+            System.out.println("Días mora actividad guardado: " + institutoGuardado.getDiasMoraBloqueoActividad());
             
             response.put("success", true);
             response.put("message", "Configuración guardada exitosamente");
@@ -1779,6 +1917,9 @@ public class AdminController {
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
+            System.err.println("❌ ERROR AL GUARDAR CONFIGURACIÓN: " + e.getMessage());
+            e.printStackTrace();
+            
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", "Error al guardar la configuración: " + e.getMessage());
@@ -1931,14 +2072,19 @@ public class AdminController {
      */
     private void asociarHorarios(OfertaAcademica oferta, String horariosJson) {
         try {
+            System.out.println("🕒 ASOCIANDO HORARIOS - JSON recibido: " + horariosJson);
+            
             // Parsear JSON manualmente (implementación simple)
             List<Map<String, String>> horariosData = parseHorariosJson(horariosJson);
+            System.out.println("🕒 HORARIOS PARSEADOS: " + horariosData.size() + " horarios");
             
             for (Map<String, String> horarioData : horariosData) {
+                System.out.println("  📅 Procesando horario: " + horarioData);
                 Horario horario = new Horario();
                 
                 // Configurar día
                 String diaStr = horarioData.get("dia");
+                System.out.println("    - Día: " + diaStr);
                 if (diaStr != null && !diaStr.isEmpty()) {
                     horario.setDia(Dias.valueOf(diaStr.toUpperCase()));
                 }
@@ -1946,13 +2092,27 @@ public class AdminController {
                 // Configurar horas
                 String horaInicioStr = horarioData.get("horaInicio");
                 String horaFinStr = horarioData.get("horaFin");
+                System.out.println("    - Hora inicio (string): " + horaInicioStr);
+                System.out.println("    - Hora fin (string): " + horaFinStr);
                 
                 if (horaInicioStr != null && !horaInicioStr.isEmpty()) {
-                    horario.setHoraInicio(Time.valueOf(horaInicioStr + ":00"));
+                    try {
+                        Time horaInicio = Time.valueOf(horaInicioStr + ":00");
+                        horario.setHoraInicio(horaInicio);
+                        System.out.println("    - ✅ Hora inicio guardada: " + horaInicio);
+                    } catch (Exception e) {
+                        System.err.println("    - ❌ Error al parsear hora inicio: " + e.getMessage());
+                    }
                 }
                 
                 if (horaFinStr != null && !horaFinStr.isEmpty()) {
-                    horario.setHoraFin(Time.valueOf(horaFinStr + ":00"));
+                    try {
+                        Time horaFin = Time.valueOf(horaFinStr + ":00");
+                        horario.setHoraFin(horaFin);
+                        System.out.println("    - ✅ Hora fin guardada: " + horaFin);
+                    } catch (Exception e) {
+                        System.err.println("    - ❌ Error al parsear hora fin: " + e.getMessage());
+                    }
                 }
                 
                 // Asociar docente si se especifica
@@ -1972,8 +2132,17 @@ public class AdminController {
                 // Asociar oferta
                 horario.setOfertaAcademica(oferta);
                 
+                // Debug: mostrar estado antes de guardar
+                System.out.println("    🔍 ESTADO ANTES DE GUARDAR:");
+                System.out.println("       - Día: " + horario.getDia());
+                System.out.println("       - Hora inicio: " + horario.getHoraInicio());
+                System.out.println("       - Hora fin: " + horario.getHoraFin());
+                System.out.println("       - Docente: " + (horario.getDocente() != null ? horario.getDocente().getNombre() : "null"));
+                System.out.println("       - Oferta: " + (horario.getOfertaAcademica() != null ? horario.getOfertaAcademica().getNombre() : "null"));
+                
                 // Guardar horario
-                horarioRepository.save(horario);
+                Horario horarioGuardado = horarioRepository.save(horario);
+                System.out.println("    ✅ Horario guardado con ID: " + horarioGuardado.getIdHorario());
             }
             
         } catch (Exception e) {
@@ -1993,6 +2162,8 @@ public class AdminController {
         }
         
         try {
+            System.out.println("📋 Parseando JSON: " + json);
+            
             // Remover corchetes
             json = json.trim();
             if (json.startsWith("[")) json = json.substring(1);
@@ -2010,25 +2181,37 @@ public class AdminController {
                 if (objeto.startsWith("{")) objeto = objeto.substring(1);
                 if (objeto.endsWith("}")) objeto = objeto.substring(0, objeto.length() - 1);
                 
+                System.out.println("  📝 Procesando objeto: " + objeto);
+                
                 Map<String, String> horario = new HashMap<>();
-                String[] pares = objeto.split(",");
+                
+                // Dividir por comas que NO estén dentro de comillas
+                String[] pares = objeto.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
                 
                 for (String par : pares) {
-                    String[] keyValue = par.split(":");
-                    if (keyValue.length == 2) {
-                        String key = keyValue[0].trim().replaceAll("\"", "");
-                        String value = keyValue[1].trim().replaceAll("\"", "");
+                    par = par.trim();
+                    System.out.println("    🔍 Par: " + par);
+                    
+                    // Encontrar la primera ocurrencia de : que separa clave de valor
+                    int colonIndex = par.indexOf(":");
+                    if (colonIndex > 0) {
+                        String key = par.substring(0, colonIndex).trim().replaceAll("\"", "");
+                        String value = par.substring(colonIndex + 1).trim().replaceAll("\"", "");
+                        
+                        System.out.println("      ✅ Key: " + key + ", Value: " + value);
                         horario.put(key, value);
                     }
                 }
                 
                 if (!horario.isEmpty()) {
+                    System.out.println("  ✅ Horario parseado: " + horario);
                     horarios.add(horario);
                 }
             }
             
         } catch (Exception e) {
-            System.err.println("Error al parsear JSON de horarios: " + e.getMessage());
+            System.err.println("❌ Error al parsear JSON de horarios: " + e.getMessage());
+            e.printStackTrace();
         }
         
         return horarios;

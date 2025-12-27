@@ -280,7 +280,7 @@
                 <thead>
                     <tr>
                         <th>Concepto</th>
-                        <th>Curso</th>
+                        <th>Tipo</th>
                         <th>Fecha Vencimiento</th>
                         <th>Monto</th>
                         <th>Estado</th>
@@ -290,8 +290,13 @@
                 <tbody>
                     <!-- Cuotas (todas, con estados actualizados) -->
                     <tr th:each="cuota : ${cuotas}">
-                        <td th:text="${cuota.numeroCuota != null ? 'Cuota ' + cuota.numeroCuota : 'Cuota'}">Cuota</td>
-                        <td th:text="${cuota.inscripcion != null and cuota.inscripcion.oferta != null ? cuota.inscripcion.oferta.nombre : '-'}">Curso</td>
+                        <td>
+                            <span th:if="${cuota.numeroCuota != null and cuota.inscripcion != null and cuota.inscripcion.oferta != null}"
+                                  th:text="'Cuota ' + ${cuota.numeroCuota} + ' (' + ${cuota.inscripcion.oferta.nombre} + ')'">Cuota 1 (Nombre)</span>
+                            <span th:unless="${cuota.numeroCuota != null and cuota.inscripcion != null and cuota.inscripcion.oferta != null}"
+                                  th:text="${cuota.numeroCuota != null ? 'Cuota ' + cuota.numeroCuota : 'Cuota'}">Cuota</span>
+                        </td>
+                        <td th:text="${cuota.inscripcion != null and cuota.inscripcion.oferta != null ? cuota.inscripcion.oferta.tipoOferta : '-'}">Tipo</td>
                         <td th:text="${cuota.fechaVencimiento != null ? #temporals.format(cuota.fechaVencimiento, 'dd MMM yyyy') : 'Sin fecha'}">15 Nov</td>
                         <td th:text="${#numbers.formatCurrency(cuota.monto != null ? cuota.monto : T(java.math.BigDecimal).ZERO)}">$0</td>
                         <td>
@@ -300,8 +305,8 @@
                                 th:text="${cuota.estado.name() == 'VENCIDA' ? 'Mora' : cuota.estado.descripcion}">Estado</span>
                         </td>
                         <td>
-                            <!-- Botón de pagar solo si es la cuota pendiente -->
-                            <form th:if="${cuotaPendiente != null and cuotaPendiente.idCuota == cuota.idCuota}"
+                            <!-- Botón de pagar si es la primera cuota pendiente de su inscripción -->
+                            <form th:if="${cuota.inscripcion != null and cuotasPendientesPorInscripcion != null and cuotasPendientesPorInscripcion.get(cuota.inscripcion.idInscripcion) != null and cuotasPendientesPorInscripcion.get(cuota.inscripcion.idInscripcion).idCuota == cuota.idCuota}"
                                   th:action="@{'/alumno/mis-pagos/cuotas/' + ${cuota.idCuota} + '/pagar'}" 
                                   method="post"
                                   style="display: inline;">
@@ -320,7 +325,7 @@
                                 <i class="fas fa-check-circle"></i> Completado
                             </span>
                             <!-- Para otras cuotas, solo mostrar el estado -->
-                            <span th:if="${cuota.estado.name() != 'PAGADA' and (cuotaPendiente == null or cuotaPendiente.idCuota != cuota.idCuota)}" 
+                            <span th:if="${cuota.estado.name() != 'PAGADA' and (cuota.inscripcion == null or cuotasPendientesPorInscripcion == null or cuotasPendientesPorInscripcion.get(cuota.inscripcion.idInscripcion) == null or cuotasPendientesPorInscripcion.get(cuota.inscripcion.idInscripcion).idCuota != cuota.idCuota)}" 
                                   style="color: #a0aec0;">
                                 -
                             </span>
@@ -329,8 +334,13 @@
                     
                     <!-- Pagos de inscripción (solo los que tienen esCuotaMensual = false o es null) -->
                     <tr th:each="pago : ${pagos}" th:if="${pago.esCuotaMensual == null or pago.esCuotaMensual == false}">
-                        <td th:text="${pago.descripcion != null ? pago.descripcion : 'Inscripción'}">Inscripción</td>
-                        <td th:text="${pago.oferta != null ? pago.oferta.nombre : '-'}">Curso</td>
+                        <td>
+                            <span th:if="${pago.oferta != null}"
+                                  th:text="'Inscripción (' + ${pago.oferta.nombre} + ')'">Inscripción (Nombre)</span>
+                            <span th:unless="${pago.oferta != null}"
+                                  th:text="${pago.descripcion != null ? pago.descripcion : 'Inscripción'}">Inscripción</span>
+                        </td>
+                        <td th:text="${pago.oferta != null ? pago.oferta.tipoOferta : '-'}">Tipo</td>
                         <td th:text="${pago.fechaAprobacion != null ? #temporals.format(pago.fechaAprobacion, 'dd MMM yyyy HH:mm') : (pago.fechaPago != null ? #temporals.format(pago.fechaPago, 'dd MMM yyyy HH:mm') : 'Sin registro')}">01 Oct 2025</td>
                         <td th:text="${#numbers.formatCurrency(pago.monto != null ? pago.monto : T(java.math.BigDecimal).ZERO)}">$0</td>
                         <td>

@@ -38,7 +38,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Controller
-@RequestMapping("/actividad")
 public class ActividadController {
 
     @Autowired
@@ -56,7 +55,7 @@ public class ActividadController {
     @Autowired
     private ArchivoRepository archivoRepository;
     
-    @PostMapping("/crearExamen")
+    @PostMapping("/actividad/crearExamen")
     @PreAuthorize("hasAnyAuthority('DOCENTE', 'ADMIN')")
     @ResponseBody
     public ResponseEntity<?> crearExamen(
@@ -134,7 +133,7 @@ public class ActividadController {
         return preguntaDTO;
     }
 
-    @DeleteMapping("/{actividadId}/eliminar")
+    @DeleteMapping("/actividad/{actividadId}/eliminar")
     @PreAuthorize("hasAnyAuthority('DOCENTE', 'ADMIN')")
     public ResponseEntity<Map<String, Object>> eliminarActividad(@PathVariable Long actividadId, Authentication authentication) {
         try {
@@ -145,7 +144,7 @@ public class ActividadController {
         }
     }
     
-    @PostMapping("/modulo/{moduloId}/material")
+    @PostMapping("/actividad/modulo/{moduloId}/material")
     @PreAuthorize("hasAnyAuthority('DOCENTE', 'ADMIN')")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> crearMaterialEnModulo(
@@ -201,7 +200,7 @@ public class ActividadController {
         }
     }
     
-    @GetMapping("/material/{materialId}/archivos")
+    @GetMapping("/actividad/material/{materialId}/archivos")
     @ResponseBody
     public ResponseEntity<List<Map<String, Object>>> obtenerArchivosMaterial(@PathVariable Long materialId) {
         List<Archivo> archivos = archivoRepository.findByMaterialIdActividad(materialId);
@@ -217,6 +216,24 @@ public class ActividadController {
         }).toList();
         
         return ResponseEntity.ok(archivosInfo);
+    }
+    
+    @GetMapping("/archivo/{archivoId}/descargar")
+    public ResponseEntity<byte[]> descargarArchivo(@PathVariable Long archivoId) {
+        try {
+            Archivo archivo = archivoRepository.findById(archivoId)
+                    .orElseThrow(() -> new RuntimeException("Archivo no encontrado"));
+
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.setContentType(org.springframework.http.MediaType.parseMediaType(archivo.getTipoMime()));
+            headers.setContentDispositionFormData("attachment", archivo.getNombre());
+
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(archivo.getContenido());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
     }
     
     // Clases internas para recibir datos del frontend
