@@ -43,7 +43,7 @@ public class EstadisticasService {
         try {
             // Conteo de ofertas académicas por estado
             long ofertasActivas = ofertaRepository.countByEstado(EstadoOferta.ACTIVA);
-            long ofertasInactivas = ofertaRepository.countByEstado(EstadoOferta.INACTIVA);
+            long ofertasInactivas = ofertaRepository.countByEstado(EstadoOferta.DE_BAJA);
             
             // Conteo de usuarios por rol
             Map<String, Long> usuariosPorRol = contarUsuariosPorRol();

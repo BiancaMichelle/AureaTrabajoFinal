@@ -6,6 +6,7 @@ import java.util.List;
 
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.validation.constraints.NotEmpty;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -22,6 +23,7 @@ public class Charla extends OfertaAcademica {
     private Integer duracionEstimada; // en minutos
     
     @ElementCollection
+    @NotEmpty(message = "Debe haber al menos un disertante")
     private List<String> disertantes;
     
     private String publicoObjetivo;

@@ -170,7 +170,7 @@ public class FormacionService {
      * Da de baja una formación - usa método heredado
      */
     public boolean darDeBaja(Long id) {
-        return cambiarEstado(id, EstadoOferta.INACTIVA);
+        return cambiarEstado(id, EstadoOferta.DE_BAJA);
     }
 
     /**

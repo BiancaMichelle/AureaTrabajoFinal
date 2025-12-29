@@ -96,16 +96,10 @@ public class OfertaAcademica {
     private List<Inscripciones> inscripciones;
 
         public Boolean getEstaActiva() {
-            boolean estaActiva;
-            if(this.estado == EstadoOferta.ACTIVA && 
-               (this.fechaInicio.isBefore(LocalDate.now()) || this.fechaInicio.isEqual(LocalDate.now())) &&
-               (this.fechaFin.isAfter(LocalDate.now()) || this.fechaFin.isEqual(LocalDate.now())) &&
-               (this.cupos == null || this.cupos > 0)) {
-                estaActiva = true;
-            } else {
-                estaActiva = false;
-            }
-        return estaActiva;
+        // Consideramos activa si está en curso o planificada (ACTIVA)
+        // y tiene cupos disponibles (opcional, según lógica de negocio)
+        return (this.estado == EstadoOferta.ACTIVA || this.estado == EstadoOferta.ENCURSO) &&
+               (this.cupos == null || this.cupos > 0);
     }
 
     /**
@@ -227,7 +221,7 @@ public class OfertaAcademica {
      */
     public Boolean puedeSerEditada() {
         return estado != EstadoOferta.FINALIZADA && 
-               estado != EstadoOferta.CANCELADA;
+               estado != EstadoOferta.DE_BAJA;
     }
     /**
      * Verifica si puede ser eliminada
@@ -267,7 +261,7 @@ public class OfertaAcademica {
      * Verifica si la oferta puede cambiar de estado (dar de baja/alta)
      */
     public Boolean puedeCambiarEstado() {
-        return estado != EstadoOferta.FINALIZADA && estado != EstadoOferta.CANCELADA;
+        return estado != EstadoOferta.FINALIZADA && estado != EstadoOferta.DE_BAJA;
     }
 
     /**
@@ -277,10 +271,9 @@ public class OfertaAcademica {
      * - Si la fecha de fin ya pasó, se puede dar de baja
      */
     public Boolean puedeDarseDeBaja() {
-        // No se puede dar de baja si ya está inactiva, finalizada o cancelada
-        if (estado == EstadoOferta.INACTIVA || 
-            estado == EstadoOferta.FINALIZADA || 
-            estado == EstadoOferta.CANCELADA) {
+        // No se puede dar de baja si ya está de baja, finalizada o cancelada
+        if (estado == EstadoOferta.DE_BAJA || 
+            estado == EstadoOferta.FINALIZADA) {
             return false;
         }
 
@@ -327,37 +320,35 @@ public class OfertaAcademica {
             return false;
         }
 
+        LocalDate hoy = LocalDate.now();
+
         // Validaciones específicas según el nuevo estado
         switch (nuevoEstado) {
-            case INACTIVA:
+            case DE_BAJA:
                 if (!puedeDarseDeBaja()) {
                     return false;
                 }
                 break;
             case ACTIVA:
-                // Para activar, debe tener fecha de inicio futura o actual
-                if (fechaInicio != null && fechaInicio.isBefore(LocalDate.now())) {
-                    // Si ya pasó la fecha de inicio, verificar que no haya pasado la de fin
-                    if (fechaFin != null && fechaFin.isBefore(LocalDate.now())) {
-                        return false;
-                    }
-                }
-                break;
-            case FINALIZADA:
-                // Solo se puede finalizar si la fecha de fin ya pasó
-                if (fechaFin == null || fechaFin.isAfter(LocalDate.now())) {
-                    return false;
-                }
-                break;
-            case CANCELADA:
-                // Se puede cancelar si no tiene inscripciones activas o no ha comenzado
-                if (fechaInicio != null && !fechaInicio.isAfter(LocalDate.now()) && 
-                    contarInscripcionesActivas() > 0) {
-                    return false;
+                // ACTIVA: Si todavía no comenzó la fecha de inicio
+                if (fechaInicio != null && !fechaInicio.isAfter(hoy)) {
+                    return false; // No puede ser ACTIVA si ya comenzó o pasó
                 }
                 break;
             case ENCURSO:
-                // Estado intermedio sin validación adicional específica
+                // EN CURSO: Cuando la fecha de inicio llega (y no ha finalizado)
+                if (fechaInicio != null && fechaInicio.isAfter(hoy)) {
+                    return false; // No puede ser EN CURSO si es futura
+                }
+                if (fechaFin != null && fechaFin.isBefore(hoy)) {
+                    return false; // No puede ser EN CURSO si ya finalizó
+                }
+                break;
+            case FINALIZADA:
+                // FINALIZADA: Cuando la fecha de fin pasó
+                if (fechaFin == null || !fechaFin.isBefore(hoy)) {
+                    return false;
+                }
                 break;
         }
 
@@ -369,14 +360,47 @@ public class OfertaAcademica {
      * Dar de baja la oferta (cambiar a INACTIVA)
      */
     public Boolean darDeBaja() {
-        return cambiarEstado(EstadoOferta.INACTIVA);
+        return cambiarEstado(EstadoOferta.DE_BAJA);
     }
 
     /**
-     * Dar de alta la oferta (cambiar a ACTIVA)
+     * Dar de alta la oferta (cambiar a ACTIVA o ENCURSO según fecha)
      */
     public Boolean darDeAlta() {
+        LocalDate hoy = LocalDate.now();
+        // Determinar el estado correcto basado en la fecha
+        if (fechaInicio != null && !fechaInicio.isAfter(hoy)) {
+            // Si ya comenzó, intentamos ponerla EN CURSO
+            return cambiarEstado(EstadoOferta.ENCURSO);
+        }
+        // Si es futura, ACTIVA
         return cambiarEstado(EstadoOferta.ACTIVA);
+    }
+
+    /**
+     * Verifica y actualiza el estado a FINALIZADA o ENCURSO automáticamente
+     */
+    public boolean actualizarEstadoSiFinalizada() {
+        LocalDate hoy = LocalDate.now();
+        boolean cambiado = false;
+
+        // 1. Verificar si finalizó (fecha fin pasó)
+        if (this.fechaFin != null && this.fechaFin.isBefore(hoy)) {
+            if (this.estado != EstadoOferta.FINALIZADA && this.estado != EstadoOferta.DE_BAJA) {
+                this.estado = EstadoOferta.FINALIZADA;
+                cambiado = true;
+            }
+        }
+        // 2. Verificar si comenzó (ACTIVA -> ENCURSO)
+        else if (this.fechaInicio != null && !this.fechaInicio.isAfter(hoy)) {
+            // Si hoy es >= fechaInicio y estado es ACTIVA, pasar a ENCURSO
+            if (this.estado == EstadoOferta.ACTIVA) {
+                this.estado = EstadoOferta.ENCURSO;
+                cambiado = true;
+            }
+        }
+        
+        return cambiado;
     }
 
     /**

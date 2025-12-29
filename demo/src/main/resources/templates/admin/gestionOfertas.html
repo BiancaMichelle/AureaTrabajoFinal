@@ -1143,6 +1143,13 @@
                 btnShowForm.addEventListener('click', function(e) {
                     e.preventDefault();
                     console.log('👆 CLICK EN NUEVA OFERTA');
+                     // Establecer fecha mínima en los inputs de fecha (hoy)
+                    const hoy = new Date().toISOString().split('T')[0];
+                    const fechaInicioInput = document.getElementById('fechaInicio');
+                    const fechaFinInput = document.getElementById('fechaFin');
+                    
+                    if (fechaInicioInput) fechaInicioInput.setAttribute('min', hoy);
+                    if (fechaFinInput) fechaFinInput.setAttribute('min', hoy);
                     
                     // Mostrar formulario con animación
                     formContainer.style.display = 'block';
@@ -1483,7 +1490,7 @@
             const yaAgregado = docentesSeleccionados[tipoSeccion].find(d => d.id === id);
             
             if (yaAgregado) {
-                alert('Este docente ya ha sido agregado');
+                mostrarNotificacion('Este docente ya ha sido agregado', 'warning');
                 return;
             }
             
@@ -1545,14 +1552,14 @@
             const selectedText = select.options[select.selectedIndex].text;
             
             if (!selectedValue || selectedValue === '') {
-                alert('Por favor seleccione una categoría');
+                mostrarNotificacion('Por favor seleccione una categoría', 'warning');
                 return;
             }
             
             // Verificar si ya está seleccionada
             const yaSeleccionada = categoriasSeleccionadas.find(cat => cat.id === selectedValue);
             if (yaSeleccionada) {
-                alert('Esta categoría ya ha sido seleccionada');
+                mostrarNotificacion('Esta categoría ya ha sido seleccionada', 'warning');
                 return;
             }
             
@@ -1796,12 +1803,12 @@
                 
                 // Validaciones básicas
                 if (!categoria.nombre || categoria.nombre.trim().length < 2) {
-                    alert('El nombre debe tener al menos 2 caracteres');
+                    mostrarNotificacion('El nombre debe tener al menos 2 caracteres', 'error');
                     return;
                 }
                 
                 if (!categoria.descripcion || categoria.descripcion.trim().length < 5) {
-                    alert('La descripción debe tener al menos 5 caracteres');
+                    mostrarNotificacion('La descripción debe tener al menos 5 caracteres', 'error');
                     return;
                 }
                 
@@ -1834,11 +1841,11 @@
                     document.getElementById('btnGuardarText').textContent = 'Crear Categoría';
                     cargarCategorias();
                     cargarCategoriasSelect();
-                    alert(categoriaId ? 'Categoría actualizada exitosamente' : 'Categoría creada exitosamente');
+                    mostrarNotificacion(categoriaId ? 'Categoría actualizada exitosamente' : 'Categoría creada exitosamente', 'success');
                 })
                 .catch(error => {
                     console.error('❌ Error:', error);
-                    alert('Error al guardar categoría: ' + error.message);
+                    mostrarNotificacion('Error al guardar categoría: ' + error.message, 'error');
                 });
             },
             
@@ -1870,7 +1877,7 @@
                 })
                 .catch(error => {
                     console.error('Error al cargar categoría:', error);
-                    alert('Error al cargar la categoría para editar');
+                    mostrarNotificacion('Error al cargar la categoría para editar', 'error');
                 });
         };
         
@@ -1886,15 +1893,15 @@
                         console.log('✅ Categoría eliminada');
                         cargarCategorias();
                         cargarCategoriasSelect();
-                        alert(data.message || 'Categoría eliminada exitosamente');
+                        mostrarNotificacion(data.message || 'Categoría eliminada exitosamente', 'success');
                     } else {
                         console.error('❌ Error:', data.message);
-                        alert(data.message || 'Error al eliminar la categoría');
+                        mostrarNotificacion(data.message || 'Error al eliminar la categoría', 'error');
                     }
                 })
                 .catch(error => {
                     console.error('❌ Error:', error);
-                    alert('Error al eliminar categoría: ' + error.message);
+                    mostrarNotificacion('Error al eliminar categoría: ' + error.message, 'error');
                 });
             }
         };
@@ -1916,7 +1923,7 @@
             const yaAgregado = docentesSeleccionados[tipoSeccion].find(d => d.id === id);
             
             if (yaAgregado) {
-                alert('Este docente ya ha sido agregado');
+                mostrarNotificacion('Este docente ya ha sido agregado', 'warning');
                 return;
             }
             
@@ -2000,14 +2007,14 @@
             const nombre = input.value.trim();
             
             if (!nombre) {
-                alert('Por favor ingrese el nombre del disertante');
+                mostrarNotificacion('Por favor ingrese el nombre del disertante', 'warning');
                 return;
             }
             
             // Verificar si ya existe
             const listaActual = tipo === 'charla' ? disertantesCharla : disertantesSeminario;
             if (listaActual.includes(nombre)) {
-                alert('Este disertante ya ha sido agregado');
+                mostrarNotificacion('Este disertante ya ha sido agregado', 'warning');
                 return;
             }
             
@@ -2088,17 +2095,17 @@
             
             // Validaciones
             if (!dia) {
-                alert('Por favor seleccione un día');
+                mostrarNotificacion('Por favor seleccione un día', 'warning');
                 return;
             }
             
             if (!horaInicio || !horaFin) {
-                alert('Por favor complete las horas de inicio y fin');
+                mostrarNotificacion('Por favor complete las horas de inicio y fin', 'warning');
                 return;
             }
             
             if (horaInicio >= horaFin) {
-                alert('La hora de inicio debe ser anterior a la hora de fin');
+                mostrarNotificacion('La hora de inicio debe ser anterior a la hora de fin', 'warning');
                 return;
             }
             
@@ -2111,7 +2118,7 @@
             );
             
             if (conflicto) {
-                alert('Existe un conflicto de horario en el mismo día');
+                mostrarNotificacion('Existe un conflicto de horario en el mismo día', 'error');
                 return;
             }
             
@@ -2187,7 +2194,7 @@
             const descripcion = document.getElementById('descripcion').value.trim();
             
             if (!titulo || !descripcion) {
-                mostrarNotificacion('❌ Por favor complete el título y la descripción', 'error');
+                mostrarNotificacion('Por favor complete el título y la descripción', 'error');
                 return false;
             }
             
@@ -2196,12 +2203,12 @@
             const fechaFin = document.getElementById('fechaFin').value;
             
             if (!fechaInicio) {
-                mostrarNotificacion('❌ Por favor seleccione la fecha de inicio', 'error');
+                mostrarNotificacion('Por favor seleccione la fecha de inicio', 'error');
                 return false;
             }
             
             if (!fechaFin) {
-                mostrarNotificacion('❌ Por favor seleccione la fecha de fin', 'error');
+                mostrarNotificacion('Por favor seleccione la fecha de fin', 'error');
                 return false;
             }
             
@@ -2212,49 +2219,90 @@
             const fechaFinObj = new Date(fechaFin + 'T00:00:00');
             
             if (fechaInicioObj < hoy) {
-                mostrarNotificacion('❌ La fecha de inicio no puede ser anterior a hoy', 'error');
+                mostrarNotificacion('La fecha de inicio no puede ser anterior a hoy', 'error');
                 return false;
             }
             
             if (fechaFinObj < hoy) {
-                mostrarNotificacion('❌ La fecha de fin no puede ser anterior a hoy', 'error');
+                mostrarNotificacion('La fecha de fin no puede ser anterior a hoy', 'error');
                 return false;
             }
             
             // Validar que la fecha de inicio no sea posterior a la fecha de fin
             if (fechaInicioObj > fechaFinObj) {
-                mostrarNotificacion('❌ La fecha de inicio no puede ser posterior a la fecha de fin', 'error');
+                mostrarNotificacion('La fecha de inicio no puede ser posterior a la fecha de fin', 'error');
                 return false;
             }
-            
+            // Validar costo
+            const costoVal = document.getElementById('costoInscripcion') ? parseFloat(document.getElementById('costoInscripcion').value) : NaN;
+            if (!isNaN(costoVal) && costoVal < 0) {
+            mostrarNotificacion('El costo debe ser mayor o igual a 0', 'error');
+            return false;
+            }
+
             // Validaciones específicas según tipo
             switch(tipoOferta) {
-                case 'CURSO':
-                case 'FORMACION':
-                    if (horariosSeleccionados.length === 0) {
-                        mostrarNotificacion('❌ Por favor agregue al menos un horario', 'error');
+            case 'CURSO':
+            case 'FORMACION': {
+                const tipoKey = tipoOferta === 'CURSO' ? 'curso' : 'formacion';
+                const docentes = docentesSeleccionados[tipoKey] || [];
+                if (docentes.length === 0) {
+                mostrarNotificacion('Debe asignarse al menos un docente para la oferta', 'error');
+                return false;
+                }
+                if (!horariosSeleccionados || horariosSeleccionados.length === 0) {
+                mostrarNotificacion('Debe agregarse al menos un horario para la oferta', 'error');
+                return false;
+                }
+                break;
+            }
+
+            case 'CHARLA':
+            case 'SEMINARIO': {
+                const enlaceId = tipoOferta === 'CHARLA' ? 'enlaceCharla' : 'enlaceSeminario';
+                const lugarId = tipoOferta === 'CHARLA' ? 'lugarCharla' : 'lugarSeminario';
+                
+                const enlaceEl = document.getElementById(enlaceId);
+                const lugarEl = document.getElementById(lugarId);
+                
+                const enlace = enlaceEl ? enlaceEl.value.trim() : '';
+                const lugar = lugarEl ? lugarEl.value.trim() : '';
+                
+                const modalidad = document.getElementById('modalidad').value;
+                const esVirtual = modalidad === 'VIRTUAL' || modalidad === 'HIBRIDA';
+                const esPresencial = modalidad === 'PRESENCIAL' || modalidad === 'HIBRIDA';
+                
+                if (esVirtual) {
+                    if (!enlace) {
+                        mostrarNotificacion('Para modalidad Virtual o Híbrida debe de ingresar un enlace', 'error');
                         return false;
                     }
-                    const tipoDocente = tipoOferta === 'CURSO' ? 'curso' : 'formacion';
-                    if (!docentesSeleccionados[tipoDocente] || docentesSeleccionados[tipoDocente].length === 0) {
-                        mostrarNotificacion('❌ Por favor seleccione al menos un docente', 'error');
+                    try {
+                        new URL(enlace); // valida formato
+                    } catch (e) {
+                        mostrarNotificacion('El enlace proporcionado no es una URL válida', 'error');
                         return false;
                     }
-                    break;
-                    
-                case 'CHARLA':
-                    if (disertantesCharla.length === 0) {
-                        mostrarNotificacion('❌ Por favor agregue al menos un disertante', 'error');
+                }
+                
+                if (esPresencial) {
+                    if (!lugar) {
+                        mostrarNotificacion('Para modalidad Presencial o Híbrida debe de ingresar un lugar', 'error');
                         return false;
                     }
-                    break;
-                    
-                case 'SEMINARIO':
-                    if (disertantesSeminario.length === 0) {
-                        mostrarNotificacion('❌ Por favor agregue al menos un disertante', 'error');
-                        return false;
-                    }
-                    break;
+                }
+                
+                const disertantes = tipoOferta === 'CHARLA' ? disertantesCharla : disertantesSeminario;
+                
+                if (!disertantes || disertantes.length === 0) {
+                    mostrarNotificacion('Se requiere al menos un disertante', 'error');
+                    return false;
+                }
+                break;
+            }
+
+            default:
+                // no-op
             }
             
             return true;
@@ -2870,16 +2918,30 @@
             console.log('🎯 Configurando botón para estado:', estado);
             
             if (btnCambiarEstado && iconEstado && textEstado) {
-                if (estado === 'ACTIVA') {
+                // Resetear estado del botón
+                btnCambiarEstado.disabled = false;
+                
+                if (estado === 'ACTIVA' || estado === 'ENCURSO') {
                     btnCambiarEstado.className = 'btn-danger';  // Rojo para dar de baja
                     iconEstado.className = 'fas fa-times-circle';
                     textEstado.textContent = 'Dar de Baja';
                     console.log('🔴 Botón configurado para dar de baja');
-                } else {
+                } else if (estado === 'DE_BAJA') {
                     btnCambiarEstado.className = 'btn-success';  // Verde para dar de alta
                     iconEstado.className = 'fas fa-check-circle';
                     textEstado.textContent = 'Dar de Alta';
                     console.log('🟢 Botón configurado para dar de alta');
+                } else if (estado === 'FINALIZADA') {
+                    btnCambiarEstado.className = 'btn-secondary';
+                    iconEstado.className = 'fas fa-flag-checkered';
+                    textEstado.textContent = 'Finalizada';
+                    btnCambiarEstado.disabled = true;
+                    console.log('🏁 Botón configurado como finalizada (deshabilitado)');
+                } else {
+                    btnCambiarEstado.className = 'btn-secondary';
+                    iconEstado.className = 'fas fa-question-circle';
+                    textEstado.textContent = estado;
+                    console.log('⚠️ Estado desconocido:', estado);
                 }
             } else {
                 console.error('❌ No se pudieron encontrar los elementos del botón de estado');
@@ -2932,12 +2994,22 @@
             };
             
             // Realizar petición al servidor
+            const token = obtenerCsrfToken();
+            const headerName = obtenerCsrfHeaderName();
+            
+            const headers = {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            };
+            
+            if (token && headerName) {
+                headers[headerName] = token;
+            }
+
             fetch(`/admin/ofertas/cambiar-estado/${ofertaActualId}`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
+                headers: headers,
+                credentials: 'same-origin'
             })
             .then(response => {
                 console.log('📡 Respuesta del servidor:', response.status);
@@ -2965,24 +3037,8 @@
                         console.warn('⚠️ No se pudieron recuperar los elementos del botón tras restaurar su contenido');
                     }
                     
-                    // Actualizar interfaz del botón según el nuevo estado
-                    if (data.nuevoEstado === 'ACTIVA') {
-                        btnCambiarEstado.className = 'btn-danger';  // Rojo para dar de baja
-                        if (iconEstadoActual) {
-                            iconEstadoActual.className = 'fas fa-times-circle';
-                        }
-                        if (textEstadoActual) {
-                            textEstadoActual.textContent = 'Dar de Baja';
-                        }
-                    } else {
-                        btnCambiarEstado.className = 'btn-success';  // Verde para dar de alta
-                        if (iconEstadoActual) {
-                            iconEstadoActual.className = 'fas fa-check-circle';
-                        }
-                        if (textEstadoActual) {
-                            textEstadoActual.textContent = 'Dar de Alta';
-                        }
-                    }
+                    // Actualizar interfaz del botón usando la función centralizada
+                    configurarBotonEstado(data.nuevoEstado);
                     
                     // Actualizar badge de estado en el modal
                     const estadoElement = document.getElementById('detalle-estado');
@@ -2992,9 +3048,12 @@
                     }
                     
                     // Mostrar notificación de éxito
-                    const mensaje = data.nuevoEstado === 'ACTIVA' ? 
-                        'Oferta activada correctamente' : 
-                        'Oferta dada de baja correctamente';
+                    let mensaje = 'Estado actualizado correctamente';
+                    if (data.nuevoEstado === 'ACTIVA' || data.nuevoEstado === 'ENCURSO') {
+                        mensaje = 'Oferta activada correctamente';
+                    } else if (data.nuevoEstado === 'DE_BAJA') {
+                        mensaje = 'Oferta dada de baja correctamente';
+                    }
                     mostrarNotificacion(mensaje, 'success');
                     
                     console.log('🔄 Estado actualizado en la interfaz');
@@ -3034,7 +3093,7 @@
                     }
                     
                     // Mostrar el mensaje detallado
-                    alert(mensajeDetallado);
+                    mostrarNotificacion(mensajeDetallado, 'error');
                     
                     // Restaurar botón original
                     restaurarContenidoBoton();
@@ -3044,7 +3103,7 @@
                 console.error('❌ Error en la petición:', error);
                 
                 // Mensaje de error más simple
-                alert('Error de conexión al cambiar el estado de la oferta\n\nIntenta nuevamente en unos segundos.');
+                mostrarNotificacion('Error de conexión al cambiar el estado de la oferta. Intenta nuevamente en unos segundos.', 'error');
                 
                 // Restaurar botón original
                 restaurarContenidoBoton();
@@ -3069,7 +3128,7 @@
             if (!modal || !errorTitle || !errorDescription) {
                 console.error('❌ Elementos del modal de error no encontrados');
                 // Fallback a alert simple
-                alert('Error: ' + mensaje + '\n\nMotivo: ' + tipoError);
+                mostrarNotificacion('Error: ' + mensaje + '. Motivo: ' + tipoError, 'error');
                 return;
             }
             
@@ -3141,7 +3200,7 @@
                 console.log('✅ Modal de error mostrado');
             } catch (e) {
                 console.error('❌ Error mostrando modal, usando alert:', e);
-                alert('Error: ' + mensajeFinal);
+                mostrarNotificacion('Error: ' + mensajeFinal, 'error');
             }
         };
         
@@ -3266,15 +3325,11 @@
                 return;
             }
 
-            ofertaEliminarId = id;
-            ofertaEliminarNombre = nombre || '';
-
-            const nombreLabel = document.getElementById('nombre-oferta-eliminar');
-            if (nombreLabel) {
-                nombreLabel.textContent = ofertaEliminarNombre || 'esta oferta';
+            // Confirmación nativa
+            if (confirm(`¿Estás seguro de que deseas eliminar la oferta académica "${nombre || 'seleccionada'}"?`)) {
+                ofertaEliminarId = id;
+                ejecutarEliminacion();
             }
-
-            mostrarModalConfirmacion();
         };
 
         window.eliminarOfertaDesdeModal = function() {
@@ -3381,31 +3436,57 @@
         window.modificarOferta = function(idOferta, nombreOferta) {
             console.log('🔄 Iniciando modificación de oferta:', idOferta, nombreOferta);
             
-            // Mostrar confirmación
-            if (confirm(`¿Estás seguro que quieres modificar la oferta "${nombreOferta}"?`)) {
-                console.log('✅ Usuario confirmó modificación');
-                
-                // Activar modo edición
-                modoEdicion = true;
-                idOfertaModificar = idOferta;
-                
-                // Cambiar el texto del botón submit
-                const btnSubmit = document.getElementById('btn-submit-form');
-                const btnSubmitText = document.getElementById('btn-submit-text');
-                if (btnSubmit && btnSubmitText) {
-                    btnSubmitText.textContent = 'Guardar Modificaciones';
-                    btnSubmit.classList.add('btn-update');
-                }
-                
-                // Cargar datos de la oferta
-                cargarDatosOferta(idOferta);
-                
-                // Mostrar el formulario
-                mostrarFormulario();
-                
-            } else {
-                console.log('❌ Usuario canceló modificación');
-            }
+            // Primero obtenemos los datos de la oferta para verificar su estado y fechas
+            fetch(`/admin/ofertas/${idOferta}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const oferta = data.oferta;
+                        const fechaInicio = new Date(oferta.fechaInicio + 'T00:00:00');
+                        const hoy = new Date();
+                        hoy.setHours(0, 0, 0, 0); // Resetear horas para comparar solo fechas
+                        
+                        let mensajeConfirmacion = `¿Estás seguro que quieres modificar la oferta "${nombreOferta}"?`;
+                        
+                        // Lógica de advertencia solicitada
+                        if (oferta.estado === 'ACTIVA' && fechaInicio < hoy) {
+                            mensajeConfirmacion = `⚠️ ADVERTENCIA: Esta oferta está ACTIVA y su fecha de inicio (${oferta.fechaInicio}) ya ha pasado.\n\n¿Estás seguro que deseas modificar información de una oferta que ya está en curso?`;
+                        } else if (oferta.estado === 'INACTIVA') {
+                            mensajeConfirmacion = `⚠️ ADVERTENCIA: Estás a punto de modificar una oferta INACTIVA.\n\n¿Estás seguro que deseas continuar?`;
+                        }
+                        
+                        // Mostrar confirmación
+                        if (confirm(mensajeConfirmacion)) {
+                            console.log('✅ Usuario confirmó modificación');
+                            
+                            // Activar modo edición
+                            modoEdicion = true;
+                            idOfertaModificar = idOferta;
+                            
+                            // Cambiar el texto del botón submit
+                            const btnSubmit = document.getElementById('btn-submit-form');
+                            const btnSubmitText = document.getElementById('btn-submit-text');
+                            if (btnSubmit && btnSubmitText) {
+                                btnSubmitText.textContent = 'Guardar Modificaciones';
+                                btnSubmit.classList.add('btn-update');
+                            }
+                            
+                            // Poblar el formulario con los datos ya obtenidos
+                            poblarFormulario(oferta);
+                            
+                            // Mostrar el formulario
+                            mostrarFormulario();
+                        } else {
+                            console.log('❌ Usuario canceló modificación');
+                        }
+                    } else {
+                        mostrarNotificacion('Error al obtener los datos de la oferta para verificar.', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Error al verificar oferta:', error);
+                    mostrarNotificacion('Error de conexión al verificar la oferta.', 'error');
+                });
         };
         
         /**
@@ -3423,12 +3504,12 @@
                         poblarFormulario(data.oferta);
                     } else {
                         console.error('❌ Error al cargar datos:', data.message);
-                        alert('Error al cargar los datos de la oferta: ' + data.message);
+                        mostrarNotificacion('Error al cargar los datos de la oferta: ' + data.message, 'error');
                     }
                 })
                 .catch(error => {
                     console.error('❌ Error en la petición:', error);
-                    alert('Error de conexión al cargar los datos de la oferta');
+                    mostrarNotificacion('Error de conexión al cargar los datos de la oferta', 'error');
                 });
         }
         
@@ -3672,7 +3753,7 @@
                 
             } catch (error) {
                 console.error('❌ Error poblando formulario:', error);
-                alert('Error al cargar los datos en el formulario: ' + error.message);
+                mostrarNotificacion('Error al cargar los datos en el formulario: ' + error.message, 'error');
             }
         }
         
@@ -3739,11 +3820,26 @@
                 }
 
                 if (modoEdicion) {
-                    console.log('📤 Enviando actualización de oferta');
-                    enviarActualizacionOferta();
+                    // Confirmación para modificar
+                    if (confirm('¿Está seguro que desea modificar los datos de esta oferta?')) {
+                        console.log('📤 Enviando actualización de oferta');
+                        enviarActualizacionOferta();
+                    } else {
+                        console.log('❌ Modificación cancelada por el usuario');
+                        limpiarFormularioCompleto();
+                        resetearModoEdicion();
+                        cerrarFormulario();
+                    }
                 } else {
-                    console.log('📤 Enviando nueva oferta');
-                    enviarFormularioAjax(); // Función existente para crear
+                    // Confirmación para registrar
+                    if (confirm('¿Está seguro que desea registrar esta nueva oferta?')) {
+                        console.log('📤 Enviando nueva oferta');
+                        enviarFormularioAjax(); // Función existente para crear
+                    } else {
+                        console.log('❌ Registro cancelado por el usuario');
+                        limpiarFormularioCompleto();
+                        cerrarFormulario();
+                    }
                 }
             });
         }

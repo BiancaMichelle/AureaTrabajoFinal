@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.UUID;
 
 import com.example.demo.enums.EstadoIntento;
-import com.example.demo.model.RespuestaIntento;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;

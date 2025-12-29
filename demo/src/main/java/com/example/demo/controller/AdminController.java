@@ -23,6 +23,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,15 +34,14 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.transaction.annotation.Transactional;
 
+import com.example.demo.enums.Dias;
 import com.example.demo.enums.EstadoOferta;
 import com.example.demo.enums.Modalidad;
 import com.example.demo.enums.TipoGenero;
-import com.example.demo.enums.Dias;
 import com.example.demo.model.Alumno;
-import com.example.demo.model.CarruselImagen;
 import com.example.demo.model.Auditable;
+import com.example.demo.model.CarruselImagen;
 import com.example.demo.model.Categoria;
 import com.example.demo.model.Charla;
 import com.example.demo.model.Curso;
@@ -257,7 +257,7 @@ public class AdminController {
     }
     
     /**
-     * Endpoint para eliminar una oferta
+     * Endpoint para eliminar una oferta (Eliminación lógica: cambia estado a DE_BAJA)
      */
     @PostMapping("/admin/ofertas/eliminar/{id}")
     @Auditable(action = "ELIMINAR_OFERTA", entity = "OfertaAcademica")
@@ -275,7 +275,7 @@ public class AdminController {
             
             OfertaAcademica oferta = ofertaOpt.get();
             
-            // Verificar si puede ser eliminada
+            // Verificar si puede ser eliminada (lógica de negocio: sin inscripciones, no finalizada)
             if (!oferta.puedeSerEliminada()) {
                 Map<String, Object> response = new HashMap<>();
                 response.put("success", false);
@@ -283,12 +283,12 @@ public class AdminController {
                 return ResponseEntity.badRequest().body(response);
             }
             
-            // Eliminar usando el servicio
+            // Eliminación Lógica a través del servicio
             ofertaAcademicaService.eliminar(id, oferta.getTipoOferta());
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
-            response.put("message", "Oferta eliminada correctamente");
+            response.put("message", "Oferta eliminada correctamente (Baja lógica)");
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -316,44 +316,57 @@ public class AdminController {
                 response.put("success", false);
                 response.put("message", "Oferta no encontrada");
                 response.put("motivo", "OFERTA_NO_ENCONTRADA");
-                return ResponseEntity.ok(response); // Devolver 200 OK con success: false
+                return ResponseEntity.ok(response);
             }
             
             OfertaAcademica oferta = ofertaOpt.get();
             System.out.println("📋 Estado actual: " + oferta.getEstado());
             
-            // Validar si se puede cambiar el estado
+            // Validar si se puede cambiar el estado (no FINALIZADA)
             if (!oferta.puedeCambiarEstado()) {
-                String motivo = "No se puede cambiar el estado de una oferta finalizada o cancelada";
+                String motivo = "No se puede cambiar el estado de una oferta finalizada";
                 System.out.println("❌ No se puede cambiar estado: " + motivo);
                 
                 Map<String, Object> response = new HashMap<>();
                 response.put("success", false);
                 response.put("message", motivo);
                 response.put("motivo", "ESTADO_FINAL");
-                return ResponseEntity.ok(response); // Devolver 200 OK con success: false
+                return ResponseEntity.ok(response);
             }
             
-            // Si está activa, validar si se puede dar de baja
-            if (oferta.getEstado() == com.example.demo.enums.EstadoOferta.ACTIVA) {
-                String motivoRechazo = validarDarDeBaja(oferta);
-                if (motivoRechazo != null) {
-                    System.out.println("❌ No se puede dar de baja: " + motivoRechazo);
-                    
-                    Map<String, Object> response = new HashMap<>();
-                    response.put("success", false);
-                    response.put("message", motivoRechazo);
-                    response.put("motivo", "VALIDACION_BAJA");
-                    return ResponseEntity.ok(response); // Devolver 200 OK con success: false
+            boolean exito = false;
+            String mensajeError = null;
+            String motivoCodigo = "VALIDACION_FALLIDA";
+
+            // Lógica de Toggle: Si está DE_BAJA -> Alta, Si está ACTIVA/ENCURSO -> Baja
+            if (oferta.getEstado() == EstadoOferta.DE_BAJA) {
+                // Intentar dar de alta
+                exito = oferta.darDeAlta();
+                if (!exito) {
+                    mensajeError = "No se puede activar la oferta. Verifique que las fechas sean válidas (Fecha fin debe ser futura).";
+                    motivoCodigo = "VALIDACION_ALTA";
+                } else {
+                    System.out.println("🟢 Cambiando a " + oferta.getEstado());
                 }
-                
-                // Dar de baja
-                oferta.setEstado(com.example.demo.enums.EstadoOferta.INACTIVA);
-                System.out.println("🔴 Cambiando a INACTIVA");
             } else {
-                // Dar de alta (de INACTIVA a ACTIVA)
-                oferta.setEstado(com.example.demo.enums.EstadoOferta.ACTIVA);
-                System.out.println("🟢 Cambiando a ACTIVA");
+                // Intentar dar de baja
+                if (!oferta.puedeDarseDeBaja()) {
+                    mensajeError = obtenerMotivoRechazoBaja(oferta);
+                    motivoCodigo = "VALIDACION_BAJA";
+                    exito = false;
+                } else {
+                    exito = oferta.darDeBaja();
+                    System.out.println("🔴 Cambiando a DE_BAJA");
+                }
+            }
+            
+            if (!exito) {
+                System.out.println("❌ Operación rechazada: " + mensajeError);
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", mensajeError);
+                response.put("motivo", motivoCodigo);
+                return ResponseEntity.ok(response);
             }
             
             // Guardar cambios
@@ -374,14 +387,14 @@ public class AdminController {
             response.put("success", false);
             response.put("message", "Error interno del servidor: " + e.getMessage());
             response.put("motivo", "ERROR_SERVIDOR");
-            return ResponseEntity.ok(response); // Devolver 200 OK con success: false
+            return ResponseEntity.ok(response);
         }
     }
     
     /**
-     * Valida si una oferta puede ser dada de baja y devuelve el motivo si no puede
+     * Genera el mensaje de error explicando por qué no se puede dar de baja
      */
-    private String validarDarDeBaja(OfertaAcademica oferta) {
+    private String obtenerMotivoRechazoBaja(OfertaAcademica oferta) {
         java.time.LocalDate ahora = java.time.LocalDate.now();
         
         // Contar inscripciones activas
@@ -393,31 +406,19 @@ public class AdminController {
                     .count();
         }
         
-        System.out.println("📊 Validando baja - Inscripciones activas: " + inscripcionesActivas);
-        System.out.println("📊 Fechas - Inicio: " + oferta.getFechaInicio() + ", Fin: " + oferta.getFechaFin() + ", Hoy: " + ahora);
-        
-        // Si ya terminó la oferta, siempre se puede dar de baja
+        // Si ya terminó la oferta, siempre se debería poder dar de baja (aunque el estado sería FINALIZADA)
         if (oferta.getFechaFin() != null && oferta.getFechaFin().isBefore(ahora)) {
-            System.out.println("✅ Oferta ya terminó, se puede dar de baja");
-            return null; // Se puede dar de baja
+            return null; 
         }
         
-        // Si tiene inscripciones activas y ya comenzó, no se puede dar de baja
-        if (inscripcionesActivas > 0) {
-            if (oferta.getFechaInicio() != null && !oferta.getFechaInicio().isAfter(ahora)) {
-                return "No se puede dar de baja esta oferta porque ya comenzó y tiene " + 
-                       inscripcionesActivas + " inscripcion" + (inscripcionesActivas > 1 ? "es" : "") + " activa" + 
-                       (inscripcionesActivas > 1 ? "s" : "") + ". Las inscripciones deben ser canceladas primero.";
-            } else {
-                return "No se puede dar de baja esta oferta porque tiene " + 
-                       inscripcionesActivas + " inscripcion" + (inscripcionesActivas > 1 ? "es" : "") + " activa" + 
-                       (inscripcionesActivas > 1 ? "s" : "") + ". Las inscripciones deben ser canceladas primero.";
-            }
+        // Si ya comenzó y tiene inscripciones activas
+        if (oferta.getFechaInicio() != null && !oferta.getFechaInicio().isAfter(ahora) && inscripcionesActivas > 0) {
+            return "No se puede dar de baja esta oferta porque ya comenzó y tiene " + 
+                   inscripcionesActivas + " inscripcion" + (inscripcionesActivas > 1 ? "es" : "") + " activa" + 
+                   (inscripcionesActivas > 1 ? "s" : "") + ". Las inscripciones deben ser canceladas primero.";
         }
         
-        // Si no tiene inscripciones activas, siempre se puede dar de baja
-        System.out.println("✅ No hay inscripciones activas, se puede dar de baja");
-        return null; // Se puede dar de baja
+        return "No se puede dar de baja la oferta debido a restricciones de negocio.";
     }
     
     /**
@@ -734,6 +735,69 @@ public class AdminController {
                 return ResponseEntity.badRequest().body(errorResponse);
             }
             
+            // Validaciones específicas por tipo
+            if ("CURSO".equalsIgnoreCase(tipoOferta) || "FORMACION".equalsIgnoreCase(tipoOferta)) {
+                String docentes = "CURSO".equalsIgnoreCase(tipoOferta) ? docentesCurso : docentesFormacion;
+                if (docentes == null || docentes.trim().isEmpty()) {
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("success", false);
+                    errorResponse.put("message", "Debe asignar al menos un docente para Cursos y Formaciones");
+                    return ResponseEntity.badRequest().body(errorResponse);
+                }
+                
+                if (horarios == null || horarios.trim().isEmpty() || "[]".equals(horarios.trim())) {
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("success", false);
+                    errorResponse.put("message", "Debe agregar al menos un horario para Cursos y Formaciones");
+                    return ResponseEntity.badRequest().body(errorResponse);
+                }
+            } else if ("CHARLA".equalsIgnoreCase(tipoOferta) || "SEMINARIO".equalsIgnoreCase(tipoOferta)) {
+                String enlace = "CHARLA".equalsIgnoreCase(tipoOferta) ? enlaceCharla : enlaceSeminario;
+                String lugar = "CHARLA".equalsIgnoreCase(tipoOferta) ? lugarCharla : lugarSeminario;
+                String disertantes = "CHARLA".equalsIgnoreCase(tipoOferta) ? disertantesCharla : disertantesSeminario;
+                
+                boolean esVirtual = "VIRTUAL".equalsIgnoreCase(modalidad) || "HIBRIDA".equalsIgnoreCase(modalidad);
+                boolean esPresencial = "PRESENCIAL".equalsIgnoreCase(modalidad) || "HIBRIDA".equalsIgnoreCase(modalidad);
+                
+                // Validar enlace si es virtual/híbrida
+                if (esVirtual) {
+                    if (enlace == null || enlace.trim().isEmpty()) {
+                        Map<String, Object> errorResponse = new HashMap<>();
+                        errorResponse.put("success", false);
+                        errorResponse.put("message", "Para modalidad Virtual o Híbrida, el enlace es obligatorio");
+                        return ResponseEntity.badRequest().body(errorResponse);
+                    }
+                    try {
+                        new java.net.URL(enlace);
+                    } catch (java.net.MalformedURLException e) {
+                        Map<String, Object> errorResponse = new HashMap<>();
+                        errorResponse.put("success", false);
+                        errorResponse.put("message", "El enlace proporcionado no es una URL válida");
+                        return ResponseEntity.badRequest().body(errorResponse);
+                    }
+                }
+                
+                // Validar lugar si es presencial/híbrida
+                if (esPresencial) {
+                    if (lugar == null || lugar.trim().isEmpty()) {
+                        Map<String, Object> errorResponse = new HashMap<>();
+                        errorResponse.put("success", false);
+                        errorResponse.put("message", "Para modalidad Presencial o Híbrida, el lugar es obligatorio");
+                        return ResponseEntity.badRequest().body(errorResponse);
+                    }
+                }
+                
+                // Validar disertantes (siempre requerido al menos uno)
+                boolean tieneDisertantes = disertantes != null && !disertantes.trim().isEmpty() && !"[]".equals(disertantes.trim());
+                
+                if (!tieneDisertantes) {
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("success", false);
+                    errorResponse.put("message", "Debe agregar al menos un disertante");
+                    return ResponseEntity.badRequest().body(errorResponse);
+                }
+            }
+
             // Normalizar costos: convertir null a 0
             if (costoInscripcion == null) costoInscripcion = 0.0;
             if (costoCuota == null) costoCuota = 0.0;

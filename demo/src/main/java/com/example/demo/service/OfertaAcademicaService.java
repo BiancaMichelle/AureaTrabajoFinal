@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,21 +55,16 @@ public class OfertaAcademicaService {
         }
         throw new IllegalArgumentException("Tipo de oferta no soportado");
     }
+    /**
+     * Realiza una baja lógica de la oferta (cambia estado a DE_BAJA)
+     */
+    @Transactional
     public void eliminar(Long id, String tipo) {
-        switch (tipo.toUpperCase()) {
-            case "CURSO":
-                Long cursoId = Long.valueOf(id);
-                cursoRepository.deleteById(cursoId);
-                break;
-            case "FORMACION":
-                formacionRepository.deleteById(id);
-                break;
-            case "CHARLA":
-                charlaRepository.deleteById(id);
-                break;
-            case "SEMINARIO":
-                seminarioRepository.deleteById(id);
-                break;
+        Optional<OfertaAcademica> ofertaOpt = obtenerPorId(id, tipo);
+        if (ofertaOpt.isPresent()) {
+            OfertaAcademica oferta = ofertaOpt.get();
+            oferta.setEstado(EstadoOferta.DE_BAJA);
+            guardar(oferta);
         }
     }
 
@@ -135,7 +131,7 @@ public class OfertaAcademicaService {
      */
     @Transactional
     public boolean darDeBaja(Long id) {
-        return cambiarEstado(id, EstadoOferta.INACTIVA);
+        return cambiarEstado(id, EstadoOferta.DE_BAJA);
     }
 
     /**
@@ -160,7 +156,7 @@ public class OfertaAcademicaService {
     }
 
     /**
-     * Elimina una oferta con validaciones
+     * Elimina una oferta con validaciones (Baja lógica)
      */
     @Transactional
     public boolean eliminarConValidacion(Long id) {
@@ -176,8 +172,9 @@ public class OfertaAcademicaService {
             return false;
         }
         
-        String tipo = oferta.getTipoOferta();
-        eliminar(id, tipo);
+        // Baja lógica
+        oferta.setEstado(EstadoOferta.DE_BAJA);
+        guardar(oferta);
         return true;
     }
 
@@ -297,5 +294,27 @@ public class OfertaAcademicaService {
         ofertas.addAll(charlaRepository.findByNombreContainingIgnoreCase(nombre));
         ofertas.addAll(seminarioRepository.findByNombreContainingIgnoreCase(nombre));
         return ofertas;
+    }
+
+    /**
+     * Tarea programada para verificar y actualizar estados de ofertas finalizadas
+     * Se ejecuta cada 10 minutos (600000 ms)
+     */
+    @Scheduled(fixedRate = 600000)
+    @Transactional
+    public void verificarOfertasFinalizadas() {
+        List<OfertaAcademica> todas = obtenerTodas();
+        int actualizadas = 0;
+        
+        for (OfertaAcademica oferta : todas) {
+            if (oferta.actualizarEstadoSiFinalizada()) {
+                guardar(oferta);
+                actualizadas++;
+            }
+        }
+        
+        if (actualizadas > 0) {
+            System.out.println("🔄 Se actualizaron " + actualizadas + " ofertas (FINALIZADA/EN CURSO)");
+        }
     }
 }

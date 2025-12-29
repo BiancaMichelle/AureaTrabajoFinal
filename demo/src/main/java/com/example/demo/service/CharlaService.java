@@ -163,7 +163,7 @@ public class CharlaService {
      * Da de baja una charla - usa método heredado
      */
     public boolean darDeBaja(Long id) {
-        return cambiarEstado(id, EstadoOferta.INACTIVA);
+        return cambiarEstado(id, EstadoOferta.DE_BAJA);
     }
 
     /**

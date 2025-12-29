@@ -7,6 +7,7 @@ import java.util.List;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.example.demo.enums.TipoGenero;
@@ -26,6 +27,7 @@ import com.example.demo.repository.UsuarioRepository;
 import jakarta.transaction.Transactional;
 
 @SpringBootApplication
+@EnableScheduling
 public class DemoApplication implements CommandLineRunner {
 
     private final RolRepository roleRepository;
