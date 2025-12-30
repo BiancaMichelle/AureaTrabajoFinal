@@ -167,6 +167,21 @@
                             </div>
                         </div>
 
+                        <!-- Ubicación y Acceso -->
+                        <div class="form-section">
+                            <h4><i class="fas fa-map-marker-alt"></i> Ubicación y Acceso</h4>
+                            <div class="form-group" id="grupo-lugar">
+                                <label for="lugar">Lugar <span class="text-muted">(Requerido para Presencial/Híbrida)</span></label>
+                                <input type="text" id="lugar" name="lugar" class="form-control" 
+                                       placeholder="Dirección física o aula">
+                            </div>
+                            <div class="form-group" id="grupo-enlace">
+                                <label for="enlace">Enlace <span class="text-muted">(Requerido para Virtual/Híbrida)</span></label>
+                                <input type="url" id="enlace" name="enlace" class="form-control" 
+                                       placeholder="https://zoom.us/...">
+                            </div>
+                        </div>
+
                         <!-- Costos -->
                         <div class="form-section">
                             <h4><i class="fas fa-dollar-sign"></i> Información de Costos</h4>
@@ -185,11 +200,6 @@
                                     <label for="nrCuotas">Número de Cuotas</label>
                                     <input type="number" id="nrCuotas" name="nrCuotas" class="form-control" min="1">
                                 </div>
-                                <div class="form-group" id="grupo-costo-mora" style="display: none;">
-                                    <label for="costoMora">Costo por Mora</label>
-                                    <input type="number" step="0.01" id="costoMora" name="costoMora" 
-                                           class="form-control" placeholder="0.00">
-                                </div>
                                 <div class="form-group" id="grupo-dia-vencimiento" style="display: none;">
                                     <label for="diaVencimiento">Día de Vencimiento</label>
                                     <input type="number" id="diaVencimiento" name="diaVencimiento" 
@@ -203,30 +213,7 @@
                             </div>
                         </div>
 
-                        <!-- Certificación -->
-                        <div class="form-section">
-                            <h4><i class="fas fa-certificate"></i> Certificación</h4>
-                            <div class="checkbox-container">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="otorgaCertificado" class="form-checkbox">
-                                    <span class="checkmark"></span>
-                                    Otorga Certificado
-                                </label>
-                            </div>
-                            
-                            <div id="certificado-fields" style="display: none;">
-                                <div class="form-group">
-                                    <label for="tituloCertificado">Título del Certificado</label>
-                                    <input type="text" id="tituloCertificado" name="tituloCertificado" class="form-control" 
-                                           placeholder="Ej: Certificado de Finalización en...">
-                                </div>
-                                <div class="form-group">
-                                    <label for="descripcionCertificado">Descripción del Certificado</label>
-                                    <textarea id="descripcionCertificado" name="descripcionCertificado" rows="2" 
-                                              class="form-control" placeholder="Descripción que aparecerá en el certificado"></textarea>
-                                </div>
-                            </div>
-                        </div>
+
 
                         <!-- Categorías -->
                         <div class="form-section">
@@ -275,6 +262,31 @@
                                     </div>
                                     <img id="image-preview" style="display: none;" alt="Vista previa">
                                 </label>
+                            </div>
+                        </div>
+
+                        <!-- Certificación -->
+                        <div class="form-section">
+                            <h4><i class="fas fa-certificate"></i> Certificación</h4>
+                            <div class="checkbox-container">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="otorgaCertificado" class="form-checkbox">
+                                    <span class="checkmark"></span>
+                                    Otorga Certificado
+                                </label>
+                            </div>
+                            
+                            <div id="certificado-fields" style="display: none;">
+                                <div class="form-group">
+                                    <label for="tituloCertificado">Título del Certificado</label>
+                                    <input type="text" id="tituloCertificado" name="tituloCertificado" class="form-control" 
+                                           placeholder="Ej: Certificado de Finalización en...">
+                                </div>
+                                <div class="form-group">
+                                    <label for="descripcionCertificado">Descripción del Certificado</label>
+                                    <textarea id="descripcionCertificado" name="descripcionCertificado" rows="2" 
+                                              class="form-control" placeholder="Descripción que aparecerá en el certificado"></textarea>
+                                </div>
                             </div>
                         </div>
 
@@ -350,16 +362,6 @@
                         <div id="fields-charla" class="form-section tipo-specific" style="display: none;">
                             <h4><i class="fas fa-microphone"></i> Información de la Charla</h4>
                             <div class="form-group">
-                                <label for="lugarCharla">Lugar</label>
-                                <input type="text" id="lugarCharla" name="lugarCharla" class="form-control" 
-                                       placeholder="Dirección física del evento">
-                            </div>
-                            <div class="form-group">
-                                <label for="enlaceCharla">Enlace</label>
-                                <input type="url" id="enlaceCharla" name="enlaceCharla" class="form-control" 
-                                       placeholder="Enlace de acceso virtual">
-                            </div>
-                            <div class="form-group">
                                 <label for="publicoObjetivo">Público Objetivo</label>
                                 <input type="text" id="publicoObjetivo" name="publicoObjetivo" class="form-control" 
                                        placeholder="A quién está dirigida la charla">
@@ -381,16 +383,6 @@
                         <!-- Campos para SEMINARIO -->
                         <div id="fields-seminario" class="form-section tipo-specific" style="display: none;">
                             <h4><i class="fas fa-users"></i> Información del Seminario</h4>
-                            <div class="form-group">
-                                <label for="lugarSeminario">Lugar</label>
-                                <input type="text" id="lugarSeminario" name="lugarSeminario" class="form-control" 
-                                       placeholder="Dirección física del seminario">
-                            </div>
-                            <div class="form-group">
-                                <label for="enlaceSeminario">Enlace</label>
-                                <input type="url" id="enlaceSeminario" name="enlaceSeminario" class="form-control" 
-                                       placeholder="Enlace de acceso virtual">
-                            </div>
                             <div class="form-group">
                                 <label for="publicoObjetivoSeminario">Público Objetivo</label>
                                 <input type="text" id="publicoObjetivoSeminario" name="publicoObjetivoSeminario" class="form-control" 
@@ -505,17 +497,16 @@
                     </select>
                     <select id="filtro-estado" class="filter-select">
                         <option value="">Todos los estados</option>
-                        <option value="ACTIVA">Activa</option>
-                        <option value="INACTIVA">Inactiva</option>
-                        <option value="FINALIZADA">Finalizada</option>
+                        <option value="ENCURSO">En Curso</option>
+                        <option value="ACTIVA">Activo</option>
+                        <option value="FINALIZADA">Finalizado</option>
+                        <option value="DE_BAJA">De Baja</option>
                     </select>
                     <select id="filtro-certificado" class="filter-select">
                         <option value="">Certificado</option>
                         <option value="SI">Con certificado</option>
                         <option value="NO">Sin certificado</option>
                     </select>
-                    <input type="number" id="filtro-costo-min" placeholder="Costo mínimo" class="filter-input">
-                    <input type="number" id="filtro-costo-max" placeholder="Costo máximo" class="filter-input">
                 </div>
                 <div class="filters-actions">
                     <button id="btn-apply-filters" class="btn-secondary">
@@ -580,16 +571,8 @@
                                         onclick="modificarOferta(this.getAttribute('data-id'), this.getAttribute('data-nombre'))">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button class="btn-accion btn-eliminar"
-                                        title="Eliminar"
-                                        th:data-id="${oferta.idOferta}"
-                                        th:data-nombre="${oferta.nombre}"
-                                        onclick="eliminarOferta(this.getAttribute('data-id'), this.getAttribute('data-nombre'))">
-                                    <i class="fas fa-trash"></i>
-                                </button>
                             </td>
                         </tr>
-                        
                         <!-- Mensaje cuando no hay ofertas -->
                         <tr th:if="${ofertas == null or ofertas.isEmpty()}">
                             <td colspan="8" class="text-center text-muted py-4">
@@ -602,17 +585,17 @@
             </div>
             
             <div class="table-pagination">
-                <div class="pagination-info">
-                    Mostrando 1-1 de 1 ofertas
+                <div class="pagination-info" id="pagination-info">
+                    Mostrando 0-0 de 0 ofertas
                 </div>
                 <div class="pagination-controls">
-                    <button class="btn-pagination" disabled>
+                    <button class="btn-pagination" id="btn-prev" onclick="cambiarPagina(-1)">
                         <i class="fas fa-chevron-left"></i> Anterior
                     </button>
-                    <span class="pagination-pages">
+                    <span class="pagination-pages" id="pagination-pages">
                         <button class="btn-page active">1</button>
                     </span>
-                    <button class="btn-pagination" disabled>
+                    <button class="btn-pagination" id="btn-next" onclick="cambiarPagina(1)">
                         Siguiente <i class="fas fa-chevron-right"></i>
                     </button>
                 </div>
@@ -1129,12 +1112,14 @@
             const btnShowForm = document.getElementById('btn-show-form');
             const formContainer = document.getElementById('form-container');
             const btnCloseForm = document.getElementById('btn-close-form');
+            const btnCancelForm = document.getElementById('btn-cancel-form');
             const btnGestionarCategorias = document.getElementById('btn-gestionar-categorias');
             
             console.log('Elementos encontrados:', {
                 btnShowForm: !!btnShowForm,
                 formContainer: !!formContainer,
                 btnCloseForm: !!btnCloseForm,
+                btnCancelForm: !!btnCancelForm,
                 btnGestionarCategorias: !!btnGestionarCategorias
             });
             
@@ -1143,6 +1128,12 @@
                 btnShowForm.addEventListener('click', function(e) {
                     e.preventDefault();
                     console.log('👆 CLICK EN NUEVA OFERTA');
+                    
+                    // Limpiar formulario para asegurar estado inicial
+                    if (typeof limpiarFormularioCompleto === 'function') {
+                        limpiarFormularioCompleto();
+                    }
+                    
                      // Establecer fecha mínima en los inputs de fecha (hoy)
                     const hoy = new Date().toISOString().split('T')[0];
                     const fechaInicioInput = document.getElementById('fechaInicio');
@@ -1165,7 +1156,52 @@
             if (btnCloseForm && formContainer) {
                 btnCloseForm.addEventListener('click', function(e) {
                     e.preventDefault();
+                    
+                    // Verificar si estamos en modo edición
+                    if (typeof modoEdicion !== 'undefined' && modoEdicion) {
+                        if (!confirm('¿Estás seguro que deseas cancelar la modificación? Los cambios no guardados se perderán.')) {
+                            return;
+                        }
+                        // Si confirma, reseteamos el modo edición
+                        if (typeof resetearModoEdicion === 'function') {
+                            resetearModoEdicion();
+                        }
+                        // Y limpiamos el formulario
+                        if (typeof limpiarFormularioCompleto === 'function') {
+                            limpiarFormularioCompleto();
+                        }
+                    }
+                    
                     console.log('❌ CERRANDO FORMULARIO');
+                    
+                    formContainer.classList.remove('show');
+                    setTimeout(() => {
+                        formContainer.style.display = 'none';
+                    }, 500);
+                });
+            }
+
+            // Manejador del botón cancelar formulario (botón inferior)
+            if (btnCancelForm && formContainer) {
+                btnCancelForm.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Verificar si estamos en modo edición
+                    if (typeof modoEdicion !== 'undefined' && modoEdicion) {
+                        if (!confirm('¿Estás seguro que deseas cancelar la modificación? Los cambios no guardados se perderán.')) {
+                            return;
+                        }
+                        // Si confirma, reseteamos el modo edición
+                        if (typeof resetearModoEdicion === 'function') {
+                            resetearModoEdicion();
+                        }
+                        // Y limpiamos el formulario
+                        if (typeof limpiarFormularioCompleto === 'function') {
+                            limpiarFormularioCompleto();
+                        }
+                    }
+                    
+                    console.log('❌ CANCELANDO FORMULARIO');
                     
                     formContainer.classList.remove('show');
                     setTimeout(() => {
@@ -1235,7 +1271,26 @@
                 notificationClose.addEventListener('click', ocultarNotificacion);
             }
             
+            // Manejador de filtros
+            const btnApplyFilters = document.getElementById('btn-apply-filters');
+            const btnClearFilters = document.getElementById('btn-clear-filters');
+            
+            if (btnApplyFilters) {
+                btnApplyFilters.addEventListener('click', function() {
+                    aplicarFiltros();
+                });
+            }
+            
+            if (btnClearFilters) {
+                btnClearFilters.addEventListener('click', function() {
+                    limpiarFiltros();
+                });
+            }
+
             console.log('🎉 GESTIÓN DE OFERTAS INICIALIZADA');
+            
+            // Cargar ofertas iniciales para paginación
+            actualizarTablaOfertas();
         });
         
         // Función para mostrar campos específicos según tipo de oferta
@@ -1258,7 +1313,6 @@
             // Controlar campos de cuotas en la sección principal de costos
             const grupoCostoCuota = document.getElementById('grupo-costo-cuota');
             const grupoNroCuotas = document.getElementById('grupo-nro-cuotas');
-            const grupoCostoMora = document.getElementById('grupo-costo-mora');
             const grupoDiaVencimiento = document.getElementById('grupo-dia-vencimiento');
             
             // Mostrar campos de cuotas solo para CURSO y FORMACION
@@ -1266,7 +1320,6 @@
             
             if (grupoCostoCuota) grupoCostoCuota.style.display = mostrarCamposCuotas ? 'block' : 'none';
             if (grupoNroCuotas) grupoNroCuotas.style.display = mostrarCamposCuotas ? 'block' : 'none';
-            if (grupoCostoMora) grupoCostoMora.style.display = mostrarCamposCuotas ? 'block' : 'none';
             if (grupoDiaVencimiento) grupoDiaVencimiento.style.display = mostrarCamposCuotas ? 'block' : 'none';
             
             // Mostrar la sección correspondiente al tipo seleccionado
@@ -2317,6 +2370,13 @@
             const formulario = document.getElementById('oferta-form');
             const formData = new FormData(formulario);
             
+            // Manejar cupos infinitos: si está vacío, enviar Integer.MAX_VALUE
+            const cuposVal = formData.get('cupos');
+            if (!cuposVal || cuposVal.trim() === '') {
+                formData.set('cupos', '2147483647');
+                console.log('♾️ Cupos establecidos como ilimitados (MAX_VALUE)');
+            }
+            
             // Debug: mostrar datos del formulario
             console.log('📋 Datos del formulario:');
             for (let [key, value] of formData.entries()) {
@@ -2452,6 +2512,12 @@
             }
         }
         
+        // Variables de paginación
+        let currentPage = 1;
+        const itemsPerPage = 10;
+        let allOfertas = [];
+        let filteredOfertas = [];
+
         // Función para actualizar tabla de ofertas
         function actualizarTablaOfertas() {
             console.log('📊 Actualizando tabla de ofertas...');
@@ -2460,14 +2526,138 @@
                 .then(data => {
                     console.log('📥 Respuesta del servidor:', data);
                     if (data.success && data.data) {
-                        actualizarTablaConDatos(data.data);
-                        actualizarContadorOfertas(data.data.length);
+                        // Guardar datos globales
+                        allOfertas = data.data;
+                        filteredOfertas = [...allOfertas]; // Inicialmente sin filtros adicionales
+                        
+                        // Resetear a página 1
+                        currentPage = 1;
+                        
+                        // Renderizar
+                        renderizarPaginaActual();
+                        
                         console.log('✅ Tabla actualizada con', data.data.length, 'ofertas');
                     }
                 })
                 .catch(error => {
                     console.error('❌ Error al actualizar tabla:', error);
                 });
+        }
+
+        // Funciones de paginación
+        window.cambiarPagina = function(delta) {
+            const totalPages = Math.ceil(filteredOfertas.length / itemsPerPage);
+            const newPage = currentPage + delta;
+            
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentPage = newPage;
+                renderizarPaginaActual();
+            }
+        };
+
+        window.irAPagina = function(page) {
+            currentPage = page;
+            renderizarPaginaActual();
+        };
+
+        function renderizarPaginaActual() {
+            const start = (currentPage - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+            const pageData = filteredOfertas.slice(start, end);
+            
+            actualizarTablaConDatos(pageData);
+            actualizarControlesPaginacion();
+            actualizarInfoPaginacion(start, end);
+        }
+
+        function actualizarControlesPaginacion() {
+            const totalPages = Math.ceil(filteredOfertas.length / itemsPerPage);
+            const btnPrev = document.getElementById('btn-prev');
+            const btnNext = document.getElementById('btn-next');
+            const pagesContainer = document.getElementById('pagination-pages');
+            
+            if (btnPrev) btnPrev.disabled = currentPage === 1;
+            if (btnNext) btnNext.disabled = currentPage === totalPages || totalPages === 0;
+            
+            if (pagesContainer) {
+                pagesContainer.innerHTML = '';
+                
+                // Lógica simple de paginación: mostrar rango alrededor de actual
+                let startPage = Math.max(1, currentPage - 2);
+                let endPage = Math.min(totalPages, startPage + 4);
+                
+                if (endPage - startPage < 4) {
+                    startPage = Math.max(1, endPage - 4);
+                }
+
+                for (let i = startPage; i <= endPage; i++) {
+                    const btn = document.createElement('button');
+                    btn.className = `btn-page ${i === currentPage ? 'active' : ''}`;
+                    btn.textContent = i;
+                    btn.onclick = () => irAPagina(i);
+                    pagesContainer.appendChild(btn);
+                }
+            }
+        }
+
+        function actualizarInfoPaginacion(start, end) {
+            const infoDiv = document.getElementById('pagination-info');
+            const total = filteredOfertas.length;
+            const realEnd = Math.min(end, total);
+            const realStart = total === 0 ? 0 : start + 1;
+            
+            if (infoDiv) {
+                infoDiv.textContent = `Mostrando ${realStart}-${realEnd} de ${total} ofertas`;
+            }
+            
+            // Actualizar también el contador del header si existe
+            actualizarContadorOfertas(total);
+        }
+
+        function aplicarFiltros() {
+            const searchInput = document.getElementById('search-input').value.toLowerCase();
+            const tipo = document.getElementById('filtro-tipo').value;
+            const modalidad = document.getElementById('filtro-modalidad').value;
+            const estado = document.getElementById('filtro-estado').value;
+            const certificado = document.getElementById('filtro-certificado').value;
+            
+            filteredOfertas = allOfertas.filter(oferta => {
+                // Filtro por nombre
+                if (searchInput && !oferta.nombre.toLowerCase().includes(searchInput)) return false;
+                
+                // Filtro por tipo
+                if (tipo && (oferta.tipo || oferta.tipoOferta) !== tipo) return false;
+                
+                // Filtro por modalidad
+                if (modalidad && oferta.modalidad !== modalidad) return false;
+                
+                // Filtro por estado
+                if (estado && oferta.estado !== estado) return false;
+                
+                // Filtro por certificado
+                if (certificado) {
+                    const tieneCertificado = oferta.certificado === true || oferta.certificado === 'true' || oferta.certificado === 'SI';
+                    if (certificado === 'SI' && !tieneCertificado) return false;
+                    if (certificado === 'NO' && tieneCertificado) return false;
+                }
+                
+                return true;
+            });
+            
+            currentPage = 1;
+            renderizarPaginaActual();
+        }
+        
+        function limpiarFiltros() {
+            document.getElementById('search-input').value = '';
+            document.getElementById('filtro-tipo').value = '';
+            document.getElementById('filtro-modalidad').value = '';
+            document.getElementById('filtro-estado').value = '';
+            document.getElementById('filtro-certificado').value = '';
+            
+            filteredOfertas = [...allOfertas];
+            currentPage = 1;
+            renderizarPaginaActual();
         }
         
         // Función para actualizar tabla con nuevos datos
@@ -2507,7 +2697,7 @@
                     <td>${oferta.tipoOferta || oferta.tipo || '-'}</td>
                     <td>${oferta.modalidad || '-'}</td>
                     <td class="cupos-cell">
-                        ${oferta.cupos ? 
+                        ${(oferta.cupos && oferta.cupos !== 2147483647) ? 
                             `<span class="cupos-disponibles">${oferta.cupos}</span>` : 
                             '<span class="cupos-ilimitados">∞</span>'
                         }
@@ -2701,7 +2891,7 @@
             }
             
             // Cupos
-            const cupos = oferta.cupos || '-';
+            const cupos = (oferta.cupos && oferta.cupos !== 2147483647) ? oferta.cupos : 'Sin límite';
             const capacidadMaxElement = document.getElementById('detalle-capacidad-max');
             if (capacidadMaxElement) {
                 capacidadMaxElement.textContent = cupos;
@@ -3057,6 +3247,9 @@
                     mostrarNotificacion(mensaje, 'success');
                     
                     console.log('🔄 Estado actualizado en la interfaz');
+                    
+                    // Actualizar tabla de ofertas para reflejar el cambio
+                    actualizarTablaOfertas();
                 } else {
                     console.error('❌ Error del servidor:', data.message || 'Error desconocido');
                     console.log('🔍 Motivo del error:', data.motivo);
@@ -3273,6 +3466,7 @@
         // Variable global para rastrear si está en modo edición
         let modoEdicion = false;
         let idOfertaModificar = null;
+        let estadoOfertaEnEdicion = null;
 
         // Variables para manejar eliminaciones
         let ofertaEliminarId = null;
@@ -3451,8 +3645,8 @@
                         // Lógica de advertencia solicitada
                         if (oferta.estado === 'ACTIVA' && fechaInicio < hoy) {
                             mensajeConfirmacion = `⚠️ ADVERTENCIA: Esta oferta está ACTIVA y su fecha de inicio (${oferta.fechaInicio}) ya ha pasado.\n\n¿Estás seguro que deseas modificar información de una oferta que ya está en curso?`;
-                        } else if (oferta.estado === 'INACTIVA') {
-                            mensajeConfirmacion = `⚠️ ADVERTENCIA: Estás a punto de modificar una oferta INACTIVA.\n\n¿Estás seguro que deseas continuar?`;
+                        } else if (oferta.estado === 'DE_BAJA') {
+                            mensajeConfirmacion = `⚠️ ADVERTENCIA: Estás a punto de modificar una oferta que está DE BAJA.\n\n¿Estás seguro que deseas continuar?`;
                         }
                         
                         // Mostrar confirmación
@@ -3462,6 +3656,8 @@
                             // Activar modo edición
                             modoEdicion = true;
                             idOfertaModificar = idOferta;
+                            estadoOfertaEnEdicion = oferta.estado;
+                            console.log('📝 Modo edición activado. Estado original:', estadoOfertaEnEdicion);
                             
                             // Cambiar el texto del botón submit
                             const btnSubmit = document.getElementById('btn-submit-form');
@@ -3545,7 +3741,13 @@
                     document.getElementById('fechaFin').value = oferta.fechaFin || '';
                 }
                 if (document.getElementById('cupos')) {
-                    document.getElementById('cupos').value = oferta.cupos || '';
+                    const cuposVal = oferta.cupos;
+                    // Si es MAX_VALUE (2147483647), dejar vacío para indicar "Sin límite"
+                    if (cuposVal === 2147483647) {
+                        document.getElementById('cupos').value = '';
+                    } else {
+                        document.getElementById('cupos').value = cuposVal || '';
+                    }
                 }
                 
                 // Certificado - manejar diferentes formatos
@@ -3578,9 +3780,6 @@
                         }
                         if (document.getElementById('costoCuota')) {
                             document.getElementById('costoCuota').value = oferta.costoCuota || '';
-                        }
-                        if (document.getElementById('costoMora')) {
-                            document.getElementById('costoMora').value = oferta.costoMora || '';
                         }
                         if (document.getElementById('nrCuotas')) {
                             document.getElementById('nrCuotas').value = oferta.nrCuotas || '';
@@ -3630,10 +3829,6 @@
                         if (document.getElementById('costoCuotaFormacion')) {
                             document.getElementById('costoCuotaFormacion').value = oferta.costoCuota || '';
                             console.log('✅ Costo cuota cargado:', oferta.costoCuota);
-                        }
-                        if (document.getElementById('costoMoraFormacion')) {
-                            document.getElementById('costoMoraFormacion').value = oferta.costoMora || '';
-                            console.log('✅ Costo mora cargado:', oferta.costoMora);
                         }
                         if (document.getElementById('nrCuotasFormacion')) {
                             document.getElementById('nrCuotasFormacion').value = oferta.nrCuotas || '';
@@ -3721,7 +3916,7 @@
                         }
                     }
                     
-                    console.log('✅ Campos específicos cargados');
+                    console.log('Campos específicos cargados');
                 }, 100);
                 
                 // Cargar categorías
@@ -3731,12 +3926,12 @@
                         nombre: cat.nombre
                     }));
                     actualizarCategoriasChips();
-                    console.log('✅ Categorías cargadas:', categoriasSeleccionadas.length);
+                    console.log('Categorías cargadas:', categoriasSeleccionadas.length);
                 }
                 
                 // Cargar horarios si existen
                 if (oferta.horarios && Array.isArray(oferta.horarios)) {
-                    console.log('🕒 Horarios recibidos:', oferta.horarios);
+                    console.log('Horarios recibidos:', oferta.horarios);
                     horariosSeleccionados = oferta.horarios.map(h => {
                         console.log('  - Horario individual:', h);
                         return {
@@ -3746,13 +3941,13 @@
                         };
                     });
                     actualizarHorariosChips();
-                    console.log('✅ Horarios cargados:', horariosSeleccionados.length, horariosSeleccionados);
+                    console.log('Horarios cargados:', horariosSeleccionados.length, horariosSeleccionados);
                 }
                 
-                console.log('✅ Formulario poblado exitosamente');
+                console.log('Formulario poblado exitosamente');
                 
             } catch (error) {
-                console.error('❌ Error poblando formulario:', error);
+                console.error('Error poblando formulario:', error);
                 mostrarNotificacion('Error al cargar los datos en el formulario: ' + error.message, 'error');
             }
         }
@@ -3784,6 +3979,7 @@
         function resetearModoEdicion() {
             modoEdicion = false;
             idOfertaModificar = null;
+            estadoOfertaEnEdicion = null;
             
             // Resetear el botón submit
             const btnSubmit = document.getElementById('btn-submit-form');
@@ -3815,17 +4011,17 @@
                 actualizarCertificadoHidden();
 
                 if (!validarFormulario(tipoOferta)) {
-                    console.warn('❌ Validación fallida, formulario no enviado');
+                    console.warn('Validación fallida, formulario no enviado');
                     return;
                 }
 
                 if (modoEdicion) {
                     // Confirmación para modificar
                     if (confirm('¿Está seguro que desea modificar los datos de esta oferta?')) {
-                        console.log('📤 Enviando actualización de oferta');
+                        console.log('Enviando actualización de oferta');
                         enviarActualizacionOferta();
                     } else {
-                        console.log('❌ Modificación cancelada por el usuario');
+                        console.log('Modificación cancelada por el usuario');
                         limpiarFormularioCompleto();
                         resetearModoEdicion();
                         cerrarFormulario();
@@ -3833,10 +4029,10 @@
                 } else {
                     // Confirmación para registrar
                     if (confirm('¿Está seguro que desea registrar esta nueva oferta?')) {
-                        console.log('📤 Enviando nueva oferta');
+                        console.log('Enviando nueva oferta');
                         enviarFormularioAjax(); // Función existente para crear
                     } else {
-                        console.log('❌ Registro cancelado por el usuario');
+                        console.log('Registro cancelado por el usuario');
                         limpiarFormularioCompleto();
                         cerrarFormulario();
                     }
@@ -3848,7 +4044,7 @@
          * Función para enviar actualización de oferta
          */
         function enviarActualizacionOferta() {
-            console.log('🚀 Iniciando actualización de oferta');
+            console.log('Iniciando actualización de oferta');
             
             const formulario = document.getElementById('oferta-form');
             const formData = new FormData(formulario);
@@ -3868,12 +4064,48 @@
             })
             .then(response => response.json())
             .then(data => {
-                console.log('📋 Respuesta del servidor:', data);
+                console.log('Respuesta del servidor:', data);
                 
                 if (data.success) {
-                    console.log('✅ Oferta actualizada exitosamente');
+                    console.log('Oferta actualizada exitosamente. Estado original era:', estadoOfertaEnEdicion);
                     mostrarNotificacion('Oferta actualizada exitosamente', 'success');
                     
+                    // Verificar si estaba DE_BAJA para ofrecer dar de alta
+                    if (estadoOfertaEnEdicion === 'DE_BAJA') {
+                        console.log('💡 Oferta estaba DE_BAJA, preguntando si activar...');
+                        if (confirm('La oferta se ha modificado correctamente. ¿Desea darla de alta ahora?')) {
+                            // Intentar dar de alta
+                            const token = obtenerCsrfToken();
+                            const headerName = obtenerCsrfHeaderName();
+                            const headers = {
+                                'Content-Type': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            };
+                            if (token && headerName) headers[headerName] = token;
+
+                            fetch(`/admin/ofertas/cambiar-estado/${idOfertaModificar}`, {
+                                method: 'POST',
+                                headers: headers
+                            })
+                            .then(r => r.json())
+                            .then(resp => {
+                                if (resp.success) {
+                                    mostrarNotificacion('Oferta dada de alta correctamente', 'success');
+                                } else {
+                                    mostrarNotificacion('No se pudo dar de alta: ' + resp.message, 'warning');
+                                }
+                            })
+                            .catch(err => console.error('Error al dar de alta post-edición', err))
+                            .finally(() => {
+                                limpiarFormularioCompleto();
+                                resetearModoEdicion();
+                                cerrarFormulario();
+                                actualizarTablaOfertas();
+                            });
+                            return; // Salir para esperar el fetch asíncrono
+                        }
+                    }
+
                     // Limpiar formulario y resetear modo
                     limpiarFormularioCompleto();
                     resetearModoEdicion();
@@ -3883,12 +4115,12 @@
                     actualizarTablaOfertas();
                     
                 } else {
-                    console.error('❌ Error al actualizar:', data.message);
+                    console.error('Error al actualizar:', data.message);
                     mostrarNotificacion('Error al actualizar la oferta: ' + data.message, 'error');
                 }
             })
             .catch(error => {
-                console.error('❌ Error en la petición:', error);
+                console.error('Error en la petición:', error);
                 mostrarNotificacion('Error de conexión al actualizar la oferta', 'error');
             })
             .finally(() => {
@@ -3898,13 +4130,6 @@
             });
         }
         
-        // Resetear modo edición al cancelar formulario
-        const btnCancelForm = document.getElementById('btn-cancel-form');
-        if (btnCancelForm) {
-            btnCancelForm.addEventListener('click', function() {
-                resetearModoEdicion();
-            });
-        }
         
         console.log('🔄 Sistema de modificación de ofertas inicializado');
     </script>

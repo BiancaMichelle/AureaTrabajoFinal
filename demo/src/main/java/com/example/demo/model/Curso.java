@@ -292,6 +292,8 @@ public class Curso extends OfertaAcademica {
         detalle.setCostoInscripcion(this.getCostoInscripcion());
         detalle.setCertificado(this.getCertificado() != null ? this.getCertificado().toString() : "");
         detalle.setVisibilidad(this.getVisibilidad());
+        detalle.setLugar(this.getLugar());
+        detalle.setEnlace(this.getEnlace());
         
         // Información específica de curso
         detalle.setTemario(this.temario);
@@ -446,6 +448,8 @@ public class Curso extends OfertaAcademica {
         private Double costoInscripcion;
         private String certificado;
         private Boolean visibilidad;
+        private String lugar;
+        private String enlace;
         
         // Específicos de curso
         private String temario;
@@ -499,6 +503,12 @@ public class Curso extends OfertaAcademica {
         
         public Boolean getVisibilidad() { return visibilidad; }
         public void setVisibilidad(Boolean visibilidad) { this.visibilidad = visibilidad; }
+
+        public String getLugar() { return lugar; }
+        public void setLugar(String lugar) { this.lugar = lugar; }
+
+        public String getEnlace() { return enlace; }
+        public void setEnlace(String enlace) { this.enlace = enlace; }
         
         public String getTemario() { return temario; }
         public void setTemario(String temario) { this.temario = temario; }

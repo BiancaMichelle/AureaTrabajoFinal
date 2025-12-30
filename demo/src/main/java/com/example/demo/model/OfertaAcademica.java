@@ -74,6 +74,10 @@ public class OfertaAcademica {
     @NotNull(message = "El campo certificado no puede estar vacío")
     private Boolean certificado;
     
+    // Campos de ubicación/acceso (movidos desde subclases)
+    private String lugar;
+    private String enlace;
+    
     @Enumerated(EnumType.STRING)
     private EstadoOferta estado;
     @Min(1)
@@ -145,7 +149,7 @@ public class OfertaAcademica {
      * Información de cupos para la tabla
      */
     public String getInfoCupos() {
-        if (cupos == null) return "Sin límite";
+        if (cupos == null || cupos == Integer.MAX_VALUE) return "Sin límite";
         int ocupados = inscripciones != null ? inscripciones.size() : 0;
         return ocupados + " / " + cupos;
     }
@@ -153,7 +157,7 @@ public class OfertaAcademica {
      * Porcentaje de ocupación de cupos
      */
     public Double getPorcentajeOcupacion() {
-        if (cupos == null || cupos == 0) return 0.0;
+        if (cupos == null || cupos == 0 || cupos == Integer.MAX_VALUE) return 0.0;
         int ocupados = inscripciones != null ? inscripciones.size() : 0;
         return (ocupados * 100.0) / cupos;
     }
@@ -161,7 +165,7 @@ public class OfertaAcademica {
      * Verifica si tiene cupos disponibles
      */
     public Boolean tieneCuposDisponibles() {
-        if (cupos == null) return true;
+        if (cupos == null || cupos == Integer.MAX_VALUE) return true;
         return getPorcentajeOcupacion() < 100;
     }
     
@@ -169,7 +173,7 @@ public class OfertaAcademica {
      * Obtiene la cantidad de cupos disponibles
      */
     public Integer getCuposDisponibles() {
-        if (cupos == null) return null; // Sin límite
+        if (cupos == null || cupos == Integer.MAX_VALUE) return null; // Sin límite
         int ocupados = inscripciones != null ? inscripciones.size() : 0;
         return Math.max(0, cupos - ocupados);
     }
@@ -409,7 +413,8 @@ public class OfertaAcademica {
     public void modificarDatosBasicos(String nombre, String descripcion, String duracion,
                                     LocalDate fechaInicio, LocalDate fechaFin, 
                                     Modalidad modalidad, Integer cupos, Boolean visibilidad,
-                                    Double costoInscripcion, Double recargoMora, Boolean certificado) {
+                                    Double costoInscripcion, Double recargoMora, Boolean certificado,
+                                    String lugar, String enlace) {
         if (nombre != null && !nombre.trim().isEmpty()) {
             this.nombre = nombre.trim();
         }
@@ -436,7 +441,8 @@ public class OfertaAcademica {
             this.modalidad = modalidad;
         }
         
-        if (cupos != null && cupos > 0) {
+        // Permitir null o MAX_VALUE para cupos ilimitados
+        if (cupos != null) {
             this.cupos = cupos;
         }
         
@@ -454,6 +460,15 @@ public class OfertaAcademica {
         
         if (certificado != null) {
             this.certificado = certificado;
+        }
+        
+        // Actualizar lugar y enlace (permitir null si se quiere limpiar, o manejar lógica de negocio)
+        // Aquí asumimos que si viene null no se actualiza, si viene vacío se limpia
+        if (lugar != null) {
+            this.lugar = lugar;
+        }
+        if (enlace != null) {
+            this.enlace = enlace;
         }
     }
 

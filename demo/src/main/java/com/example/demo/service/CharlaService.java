@@ -77,13 +77,13 @@ public class CharlaService {
             datosNuevos.getVisibilidad(),
             datosNuevos.getCostoInscripcion(),
             0.0,
-            datosNuevos.getCertificado()
+            datosNuevos.getCertificado(),
+            datosNuevos.getLugar(),
+            datosNuevos.getEnlace()
         );
         
         // Aplicar modificaciones específicas de charla
         charlaExistente.modificarDatosCharla(
-            datosNuevos.getLugar(),
-            datosNuevos.getEnlace(),
             datosNuevos.getDuracionEstimada(),
             datosNuevos.getDisertantes(),
             datosNuevos.getPublicoObjetivo()

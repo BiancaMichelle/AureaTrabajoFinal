@@ -21,9 +21,8 @@ import lombok.Setter;
 @NoArgsConstructor
 public class Seminario extends OfertaAcademica {
     
-    private String lugar;
+    // lugar y enlace movidos a OfertaAcademica
     
-    private String enlace;
     @NotBlank(message = "El público objetivo no puede estar vacío")
     private String publicoObjetivo;
     @Min(10)
@@ -45,14 +44,30 @@ public class Seminario extends OfertaAcademica {
     /**
      * Modifica los datos específicos del seminario
      */
-    public void modificarDatosSeminario(String lugar, String enlace, String publicoObjetivo,
-                                       Integer duracionMinutos, List<String> disertantes) {
+    public void modificarDatosSeminario(String publicoObjetivo, Integer duracionMinutos, List<String> disertantes) {
+        if (publicoObjetivo != null && !publicoObjetivo.trim().isEmpty()) {
+            this.publicoObjetivo = publicoObjetivo;
+        }
+        
+        if (duracionMinutos != null && duracionMinutos > 0) {
+            this.duracionMinutos = duracionMinutos;
+        }
+        
+        if (disertantes != null && !disertantes.isEmpty()) {
+            this.disertantes = disertantes;
+        }
+    }
+
+    /**
+     * Modifica los datos específicos del seminario con ubicación
+     */
+    public void modificarDatosSeminario(String lugar, String enlace, String publicoObjetivo, Integer duracionMinutos, List<String> disertantes) {
         if (lugar != null) {
-            this.lugar = lugar.trim();
+            setLugar(lugar.trim());
         }
         
         if (enlace != null) {
-            this.enlace = enlace.trim();
+            setEnlace(enlace.trim());
         }
         
         if (publicoObjetivo != null) {
@@ -75,8 +90,8 @@ public class Seminario extends OfertaAcademica {
         List<String> errores = new ArrayList<>();
         
         // Debe tener lugar O enlace, no ambos vacíos
-        if ((lugar == null || lugar.trim().isEmpty()) && 
-            (enlace == null || enlace.trim().isEmpty())) {
+        if ((getLugar() == null || getLugar().trim().isEmpty()) && 
+            (getEnlace() == null || getEnlace().trim().isEmpty())) {
             errores.add("El seminario debe tener un lugar (presencial) o enlace (virtual)");
         }
         
@@ -89,8 +104,8 @@ public class Seminario extends OfertaAcademica {
         }
         
         // Si es virtual, validar que el enlace sea válido
-        if (enlace != null && !enlace.trim().isEmpty()) {
-            if (!enlace.startsWith("http://") && !enlace.startsWith("https://")) {
+        if (getEnlace() != null && !getEnlace().trim().isEmpty()) {
+            if (!getEnlace().startsWith("http://") && !getEnlace().startsWith("https://")) {
                 errores.add("El enlace debe comenzar con http:// o https://");
             }
         }
@@ -249,14 +264,14 @@ public class Seminario extends OfertaAcademica {
      * Verifica si es un seminario virtual
      */
     public boolean esVirtual() {
-        return enlace != null && !enlace.trim().isEmpty();
+        return getEnlace() != null && !getEnlace().trim().isEmpty();
     }
 
     /**
      * Verifica si es un seminario presencial
      */
     public boolean esPresencial() {
-        return lugar != null && !lugar.trim().isEmpty();
+        return getLugar() != null && !getLugar().trim().isEmpty();
     }
 
     /**
@@ -293,8 +308,8 @@ public class Seminario extends OfertaAcademica {
         detalle.setVisibilidad(this.getVisibilidad());
         
         // Información específica de seminario
-        detalle.setLugar(this.lugar);
-        detalle.setEnlace(this.enlace);
+        detalle.setLugar(this.getLugar());
+        detalle.setEnlace(this.getEnlace());
         detalle.setPublicoObjetivo(this.publicoObjetivo);
         detalle.setDuracionMinutos(this.duracionMinutos);
         detalle.setDisertantes(this.disertantes != null ? this.disertantes : new ArrayList<>());

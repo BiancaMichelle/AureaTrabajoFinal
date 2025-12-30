@@ -50,6 +50,7 @@ document.addEventListener('DOMContentLoaded', function () {
     initializeHorarios();
     initializeCertificado();
     initializeTipoOferta();
+    initializeModalidad();
     initializeCategorias();
     initializeFilters();
     initializeTable();
@@ -105,11 +106,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function resetForm() {
         document.getElementById('oferta-form').reset();
+        document.getElementById('idOfertaModificar').value = '';
+        
+        const btnSubmit = document.getElementById('btn-submit-text');
+        if (btnSubmit) btnSubmit.textContent = 'Registrar Oferta';
+        
         hideAllTipoSpecificFields();
         resetImageUpload();
         clearHorariosTable();
         hideCertificadoFields();
         resetCategorias();
+        
+        // Resetear visibilidad de ubicación
+        if (window.updateUbicacionFields) {
+            window.updateUbicacionFields(''); // Ocultar todo
+        }
     }
 
     function resetCategorias() {
@@ -205,6 +216,50 @@ document.addEventListener('DOMContentLoaded', function () {
             const field = document.getElementById(fieldId);
             if (field) field.style.display = 'none';
         });
+    }
+
+    // Manejo de campos de ubicación según modalidad
+    function initializeModalidad() {
+        const modalidadSelect = document.getElementById('modalidad');
+        const grupoLugar = document.getElementById('grupo-lugar');
+        const grupoEnlace = document.getElementById('grupo-enlace');
+        
+        if (modalidadSelect) {
+            modalidadSelect.addEventListener('change', function() {
+                const modalidad = this.value;
+                updateUbicacionFields(modalidad);
+            });
+        }
+        
+        // Función interna para actualizar visibilidad
+        window.updateUbicacionFields = function(modalidad) {
+            if (!grupoLugar || !grupoEnlace) return;
+            
+            const lugarInput = document.getElementById('lugar');
+            const enlaceInput = document.getElementById('enlace');
+            
+            if (modalidad === 'PRESENCIAL') {
+                grupoLugar.style.display = 'block';
+                grupoEnlace.style.display = 'none';
+                if(lugarInput) lugarInput.required = true;
+                if(enlaceInput) enlaceInput.required = false;
+            } else if (modalidad === 'VIRTUAL') {
+                grupoLugar.style.display = 'none';
+                grupoEnlace.style.display = 'block';
+                if(lugarInput) lugarInput.required = false;
+                if(enlaceInput) enlaceInput.required = true;
+            } else if (modalidad === 'HIBRIDA') {
+                grupoLugar.style.display = 'block';
+                grupoEnlace.style.display = 'block';
+                if(lugarInput) lugarInput.required = true;
+                if(enlaceInput) enlaceInput.required = true;
+            } else {
+                grupoLugar.style.display = 'none';
+                grupoEnlace.style.display = 'none';
+                if(lugarInput) lugarInput.required = false;
+                if(enlaceInput) enlaceInput.required = false;
+            }
+        };
     }
 
     // Manejo de certificación
@@ -659,15 +714,21 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         formData.append('horariosJson', horariosArray.join(','));
         
+        // Determinar URL (registrar o modificar)
+        const idOferta = document.getElementById('idOfertaModificar').value;
+        const url = idOferta ? '/admin/ofertas/modificar' : '/admin/ofertas/registrar';
+        
+        console.log(`🚀 Enviando a ${url} (ID: ${idOferta})`);
+
         // Enviar al servidor
-        fetch('/admin/ofertas/registrar', {
+        fetch(url, {
             method: 'POST',
             body: formData
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                showNotification('✅ Oferta registrada exitosamente', 'success');
+                showNotification(idOferta ? '✅ Oferta modificada exitosamente' : '✅ Oferta registrada exitosamente', 'success');
                 resetForm();
                 hideForm();
                 loadOfertas(); // Recargar tabla
@@ -677,7 +738,7 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .catch(error => {
             console.error('💥 Error:', error);
-            showNotification('❌ Error al registrar la oferta', 'error');
+            showNotification('❌ Error al procesar la oferta', 'error');
         });
     }
 
@@ -800,4 +861,86 @@ document.addEventListener('DOMContentLoaded', function () {
     loadOfertas();
 
     console.log('Gestión de Ofertas inicializada correctamente');
+
+    // ==========================================
+    // LÓGICA DE EDICIÓN (Agregada dinámicamente)
+    // ==========================================
+    
+    window.modificarOferta = function(id, nombre) {
+        console.log(`📝 Modificando oferta ${id}: ${nombre}`);
+        
+        fetch(`/admin/ofertas/${id}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    cargarDatosEnFormulario(data.oferta);
+                    showForm();
+                    // Cambiar texto del botón
+                    const btnSubmit = document.getElementById('btn-submit-text');
+                    if (btnSubmit) btnSubmit.textContent = 'Guardar Cambios';
+                } else {
+                    showNotification('Error al cargar la oferta: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('Error al cargar la oferta', 'error');
+            });
+    };
+
+    function cargarDatosEnFormulario(oferta) {
+        console.log('📋 Cargando datos en formulario:', oferta);
+        resetForm();
+        
+        // Campos ocultos
+        document.getElementById('idOfertaModificar').value = oferta.id;
+        
+        // Campos básicos
+        const tipoSelect = document.getElementById('tipoOferta');
+        tipoSelect.value = oferta.tipo;
+        // Disparar evento change para mostrar campos específicos
+        tipoSelect.dispatchEvent(new Event('change'));
+        
+        document.getElementById('nombre').value = oferta.nombre;
+        document.getElementById('descripcion').value = oferta.descripcion;
+        document.getElementById('cupos').value = oferta.cupos;
+        document.getElementById('costoInscripcion').value = oferta.costoInscripcion;
+        document.getElementById('fechaInicio').value = oferta.fechaInicio;
+        document.getElementById('fechaFin').value = oferta.fechaFin;
+        
+        const modalidadSelect = document.getElementById('modalidad');
+        modalidadSelect.value = oferta.modalidad;
+        // Actualizar visibilidad de lugar/enlace
+        if (window.updateUbicacionFields) {
+            window.updateUbicacionFields(oferta.modalidad);
+        }
+        
+        // Llenar lugar y enlace
+        if (document.getElementById('lugar')) document.getElementById('lugar').value = oferta.lugar || '';
+        if (document.getElementById('enlace')) document.getElementById('enlace').value = oferta.enlace || '';
+        
+        // Certificado
+        const chkCertificado = document.getElementById('otorgaCertificado');
+        if (chkCertificado) {
+            chkCertificado.checked = (oferta.certificado === 'true' || oferta.certificado === true);
+            chkCertificado.dispatchEvent(new Event('change'));
+        }
+        
+        // Campos específicos según tipo
+        if (oferta.tipo === 'CURSO') {
+            if (document.getElementById('temario')) document.getElementById('temario').value = oferta.temario || '';
+            if (document.getElementById('costoCuota')) document.getElementById('costoCuota').value = oferta.costoCuota || '';
+            if (document.getElementById('nrCuotas')) document.getElementById('nrCuotas').value = oferta.nrCuotas || '';
+            if (document.getElementById('diaVencimiento')) document.getElementById('diaVencimiento').value = oferta.diaVencimiento || '';
+        } else if (oferta.tipo === 'FORMACION') {
+            if (document.getElementById('planFormacion')) document.getElementById('planFormacion').value = oferta.plan || '';
+            if (document.getElementById('costoCuota')) document.getElementById('costoCuota').value = oferta.costoCuota || '';
+            if (document.getElementById('nrCuotas')) document.getElementById('nrCuotas').value = oferta.nrCuotas || '';
+            if (document.getElementById('diaVencimiento')) document.getElementById('diaVencimiento').value = oferta.diaVencimiento || '';
+        } else if (oferta.tipo === 'CHARLA') {
+            if (document.getElementById('publicoObjetivo')) document.getElementById('publicoObjetivo').value = oferta.publicoObjetivo || '';
+        } else if (oferta.tipo === 'SEMINARIO') {
+            if (document.getElementById('publicoObjetivoSeminario')) document.getElementById('publicoObjetivoSeminario').value = oferta.publicoObjetivo || '';
+        }
+    }
 });

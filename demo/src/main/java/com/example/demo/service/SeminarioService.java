@@ -77,13 +77,13 @@ public class SeminarioService {
             datosNuevos.getVisibilidad(),
             datosNuevos.getCostoInscripcion(),
             0.0,
-            datosNuevos.getCertificado()
+            datosNuevos.getCertificado(),
+            datosNuevos.getLugar(),
+            datosNuevos.getEnlace()
         );
         
         // Aplicar modificaciones específicas de seminario
         seminarioExistente.modificarDatosSeminario(
-            datosNuevos.getLugar(),
-            datosNuevos.getEnlace(),
             datosNuevos.getPublicoObjetivo(),
             datosNuevos.getDuracionMinutos(),
             datosNuevos.getDisertantes()

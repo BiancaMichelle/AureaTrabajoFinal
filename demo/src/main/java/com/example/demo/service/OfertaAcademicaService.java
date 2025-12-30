@@ -215,7 +215,9 @@ public class OfertaAcademicaService {
             datosNuevos.getVisibilidad(),
             datosNuevos.getCostoInscripcion(),
             0.0,
-            datosNuevos.getCertificado()
+            datosNuevos.getCertificado(),
+            datosNuevos.getLugar(),
+            datosNuevos.getEnlace()
         );
         
         // Aplicar modificaciones específicas según el tipo
@@ -248,8 +250,6 @@ public class OfertaAcademicaService {
             Charla charlaNueva = (Charla) datosNuevos;
             
             charlaExistente.modificarDatosCharla(
-                charlaNueva.getLugar(),
-                charlaNueva.getEnlace(),
                 charlaNueva.getDuracionEstimada(),
                 charlaNueva.getDisertantes(),
                 charlaNueva.getPublicoObjetivo()
@@ -259,8 +259,6 @@ public class OfertaAcademicaService {
             Seminario seminarioNuevo = (Seminario) datosNuevos;
             
             seminarioExistente.modificarDatosSeminario(
-                seminarioNuevo.getLugar(),
-                seminarioNuevo.getEnlace(),
                 seminarioNuevo.getPublicoObjetivo(),
                 seminarioNuevo.getDuracionMinutos(),
                 seminarioNuevo.getDisertantes()

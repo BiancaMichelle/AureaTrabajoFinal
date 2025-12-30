@@ -256,6 +256,8 @@ public class Formacion extends OfertaAcademica {
         detalle.setCostoInscripcion(this.getCostoInscripcion());
         detalle.setCertificado(this.getCertificado() != null ? this.getCertificado().toString() : "");
         detalle.setVisibilidad(this.getVisibilidad());
+        detalle.setLugar(this.getLugar());
+        detalle.setEnlace(this.getEnlace());
         
         // Información específica de formación
         detalle.setPlan(this.plan);
@@ -409,6 +411,8 @@ public class Formacion extends OfertaAcademica {
         private Double costoInscripcion;
         private String certificado;
         private Boolean visibilidad;
+        private String lugar;
+        private String enlace;
         
         // Específicos de formación
         private String plan;
@@ -461,6 +465,12 @@ public class Formacion extends OfertaAcademica {
         
         public Boolean getVisibilidad() { return visibilidad; }
         public void setVisibilidad(Boolean visibilidad) { this.visibilidad = visibilidad; }
+
+        public String getLugar() { return lugar; }
+        public void setLugar(String lugar) { this.lugar = lugar; }
+
+        public String getEnlace() { return enlace; }
+        public void setEnlace(String enlace) { this.enlace = enlace; }
         
         public String getPlan() { return plan; }
         public void setPlan(String plan) { this.plan = plan; }

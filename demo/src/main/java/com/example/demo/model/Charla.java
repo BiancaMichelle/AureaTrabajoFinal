@@ -18,8 +18,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class Charla extends OfertaAcademica {
-    private String lugar;
-    private String enlace;
+    // lugar y enlace movidos a OfertaAcademica
     private Integer duracionEstimada; // en minutos
     
     @ElementCollection
@@ -40,10 +39,10 @@ public class Charla extends OfertaAcademica {
      * Tipo de modalidad (presencial/online)
      */
     public String getTipoModalidad() {
-        if (enlace != null && !enlace.trim().isEmpty()) {
+        if (getEnlace() != null && !getEnlace().trim().isEmpty()) {
             return "Online";
         }
-        if (lugar != null && !lugar.trim().isEmpty()) {
+        if (getLugar() != null && !getLugar().trim().isEmpty()) {
             return "Presencial";
         }
         return "No definida";
@@ -52,14 +51,31 @@ public class Charla extends OfertaAcademica {
     /**
      * Modifica los datos específicos de la charla
      */
+    public void modificarDatosCharla(Integer duracionEstimada, List<String> disertantes, String publicoObjetivo) {
+        if (duracionEstimada != null && duracionEstimada > 0) {
+            this.duracionEstimada = duracionEstimada;
+        }
+        
+        if (disertantes != null && !disertantes.isEmpty()) {
+            this.disertantes = disertantes;
+        }
+        
+        if (publicoObjetivo != null && !publicoObjetivo.trim().isEmpty()) {
+            this.publicoObjetivo = publicoObjetivo;
+        }
+    }
+
+    /**
+     * Modifica los datos específicos de la charla
+     */
     public void modificarDatosCharla(String lugar, String enlace, Integer duracionEstimada, 
                                     List<String> disertantes, String publicoObjetivo) {
         if (lugar != null) {
-            this.lugar = lugar.trim();
+            setLugar(lugar.trim());
         }
         
         if (enlace != null) {
-            this.enlace = enlace.trim();
+            setEnlace(enlace.trim());
         }
         
         if (duracionEstimada != null && duracionEstimada > 0) {
@@ -82,8 +98,8 @@ public class Charla extends OfertaAcademica {
         List<String> errores = new ArrayList<>();
         
         // Debe tener lugar O enlace, no ambos vacíos
-        if ((lugar == null || lugar.trim().isEmpty()) && 
-            (enlace == null || enlace.trim().isEmpty())) {
+        if ((getLugar() == null || getLugar().trim().isEmpty()) && 
+            (getEnlace() == null || getEnlace().trim().isEmpty())) {
             errores.add("La charla debe tener un lugar (presencial) o enlace (virtual)");
         }
         
@@ -96,8 +112,8 @@ public class Charla extends OfertaAcademica {
         }
         
         // Si es virtual, validar que el enlace sea válido
-        if (enlace != null && !enlace.trim().isEmpty()) {
-            if (!enlace.startsWith("http://") && !enlace.startsWith("https://")) {
+        if (getEnlace() != null && !getEnlace().trim().isEmpty()) {
+            if (!getEnlace().startsWith("http://") && !getEnlace().startsWith("https://")) {
                 errores.add("El enlace debe comenzar con http:// o https://");
             }
         }
@@ -219,14 +235,14 @@ public class Charla extends OfertaAcademica {
      * Verifica si es una charla virtual
      */
     public boolean esVirtual() {
-        return enlace != null && !enlace.trim().isEmpty();
+        return getEnlace() != null && !getEnlace().trim().isEmpty();
     }
 
     /**
      * Verifica si es una charla presencial
      */
     public boolean esPresencial() {
-        return lugar != null && !lugar.trim().isEmpty();
+        return getLugar() != null && !getLugar().trim().isEmpty();
     }
 
     /**
@@ -250,8 +266,8 @@ public class Charla extends OfertaAcademica {
         detalle.setVisibilidad(this.getVisibilidad());
         
         // Información específica de charla
-        detalle.setLugar(this.lugar);
-        detalle.setEnlace(this.enlace);
+        detalle.setLugar(this.getLugar());
+        detalle.setEnlace(this.getEnlace());
         detalle.setDuracionEstimada(this.duracionEstimada);
         detalle.setDisertantes(this.disertantes != null ? this.disertantes : new ArrayList<>());
         detalle.setPublicoObjetivo(this.publicoObjetivo);
