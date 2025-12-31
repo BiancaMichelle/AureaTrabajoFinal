@@ -40,17 +40,29 @@ public class ClaseController {
     private final ModuloRepository moduloRepository;
     private final CursoRepository cursoRepository;
     private final UsuarioRepository usuarioRepository;
+    private final com.example.demo.ia.service.ChatServiceSimple chatServiceSimple;
+    private final com.example.demo.repository.MaterialRepository materialRepository;
+    private final com.example.demo.repository.ArchivoRepository archivoRepository;
+    private final com.example.demo.repository.DocenteRepository docenteRepository;
 
     public ClaseController(ClaseService claseService,
             JitsiClaseService jitsiClaseService,
             ModuloRepository moduloRepository,
             CursoRepository cursoRepository,
-            UsuarioRepository usuarioRepository) {
+            UsuarioRepository usuarioRepository,
+            com.example.demo.ia.service.ChatServiceSimple chatServiceSimple,
+            com.example.demo.repository.MaterialRepository materialRepository,
+            com.example.demo.repository.ArchivoRepository archivoRepository,
+            com.example.demo.repository.DocenteRepository docenteRepository) {
         this.claseService = claseService;
         this.jitsiClaseService = jitsiClaseService;
         this.moduloRepository = moduloRepository;
         this.cursoRepository = cursoRepository;
         this.usuarioRepository = usuarioRepository;
+        this.chatServiceSimple = chatServiceSimple;
+        this.materialRepository = materialRepository;
+        this.archivoRepository = archivoRepository;
+        this.docenteRepository = docenteRepository;
     }
 
     @PostMapping("/crear")
@@ -158,6 +170,49 @@ public class ClaseController {
         return authentication.getAuthorities().stream()
                 .anyMatch(auth -> auth.getAuthority().equals("ADMIN") ||
                         auth.getAuthority().equals("DOCENTE"));
+    }
+
+    @PostMapping("/finalizar-con-resumen/{claseId}")
+    public ResponseEntity<?> finalizarConResumen(@PathVariable UUID claseId, @org.springframework.web.bind.annotation.RequestBody String transcripcion, Principal principal) {
+        try {
+            Clase clase = claseService.findById(claseId)
+                    .orElseThrow(() -> new RuntimeException("Clase no encontrada"));
+
+            // 1. Generar resumen con IA
+            String resumenHtml = chatServiceSimple.generarResumenClase(transcripcion);
+
+            // 2. Crear Material
+            com.example.demo.model.Material material = new com.example.demo.model.Material();
+            material.setTitulo("Resumen IA: " + clase.getTitulo());
+            material.setDescripcion("Resumen generado automáticamente por IA para la clase del " + LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+            material.setFechaCreacion(LocalDateTime.now());
+            material.setVisibilidad(true);
+            material.setModulo(clase.getModulo());
+            
+            // Asignar docente
+            com.example.demo.model.Docente docente = docenteRepository.findByDni(principal.getName())
+                    .orElseThrow(() -> new RuntimeException("Docente no encontrado"));
+            material.setDocente(docente);
+            
+            material = materialRepository.save(material);
+
+            // 3. Crear Archivo HTML
+            com.example.demo.model.Archivo archivo = new com.example.demo.model.Archivo();
+            archivo.setNombre("resumen-" + claseId + ".html");
+            archivo.setTipoMime("text/html");
+            archivo.setContenido(resumenHtml.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            archivo.setTamano((long) archivo.getContenido().length);
+            archivo.setFechaSubida(LocalDateTime.now());
+            archivo.setMaterial(material);
+            
+            archivoRepository.save(archivo);
+
+            return ResponseEntity.ok().body(Map.of("message", "Resumen generado y guardado exitosamente", "materialId", material.getIdActividad()));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
     }
 
 }

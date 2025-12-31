@@ -186,6 +186,10 @@
                 <h2 class="text-2xl font-semibold mb-2 text-gray-800">La clase ha terminado</h2>
                 <p class="mb-6 text-gray-600">Gracias por participar.</p>
 
+                <!-- Status del Resumen IA -->
+                <div id="summaryStatus" class="hidden mb-4 p-3 rounded-lg bg-blue-50 text-blue-700 font-medium">
+                </div>
+
                 <div class="flex justify-center gap-4">
                     <button onclick="descargarTranscripcion()" id="btnDescargarTranscripcion"
                         class="hidden bg-green-600 text-white px-6 py-2.5 rounded-lg shadow-md hover:bg-green-700 transition-all duration-200 inline-flex items-center gap-2 font-medium">
@@ -222,9 +226,14 @@
             const defaultRoomName = /*[[${clase.roomName}]]*/ 'SalaPrueba';
             const isTeacher = /*[[${esDocente}]]*/ false;
             const transcripcionHabilitada = /*[[${clase.transcripcionHabilitada != null ? clase.transcripcionHabilitada : false}]]*/ false;
+            const claseId = /*[[${clase.idClase}]]*/ '';
             // Obtener datos del usuario de manera segura con Thymeleaf
             const usuarioNombre = /*[[${usuario != null ? usuario.nombre + ' ' + usuario.apellido : 'Usuario Invitado'}]]*/ 'Usuario Invitado';
             const usuarioEmail = /*[[${usuario != null ? usuario.correo : 'email@example.com'}]]*/ 'email@example.com';
+            
+            // CSRF
+            const csrfToken = document.querySelector("meta[name='_csrf']")?.getAttribute("content");
+            const csrfHeader = document.querySelector("meta[name='_csrf_header']")?.getAttribute("content");
 
             // Configuración dinámica de Jitsi (Soporte para JaaS/8x8)
             let domain = "meet.jit.si";
@@ -336,10 +345,11 @@
                     if (message) message.classList.remove('hidden');
 
                     // Mostrar botón de descarga si hay transcripción y es docente
-                    if (isTeacher && transcripcionHabilitada && btnDescargar) {
-                        btnDescargar.classList.remove('hidden');
-                        // Intentar descarga automática
-                        descargarTranscripcion();
+                    if (isTeacher && transcripcionHabilitada) {
+                        if (btnDescargar) btnDescargar.classList.remove('hidden');
+                        
+                        // Enviar transcripción al servidor para generar resumen
+                        enviarTranscripcionAlServidor();
                     }
 
                     // Eliminar la instancia de la API para limpiar recursos
@@ -442,6 +452,49 @@
                 a.click();
                 document.body.removeChild(a);
                 window.URL.revokeObjectURL(url);
+            }
+
+            function enviarTranscripcionAlServidor() {
+                if (!fullTranscript || fullTranscript.trim() === "") {
+                    console.warn("No hay transcripción para enviar.");
+                    return;
+                }
+
+                // Mostrar estado
+                const statusDiv = document.getElementById('summaryStatus');
+                if(statusDiv) {
+                    statusDiv.classList.remove('hidden');
+                    statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Generando resumen con IA...';
+                }
+
+                fetch(`/clase/finalizar-con-resumen/${claseId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'text/plain',
+                        [csrfHeader]: csrfToken
+                    },
+                    body: fullTranscript
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la respuesta del servidor');
+                    return response.json();
+                })
+                .then(data => {
+                    console.log("Resumen generado:", data);
+                    if(statusDiv) {
+                        statusDiv.innerHTML = '<i class="fas fa-check-circle text-green-500 me-2"></i> Resumen generado y guardado en el aula.';
+                        statusDiv.classList.remove('bg-blue-50', 'text-blue-700');
+                        statusDiv.classList.add('bg-green-50', 'text-green-700');
+                    }
+                })
+                .catch(error => {
+                    console.error("Error enviando transcripción:", error);
+                    if(statusDiv) {
+                        statusDiv.innerHTML = '<i class="fas fa-exclamation-circle text-red-500 me-2"></i> Error al generar resumen.';
+                        statusDiv.classList.remove('bg-blue-50', 'text-blue-700');
+                        statusDiv.classList.add('bg-red-50', 'text-red-700');
+                    }
+                });
             }
 
             function mostrarNotificacionTranscripcion(activa) {
