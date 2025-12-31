@@ -23,7 +23,76 @@ function initializeUploadArea() {
             showUploadButton();
         }
     });
+
+    // Setup upload button click event (AJAX)
+    const uploadBtn = document.getElementById('upload-btn');
+    if (uploadBtn) {
+        uploadBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            uploadImages(fileInput);
+        });
+    }
 }
+
+function uploadImages(fileInput) {
+    const files = fileInput.files;
+    if (!files || files.length === 0) return;
+
+    const formData = new FormData();
+    for (let i = 0; i < files.length; i++) {
+        formData.append('imagenes', files[i]);
+    }
+
+    const uploadBtn = document.getElementById('upload-btn');
+    const originalText = uploadBtn.innerHTML;
+    uploadBtn.disabled = true;
+    uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Subiendo...';
+
+    fetch('/api/carrusel/subir', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Error en la subida');
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            window.location.href = '/admin/configuracion?success=upload';
+        } else {
+            alert('Error: ' + data.message);
+            uploadBtn.disabled = false;
+            uploadBtn.innerHTML = originalText;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al subir las imágenes. Por favor intente nuevamente.');
+        uploadBtn.disabled = false;
+        uploadBtn.innerHTML = originalText;
+    });
+}
+
+// Funciones para el modal de imagen
+function openImageModal(element) {
+    const modal = document.getElementById('imageModal');
+    const modalImg = document.getElementById('img01');
+    const img = element.querySelector('img');
+    
+    modal.style.display = "flex";
+    modalImg.src = img.getAttribute('data-full-src') || img.src;
+}
+
+function closeImageModal() {
+    document.getElementById('imageModal').style.display = "none";
+}
+
+// Cerrar modal con tecla ESC
+document.addEventListener('keydown', function(event) {
+    if (event.key === "Escape") {
+        closeImageModal();
+    }
+});
 
 function setupDragAndDrop(uploadArea, fileInput) {
     uploadArea.addEventListener('dragover', function(e) {

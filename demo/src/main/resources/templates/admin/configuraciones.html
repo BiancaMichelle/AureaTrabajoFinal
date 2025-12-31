@@ -263,9 +263,9 @@
                             </div>
                             
                             <div class="carrusel-management">
-                                <!-- Formulario de subida de imágenes -->
-                                <form th:action="@{/admin/configuracion/carrusel/subir}" method="POST" enctype="multipart/form-data" class="upload-form">
-                                    <div class="upload-area" onclick="document.getElementById('imageFiles').click()">
+                                <!-- Área de subida de imágenes (AJAX) -->
+                                <div class="upload-form">
+                                    <div class="upload-area">
                                         <div class="upload-content">
                                             <i class="fas fa-cloud-upload-alt upload-icon"></i>
                                             <h5>Subir Imágenes al Carrusel</h5>
@@ -277,7 +277,7 @@
                                         </div>
                                     </div>
                                     <input type="file" id="imageFiles" name="imagenes" multiple accept="image/*" 
-                                           style="display: none;" onchange="previewImages(this); showUploadButton();">
+                                           style="display: none;">
                                     
                                     <!-- Preview de imágenes seleccionadas -->
                                     <div id="preview-container" style="display: none; margin: 15px 0;">
@@ -285,24 +285,25 @@
                                         <div id="preview-grid" class="preview-grid"></div>
                                     </div>
                                     
-                                    <button type="submit" id="upload-btn" class="btn-upload" style="display: none;">
+                                    <button type="button" id="upload-btn" class="btn-upload" style="display: none;">
                                         <i class="fas fa-upload"></i> Subir Imágenes al Carrusel
                                     </button>
-                                </form>
+                                </div>
                                 
                                 <!-- Lista de imágenes actuales -->
                                 <div class="current-images">
                                     <h5>Imágenes actuales del carrusel:</h5>
                                     <div class="images-grid">
                                         <div th:each="imagen : ${imagenesCarrusel}" class="image-item">
-                                            <div class="image-preview">
+                                            <div class="image-preview" onclick="openImageModal(this)">
                                                 <img th:src="@{'/api/carrusel/imagen/' + ${imagen.id}}" 
-                                                     th:alt="${imagen.altText ?: 'Imagen del carrusel'}" />
+                                                     th:alt="${imagen.altText ?: 'Imagen del carrusel'}" 
+                                                     th:data-full-src="@{'/api/carrusel/imagen/' + ${imagen.id}}" />
                                                 <div class="image-overlay">
                                                     <form th:action="@{'/admin/configuracion/carrusel/eliminar/' + ${imagen.id}}" 
                                                           method="POST" style="display: inline;">
                                                         <button type="submit" class="btn-delete-image" 
-                                                                onclick="return confirm('¿Estás seguro de que quieres eliminar esta imagen?')">
+                                                                onclick="event.stopPropagation(); return confirm('¿Estás seguro de que quieres eliminar esta imagen?')">
                                                             <i class="fas fa-trash"></i>
                                                         </button>
                                                     </form>
@@ -312,9 +313,7 @@
                                                 </div>
                                             </div>
                                             <div class="image-info">
-                                                <small th:text="${imagen.nombreArchivo}">nombre.jpg</small><br>
-                                                <small th:text="'Tamaño: ' + ${#numbers.formatInteger(imagen.tamaño/1024, 1, 'COMMA')} + ' KB'">Tamaño: 123 KB</small><br>
-                                                <small th:text="'Subida: ' + ${#temporals.format(imagen.fechaSubida, 'dd/MM/yyyy HH:mm')}">01/01/2024 12:00</small>
+                                                <small th:text="${imagen.nombreArchivo}" title="${imagen.nombreArchivo}">nombre.jpg</small>
                                             </div>
                                         </div>
                                     </div>
@@ -323,6 +322,12 @@
                                         <i class="fas fa-image"></i>
                                         <p>No hay imágenes en el carrusel. Sube algunas para comenzar.</p>
                                     </div>
+                                </div>
+
+                                <!-- Modal para ver imagen completa -->
+                                <div id="imageModal" class="image-modal" onclick="closeImageModal()">
+                                    <span class="close-modal">&times;</span>
+                                    <img class="modal-content-img" id="img01">
                                 </div>
                                 
                                 <!-- Instrucciones -->
@@ -410,7 +415,31 @@
     </div>
 
     <script th:src="@{/js/configuraciones.js}"></script>
-    <!-- JavaScript removido temporalmente para depuración -->
+    <!-- Script necesario para la funcionalidad del carrusel (preview y drag & drop) -->
+    <script th:src="@{/js/carrusel-configuracion.js}"></script>
+    
+    <!-- Script inline para asegurar que las funciones globales estén disponibles -->
+    <script>
+        function openImageModal(element) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('img01');
+            const img = element.querySelector('img');
+            
+            if (modal && modalImg && img) {
+                modal.style.display = "flex";
+                modalImg.src = img.getAttribute('data-full-src') || img.src;
+            } else {
+                console.error('Elementos del modal no encontrados');
+            }
+        }
+
+        function closeImageModal() {
+            const modal = document.getElementById('imageModal');
+            if (modal) {
+                modal.style.display = "none";
+            }
+        }
+    </script>
     
     <script>
         // Script para actualizar los valores hexadecimales de los colores

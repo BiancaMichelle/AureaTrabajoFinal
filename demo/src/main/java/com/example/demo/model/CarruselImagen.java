@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "carrusel_imagenes")
+@Table(name = "carrusel_imagenes_web")
 public class CarruselImagen {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,7 +27,7 @@ public class CarruselImagen {
     @Column(nullable = false)
     private String tipoMime;
     
-    @Lob
+    // @Lob removido para usar bytea en Postgres y evitar problemas de transacción con OID
     @Column(nullable = false)
     private byte[] datos;
     

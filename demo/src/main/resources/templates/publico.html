@@ -10,13 +10,6 @@
         
         <!-- Hero Section con Carrusel Bootstrap -->
         <section class="hero-section">
-            <!-- Debug: Mostrar cantidad de imágenes -->
-            <div class="alert alert-info" th:if="${imagenesCarrusel != null}">
-                <p>Debug: Cantidad de imágenes en carrusel: <span th:text="${#lists.size(imagenesCarrusel)}">0</span></p>
-            </div>
-            <div class="alert alert-warning" th:if="${imagenesCarrusel == null}">
-                <p>Debug: imagenesCarrusel es null</p>
-            </div>
             
             <div id="heroCarousel" class="carousel slide" data-bs-ride="carousel" th:if="${imagenesCarrusel != null and not #lists.isEmpty(imagenesCarrusel)}">
                 <div class="carousel-indicators">

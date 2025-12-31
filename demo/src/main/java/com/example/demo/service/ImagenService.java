@@ -5,6 +5,7 @@ import com.example.demo.model.Instituto;
 import com.example.demo.repository.CarruselImagenRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -12,6 +13,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
+@Transactional
 public class ImagenService {
 
     @Autowired
@@ -26,7 +28,11 @@ public class ImagenService {
             instituto,
             orden
         );
-        return carruselImagenRepository.save(imagen);
+        CarruselImagen guardada = carruselImagenRepository.save(imagen);
+        
+        // Actualizar la ruta con el ID real
+        guardada.setRutaArchivo("/api/carrusel/imagen/" + guardada.getId());
+        return carruselImagenRepository.save(guardada);
     }
 
     public List<CarruselImagen> guardarMultiplesImagenesCarrusel(MultipartFile[] archivos, Instituto instituto) throws IOException {
