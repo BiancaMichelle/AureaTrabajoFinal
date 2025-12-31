@@ -1,6 +1,7 @@
 package com.example.demo;
 
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 
@@ -13,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import com.example.demo.enums.TipoGenero;
 import com.example.demo.model.Alumno;
 import com.example.demo.model.Docente;
+import com.example.demo.model.Instituto;
 import com.example.demo.model.Rol;
 import com.example.demo.model.Usuario;
 import com.example.demo.repository.AlumnoRepository;
@@ -20,6 +22,7 @@ import com.example.demo.repository.CategoriaRepository;
 import com.example.demo.repository.CursoRepository;
 import com.example.demo.repository.DocenteRepository;
 import com.example.demo.repository.InscripcionRepository;
+import com.example.demo.repository.InstitutoRepository;
 import com.example.demo.repository.ModuloRepository;
 import com.example.demo.repository.RolRepository;
 import com.example.demo.repository.UsuarioRepository;
@@ -39,6 +42,7 @@ public class DemoApplication implements CommandLineRunner {
     private final CategoriaRepository categoriaRepository;
     private final DocenteRepository docenteRepository;
     private final AlumnoRepository alumnoRepository;
+    private final InstitutoRepository institutoRepository;
 
     public DemoApplication(RolRepository roleRepository,
             UsuarioRepository usuarioRepository,
@@ -48,7 +52,8 @@ public class DemoApplication implements CommandLineRunner {
             InscripcionRepository inscripcionRepository,
             CategoriaRepository categoriaRepository,
             DocenteRepository docenteRepository,
-            AlumnoRepository alumnoRepository) {
+            AlumnoRepository alumnoRepository,
+            InstitutoRepository institutoRepository) {
         this.roleRepository = roleRepository;
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
@@ -58,6 +63,7 @@ public class DemoApplication implements CommandLineRunner {
         this.categoriaRepository = categoriaRepository;
         this.docenteRepository = docenteRepository;
         this.alumnoRepository = alumnoRepository;
+        this.institutoRepository = institutoRepository;
     }
 
     public static void main(String[] args) {
@@ -68,7 +74,56 @@ public class DemoApplication implements CommandLineRunner {
     @Transactional
     public void run(String... args) throws Exception {
         crearRolesYUsuarios();
+        crearInstitutoDefault();
+    }
 
+    private void crearInstitutoDefault() {
+        if (institutoRepository.findByNombreInstituto("ICEP").isEmpty()) {
+            Instituto instituto = new Instituto();
+            instituto.setNombreInstituto("ICEP");
+            instituto.setDescripcion("Instituto de Capacitación y Educación Profesional");
+            instituto.setMision("Brindar educación de calidad accesible para todos, fomentando el desarrollo profesional y personal de nuestros estudiantes a través de metodologías innovadoras y tecnología de vanguardia.");
+            instituto.setVision("Ser reconocidos como una institución líder en educación profesional, referente por nuestra excelencia académica, compromiso social y capacidad de adaptación a las necesidades del mercado laboral global.");
+            
+            // Colores predefinidos: Rojo (Primario) y Azul Oscuro (Secundario/Footer)
+            instituto.setColores(Arrays.asList("#E5383B", "#0D1B2A"));
+            
+            // Configuraciones automáticas
+            instituto.setPermisoBajaAutomatica(true);
+            instituto.setMinimoAlumnoBaja(5);
+            instituto.setInactividadBaja(30);
+            
+            // Configuración de pagos
+            instituto.setMoneda("ARS");
+            instituto.setCuentaBancaria("0000000000000000000000");
+            instituto.setPoliticaPagos("Los pagos deben realizarse del 1 al 10 de cada mes. Pasada esa fecha se aplicará un recargo por mora.");
+            
+            // Configuración de bloqueos
+            instituto.setDiasMoraBloqueoExamen(15);
+            instituto.setDiasMoraBloqueoMaterial(30);
+            instituto.setDiasMoraBloqueoActividad(20);
+            instituto.setDiasMoraBloqueoAula(60);
+            
+            // Configuraciones del sistema
+            instituto.setHabilitarIA(true);
+            instituto.setReportesAutomaticos(true);
+            
+            // Información de contacto
+            instituto.setDireccion("Av. Siempre Viva 123");
+            instituto.setTelefono("+54 11 1234-5678");
+            instituto.setEmail("contacto@icep.edu.ar");
+            
+            // Redes sociales
+            instituto.setFacebook("https://facebook.com/icep");
+            instituto.setX("https://x.com/icep");
+            instituto.setInstagram("https://instagram.com/icep");
+            
+            // Certificaciones
+            instituto.setCertificacionesAvales("Certificación ISO 9001, Aval del Ministerio de Educación");
+            
+            institutoRepository.save(instituto);
+            System.out.println("✅ Instituto por defecto creado: ICEP");
+        }
     }
 
     private void crearRolesYUsuarios() {

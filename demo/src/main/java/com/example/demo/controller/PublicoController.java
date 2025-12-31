@@ -8,9 +8,11 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
 import com.example.demo.model.CarruselImagen;
+import com.example.demo.model.Categoria;
 import com.example.demo.model.Instituto;
 import com.example.demo.model.OfertaAcademica;
 import com.example.demo.repository.CarruselImagenRepository;
+import com.example.demo.repository.CategoriaRepository;
 import com.example.demo.repository.OfertaAcademicaRepository;
 import com.example.demo.service.InstitutoService;
 
@@ -25,6 +27,9 @@ public class PublicoController {
     
     @Autowired
     private OfertaAcademicaRepository ofertaAcademicaRepository;
+
+    @Autowired
+    private CategoriaRepository categoriaRepository;
     
     @GetMapping({"/", "/publico"})
     public String publico(Model model) {
@@ -36,10 +41,14 @@ public class PublicoController {
         
         // Obtener ofertas académicas activas
         List<OfertaAcademica> ofertas = ofertaAcademicaRepository.findAll();
+
+        // Obtener categorías
+        List<Categoria> categorias = categoriaRepository.findAll();
         
         model.addAttribute("instituto", instituto);
         model.addAttribute("imagenesCarrusel", imagenesCarrusel);
         model.addAttribute("ofertas", ofertas);
+        model.addAttribute("categorias", categorias);
 
         return "publico";
     }

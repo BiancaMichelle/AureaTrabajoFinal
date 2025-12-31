@@ -16,6 +16,8 @@ public interface InstitutoRepository extends JpaRepository<Instituto, Long> {
      */
     @Query("SELECT i FROM Instituto i ORDER BY i.idInstituto ASC LIMIT 1")
     Optional<Instituto> findFirstInstituto();
+
+    java.util.List<Instituto> findByNombreInstituto(String nombreInstituto);
     
     /**
      * Método alternativo para obtener el primer instituto

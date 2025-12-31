@@ -4,12 +4,12 @@
 
 /* Variables CSS para el theme */
 :root {
-    --primary-color: #4a90e2;
+    --primary-color: var(--dark-blue, #0D1B2A); /* Use dynamic dark blue */
     --secondary-color: #5a6c7d;
-    --success-color: #28a745;
+    --success-color: #198754;
     --danger-color: #dc3545;
     --warning-color: #ffc107;
-    --info-color: #17a2b8;
+    --info-color: #6c757d;
     --light-color: #f8f9fa;
     --dark-color: #343a40;
     --border-color: #e9ecef;
@@ -74,7 +74,7 @@
 
 .modal-header {
     padding: 20px 30px;
-    background: linear-gradient(135deg, var(--primary-color), #357abd);
+    background: linear-gradient(135deg, var(--primary-color), #1b263b); /* Updated gradient */
     color: white;
     display: flex;
     justify-content: space-between;

@@ -220,15 +220,15 @@
 :root {
     --sidebar-bg: #1a1d29;
     --sidebar-hover: #232940;
-    --main-bg: #f5f7fa;
+    --main-bg: #f8f9fa;
     --card-bg: #ffffff;
-    --primary-color: #3b82f6;
-    --primary-hover: #2563eb;
+    --primary-color: var(--dark-blue, #0D1B2A); /* Use dynamic dark blue with fallback */
+    --primary-hover: #1b263b;
     --secondary-color: #64748b;
-    --accent-color: #06b6d4;
-    --success-color: #10b981;
-    --warning-color: #f59e0b;
-    --danger-color: #ef4444;
+    --accent-color: var(--main-red, #E5383B); /* Use dynamic red with fallback */
+    --success-color: #198754;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
     --text-primary: #1e293b;
     --text-secondary: #64748b;
     --text-light: #94a3b8;

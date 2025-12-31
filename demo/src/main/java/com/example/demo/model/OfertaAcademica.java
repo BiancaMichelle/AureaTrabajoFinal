@@ -96,7 +96,7 @@ public class OfertaAcademica {
     @JoinColumn(name = "instituto_id")
     private Instituto instituto;
     
-    @OneToMany(mappedBy = "oferta", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "oferta", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private List<Inscripciones> inscripciones;
 
         public Boolean getEstaActiva() {

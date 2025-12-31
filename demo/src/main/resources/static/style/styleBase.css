@@ -585,3 +585,76 @@ main {
     border-color: #007bff;
     box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
+
+/* =================   BOOTSTRAP OVERRIDES FOR FORMAL THEME   ================= */
+/* Override Bootstrap Primary to use Institute Dark Blue */
+.bg-primary {
+    background-color: var(--dark-blue) !important;
+}
+
+.text-primary {
+    color: var(--dark-blue) !important;
+}
+
+.btn-primary {
+    background-color: var(--dark-blue) !important;
+    border-color: var(--dark-blue) !important;
+}
+
+.btn-primary:hover, .btn-primary:focus, .btn-primary:active {
+    background-color: #1b263b !important; /* Lighter dark blue */
+    border-color: #1b263b !important;
+}
+
+.btn-outline-primary {
+    color: var(--dark-blue) !important;
+    border-color: var(--dark-blue) !important;
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--dark-blue) !important;
+    color: #fff !important;
+}
+
+/* Override Bootstrap Info to remove Cyan/Celeste */
+.text-info {
+    color: #6c757d !important; /* Muted gray instead of cyan */
+}
+
+.bg-info {
+    background-color: #e9ecef !important; /* Light gray instead of cyan */
+    color: #212529 !important;
+}
+
+/* Ensure Success/Danger are standard Green/Red */
+.btn-success {
+    background-color: #198754 !important;
+    border-color: #198754 !important;
+}
+
+.btn-danger {
+    background-color: #dc3545 !important;
+    border-color: #dc3545 !important;
+}
+
+/* Card Styling for Professional Look */
+.card {
+    border: 1px solid rgba(0,0,0,0.08) !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
+}
+
+.card-header {
+    border-bottom: 1px solid rgba(255,255,255,0.1) !important;
+}
+
+/* Badge Styling */
+.badge.bg-light.text-primary {
+    background-color: #f8f9fa !important;
+    color: var(--dark-blue) !important;
+    border: 1px solid #e9ecef;
+}
+
+.badge.bg-warning {
+    background-color: #ffc107 !important;
+    color: #000 !important;
+}

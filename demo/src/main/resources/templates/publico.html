@@ -6,7 +6,6 @@
     <title th:text="${instituto?.nombreInstituto ?: 'Instituto Aurea'}">Instituto Aurea</title>
 </head>
 
-<body>
     <div layout:fragment="content">
         
         <!-- Hero Section con Carrusel Bootstrap -->
@@ -115,13 +114,65 @@
                         <p class="lead text-muted">Descubre nuestros programas educativos diseñados para tu crecimiento profesional</p>
                     </div>
                 </div>
+
+                <!-- Filtros de Búsqueda -->
+                <div class="card border-0 shadow-sm mb-5 bg-light" th:if="${not #lists.isEmpty(ofertas)}">
+                    <div class="card-body p-4">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label for="filtroNombre" class="form-label fw-bold text-muted small text-uppercase">Buscar</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                                    <input type="text" class="form-control border-start-0 ps-0" id="filtroNombre" placeholder="Nombre de la oferta...">
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="filtroTipo" class="form-label fw-bold text-muted small text-uppercase">Tipo</label>
+                                <select class="form-select" id="filtroTipo">
+                                    <option value="">Todos</option>
+                                    <option value="CURSO">Curso</option>
+                                    <option value="FORMACION">Formación</option>
+                                    <option value="SEMINARIO">Seminario</option>
+                                    <option value="CHARLA">Charla</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="filtroCategoria" class="form-label fw-bold text-muted small text-uppercase">Categoría</label>
+                                <select class="form-select" id="filtroCategoria">
+                                    <option value="">Todas</option>
+                                    <option th:each="cat : ${categorias}" 
+                                            th:value="${cat.idCategoria}" 
+                                            th:text="${cat.nombre}">Categoría</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="filtroModalidad" class="form-label fw-bold text-muted small text-uppercase">Modalidad</label>
+                                <select class="form-select" id="filtroModalidad">
+                                    <option value="">Todas</option>
+                                    <option value="PRESENCIAL">Presencial</option>
+                                    <option value="VIRTUAL">Virtual</option>
+                                    <option value="HIBRIDA">Híbrida</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button class="btn btn-outline-secondary w-100" id="btnLimpiarFiltros">
+                                    <i class="fas fa-eraser me-1"></i> Limpiar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 
                 <div class="row g-4" th:if="${not #lists.isEmpty(ofertas)}">
-                    <div th:each="oferta : ${ofertas}" class="col-lg-4 col-md-6">
+                    <div th:each="oferta : ${ofertas}" class="col-lg-4 col-md-6 oferta-item"
+                         th:data-nombre="${oferta.nombre != null ? oferta.nombre.toLowerCase() : ''}"
+                         th:data-tipo="${oferta.tipoOferta}"
+                         th:data-modalidad="${oferta.modalidad}"
+                         th:data-categoria="${oferta.categorias != null and not #lists.isEmpty(oferta.categorias) ? oferta.categorias[0].idCategoria : ''}">
                         <div class="card h-100 border-0 shadow-sm">
-                            <div class="card-header bg-primary text-white">
+                            <div class="card-header text-white" style="background-color: var(--dark-blue);">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <span class="badge bg-light text-primary me-2" 
+                                    <span class="badge bg-light me-2" style="color: var(--dark-blue);"
                                           th:text="${oferta.categorias != null and not #lists.isEmpty(oferta.categorias)} ? ${oferta.categorias[0].nombre} : 'General'">Categoría</span>
                                     <span class="badge bg-warning text-dark" th:text="${oferta.tipoOferta}">TIPO</span>
                                 </div>
@@ -169,11 +220,11 @@
                                             Costo mensual: $<span th:text="${#numbers.formatDecimal(oferta.costoCuota, 0, 'COMMA', 2, 'POINT')}">0</span>
                                         </small>
                                     </div>
-                                    <!-- Costo mensual para Formación (usa costoMensual si existe) -->
-                                    <div class="col-12" th:if="${oferta.tipoOferta == 'FORMACION' and oferta.costoMensual != null and oferta.costoMensual > 0}">
+                                    <!-- Costo mensual para Formación (usa costoCuota si existe) -->
+                                    <div class="col-12" th:if="${oferta.tipoOferta == 'FORMACION' and oferta.costoCuota != null and oferta.costoCuota > 0}">
                                         <small class="text-primary fw-bold">
                                             <i class="fas fa-calendar-alt me-1"></i>
-                                            Costo mensual: $<span th:text="${#numbers.formatDecimal(oferta.costoMensual, 0, 'COMMA', 2, 'POINT')}">0</span>
+                                            Costo mensual: $<span th:text="${#numbers.formatDecimal(oferta.costoCuota, 0, 'COMMA', 2, 'POINT')}">0</span>
                                         </small>
                                     </div>
                                 </div>
@@ -210,6 +261,15 @@
                     </div>
                 </div>
                 
+                <!-- Mensaje cuando no hay resultados por filtro -->
+                <div id="mensajeNoResultados" class="text-center py-5" style="display: none;">
+                    <div class="mb-3">
+                        <i class="fas fa-search fa-3x text-muted opacity-50"></i>
+                    </div>
+                    <h4 class="text-muted">No se encontraron resultados</h4>
+                    <p class="text-muted">Intenta ajustar los filtros de búsqueda</p>
+                </div>
+
                 <!-- Mensaje cuando no hay ofertas -->
                 <div th:if="${#lists.isEmpty(ofertas)}" class="text-center py-5">
                     <div class="mb-4">
@@ -223,5 +283,79 @@
 
     </div>
 
-</body>
+    <!-- Scripts específicos de la página -->
+    <th:block layout:fragment="scripts">
+        <script>
+            // Lógica de filtrado de ofertas
+            document.addEventListener('DOMContentLoaded', function() {
+                const filtroNombre = document.getElementById('filtroNombre');
+                const filtroTipo = document.getElementById('filtroTipo');
+                const filtroModalidad = document.getElementById('filtroModalidad');
+                const filtroCategoria = document.getElementById('filtroCategoria');
+                const btnLimpiar = document.getElementById('btnLimpiarFiltros');
+                const ofertas = document.querySelectorAll('.oferta-item');
+                const mensajeNoResultados = document.getElementById('mensajeNoResultados');
+
+                if (filtroNombre && ofertas.length > 0) {
+                    function filtrarOfertas() {
+                        const nombre = filtroNombre.value.toLowerCase().trim();
+                        const tipo = filtroTipo.value;
+                        const modalidad = filtroModalidad.value;
+                        const categoria = filtroCategoria ? filtroCategoria.value : '';
+                        let visibles = 0;
+
+                        ofertas.forEach(oferta => {
+                            const dataNombre = oferta.getAttribute('data-nombre') || '';
+                            const dataTipo = oferta.getAttribute('data-tipo') || '';
+                            const dataModalidad = oferta.getAttribute('data-modalidad') || '';
+                            const dataCategoria = oferta.getAttribute('data-categoria') || '';
+
+                            const coincideNombre = dataNombre.includes(nombre);
+                            const coincideTipo = tipo === '' || dataTipo === tipo;
+                            const coincideModalidad = modalidad === '' || dataModalidad === modalidad;
+                            const coincideCategoria = categoria === '' || dataCategoria === categoria;
+
+                            if (coincideNombre && coincideTipo && coincideModalidad && coincideCategoria) {
+                                oferta.style.display = ''; // Restaurar display original
+                                visibles++;
+                            } else {
+                                oferta.style.display = 'none';
+                            }
+                        });
+                        
+                        if (mensajeNoResultados) {
+                            mensajeNoResultados.style.display = visibles === 0 ? 'block' : 'none';
+                        }
+                    }
+
+                    filtroNombre.addEventListener('input', filtrarOfertas);
+                    filtroTipo.addEventListener('change', filtrarOfertas);
+                    filtroModalidad.addEventListener('change', filtrarOfertas);
+                    if (filtroCategoria) filtroCategoria.addEventListener('change', filtrarOfertas);
+
+                    if (btnLimpiar) {
+                        btnLimpiar.addEventListener('click', function() {
+                            filtroNombre.value = '';
+                            filtroTipo.value = '';
+                            filtroModalidad.value = '';
+                            if (filtroCategoria) filtroCategoria.value = '';
+                            filtrarOfertas();
+                        });
+                    }
+                }
+            });
+
+            // Inicializar carrusel si existe
+            document.addEventListener('DOMContentLoaded', function() {
+                var myCarousel = document.querySelector('#heroCarousel')
+                if (myCarousel) {
+                    var carousel = new bootstrap.Carousel(myCarousel, {
+                        interval: 5000,
+                        wrap: true
+                    })
+                }
+            });
+        </script>
+    </th:block>
+
 </html>

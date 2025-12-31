@@ -1,0 +1,23 @@
+<th:block th:fragment="styles">
+    <!-- Estilos Dinámicos basados en la configuración del Instituto -->
+    <style th:if="${instituto != null}">
+        :root {
+            /* Color Primario (Index 0) -> Reemplaza --main-red */
+            --main-red: [[${instituto.colores != null and !instituto.colores.isEmpty() ? instituto.colores[0] : '#E5383B'}]] !important;
+            
+            /* Color Secundario (Index 1) -> Reemplaza --dark-blue */
+            --dark-blue: [[${instituto.colores != null and instituto.colores.size() > 1 ? instituto.colores[1] : '#0D1B2A'}]] !important;
+        }
+        
+        /* Actualizar gradientes que usan estos colores si es necesario */
+        .header {
+            background: linear-gradient(135deg, var(--dark-blue) 0%, #1a2942 100%) !important;
+        }
+        
+        .nav-logo {
+            background: linear-gradient(135deg, #fff, var(--main-red)) !important;
+            -webkit-background-clip: text !important;
+            background-clip: text !important;
+        }
+    </style>
+</th:block>

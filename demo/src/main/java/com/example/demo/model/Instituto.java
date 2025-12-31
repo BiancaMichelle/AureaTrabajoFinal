@@ -37,7 +37,7 @@ public class Instituto {
     @Column(length = 2000)
     private String vision;
     
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     private List<String> colores;
     
     // Configuraciones automáticas
