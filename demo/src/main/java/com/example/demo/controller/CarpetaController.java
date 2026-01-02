@@ -139,14 +139,20 @@ public class CarpetaController {
     }
 
     @GetMapping("/archivo/{archivoId}/descargar")
-    public ResponseEntity<byte[]> descargarArchivo(@PathVariable Long archivoId) {
+    public ResponseEntity<byte[]> descargarArchivo(@PathVariable Long archivoId, @RequestParam(required = false, defaultValue = "false") boolean download) {
         try {
             Archivo archivo = archivoRepository.findById(archivoId)
                     .orElseThrow(() -> new RuntimeException("Archivo no encontrado"));
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.parseMediaType(archivo.getTipoMime()));
-            headers.setContentDispositionFormData("attachment", archivo.getNombre());
+            
+            org.springframework.http.ContentDisposition disposition = org.springframework.http.ContentDisposition
+                    .builder(download ? "attachment" : "inline")
+                    .filename(archivo.getNombre(), java.nio.charset.StandardCharsets.UTF_8)
+                    .build();
+            
+            headers.setContentDisposition(disposition);
 
             return ResponseEntity.ok()
                     .headers(headers)

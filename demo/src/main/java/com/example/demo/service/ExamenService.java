@@ -40,6 +40,12 @@ public class ExamenService {
         Modulo modulo = moduloRepository.findById(moduloId)
                 .orElseThrow(() -> new RuntimeException("Módulo no encontrado"));
 
+        // Validar fechas
+        if (examen.getFechaApertura() != null && examen.getFechaCierre() != null && 
+            examen.getFechaCierre().isBefore(examen.getFechaApertura())) {
+            throw new RuntimeException("La fecha de cierre no puede ser anterior a la fecha de apertura");
+        }
+
         // Configurar el examen
         examen.setModulo(modulo);
         examen.setFechaCreacion(LocalDateTime.now());

@@ -190,6 +190,59 @@ public class PoolController {
     }
     
     /**
+     * Editar una pregunta existente
+     */
+    @PostMapping("/editarPregunta/{preguntaId}")
+    @PreAuthorize("hasAnyAuthority('DOCENTE', 'ADMIN')")
+    @ResponseBody
+    public ResponseEntity<String> editarPregunta(
+            @PathVariable String preguntaId,
+            @RequestParam("enunciado") String enunciado,
+            @RequestParam("tipoPregunta") String tipoPregunta,
+            @RequestParam("puntaje") Float puntaje,
+            @RequestParam(value = "opcionesData", required = false, defaultValue = "[]") String opcionesData) {
+        try {
+            Pregunta pregunta = preguntaRepository.findById(UUID.fromString(preguntaId))
+                .orElseThrow(() -> new RuntimeException("Pregunta no encontrada"));
+            
+            pregunta.setEnunciado(enunciado);
+            pregunta.setTipoPregunta(TipoPregunta.valueOf(tipoPregunta));
+            pregunta.setPuntaje(puntaje);
+            
+            // Actualizar opciones
+            if (opcionesData != null && !opcionesData.isEmpty() && !opcionesData.equals("[]")) {
+                List<OpcionDTO> opcionesList = objectMapper.readValue(opcionesData, new TypeReference<List<OpcionDTO>>(){});
+                
+                // Limpiar opciones actuales
+                pregunta.getOpciones().clear();
+                
+                for (OpcionDTO opcionDTO : opcionesList) {
+                    Opcion opcion = new Opcion();
+                    opcion.setIdOpcion(UUID.randomUUID());
+                    opcion.setDescripcion(opcionDTO.getDescripcion());
+                    opcion.setEsCorrecta(opcionDTO.getEsCorrecta());
+                    opcion.setPregunta(pregunta);
+                    pregunta.getOpciones().add(opcion);
+                }
+            } else {
+                 pregunta.getOpciones().clear();
+            }
+            
+            preguntaRepository.save(pregunta);
+            
+            return ResponseEntity.ok()
+                .header("Content-Type", "application/json")
+                .body("{\"success\": true, \"message\": \"Pregunta actualizada exitosamente\"}");
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest()
+                .header("Content-Type", "application/json")
+                .body("{\"success\": false, \"message\": \"Error al actualizar pregunta: " + e.getMessage().replace("\"", "'") + "\"}");
+        }
+    }
+
+    /**
      * Listar todos los pools disponibles
      */
     @GetMapping("/listar")

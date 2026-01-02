@@ -65,7 +65,7 @@ public class DemoApplication implements CommandLineRunner {
         this.alumnoRepository = alumnoRepository;
         this.institutoRepository = institutoRepository;
     }
-
+ 
     public static void main(String[] args) {
         SpringApplication.run(DemoApplication.class, args);
     }

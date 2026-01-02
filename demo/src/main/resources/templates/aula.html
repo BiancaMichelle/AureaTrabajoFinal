@@ -242,6 +242,151 @@
             background-color: rgba(13, 110, 253, 0.18) !important;
             opacity: 1 !important;
         }
+
+        /* Moodle-like Theme Overrides */
+        :root {
+            --moodle-primary: #0f6cb4;
+            --moodle-secondary: #f8f9fa;
+            --moodle-text: #343a40;
+            --moodle-border: #dee2e6;
+            --moodle-hover: #e9ecef;
+        }
+
+        body {
+            background-color: #f2f2f2; /* Light gray background like Moodle */
+            color: var(--moodle-text);
+        }
+
+        /* Breadcrumbs */
+        .breadcrumb-container {
+            background: white;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--moodle-border);
+            margin-bottom: 2rem;
+        }
+
+        .breadcrumb-item + .breadcrumb-item::before {
+            content: "/";
+            color: #6c757d;
+        }
+
+        /* Course Header */
+        .course-header-card {
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border-left: 5px solid var(--moodle-primary);
+        }
+
+        /* Module Cards */
+        .moodle-module {
+            background: white;
+            border: 1px solid var(--moodle-border);
+            border-radius: 0.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            transition: all 0.2s ease;
+        }
+
+        .moodle-module:hover {
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .module-header {
+            padding: 1.25rem;
+            border-bottom: 1px solid var(--moodle-border);
+            background-color: #fff;
+            border-radius: 0.5rem 0.5rem 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .module-title {
+            color: var(--moodle-primary);
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .module-content {
+            padding: 1.25rem;
+        }
+
+        /* Activity Items */
+        .activity-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 1rem;
+            border-bottom: 1px solid #f1f1f1;
+            transition: background-color 0.2s;
+            position: relative;
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-item:hover {
+            background-color: #fcfcfc;
+        }
+
+        .activity-icon-container {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            margin-right: 1rem;
+            flex-shrink: 0;
+        }
+
+        .activity-icon-container.pdf { background-color: #ffebee; color: #c62828; }
+        .activity-icon-container.video { background-color: #e3f2fd; color: #1565c0; }
+        .activity-icon-container.quiz { background-color: #f3e5f5; color: #7b1fa2; }
+        .activity-icon-container.assignment { background-color: #e8f5e9; color: #2e7d32; }
+        .activity-icon-container.folder { background-color: #fff8e1; color: #fbc02d; }
+        .activity-icon-container.generic { background-color: #eceff1; color: #546e7a; }
+
+        .activity-icon {
+            font-size: 1.5rem;
+        }
+
+        .activity-details h5 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            color: #2d3748;
+        }
+
+        .activity-details p {
+            font-size: 0.875rem;
+            color: #718096;
+            margin-bottom: 0;
+        }
+
+        .activity-meta {
+            font-size: 0.75rem;
+            color: #a0aec0;
+            margin-top: 0.5rem;
+            display: flex;
+            gap: 1rem;
+        }
+
+        /* Edit Mode Toggles */
+        .edit-controls {
+            display: flex;
+            gap: 0.5rem;
+            opacity: 0; /* Hidden by default */
+            transition: opacity 0.2s;
+        }
+
+        body.edit-mode .edit-controls {
+            opacity: 1;
+        }
     </style>
 </head>
 
@@ -469,326 +614,246 @@
     </div>
 
     <!-- Contenido principal -->
-    <div id="main-container" class="relative min-h-screen">
+    <div id="main-container" class="relative min-h-screen pb-12">
 
-        <!-- Cabecera del Curso -->
-        <header class="bg-customGrayDark text-white p-4 py-8 shadow-md relative z-10">
-            <div class="max-w-7xl mx-auto flex justify-between items-center relative">
-
-                <!-- Botón para modificar el curso (solo para admin/docente) -->
-                <button th:if="${puedeModificar}" id="modifyCourseButton"
-                    class="absolute left-0 top-1/2 -translate-y-1/2 bg-customBlue text-white py-2 pr-3 pl-2 rounded-r-lg shadow hover:bg-blue-700 transition-colors duration-200 z-20 flex items-center">
-                    <i class="fas fa-edit"></i>
-                    <span class="ml-1 text-sm whitespace-nowrap">Modificar Curso</span>
-                </button>
-
-                <h1 class="text-3xl font-bold tracking-wider mx-auto" th:text="${curso.nombre}">IMAGEN DEL CURSO</h1>
-
-                <!-- Botón para abrir el índice -->
-                <button id="openButton"
-                    class="absolute right-0 top-1/2 -translate-y-1/2 bg-customBlue hover:bg-blue-700 text-white py-2 pl-3 pr-2 rounded-l-lg flex items-center transition-colors duration-200 shadow z-20">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 rotate-180" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                    </svg>
-                    <span class="ml-1 text-sm whitespace-nowrap">Contenido del curso</span>
-                </button>
+        <!-- Breadcrumbs -->
+        <div class="breadcrumb-container">
+            <div class="max-w-7xl mx-auto">
+                <nav aria-label="breadcrumb">
+                    <ol class="flex items-center space-x-2 text-sm text-gray-600">
+                        <li class="breadcrumb-item"><a href="/" class="hover:text-blue-600">Inicio</a></li>
+                        <li class="breadcrumb-item"><a href="/mis-cursos" class="hover:text-blue-600">Mis Cursos</a></li>
+                        <li class="breadcrumb-item font-semibold text-gray-800" aria-current="page" th:text="${curso.nombre}">Curso Actual</li>
+                    </ol>
+                </nav>
             </div>
-        </header>
+        </div>
 
-        <!-- Barra de Navegación -->
-        <nav class="bg-customGreen border-b border-gray-200 shadow-sm relative z-10">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex items-center space-x-6">
-                    <!-- Ícono de búsqueda -->
-                    <div class="py-3 px-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none"
-                            viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                    </div>
-
-                    <!-- Pestañas -->
-                    <a href="#"
-                        class="py-3 px-1 border-b-2 border-white text-white font-semibold text-sm nav-tab-active">
-                        Contenido
-                    </a>
-                    <a href="#"
-                        class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
-                        Descripción
-                    </a>
-                    <a href="#"
-                        class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
-                        Anuncios
-                    </a>
-                    <a th:href="@{/aula/oferta/{id}/participantes(id=${curso.idOferta})}"
-                        class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
-                        Participantes
-                    </a>
-                    <a href="#"
-                        class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
-                        Calificaciones
-                    </a>
-                    <a href="#"
-                        class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
-                        Calendario
-                    </a>
-                </div>
-            </div>
-        </nav>
-
-        <!-- Contenido Principal del Curso -->
-        <main class="p-8">
-            <div class="max-w-4xl mx-auto" id="courseContent">
-                <div id="editModeHint" role="status" aria-hidden="true" aria-live="polite"
-                    class="items-center gap-3 mb-6 px-4 py-3 rounded-md border border-dashed border-blue-400 bg-blue-50 text-blue-700 text-sm uppercase tracking-wide">
-                    <i class="fas fa-pen-to-square"></i>
-                    <span>Modo edición activo. Selecciona el ícono para modificar un elemento.</span>
-                </div>
-                <!-- Módulos cargados desde la base de datos -->
-                <div th:each="modulo, moduloStat : ${modulos}" class="mb-8 bg-white p-6 rounded-lg shadow editable-block"
-                    th:data-modulo-id="${modulo.idModulo}"
-                    th:data-modulo-nombre="${modulo.nombre}"
-                    th:data-modulo-descripcion="${modulo.descripcion != null ? modulo.descripcion : ''}"
-                    th:data-modulo-inicio="${#temporals.format(modulo.fechaInicioModulo, 'yyyy-MM-dd')}"
-                    th:data-modulo-fin="${#temporals.format(modulo.fechaFinModulo, 'yyyy-MM-dd')}"
-                    th:data-modulo-visible="${modulo.visibilidad != null ? modulo.visibilidad : false}">
-                    <button type="button" class="module-visibility-toggle" data-visibility-toggle
-                        th:if="${puedeModificar}"
-                        th:attr="data-visible=${modulo.visibilidad != null ? modulo.visibilidad : false},
-                                 title=${(modulo.visibilidad != null ? modulo.visibilidad : false) ? 'Visible para estudiantes' : 'Oculto para estudiantes'}">
-                        <i class="fas"
-                            th:classappend="${modulo.visibilidad != null ? (modulo.visibilidad ? ' fa-eye' : ' fa-eye-slash') : ' fa-eye-slash'}"
-                            aria-hidden="true"></i>
-                        <span class="sr-only">Estado de visibilidad del módulo</span>
-                    </button>
-                    <button type="button" class="delete-icon" data-delete-type="modulo"
-                        th:data-modulo-id="${modulo.idModulo}"
-                        th:data-modulo-nombre="${modulo.nombre}" title="Eliminar módulo">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                    <button type="button" class="edit-icon" data-edit-type="module"
-                        th:data-modulo-id="${modulo.idModulo}" title="Editar módulo">
-                        <i class="fas fa-pen"></i>
-                    </button>
-
-                    <h2 class="text-gray-500 text-xs font-semibold uppercase mb-1">
-                        <span
-                            th:text="${#temporals.format(modulo.fechaInicioModulo, 'dd/MM/yyyy')} + ' - ' + ${#temporals.format(modulo.fechaFinModulo, 'dd/MM/yyyy')}">
-                            Fechas
-                        </span>
-                    </h2>
-                    <h3 class="text-2xl font-bold tracking-wide mb-4" th:text="${modulo.nombre}">MÓDULO</h3>
-                    <p class="text-gray-600 mb-4" th:text="${modulo.descripcion}">Descripción del módulo</p>
-
-                    <!-- Clases del módulo -->
-                    <div th:if="${not #lists.isEmpty(modulo.clases)}" class="ml-4 mb-4">
-                        <h4 class="text-lg font-semibold text-gray-700 mb-2">Clases:</h4>
-                        <div th:each="clase : ${modulo.clases}" class="bg-gray-50 p-4 rounded-lg mb-2 border editable-block"
-                            th:data-clase-id="${clase.idClase}"
-                            th:data-clase-titulo="${clase.titulo}"
-                            th:data-clase-descripcion="${clase.descripcion}"
-                            th:data-clase-inicio="${#temporals.format(clase.inicio, 'yyyy-MM-dd''T''HH:mm')}"
-                            th:data-clase-fin="${#temporals.format(clase.fin, 'yyyy-MM-dd''T''HH:mm')}">
-                            <button type="button" class="delete-icon no-visibility" data-delete-type="clase"
-                                th:data-clase-id="${clase.idClase}"
-                                th:data-clase-nombre="${clase.titulo}" title="Eliminar clase">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                            <button type="button" class="edit-icon" data-edit-type="clase"
-                                th:data-clase-id="${clase.idClase}" title="Editar clase">
-                                <i class="fas fa-pen"></i>
-                            </button>
-                            <h5 class="font-medium text-customBlue" th:text="${clase.titulo}">Título de la clase</h5>
-                            <p class="text-sm text-gray-600 mt-1" th:text="${clase.descripcion}">Descripción de la clase
-                            </p>
-                            <p class="text-xs text-gray-500 mt-2"
-                                th:text="${'Inicio: ' + #temporals.format(clase.inicio, 'dd/MM/yyyy HH:mm')}">Fecha</p>
-                            <p class="text-xs text-gray-500"
-                                th:text="${'Fin: ' + #temporals.format(clase.fin, 'dd/MM/yyyy HH:mm')}">Fecha fin</p>
-                            <!-- Botón para unirse a la clase -->
-                            <div class="mt-3 flex justify-between items-center">
-                                <span class="text-xs text-gray-500" th:if="${clase.meetingUrl}">
-                                    <i class="fas fa-video me-1"></i>Clase en vivo disponible
-                                </span>
-                                <a th:href="@{/clase/unirse/} + ${clase.idClase}"
-                                    class="px-4 py-2 bg-customBlue text-white rounded-md hover:bg-blue-700 text-sm transition-colors duration-200">
-                                    <i class="fas fa-play me-1"></i>Unirse a la clase
-                                </a>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                
+                <!-- Columna Principal (Contenido) -->
+                <div class="lg:col-span-3">
+                    
+                    <!-- Cabecera del Curso -->
+                    <div class="course-header-card">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h1 class="text-3xl font-bold text-gray-800 mb-2" th:text="${curso.nombre}">Nombre del Curso</h1>
+                                <p class="text-gray-600" th:text="${curso.descripcion}">Descripción del curso...</p>
                             </div>
-                        </div>
-                    </div>
-                    <!-- Actividades del módulo -->
-                    <div th:if="${not #lists.isEmpty(modulo.actividades)}" class="ml-4">
-                        <div th:each="actividad : ${modulo.actividades}"
-                            th:if="${actividad instanceof T(com.example.demo.model.Material) ? actividad.carpeta == null : true}"
-                            class="bg-gray-50 p-4 rounded-lg mb-2 border hover:border-gray-300 transition-all editable-block"
-                            th:data-actividad-id="${actividad.idActividad}"
-                            th:data-actividad-titulo="${actividad.titulo}"
-                            th:data-actividad-descripcion="${actividad.descripcion}">
-                            <button type="button" class="delete-icon no-visibility" data-delete-type="actividad"
-                                th:data-actividad-id="${actividad.idActividad}"
-                                th:data-actividad-nombre="${actividad.titulo}" title="Eliminar actividad">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                            <button type="button" class="edit-icon" data-edit-type="actividad"
-                                th:data-actividad-id="${actividad.idActividad}" title="Editar actividad">
-                                <i class="fas fa-pen"></i>
-                            </button>
-                            <div class="flex justify-between items-start">
-                                <div class="flex-1">
-                                    <!-- Icono según tipo de actividad -->
-                                    <div class="flex items-center mb-2">
-                                        <span th:if="${actividad instanceof T(com.example.demo.model.Examen)}"
-                                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                                            <i class="fas fa-clipboard-check mr-1"></i> Examen
-                                        </span>
-                                        <span th:if="${actividad instanceof T(com.example.demo.model.Tarea)}"
-                                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                            <i class="fas fa-tasks mr-1"></i> Tarea
-                                        </span>
-                                        <span th:if="${actividad instanceof T(com.example.demo.model.Material)}"
-                                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                            <i class="fas fa-file-alt mr-1"></i> Material
-                                        </span>
-                                        <span th:if="${actividad instanceof T(com.example.demo.model.Carpeta)}"
-                                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                            <i class="fas fa-folder mr-1"></i> Carpeta
-                                        </span>
-                                    </div>
-
-                                    <h5 class="font-medium text-gray-800 text-lg" th:text="${actividad.titulo}">Título
-                                        de la actividad</h5>
-                                    <p class="text-sm text-gray-600 mt-1" th:text="${actividad.descripcion}">Descripción
-                                        de la actividad</p>
-
-                                    <!-- Información específica para materiales -->
-                                    <div th:if="${actividad instanceof T(com.example.demo.model.Material)}"
-                                        class="mt-2">
-                                        <div th:each="archivo : ${actividad.archivos}" 
-                                             class="flex items-center text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded mt-1">
-                                            <i class="fas fa-file-pdf text-red-500 mr-2"></i>
-                                            <span th:text="${archivo.nombre}" class="font-medium">archivo.pdf</span>
-                                        </div>
-                                        <p th:if="${#lists.isEmpty(actividad.archivos)}" 
-                                           class="text-xs text-gray-400 italic mt-1">
-                                            Sin archivos adjuntos
-                                        </p>
-                                    </div>
-
-                                    <!-- Información específica para exámenes -->
-                                    <div th:if="${actividad instanceof T(com.example.demo.model.Examen)}"
-                                        class="mt-3 flex flex-wrap gap-3 text-xs text-gray-500">
-                                        <span th:if="${actividad.fechaApertura != null}">
-                                            <i class="fas fa-calendar-day mr-1"></i>
-                                            <span
-                                                th:text="${#temporals.format(actividad.fechaApertura, 'dd/MM/yyyy HH:mm')}"></span>
-                                        </span>
-                                        <span th:if="${actividad.tiempoRealizacion != null}">
-                                            <i class="fas fa-clock mr-1"></i>
-                                            <span th:text="${actividad.tiempoRealizacion} + ' min'"></span>
-                                        </span>
-                                        <span th:if="${actividad.cantidadIntentos != null}">
-                                            <i class="fas fa-redo mr-1"></i>
-                                            <span th:text="${actividad.cantidadIntentos} + ' intento(s)'"></span>
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <!-- Botón de acción -->
-                                <div class="ml-4">
-                                    <div th:if="${actividad instanceof T(com.example.demo.model.Examen)}"
-                                        th:with="resumen=${examenIntentos != null ? examenIntentos[actividad.idActividad] : null},
-                                                 ahora=${#temporals.createNow()},
-                                                 estaAbierto=${actividad.fechaApertura != null and actividad.fechaCierre != null and actividad.fechaApertura.isBefore(ahora) and actividad.fechaCierre.isAfter(ahora)},
-                                                 noHaAbierto=${actividad.fechaApertura != null and actividad.fechaApertura.isAfter(ahora)},
-                                                 yaCerro=${actividad.fechaCierre != null and actividad.fechaCierre.isBefore(ahora)}">
-                                        <div th:if="${!puedeModificar and resumen != null and resumen['intentosRealizados'] > 0}"
-                                            class="px-4 py-3 border border-purple-200 rounded-md text-center text-sm"
-                                            th:classappend="${resumen['puedeReintentar']} ? ' bg-purple-50 mb-2' : ' bg-purple-100'">
-                                            <div class="font-semibold text-purple-700">Calificación obtenida</div>
-                                            <div class="text-2xl font-bold text-purple-700"
-                                                th:text="${resumen['calificacionTexto'] != null ? resumen['calificacionTexto'] : 'Pendiente'}"></div>
-                                            <div th:if="${resumen['requiereRevision']}"
-                                                class="text-xs text-yellow-600 mt-1">
-                                                Pendiente de corrección del docente
-                                            </div>
-                                        </div>
-
-                                        <!-- Botón para realizar examen (solo si está abierto) -->
-                                        <a th:if="${!puedeModificar and (resumen == null or resumen['puedeReintentar']) and estaAbierto}"
-                                            th:href="@{/examen/realizar/{id}(id=${actividad.idActividad})}"
-                                            class="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700 transition-colors">
-                                            <i class="fas fa-play mr-2"></i>Realizar Examen
-                                        </a>
-
-                                        <!-- Mensaje si el examen aún no abre -->
-                                        <div th:if="${!puedeModificar and (resumen == null or resumen['puedeReintentar']) and noHaAbierto}"
-                                            class="px-4 py-3 bg-gray-100 text-gray-600 rounded-md text-sm text-center">
-                                            <i class="fas fa-clock text-gray-500 mb-2 text-lg block"></i>
-                                            <div class="font-semibold">Examen no disponible aún</div>
-                                            <div class="text-xs mt-1">
-                                                Abre: <span th:text="${#temporals.format(actividad.fechaApertura, 'dd/MM/yyyy HH:mm')}"></span>
-                                            </div>
-                                        </div>
-
-                                        <!-- Mensaje si el examen ya cerró -->
-                                        <div th:if="${!puedeModificar and (resumen == null or resumen['puedeReintentar']) and yaCerro}"
-                                            class="px-4 py-3 bg-red-50 text-red-600 rounded-md text-sm text-center border border-red-200">
-                                            <i class="fas fa-lock text-red-500 mb-2 text-lg block"></i>
-                                            <div class="font-semibold">Examen cerrado</div>
-                                            <div class="text-xs mt-1">
-                                                Cerró: <span th:text="${#temporals.format(actividad.fechaCierre, 'dd/MM/yyyy HH:mm')}"></span>
-                                            </div>
-                                        </div>
-
-                                        <div th:if="${!puedeModificar and resumen != null and !resumen['puedeReintentar']}"
-                                            class="px-4 py-2 bg-purple-100 text-purple-700 rounded-md text-sm font-semibold text-center">
-                                            Intentos completados
-                                        </div>
-
-                                        <a th:if="${puedeModificar}"
-                                            th:href="@{/examen/{id}/intentos(id=${actividad.idActividad})}"
-                                            class="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700 transition-colors">
-                                            <i class="fas fa-clipboard-list mr-2"></i>Ver intentos
-                                        </a>
-                                    </div>
-
-                                    <button th:if="${actividad instanceof T(com.example.demo.model.Carpeta)}"
-                                        th:attr="data-carpeta-id=${actividad.idActividad}, data-carpeta-nombre=${actividad.titulo}"
-                                        onclick="abrirCarpeta(this)"
-                                        class="inline-flex items-center px-4 py-2 bg-yellow-600 text-white text-sm font-medium rounded-md hover:bg-yellow-700 transition-colors">
-                                        <i class="fas fa-folder-open mr-2"></i>Abrir Carpeta
-                                    </button>
-                                    
-                                    <button th:if="${actividad instanceof T(com.example.demo.model.Material)}"
-                                        th:attr="data-material-id=${actividad.idActividad}, data-material-nombre=${actividad.titulo}"
-                                        onclick="descargarMaterial(this)"
-                                        class="inline-flex items-center justify-center w-10 h-10 bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors"
-                                        title="Descargar material">
-                                        <i class="fas fa-download"></i>
-                                    </button>
-                                </div>
+                            <div th:if="${puedeModificar}">
+                                <button id="modifyCourseButton" class="bg-customBlue text-white px-4 py-2 rounded-md shadow hover:bg-blue-700 transition-colors text-sm font-medium flex items-center">
+                                    <i class="fas fa-edit me-2"></i> Activar Edición
+                                </button>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Mensaje si no hay contenido -->
-                    <div th:if="${#lists.isEmpty(modulo.clases) and #lists.isEmpty(modulo.actividades)}" class="ml-4">
-                        <p class="text-gray-500 text-sm">No hay clases o actividades en este módulo.</p>
+                    <div id="editModeHint" role="status" aria-hidden="true" aria-live="polite"
+                        class="hidden items-center gap-3 mb-6 px-4 py-3 rounded-md border border-dashed border-blue-400 bg-blue-50 text-blue-700 text-sm uppercase tracking-wide">
+                        <i class="fas fa-pen-to-square"></i>
+                        <span>Modo edición activo</span>
+                    </div>
+
+                    <!-- Lista de Módulos -->
+                    <div id="courseContent">
+                        <div th:each="modulo, moduloStat : ${modulos}" class="moodle-module editable-block"
+                            th:data-modulo-id="${modulo.idModulo}"
+                            th:data-modulo-nombre="${modulo.nombre}"
+                            th:data-modulo-descripcion="${modulo.descripcion != null ? modulo.descripcion : ''}"
+                            th:data-modulo-inicio="${#temporals.format(modulo.fechaInicioModulo, 'yyyy-MM-dd')}"
+                            th:data-modulo-fin="${#temporals.format(modulo.fechaFinModulo, 'yyyy-MM-dd')}"
+                            th:data-modulo-visible="${modulo.visibilidad != null ? modulo.visibilidad : false}">
+                            
+                            <!-- Cabecera del Módulo -->
+                            <div class="module-header">
+                                <div>
+                                    <h3 class="module-title" th:text="${modulo.nombre}">Módulo 1</h3>
+                                    <span class="text-xs text-gray-500 font-medium uppercase tracking-wider" 
+                                          th:text="${#temporals.format(modulo.fechaInicioModulo, 'dd/MM/yyyy')} + ' - ' + ${#temporals.format(modulo.fechaFinModulo, 'dd/MM/yyyy')}">
+                                        Fechas
+                                    </span>
+                                </div>
+                                <div class="edit-controls">
+                                    <button type="button" class="module-visibility-toggle text-gray-500 hover:text-blue-600" 
+                                        th:if="${puedeModificar}"
+                                        th:attr="data-visible=${modulo.visibilidad != null ? modulo.visibilidad : false}">
+                                        <i class="fas" th:classappend="${modulo.visibilidad != null ? (modulo.visibilidad ? ' fa-eye' : ' fa-eye-slash') : ' fa-eye-slash'}"></i>
+                                    </button>
+                                    <button type="button" class="edit-icon text-blue-600 hover:text-blue-800" data-edit-type="module"
+                                        th:data-modulo-id="${modulo.idModulo}">
+                                        <i class="fas fa-pen"></i>
+                                    </button>
+                                    <button type="button" class="delete-icon text-red-500 hover:text-red-700" data-delete-type="modulo"
+                                        th:data-modulo-id="${modulo.idModulo}" th:data-modulo-nombre="${modulo.nombre}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="module-content">
+                                <p class="text-gray-600 mb-6 text-sm" th:if="${modulo.descripcion}" th:text="${modulo.descripcion}"></p>
+
+                                <!-- Clases -->
+                                <div th:if="${not #lists.isEmpty(modulo.clases)}" class="mb-6">
+                                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 ml-2">Clases en Vivo</h4>
+                                    <div class="space-y-2">
+                                        <div th:each="clase : ${modulo.clases}" class="activity-item editable-block"
+                                            th:data-clase-id="${clase.idClase}"
+                                            th:data-clase-titulo="${clase.titulo}"
+                                            th:data-clase-descripcion="${clase.descripcion}"
+                                            th:data-clase-inicio="${#temporals.format(clase.inicio, 'yyyy-MM-dd''T''HH:mm')}"
+                                            th:data-clase-fin="${#temporals.format(clase.fin, 'yyyy-MM-dd''T''HH:mm')}">
+                                            
+                                            <div class="activity-icon-container video">
+                                                <i class="fas fa-video activity-icon"></i>
+                                            </div>
+                                            
+                                            <div class="flex-1 activity-details">
+                                                <div class="flex justify-between items-start">
+                                                    <div>
+                                                        <h5 th:text="${clase.titulo}">Título Clase</h5>
+                                                        <p th:text="${clase.descripcion}">Descripción</p>
+                                                        <div class="activity-meta">
+                                                            <span><i class="far fa-calendar me-1"></i> <span th:text="${#temporals.format(clase.inicio, 'dd/MM/yyyy HH:mm')}"></span></span>
+                                                            <span th:if="${clase.meetingUrl}" class="text-green-600 font-medium"><i class="fas fa-circle text-[8px] me-1"></i> En vivo</span>
+                                                        </div>
+                                                    </div>
+                                                    <a th:href="@{/clase/unirse/} + ${clase.idClase}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                                        Entrar
+                                                    </a>
+                                                </div>
+                                            </div>
+
+                                            <div class="edit-controls ml-3">
+                                                <button type="button" class="edit-icon text-blue-600" data-edit-type="clase" th:data-clase-id="${clase.idClase}"><i class="fas fa-pen"></i></button>
+                                                <button type="button" class="delete-icon text-red-500" data-delete-type="clase" th:data-clase-id="${clase.idClase}" th:data-clase-nombre="${clase.titulo}"><i class="fas fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Actividades -->
+                                <div th:if="${not #lists.isEmpty(modulo.actividades)}">
+                                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 ml-2">Recursos y Actividades</h4>
+                                    <div class="space-y-2">
+                                        <div th:each="actividad : ${modulo.actividades}"
+                                            th:if="${actividad instanceof T(com.example.demo.model.Material) ? actividad.carpeta == null : true}"
+                                            class="activity-item editable-block"
+                                            th:data-actividad-id="${actividad.idActividad}"
+                                            th:data-actividad-titulo="${actividad.titulo}"
+                                            th:data-actividad-descripcion="${actividad.descripcion}">
+                                            
+                                            <!-- Icono Dinámico -->
+                                            <div class="activity-icon-container"
+                                                th:classappend="${actividad instanceof T(com.example.demo.model.Examen) ? 'quiz' : 
+                                                                 (actividad instanceof T(com.example.demo.model.Tarea) ? 'assignment' : 
+                                                                 (actividad instanceof T(com.example.demo.model.Carpeta) ? 'folder' : 'pdf'))}">
+                                                <i class="fas"
+                                                   th:classappend="${actividad instanceof T(com.example.demo.model.Examen) ? 'fa-clipboard-check' : 
+                                                                    (actividad instanceof T(com.example.demo.model.Tarea) ? 'fa-tasks' : 
+                                                                    (actividad instanceof T(com.example.demo.model.Carpeta) ? 'fa-folder' : 'fa-file-alt'))}"></i>
+                                            </div>
+
+                                            <div class="flex-1 activity-details">
+                                                <div class="flex justify-between items-start">
+                                                    <div>
+                                                        <h5 th:text="${actividad.titulo}">Título Actividad</h5>
+                                                        <p th:text="${actividad.descripcion}">Descripción</p>
+                                                        
+                                                        <!-- Detalles específicos -->
+                                                        <div th:if="${actividad instanceof T(com.example.demo.model.Material)}" class="mt-1">
+                                                            <div th:each="archivo : ${actividad.archivos}" class="text-xs text-gray-500 flex items-center gap-1">
+                                                                <i class="fas fa-paperclip"></i> <span th:text="${archivo.nombre}">archivo.pdf</span>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div th:if="${actividad instanceof T(com.example.demo.model.Examen)}" class="activity-meta">
+                                                            <span th:if="${actividad.fechaApertura}">Abre: <span th:text="${#temporals.format(actividad.fechaApertura, 'dd/MM/yyyy HH:mm')}"></span></span>
+                                                            <span th:if="${actividad.tiempoRealizacion}"> • <span th:text="${actividad.tiempoRealizacion}"></span> min</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- Botones de Acción -->
+                                                    <div>
+                                                        <button th:if="${actividad instanceof T(com.example.demo.model.Material)}"
+                                                            th:attr="data-material-id=${actividad.idActividad}, data-material-nombre=${actividad.titulo}"
+                                                            onclick="descargarMaterial(this)"
+                                                            class="btn btn-sm btn-light text-gray-600 hover:text-blue-600">
+                                                            <i class="fas fa-download"></i>
+                                                        </button>
+                                                        
+                                                        <th:block th:if="${actividad instanceof T(com.example.demo.model.Examen)}">
+                                                            <a th:unless="${puedeModificar}"
+                                                               th:href="@{/examen/realizar/{id}(id=${actividad.idActividad})}"
+                                                               class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                                                Ver Examen
+                                                            </a>
+                                                            <a th:if="${puedeModificar}"
+                                                               th:href="@{/examen/detalle/{id}(id=${actividad.idActividad})}"
+                                                               class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                                                Ver Examen
+                                                            </a>
+                                                        </th:block>
+                                                        
+                                                        <button th:if="${actividad instanceof T(com.example.demo.model.Carpeta)}"
+                                                            th:attr="data-carpeta-id=${actividad.idActividad}"
+                                                            onclick="abrirCarpeta(this)"
+                                                            class="btn btn-sm btn-light text-yellow-600">
+                                                            <i class="fas fa-folder-open"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="edit-controls ml-3">
+                                                <button type="button" class="edit-icon text-blue-600" data-edit-type="actividad" th:data-actividad-id="${actividad.idActividad}"><i class="fas fa-pen"></i></button>
+                                                <button type="button" class="delete-icon text-red-500" data-delete-type="actividad" th:data-actividad-id="${actividad.idActividad}" th:data-actividad-nombre="${actividad.titulo}"><i class="fas fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Empty State -->
+                        <div th:if="${#lists.isEmpty(modulos)}" class="text-center py-12 bg-white rounded-lg border border-dashed border-gray-300">
+                            <i class="fas fa-book-open text-4xl text-gray-300 mb-3"></i>
+                            <p class="text-gray-500">Este curso aún no tiene contenido.</p>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Mensaje si no hay módulos -->
-                <div th:if="${#lists.isEmpty(modulos)}"
-                    class="text-center text-gray-500 py-8 bg-white rounded-lg shadow">
-                    <p class="text-lg">No hay módulos disponibles para este curso.</p>
-                    <p class="text-sm mt-2" th:if="${puedeModificar}">Usa el botón "Modificar Curso" para agregar
-                        módulos.</p>
+                <!-- Columna Lateral (Widgets) -->
+                <div class="lg:col-span-1 space-y-6">
+                    <!-- Widget: Progreso (Solo visible para alumnos) -->
+                    <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200" th:if="${!puedeModificar}">
+                        <h4 class="font-bold text-gray-700 mb-3 text-sm uppercase">Tu Progreso</h4>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5 mb-1">
+                            <div class="bg-blue-600 h-2.5 rounded-full" style="width: 45%"></div>
+                        </div>
+                        <div class="text-right text-xs text-gray-500">45% Completado</div>
+                    </div>
+
+                    <!-- Widget: Anuncios Recientes -->
+                    <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                        <h4 class="font-bold text-gray-700 mb-3 text-sm uppercase">Avisos Recientes</h4>
+                        <div class="space-y-3">
+                            <div class="text-sm border-l-2 border-blue-500 pl-3">
+                                <p class="font-medium text-gray-800">Bienvenida al curso</p>
+                                <p class="text-xs text-gray-500">Hace 2 días</p>
+                            </div>
+                            <div class="text-sm border-l-2 border-gray-300 pl-3">
+                                <p class="font-medium text-gray-800">Recordatorio de examen</p>
+                                <p class="text-xs text-gray-500">Hace 1 semana</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+
             </div>
-        </main>
+        </div>
     </div>
 
     <!-- Fondo Oscuro para herramientas (Overlay) -->
@@ -2638,44 +2703,21 @@
 
         // Cerrar modal
         function closeModuleModal() {
-            moduleModal.classList.add('hidden');
+            const modal = document.getElementById('moduleModal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
         }
 
         // Cerrar modal al hacer clic fuera
-        moduleModal.addEventListener('click', (e) => {
-            if (e.target === moduleModal) {
-                closeModuleModal();
-            }
-        });
-
-        // Tu código existente para el sidebar derecho
-        const sidebar = document.getElementById('sidebar');
-        const openButton = document.getElementById('openButton');
-        const closeButton = document.getElementById('closeButton');
-        const overlay = document.getElementById('overlay');
-
-        function openSidebar() {
-            sidebar.classList.remove('translate-x-full');
-            sidebar.classList.add('translate-x-0');
-            overlay.classList.remove('pointer-events-none', 'opacity-0');
-            overlay.classList.add('opacity-50');
-            document.body.classList.add('no-scroll');
+        // moduleModal ya está definido al inicio del script
+        if (moduleModal) {
+            moduleModal.addEventListener('click', (e) => {
+                if (e.target === moduleModal) {
+                    closeModuleModal();
+                }
+            });
         }
-
-        function closeSidebar() {
-            sidebar.classList.add('translate-x-full');
-            sidebar.classList.remove('translate-x-0');
-            overlay.classList.add('opacity-0');
-            overlay.classList.remove('opacity-50');
-            setTimeout(() => {
-                overlay.classList.add('pointer-events-none');
-            }, 300);
-            document.body.classList.remove('no-scroll');
-        }
-
-        openButton.addEventListener('click', openSidebar);
-        closeButton.addEventListener('click', closeSidebar);
-        overlay.addEventListener('click', closeSidebar);
 
         // ========================================
         // EVENT LISTENERS PARA FORMULARIOS
@@ -2950,7 +2992,11 @@
                             </div>
                             <div class="flex space-x-2">
                                 <a href="/archivo/${archivo.id}/descargar" target="_blank"
-                                   class="px-3 py-1.5 text-sm bg-blue-500 text-white rounded hover:bg-blue-600">
+                                   class="px-3 py-1.5 text-sm bg-blue-500 text-white rounded hover:bg-blue-600" title="Ver archivo">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="/archivo/${archivo.id}/descargar?download=true" target="_blank"
+                                   class="px-3 py-1.5 text-sm bg-gray-500 text-white rounded hover:bg-gray-600" title="Descargar archivo">
                                     <i class="fas fa-download"></i>
                                 </a>
                             </div>
@@ -3099,25 +3145,7 @@
         window.descargarMaterial = function(button) {
             const materialId = button.getAttribute('data-material-id');
             const materialNombre = button.getAttribute('data-material-nombre');
-            
-            // Primero obtenemos los archivos del material
-            fetch(`/actividad/material/${materialId}/archivos`)
-            .then(response => response.json())
-            .then(archivos => {
-                if (archivos.length === 0) {
-                    alert('Este material no tiene archivos disponibles');
-                } else if (archivos.length === 1) {
-                    // Si hay un solo archivo, descargarlo directamente
-                    window.open(`/archivo/${archivos[0].id}/descargar`, '_blank');
-                } else {
-                    // Si hay múltiples archivos, mostrar el modal
-                    mostrarModalMaterial(materialId, materialNombre);
-                }
-            })
-            .catch(error => {
-                console.error('Error al verificar archivos:', error);
-                alert('Error al acceder a los archivos del material');
-            });
+            mostrarModalMaterial(materialId, materialNombre);
         };
         
         function mostrarModalMaterial(materialId, materialNombre) {
@@ -3181,7 +3209,11 @@
                             </div>
                             <div class="flex space-x-2">
                                 <a href="/archivo/${archivo.id}/descargar" target="_blank"
-                                   class="px-3 py-1.5 text-sm bg-blue-500 text-white rounded hover:bg-blue-600">
+                                   class="px-3 py-1.5 text-sm bg-blue-500 text-white rounded hover:bg-blue-600" title="Ver archivo">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="/archivo/${archivo.id}/descargar?download=true" target="_blank"
+                                   class="px-3 py-1.5 text-sm bg-gray-500 text-white rounded hover:bg-gray-600" title="Descargar archivo">
                                     <i class="fas fa-download"></i>
                                 </a>
                             </div>

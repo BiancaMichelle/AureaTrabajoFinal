@@ -24,6 +24,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.example.demo.enums.EstadoIntento;
@@ -36,11 +39,13 @@ import com.example.demo.model.Formacion;
 import com.example.demo.model.Intento;
 import com.example.demo.model.OfertaAcademica;
 import com.example.demo.model.Opcion;
+import com.example.demo.model.Pool;
 import com.example.demo.model.Pregunta;
 import com.example.demo.model.RespuestaIntento;
 import com.example.demo.repository.AlumnoRepository;
 import com.example.demo.repository.ExamenRepository;
 import com.example.demo.repository.IntentoRepository;
+import com.example.demo.repository.PoolRepository;
 import com.example.demo.repository.PreguntaRepository;
 import com.example.demo.repository.UsuarioRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -69,20 +74,27 @@ public class ExamenController {
     private UsuarioRepository usuarioRepository;
     
     @Autowired
+    private PoolRepository poolRepository;
+    
+    @Autowired
     private ObjectMapper objectMapper;
 
     /**
      * Muestra la vista del examen
      */
     @GetMapping("/realizar/{examenId}")
-    public String realizarExamen(@PathVariable Long examenId, Principal principal, Model model) {
+    public String realizarExamen(@PathVariable Long examenId, Principal principal, Model model, Authentication authentication) {
         try {
             Examen examen = examenRepository.findById(examenId)
                     .orElseThrow(() -> new RuntimeException("Examen no encontrado"));
 
+            boolean esDocenteOAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("DOCENTE") || a.getAuthority().equals("ADMIN") || a.getAuthority().equals("ROLE_ADMIN"));
+
             model.addAttribute("examen", examen);
             model.addAttribute("tiempoTotal",
                     examen.getTiempoRealizacion() != null ? examen.getTiempoRealizacion() : 60);
+            model.addAttribute("vistaPrevia", esDocenteOAdmin);
 
             return "examen";
 
@@ -361,6 +373,116 @@ public class ExamenController {
         model.addAttribute("respuestas", respuestasDetalle);
 
         return "docente/examen-intento-detalle";
+    }
+
+    @GetMapping("/detalle/{id}")
+    @PreAuthorize("hasAnyAuthority('DOCENTE', 'ADMIN')")
+    public String verDetalleExamen(@PathVariable Long id, Model model) {
+        Examen examen = examenRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Examen no encontrado"));
+        
+        boolean haComenzado = examen.getFechaApertura() != null && 
+                              examen.getFechaApertura().isBefore(LocalDateTime.now());
+        
+        long intentos = intentoRepository.findByExamen_IdActividad(id).size();
+        boolean tieneIntentos = intentos > 0;
+        
+        boolean soloFechas = haComenzado || tieneIntentos;
+        
+        // Obtener pools disponibles para la oferta académica
+        List<Pool> poolsDisponibles = new ArrayList<>();
+        if (examen.getModulo() != null && examen.getModulo().getCurso() != null) {
+            poolsDisponibles = poolRepository.findByOferta_IdOferta(examen.getModulo().getCurso().getIdOferta());
+        }
+        
+        // Preparar datos de preguntas para el frontend (JSON)
+        Map<String, Object> preguntasData = new HashMap<>();
+        try {
+            for (Pool pool : examen.getPoolPreguntas()) {
+                if (pool.getPreguntas() != null) {
+                    for (Pregunta p : pool.getPreguntas()) {
+                        Map<String, Object> pData = new HashMap<>();
+                        pData.put("enunciado", p.getEnunciado());
+                        pData.put("tipo", p.getTipoPregunta());
+                        pData.put("puntaje", p.getPuntaje());
+                        
+                        List<Map<String, Object>> opcionesData = new ArrayList<>();
+                        if (p.getOpciones() != null) {
+                            for (Opcion op : p.getOpciones()) {
+                                Map<String, Object> oData = new HashMap<>();
+                                oData.put("descripcion", op.getDescripcion());
+                                oData.put("esCorrecta", op.getEsCorrecta());
+                                opcionesData.add(oData);
+                            }
+                        }
+                        pData.put("opciones", opcionesData);
+                        
+                        preguntasData.put(p.getIdPregunta().toString(), pData);
+                    }
+                }
+            }
+            model.addAttribute("preguntasDataJson", objectMapper.writeValueAsString(preguntasData));
+        } catch (Exception e) {
+            e.printStackTrace();
+            model.addAttribute("preguntasDataJson", "{}");
+        }
+        
+        model.addAttribute("examen", examen);
+        model.addAttribute("poolsDisponibles", poolsDisponibles);
+        model.addAttribute("soloFechas", soloFechas);
+        model.addAttribute("haComenzado", haComenzado);
+        model.addAttribute("tieneIntentos", tieneIntentos);
+        
+        return "docente/examen-detalle";
+    }
+    
+    @PostMapping("/guardar-detalle")
+    @PreAuthorize("hasAnyAuthority('DOCENTE', 'ADMIN')")
+    public String guardarDetalleExamen(@ModelAttribute Examen examenForm, 
+                                       @RequestParam Long id, 
+                                       @RequestParam(required = false) List<UUID> pools,
+                                       RedirectAttributes redirectAttributes) {
+        Examen examen = examenRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Examen no encontrado"));
+        
+        // Validar fechas
+        if (examenForm.getFechaApertura() != null && examenForm.getFechaCierre() != null && 
+            examenForm.getFechaCierre().isBefore(examenForm.getFechaApertura())) {
+            redirectAttributes.addFlashAttribute("error", "La fecha de cierre no puede ser anterior a la fecha de apertura");
+            return "redirect:/examen/detalle/" + id;
+        }
+        
+        boolean haComenzado = examen.getFechaApertura() != null && 
+                              examen.getFechaApertura().isBefore(LocalDateTime.now());
+        long intentos = intentoRepository.findByExamen_IdActividad(id).size();
+        boolean tieneIntentos = intentos > 0;
+        boolean soloFechas = haComenzado || tieneIntentos;
+        
+        if (soloFechas) {
+            // Solo actualizar fechas
+            examen.setFechaApertura(examenForm.getFechaApertura());
+            examen.setFechaCierre(examenForm.getFechaCierre());
+        } else {
+            // Actualizar todo
+            examen.setTitulo(examenForm.getTitulo());
+            examen.setDescripcion(examenForm.getDescripcion());
+            examen.setFechaApertura(examenForm.getFechaApertura());
+            examen.setFechaCierre(examenForm.getFechaCierre());
+            examen.setTiempoRealizacion(examenForm.getTiempoRealizacion());
+            examen.setCantidadIntentos(examenForm.getCantidadIntentos());
+            
+            // Actualizar pools
+            if (pools != null) {
+                List<Pool> poolsSeleccionados = poolRepository.findAllById(pools);
+                examen.setPoolPreguntas(poolsSeleccionados);
+            } else {
+                examen.setPoolPreguntas(new ArrayList<>());
+            }
+        }
+        
+        examenRepository.save(examen);
+        redirectAttributes.addFlashAttribute("mensaje", "Examen actualizado correctamente");
+        return "redirect:/examen/detalle/" + id;
     }
 
     private boolean puedeGestionarExamen(Authentication authentication, com.example.demo.model.Usuario usuario, Examen examen) {

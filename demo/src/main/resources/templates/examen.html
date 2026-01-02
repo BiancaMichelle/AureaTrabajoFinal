@@ -28,10 +28,15 @@
 <body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
 
     <!-- Tarjeta principal del examen -->
-    <div class="bg-white p-6 sm:p-10 rounded-xl shadow-lg w-full max-w-3xl">
+    <div class="bg-white p-6 sm:p-10 rounded-xl shadow-lg w-full max-w-3xl relative">
+        
+        <!-- Banner de Vista Previa -->
+        <div th:if="${vistaPrevia}" class="absolute top-0 left-0 w-full bg-yellow-100 text-yellow-800 text-center py-2 rounded-t-xl font-semibold border-b border-yellow-200">
+            <i class="fas fa-eye mr-2"></i> MODO VISTA PREVIA (Solo lectura)
+        </div>
 
         <!-- Encabezado: Título y Temporizador -->
-        <header class="flex justify-between items-center border-b border-gray-200 pb-4 mb-8">
+        <header class="flex justify-between items-center border-b border-gray-200 pb-4 mb-8 mt-6">
             <h1 class="text-2xl font-bold text-gray-800" th:text="${examen.titulo}">Examen</h1>
             <!-- Contenedor del temporizador (solicitado a la derecha arriba) -->
             <div id="timer" class="text-xl font-semibold text-red-600 bg-red-100 px-4 py-2 rounded-lg shadow-inner">
@@ -83,6 +88,7 @@
             // --- 2. CARGAR DATOS DEL EXAMEN DESDE EL BACKEND ---
             const examenId = /*[[${examen.idActividad}]]*/ null;
             const tiempoInicial = /*[[${tiempoTotal}]]*/ 60;
+            const esVistaPrevia = /*[[${vistaPrevia}]]*/ false;
             let preguntas = [];
 
             // Cargar preguntas desde la API
@@ -184,6 +190,15 @@
                     default:
                         textEl.textContent = pregunta.texto;
                         answerEl.innerHTML = '<p class="text-red-500">Error: Tipo de pregunta no reconocido.</p>';
+                }
+                
+                // Si es vista previa, deshabilitar todos los inputs
+                if (esVistaPrevia) {
+                    const inputs = answerEl.querySelectorAll('input, textarea, select');
+                    inputs.forEach(input => {
+                        input.disabled = true;
+                        input.classList.add('bg-gray-100', 'cursor-not-allowed');
+                    });
                 }
                 
                 // Actualizar estado de botones
@@ -444,13 +459,19 @@
 
                 // Botón Siguiente
                 if (preguntaActualIndex === preguntas.length - 1) {
-                    nextBtn.textContent = 'Finalizar Examen';
-                    nextBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
-                    nextBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+                    if (esVistaPrevia) {
+                        nextBtn.textContent = 'Cerrar Vista Previa';
+                        nextBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700', 'bg-green-600', 'hover:bg-green-700');
+                        nextBtn.classList.add('bg-gray-600', 'hover:bg-gray-700');
+                    } else {
+                        nextBtn.textContent = 'Finalizar Examen';
+                        nextBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                        nextBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+                    }
                 } else {
                     nextBtn.textContent = 'Siguiente';
                     nextBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
-                    nextBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                    nextBtn.classList.remove('bg-green-600', 'hover:bg-green-700', 'bg-gray-600', 'hover:bg-gray-700');
                 }
             }
 
@@ -472,7 +493,13 @@
                     preguntaActualIndex++;
                     mostrarPregunta();
                 } else {
-                    finalizarExamen();
+                    if (esVistaPrevia) {
+                        window.close();
+                        // Fallback por si window.close() está bloqueado por el navegador
+                        window.history.back();
+                    } else {
+                        finalizarExamen();
+                    }
                 }
             }
             
