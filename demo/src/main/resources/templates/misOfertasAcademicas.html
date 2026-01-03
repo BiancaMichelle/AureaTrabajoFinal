@@ -8,13 +8,6 @@
 </head>
 <body layout:fragment="content">
     <div class="container mt-4">
-        <!-- Debug info (solo mostrar si docente existe) -->
-        <div th:if="${docente != null}" class="alert alert-info">
-            <strong>DEBUG:</strong> 
-            Docente: <span th:text="${docente.nombre + ' ' + docente.apellido}"></span> | 
-            Cursos: <span th:text="${cursos.size()}"></span>
-        </div>
-
         <div class="mb-4">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <div>

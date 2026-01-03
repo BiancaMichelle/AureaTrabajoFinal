@@ -621,8 +621,12 @@
             <div class="max-w-7xl mx-auto">
                 <nav aria-label="breadcrumb">
                     <ol class="flex items-center space-x-2 text-sm text-gray-600">
-                        <li class="breadcrumb-item"><a href="/" class="hover:text-blue-600">Inicio</a></li>
-                        <li class="breadcrumb-item"><a href="/mis-cursos" class="hover:text-blue-600">Mis Cursos</a></li>
+                        <li class="breadcrumb-item"><a th:href="@{/}" class="hover:text-blue-600">Inicio</a></li>
+                        <li class="breadcrumb-item">
+                            <a th:if="${docente != null}" th:href="@{/docente/mis-ofertas}" class="hover:text-blue-600">Mis Cursos</a>
+                            <a th:if="${alumno != null}" th:href="@{/alumno/mis-ofertas}" class="hover:text-blue-600">Mis Cursos</a>
+                            <a th:if="${docente == null and alumno == null}" th:href="@{/}" class="hover:text-blue-600">Mis Cursos</a>
+                        </li>
                         <li class="breadcrumb-item font-semibold text-gray-800" aria-current="page" th:text="${curso.nombre}">Curso Actual</li>
                     </ol>
                 </nav>

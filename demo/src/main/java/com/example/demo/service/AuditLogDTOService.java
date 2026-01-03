@@ -23,7 +23,7 @@ public class AuditLogDTOService {
     /**
      * Convierte AuditLog a AuditLogDTO
      */
-    private AuditLogDTO convertirADTO(AuditLog auditLog) {
+    public AuditLogDTO convertirADTO(AuditLog auditLog) {
         AuditLogDTO dto = new AuditLogDTO();
         dto.setId(auditLog.getId());
         dto.setFecha(auditLog.getFecha());

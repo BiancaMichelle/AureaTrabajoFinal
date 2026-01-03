@@ -262,7 +262,7 @@ public class AuditLogController {
             
             // Convertir a DTOs
             List<AuditLogDTO> dtos = logs.getContent().stream()
-                    .map(this::convertirAuditLogADTO)
+                    .map(auditLogDTOService::convertirADTO)
                     .collect(Collectors.toList());
             
             return new PageImpl<>(dtos, pageable, logs.getTotalElements());
@@ -272,31 +272,6 @@ public class AuditLogController {
             return auditLogFiltroService.buscarConFiltros(
                 usuario, accion, entidad, fechaDesde, fechaHasta, ip, pageable);
         }
-    }
-    
-    private AuditLogDTO convertirAuditLogADTO(AuditLog auditLog) {
-        AuditLogDTO dto = new AuditLogDTO();
-        dto.setId(auditLog.getId());
-        dto.setFecha(auditLog.getFecha());
-        dto.setHora(auditLog.getHora());
-        dto.setAccion(auditLog.getAccion());
-        dto.setAfecta(auditLog.getAfecta());
-        dto.setDetalles(auditLog.getDetalles());
-        dto.setIp(auditLog.getIp());
-        dto.setExito(auditLog.isExito());
-        
-        // Datos del usuario (si existe)
-        if (auditLog.getUsuario() != null) {
-            dto.setUsuarioNombre(auditLog.getUsuario().getNombre() + " " + auditLog.getUsuario().getApellido());
-            dto.setUsuarioDni(auditLog.getUsuario().getDni());
-        }
-        
-        // Datos del rol (si existe)
-        if (auditLog.getRol() != null) {
-            dto.setRolNombre(auditLog.getRol().getNombre());
-        }
-        
-        return dto;
     }
     
     private List<AuditLogDTO> obtenerDatosFiltrados(

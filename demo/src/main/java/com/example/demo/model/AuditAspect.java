@@ -66,7 +66,7 @@ public class AuditAspect {
 
             // Si usás un UserDetails personalizado
             if (principal instanceof CustomUsuarioDetails usuarioDetails) {
-                System.out.println("  ✅ CustomUsuarioDetails encontrado");
+                System.out.println(" CustomUsuarioDetails encontrado");
                 Usuario usuario = usuarioDetails.getUsuario();
                 System.out.println("  - Usuario: " + usuario.getNombre() + " " + usuario.getApellido());
                 
@@ -93,7 +93,7 @@ public class AuditAspect {
                 }
             }
         } else {
-            System.out.println("  ❌ Usuario no autenticado o anónimo");
+            System.out.println("Usuario no autenticado o anónimo");
         }
 
         // ------------------------------------------------------------

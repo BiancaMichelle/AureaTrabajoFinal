@@ -4,7 +4,7 @@
     <title>Auditoría del Sistema - Instituto Aurea</title>
 </head>
 <body>
-<main class="main-content">
+<main class="main-content" th:fragment="main">
     <header class="main-header">
         <h1><i class="fas fa-shield-alt"></i> Auditoría del Sistema</h1>
         <p>Monitoreo completo de actividades y acciones en el sistema</p>
@@ -92,13 +92,11 @@
         <table class="data-table" id="audit-table">
             <thead>
                 <tr>
+                    <th style="width: 20%;"><i class="fas fa-user"></i> Usuario</th>
+                    <th style="width: 15%;"><i class="fas fa-cogs"></i> Acción</th>
                     <th style="width: 12%;"><i class="fas fa-calendar"></i> Fecha</th>
                     <th style="width: 10%;"><i class="fas fa-clock"></i> Hora</th>
-                    <th style="width: 20%;"><i class="fas fa-user"></i> Usuario</th>
-                    <th style="width: 12%;"><i class="fas fa-user-tag"></i> Rol</th>
-                    <th style="width: 15%;"><i class="fas fa-cogs"></i> Acción</th>
-                    <th style="width: 12%;"><i class="fas fa-cube"></i> Entidad</th>
-                    <th style="width: 25%;"><i class="fas fa-info-circle"></i> Detalles</th>
+                    <th style="width: 35%;"><i class="fas fa-info-circle"></i> Detalle</th>
                     <th style="width: 8%;"><i class="fas fa-check"></i> Estado</th>
                 </tr>
             </thead>
@@ -124,59 +122,34 @@
             <!-- Los controles de paginación se generarán dinámicamente -->
         </div>
     </div>
-</main>
-
-<script>
+    
+    <script th:inline="javascript">
+    /*<![CDATA[*/
+    (function() {
+        'use strict';
+        
+        console.log('=== SCRIPT DE AUDITORÍA INICIADO ===');
+    
     // === VARIABLES GLOBALES ===
     let currentPage = 0;
     let pageSize = 20;
     let totalRecords = 0;
     let currentFilters = {};
 
-    // === INICIALIZACIÓN ===
-    document.addEventListener('DOMContentLoaded', function() {
-        cargarDatosAuditoria();
-        cargarEstadisticasGenerales();
-        configurarEventos();
-        configurarFechasIniciales();
-    });
-
-    // === CONFIGURACIÓN INICIAL ===
-    function configurarFechasIniciales() {
-        // Establecer fecha hasta como hoy
-        const hoy = new Date().toISOString().split('T')[0];
-        document.getElementById('filter-fecha-hasta').value = hoy;
-        
-        // Establecer fecha desde como hace 30 días
-        const hace30Dias = new Date();
-        hace30Dias.setDate(hace30Dias.getDate() - 30);
-        document.getElementById('filter-fecha-desde').value = hace30Dias.toISOString().split('T')[0];
-    }
-
-    // === CONFIGURACIÓN DE EVENTOS ===
-    function configurarEventos() {
-        // Eventos de filtros
-        document.getElementById('filter-usuario').addEventListener('input', debounce(aplicarFiltros, 500));
-        document.getElementById('filter-accion').addEventListener('change', aplicarFiltros);
-        document.getElementById('filter-entidad').addEventListener('change', aplicarFiltros);
-        document.getElementById('filter-fecha-desde').addEventListener('change', aplicarFiltros);
-        document.getElementById('filter-fecha-hasta').addEventListener('change', aplicarFiltros);
-    }
-
     // === FUNCIÓN PRINCIPAL DE CARGA ===
     async function cargarDatosAuditoria() {
-        mostrarLoading(true);
+        console.log('=== CARGANDO DATOS DE AUDITORÍA ===');
+        console.log('Página:', currentPage, 'Tamaño:', pageSize);
+        
+        const loading = document.getElementById('loading-overlay');
+        if (loading) loading.style.display = 'flex';
         
         try {
-            console.log('=== INICIANDO CARGA DE AUDITORÍA ===');
-            
-            // Construir parámetros de consulta
             const params = new URLSearchParams({
                 page: currentPage.toString(),
                 size: pageSize.toString()
             });
             
-            // Agregar filtros si están definidos
             if (currentFilters.usuario) params.append('usuario', currentFilters.usuario);
             if (currentFilters.accion) params.append('accion', currentFilters.accion);
             if (currentFilters.entidad) params.append('entidad', currentFilters.entidad);
@@ -184,215 +157,168 @@
             if (currentFilters.fechaHasta) params.append('fechaHasta', currentFilters.fechaHasta);
             
             const url = `/auditoria/api/logs?${params.toString()}`;
-            console.log('URL de consulta:', url);
+            console.log('Fetch URL:', url);
             
-            // Llamada real a la API
             const response = await fetch(url);
-            console.log('Respuesta HTTP:', response.status, response.statusText);
+            console.log('Response status:', response.status);
             
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                throw new Error(`HTTP ${response.status}`);
             }
             
             const datos = await response.json();
             console.log('Datos recibidos:', datos);
+            console.log('Total elementos:', datos.totalElements);
+            console.log('Contenido:', datos.content ? datos.content.length : 0);
             
-            if (datos.error) {
-                throw new Error(datos.message || 'Error desconocido del servidor');
-            }
-            
-            if (!datos.content) {
-                console.warn('No se recibió contenido en la respuesta');
-                mostrarMensaje('No se recibieron datos del servidor');
+            if (!datos.content || datos.content.length === 0) {
                 mostrarEstadoVacio();
                 return;
             }
             
-            if (datos.content.length === 0) {
-                console.log('No hay registros de auditoría');
-                mostrarMensaje('No hay registros de auditoría en la base de datos');
-                mostrarEstadoVacio();
-                return;
-            }
-            
-            console.log(`Mostrando ${datos.content.length} registros de ${datos.totalElements} totales`);
-            
-            actualizarTabla(datos.content || []);
-            actualizarEstadisticas(datos);
+            actualizarTabla(datos.content);
             actualizarPaginacion(datos);
+            actualizarEstadisticas(datos);
             
         } catch (error) {
-            console.error('Error al cargar datos de auditoría:', error);
-            mostrarError('Error al cargar los datos de auditoría: ' + error.message);
+            console.error('Error:', error);
             mostrarEstadoVacio();
         } finally {
-            mostrarLoading(false);
+            if (loading) loading.style.display = 'none';
         }
     }
 
-    function mostrarMensaje(mensaje) {
-        mostrarNotificacion(mensaje, 'info');
-    }
-
-    // === FUNCIÓN DE CARGA DE ESTADÍSTICAS ===
-    async function cargarEstadisticasGenerales() {
-        try {
-            const response = await fetch('/auditoria/api/estadisticas');
-            if (response.ok) {
-                const stats = await response.json();
-                document.getElementById('total-registros').textContent = stats.totalLogs || 0;
-                document.getElementById('exitosos-count').textContent = stats.logsExitosos || 0;
-                document.getElementById('fallidos-count').textContent = stats.logsFallidos || 0;
-            }
-        } catch (error) {
-            console.warn('No se pudieron cargar las estadísticas generales:', error);
-        }
-    }
-
-    function mostrarError(mensaje) {
-        mostrarNotificacion(mensaje, 'error');
-        mostrarEstadoVacio();
-    }
-
-    function mostrarNotificacion(mensaje, tipo = 'info') {
-        const alertClass = {
-            'info': 'alert-info',
-            'success': 'alert-success',
-            'warning': 'alert-warning',
-            'error': 'alert-danger'
-        };
-        
-        const errorDiv = document.createElement('div');
-        errorDiv.className = `alert ${alertClass[tipo]} alert-dismissible fade show`;
-        errorDiv.innerHTML = `
-            <strong>${tipo.toUpperCase()}:</strong> ${mensaje}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        
-        const container = document.querySelector('.audit-container');
-        if (container) {
-            container.insertBefore(errorDiv, container.firstChild);
-        }
-        
-        // Auto-remover después de 5 segundos
-        setTimeout(() => {
-            if (errorDiv && errorDiv.parentNode) {
-                errorDiv.remove();
-            }
-        }, 5000);
-    }
-
-    // === ACTUALIZACIÓN DE LA TABLA ===
+    // === ACTUALIZAR TABLA ===
     function actualizarTabla(datos) {
+        console.log('Actualizando tabla con', datos.length, 'registros');
+        
         const tbody = document.getElementById('audit-table-body');
         const emptyState = document.getElementById('empty-state');
         
-        console.log('Actualizando tabla con datos:', datos);
-        
-        if (!datos || datos.length === 0) {
-            console.log('No hay datos para mostrar');
-            tbody.innerHTML = '';
-            emptyState.style.display = 'block';
+        if (!tbody) {
+            console.error('No se encontró tbody');
             return;
         }
         
-        emptyState.style.display = 'none';
+        if (emptyState) emptyState.style.display = 'none';
         
-        tbody.innerHTML = datos.map((item, index) => {
-            console.log(`Registro ${index}:`, item);
+        tbody.innerHTML = datos.map(item => {
+            const usuario = item.usuarioNombre || 'N/A';
+            const dni = item.usuarioDni || 'N/A';
+            const accion = formatearAccion(item.accion || '');
+            const fecha = formatearFecha(item.fecha);
+            const hora = formatearHora(item.hora);
+            const detalles = truncarTexto(item.detalles || '', 80);
+            const exito = item.exito;
+            
             return `
-            <tr>
-                <td>${formatearFecha(item.fecha)}</td>
-                <td><strong>${formatearHora(item.hora)}</strong></td>
-                <td>
-                    <div>
-                        <strong>${item.usuarioNombre || 'N/A'}</strong>
-                        <br>
-                        <small style="color: #64748b;">DNI: ${item.usuarioDni || 'N/A'}</small>
-                    </div>
-                </td>
-                <td><span class="status-badge ${(item.rolNombre || 'default').toLowerCase()}">${item.rolNombre || 'N/A'}</span></td>
-                <td><span class="action-badge ${getActionClass(item.accion)}">${formatearAccion(item.accion)}</span></td>
-                <td><strong>${item.afecta || 'N/A'}</strong></td>
-                <td title="${item.detalles || ''}">${truncarTexto(item.detalles, 80)}</td>
-                <td>
-                    <span class="status-badge ${item.exito ? 'success' : 'error'}">
-                        <i class="fas fa-${item.exito ? 'check' : 'times'}"></i>
-                        ${item.exito ? 'Exitoso' : 'Fallido'}
-                    </span>
-                </td>
-            </tr>
+                <tr>
+                    <td>
+                        <strong>${usuario}</strong><br>
+                        <small style="color: #64748b;">DNI: ${dni}</small>
+                    </td>
+                    <td><span class="action-badge">${accion}</span></td>
+                    <td>${fecha}</td>
+                    <td><strong>${hora}</strong></td>
+                    <td title="${item.detalles || ''}">${detalles}</td>
+                    <td>
+                        <span class="status-badge ${exito ? 'success' : 'error'}">
+                            <i class="fas fa-${exito ? 'check' : 'times'}"></i>
+                            ${exito ? 'Exitoso' : 'Fallido'}
+                        </span>
+                    </td>
+                </tr>
             `;
         }).join('');
         
-        console.log('Tabla actualizada con', datos.length, 'registros');
+        console.log('Tabla actualizada');
     }
 
+    // === MOSTRAR ESTADO VACÍO ===
     function mostrarEstadoVacio() {
         const tbody = document.getElementById('audit-table-body');
         const emptyState = document.getElementById('empty-state');
-        tbody.innerHTML = '';
-        emptyState.style.display = 'block';
+        if (tbody) tbody.innerHTML = '';
+        if (emptyState) emptyState.style.display = 'block';
     }
 
-    // === FUNCIONES DE FILTROS ===
-    function aplicarFiltros() {
-        // Resetear página
-        currentPage = 0;
+    // === ACTUALIZAR PAGINACIÓN ===
+    function actualizarPaginacion(datos) {
+        const showingFrom = document.getElementById('showing-from');
+        const showingTo = document.getElementById('showing-to');
+        const totalRecordsSpan = document.getElementById('total-records');
+        const paginationControls = document.getElementById('pagination-controls');
+        const paginationContainer = document.getElementById('pagination-container');
         
-        // Capturar valores de filtros
-        currentFilters = {
-            usuario: document.getElementById('filter-usuario').value.trim() || null,
-            accion: document.getElementById('filter-accion').value || null,
-            entidad: document.getElementById('filter-entidad').value || null,
-            fechaDesde: document.getElementById('filter-fecha-desde').value || null,
-            fechaHasta: document.getElementById('filter-fecha-hasta').value || null
-        };
+        totalRecords = datos.totalElements || 0;
+        const from = totalRecords > 0 ? (datos.number * datos.size) + 1 : 0;
+        const to = Math.min((datos.number + 1) * datos.size, totalRecords);
         
-        // Cargar datos con nuevos filtros
-        cargarDatosAuditoria();
+        if (showingFrom) showingFrom.textContent = from;
+        if (showingTo) showingTo.textContent = to;
+        if (totalRecordsSpan) totalRecordsSpan.textContent = totalRecords;
+        
+        if (paginationControls && datos.totalPages > 1) {
+            let html = '';
+            
+            // Botón anterior
+            html += `<button class="pagination-btn ${datos.number === 0 ? 'disabled' : ''}" 
+                onclick="cambiarPagina(${datos.number - 1})" ${datos.number === 0 ? 'disabled' : ''}>
+                <i class="fas fa-chevron-left"></i></button>`;
+            
+            // Números de página
+            const startPage = Math.max(0, datos.number - 2);
+            const endPage = Math.min(datos.totalPages - 1, datos.number + 2);
+            
+            for (let i = startPage; i <= endPage; i++) {
+                html += `<button class="pagination-btn ${i === datos.number ? 'active' : ''}" 
+                    onclick="cambiarPagina(${i})">${i + 1}</button>`;
+            }
+            
+            // Botón siguiente
+            html += `<button class="pagination-btn ${datos.number >= datos.totalPages - 1 ? 'disabled' : ''}" 
+                onclick="cambiarPagina(${datos.number + 1})" 
+                ${datos.number >= datos.totalPages - 1 ? 'disabled' : ''}>
+                <i class="fas fa-chevron-right"></i></button>`;
+            
+            paginationControls.innerHTML = html;
+        }
+        
+        if (paginationContainer) {
+            paginationContainer.style.display = totalRecords > 0 ? 'flex' : 'none';
+        }
     }
 
-    function limpiarFiltros() {
-        // Limpiar campos
-        document.getElementById('filter-usuario').value = '';
-        document.getElementById('filter-accion').value = '';
-        document.getElementById('filter-entidad').value = '';
-        document.getElementById('filter-fecha-desde').value = '';
-        document.getElementById('filter-fecha-hasta').value = '';
+    // === ACTUALIZAR ESTADÍSTICAS ===
+    function actualizarEstadisticas(datos) {
+        if (!datos.estadisticas) return;
         
-        // Resetear filtros y cargar datos
-        currentFilters = {};
-        currentPage = 0;
-        cargarDatosAuditoria();
-        configurarFechasIniciales();
+        const stats = datos.estadisticas;
+        const totalReg = document.getElementById('total-registros');
+        const exitosos = document.getElementById('exitosos-count');
+        const fallidos = document.getElementById('fallidos-count');
+        
+        if (totalReg && stats.totalLogs !== undefined) totalReg.textContent = stats.totalLogs;
+        if (exitosos && stats.logsExitosos !== undefined) exitosos.textContent = stats.logsExitosos;
+        if (fallidos && stats.logsFallidos !== undefined) fallidos.textContent = stats.logsFallidos;
     }
 
     // === FUNCIONES DE FORMATEO ===
     function formatearFecha(fecha) {
         if (!fecha) return 'N/A';
         try {
-            // Si es un string ISO, parsearlo
-            if (typeof fecha === 'string') {
-                return new Date(fecha).toLocaleDateString('es-ES');
-            }
             return new Date(fecha).toLocaleDateString('es-ES');
         } catch (e) {
-            return fecha;
+            return String(fecha);
         }
     }
 
     function formatearHora(hora) {
         if (!hora) return 'N/A';
         try {
-            // Si es un string en formato HH:MM:SS, extraer solo HH:MM
-            if (typeof hora === 'string') {
-                return hora.substring(0, 5);
-            }
-            // Si es un objeto Time, convertirlo
-            return hora.toString().substring(0, 5);
+            return typeof hora === 'string' ? hora.substring(0, 5) : hora.toString().substring(0, 5);
         } catch (e) {
-            return hora;
+            return String(hora);
         }
     }
 
@@ -406,181 +332,67 @@
         return texto.length > limite ? texto.substring(0, limite) + '...' : texto;
     }
 
-    function getActionClass(accion) {
-        if (!accion) return 'default';
-        
-        const actionMap = {
-            'CREAR_': 'create',
-            'ACTUALIZAR_': 'update',
-            'MODIFICAR_': 'update',
-            'ELIMINAR_': 'delete',
-            'LOGIN': 'login',
-            'LOGOUT': 'logout'
-        };
-        
-        for (const [key, className] of Object.entries(actionMap)) {
-            if (accion.includes(key) || accion === key) {
-                return className;
-            }
-        }
-        
-        return 'default';
-    }
-
-    // === FUNCIONES DE PAGINACIÓN ===
-    function actualizarPaginacion(datos) {
-        const paginationContainer = document.getElementById('pagination-container');
-        const paginationControls = document.getElementById('pagination-controls');
-        const showingFrom = document.getElementById('showing-from');
-        const showingTo = document.getElementById('showing-to');
-        const totalRecordsSpan = document.getElementById('total-records');
-        
-        totalRecords = datos.totalElements || 0;
-        
-        // Actualizar información de registros mostrados
-        const from = (datos.number * datos.size) + 1;
-        const to = Math.min((datos.number + 1) * datos.size, totalRecords);
-        
-        showingFrom.textContent = totalRecords > 0 ? from : 0;
-        showingTo.textContent = to;
-        totalRecordsSpan.textContent = totalRecords;
-        
-        // Generar controles de paginación
-        let paginationHTML = '';
-        
-        if (datos.totalPages > 1) {
-            // Botón anterior
-            paginationHTML += `
-                <button class="pagination-btn ${datos.number === 0 ? 'disabled' : ''}" 
-                        onclick="cambiarPagina(${datos.number - 1})" 
-                        ${datos.number === 0 ? 'disabled' : ''}>
-                    <i class="fas fa-chevron-left"></i>
-                </button>
-            `;
-            
-            // Números de página
-            const startPage = Math.max(0, datos.number - 2);
-            const endPage = Math.min(datos.totalPages - 1, datos.number + 2);
-            
-            for (let i = startPage; i <= endPage; i++) {
-                paginationHTML += `
-                    <button class="pagination-btn ${i === datos.number ? 'active' : ''}" 
-                            onclick="cambiarPagina(${i})">
-                        ${i + 1}
-                    </button>
-                `;
-            }
-            
-            // Botón siguiente
-            paginationHTML += `
-                <button class="pagination-btn ${datos.number >= datos.totalPages - 1 ? 'disabled' : ''}" 
-                        onclick="cambiarPagina(${datos.number + 1})"
-                        ${datos.number >= datos.totalPages - 1 ? 'disabled' : ''}>
-                    <i class="fas fa-chevron-right"></i>
-                </button>
-            `;
-        }
-        
-        paginationControls.innerHTML = paginationHTML;
-        paginationContainer.style.display = totalRecords > 0 ? 'flex' : 'none';
-    }
-
-    function cambiarPagina(nuevaPagina) {
+    // === CAMBIAR PÁGINA ===
+    window.cambiarPagina = function(nuevaPagina) {
+        console.log('Cambiando a página:', nuevaPagina);
         currentPage = nuevaPagina;
         cargarDatosAuditoria();
-    }
+    };
 
-    // === FUNCIONES DE ESTADÍSTICAS ===
-    function actualizarEstadisticas(datos) {
-        if (!datos.estadisticas) return;
+    // === APLICAR FILTROS ===
+    window.aplicarFiltros = function() {
+        console.log('Aplicando filtros');
+        currentPage = 0;
         
-        const stats = datos.estadisticas;
-        if (stats.totalLogs !== undefined) {
-            document.getElementById('total-registros').textContent = stats.totalLogs;
-        }
-        if (stats.logsExitosos !== undefined) {
-            document.getElementById('exitosos-count').textContent = stats.logsExitosos;
-        }
-        if (stats.logsFallidos !== undefined) {
-            document.getElementById('fallidos-count').textContent = stats.logsFallidos;
-        }
-    }
-
-    // === FUNCIONES DE UTILIDAD ===
-    function mostrarLoading(mostrar) {
-        const loading = document.getElementById('loading-overlay');
-        loading.style.display = mostrar ? 'flex' : 'none';
-    }
-
-    function debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
+        const filterUsuario = document.getElementById('filter-usuario');
+        const filterAccion = document.getElementById('filter-accion');
+        const filterEntidad = document.getElementById('filter-entidad');
+        const filterDesde = document.getElementById('filter-fecha-desde');
+        const filterHasta = document.getElementById('filter-fecha-hasta');
+        
+        currentFilters = {
+            usuario: filterUsuario ? filterUsuario.value.trim() || null : null,
+            accion: filterAccion ? filterAccion.value || null : null,
+            entidad: filterEntidad ? filterEntidad.value || null : null,
+            fechaDesde: filterDesde ? filterDesde.value || null : null,
+            fechaHasta: filterHasta ? filterHasta.value || null : null
         };
-    }
+        
+        console.log('Filtros:', currentFilters);
+        cargarDatosAuditoria();
+    };
 
-    // === FUNCIONES DE NOTIFICACIÓN ===
-    function mostrarNotificacion(mensaje, tipo = 'info') {
-        // Crear área de notificaciones si no existe
-        let notificationArea = document.querySelector('.notification-area');
-        if (!notificationArea) {
-            notificationArea = document.createElement('div');
-            notificationArea.className = 'notification-area';
-            document.body.appendChild(notificationArea);
-        }
+    // === LIMPIAR FILTROS ===
+    window.limpiarFiltros = function() {
+        console.log('Limpiando filtros');
+        
+        const filterUsuario = document.getElementById('filter-usuario');
+        const filterAccion = document.getElementById('filter-accion');
+        const filterEntidad = document.getElementById('filter-entidad');
+        const filterDesde = document.getElementById('filter-fecha-desde');
+        const filterHasta = document.getElementById('filter-fecha-hasta');
+        
+        if (filterUsuario) filterUsuario.value = '';
+        if (filterAccion) filterAccion.value = '';
+        if (filterEntidad) filterEntidad.value = '';
+        if (filterDesde) filterDesde.value = '';
+        if (filterHasta) filterHasta.value = '';
+        
+        currentFilters = {};
+        currentPage = 0;
+        cargarDatosAuditoria();
+    };
 
-        // Crear notificación
-        const notification = document.createElement('div');
-        notification.className = `notification notification-${tipo}`;
-        
-        const icon = tipo === 'error' ? 'fas fa-exclamation-triangle' : 
-                    tipo === 'success' ? 'fas fa-check-circle' :
-                    tipo === 'warning' ? 'fas fa-exclamation-circle' : 'fas fa-info-circle';
-        
-        notification.innerHTML = `
-            <i class="${icon}"></i>
-            <span class="notification-message">${mensaje}</span>
-            <button class="notification-close" onclick="this.parentElement.remove()">
-                <i class="fas fa-times"></i>
-            </button>
-        `;
-        
-        notificationArea.appendChild(notification);
-        
-        // Mostrar notificación
-        setTimeout(() => notification.classList.add('show'), 100);
-        
-        // Auto-ocultar después de 5 segundos
-        setTimeout(() => {
-            if (notification.parentElement) {
-                notification.classList.remove('show');
-                setTimeout(() => notification.remove(), 300);
-            }
-        }, 5000);
-    }
-
-    // === FUNCIÓN DE EXPORTACIÓN ===
-    async function exportarCSV() {
+    // === EXPORTAR CSV ===
+    window.exportarCSV = async function() {
         try {
-            mostrarNotificacion('Generando archivo CSV...', 'info');
-            
-            // Construir parámetros con todos los filtros aplicados
+            console.log('Exportando CSV');
             const params = new URLSearchParams(currentFilters);
+            const response = await fetch(`/auditoria/export/csv?${params.toString()}`);
             
-            const response = await fetch(`/auditoria/exportar/csv?${params.toString()}`);
-            
-            if (!response.ok) {
-                throw new Error('Error al generar el archivo CSV');
-            }
+            if (!response.ok) throw new Error('Error al generar CSV');
             
             const blob = await response.blob();
-            
-            // Crear enlace de descarga
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -590,13 +402,70 @@
             document.body.removeChild(a);
             window.URL.revokeObjectURL(url);
             
-            mostrarNotificacion('Archivo CSV descargado exitosamente', 'success');
-            
+            console.log('CSV descargado');
         } catch (error) {
             console.error('Error al exportar CSV:', error);
-            mostrarNotificacion('Error al exportar el archivo CSV: ' + error.message, 'error');
+        }
+    };
+
+    // === CARGAR ESTADÍSTICAS GENERALES ===
+    async function cargarEstadisticasGenerales() {
+        try {
+            const response = await fetch('/auditoria/api/estadisticas');
+            if (response.ok) {
+                const stats = await response.json();
+                const totalReg = document.getElementById('total-registros');
+                const exitosos = document.getElementById('exitosos-count');
+                const fallidos = document.getElementById('fallidos-count');
+                
+                if (totalReg) totalReg.textContent = stats.totalLogs || 0;
+                if (exitosos) exitosos.textContent = stats.logsExitosos || 0;
+                if (fallidos) fallidos.textContent = stats.logsFallidos || 0;
+            }
+        } catch (error) {
+            console.warn('No se pudieron cargar estadísticas:', error);
         }
     }
+
+    // === INICIALIZACIÓN ===
+    function inicializar() {
+        console.log('=== INICIALIZANDO AUDITORÍA ===');
+        
+        // Configurar eventos de filtros
+        const filterUsuario = document.getElementById('filter-usuario');
+        if (filterUsuario) {
+            filterUsuario.addEventListener('input', function() {
+                clearTimeout(this._timeout);
+                this._timeout = setTimeout(() => window.aplicarFiltros(), 500);
+            });
+        }
+        
+        const filterAccion = document.getElementById('filter-accion');
+        if (filterAccion) filterAccion.addEventListener('change', window.aplicarFiltros);
+        
+        const filterEntidad = document.getElementById('filter-entidad');
+        if (filterEntidad) filterEntidad.addEventListener('change', window.aplicarFiltros);
+        
+        const filterDesde = document.getElementById('filter-fecha-desde');
+        if (filterDesde) filterDesde.addEventListener('change', window.aplicarFiltros);
+        
+        const filterHasta = document.getElementById('filter-fecha-hasta');
+        if (filterHasta) filterHasta.addEventListener('change', window.aplicarFiltros);
+        
+        // Cargar datos iniciales
+        cargarDatosAuditoria();
+        cargarEstadisticasGenerales();
+    }
+
+    // Ejecutar cuando el DOM esté listo
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', inicializar);
+    } else {
+        inicializar();
+    }
+})();
+/*]]>*/
 </script>
+</main>
 </body>
 </html>

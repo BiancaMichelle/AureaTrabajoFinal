@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 
+import com.example.demo.enums.EstadoOferta;
 import com.example.demo.model.Curso;
 import com.example.demo.model.Docente;
 import com.example.demo.model.Formacion;
@@ -119,9 +120,17 @@ public class DocenteController {
             // 1. OFERTAS DONDE ES DOCENTE
             // ========================================
             List<Curso> cursosDelDocente = cursoRepository.findByDocentesId(docente.getId());
+            // Filtrar cursos de baja
+            cursosDelDocente = cursosDelDocente.stream()
+                .filter(c -> c.getEstado() != EstadoOferta.DE_BAJA)
+                .collect(Collectors.toList());
             System.out.println("�‍🏫 Cursos como docente: " + cursosDelDocente.size());
             
             List<Formacion> formacionesDelDocente = formacionRepository.findByDocentesId(docente.getId());
+            // Filtrar formaciones de baja
+            formacionesDelDocente = formacionesDelDocente.stream()
+                .filter(f -> f.getEstado() != EstadoOferta.DE_BAJA)
+                .collect(Collectors.toList());
             System.out.println("👨‍🏫 Formaciones como docente: " + formacionesDelDocente.size());
             
             List<OfertaAcademica> ofertasComoDocente = new ArrayList<>();
@@ -137,6 +146,7 @@ public class DocenteController {
             List<OfertaAcademica> ofertasComoAlumno = inscripciones.stream()
                     .filter(ins -> ins.getEstadoInscripcion())
                     .map(Inscripciones::getOferta)
+                    .filter(oferta -> oferta.getEstado() != EstadoOferta.DE_BAJA) // Filtrar ofertas de baja
                     .collect(Collectors.toList());
             
             // ========================================
