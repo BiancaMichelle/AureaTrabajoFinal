@@ -57,15 +57,37 @@ public class ExamenService {
         // Procesar los pools
         if (poolsDTO != null && !poolsDTO.isEmpty()) {
             List<Pool> pools = new ArrayList<>();
+            java.util.Set<String> poolsUsados = new java.util.HashSet<>();
 
             for (PoolDTO poolDTO : poolsDTO) {
                 Pool poolGuardado;
-                // Si viene un idReal, usar el pool existente (reutilización)
+                
+                // Validar duplicados si es reutilización
                 if (poolDTO.getIdReal() != null && !poolDTO.getIdReal().isEmpty()) {
+                    if (!poolsUsados.add(poolDTO.getIdReal())) {
+                        throw new RuntimeException("No se puede agregar el mismo pool más de una vez.");
+                    }
+                
                     poolGuardado = poolRepository.findById(UUID.fromString(poolDTO.getIdReal()))
                             .orElseThrow(
                                     () -> new RuntimeException("Pool existente no encontrado: " + poolDTO.getIdReal()));
+                                    
+                    // Validar que el pool existente tenga preguntas
+                    if (poolGuardado.getPreguntas() == null || poolGuardado.getPreguntas().isEmpty()) {
+                        throw new RuntimeException("El pool '" + poolGuardado.getNombre() + "' no tiene preguntas. Agrega preguntas antes de crear el examen.");
+                    }
+                    
+                    // Validar estado IA
+                    if (poolGuardado.getIaStatus() == com.example.demo.enums.IaGenerationStatus.PENDING) {
+                         throw new RuntimeException("El pool '" + poolGuardado.getNombre() + "' aún se está generando con IA. Espera a que termine."); 
+                    }
+                    
                 } else {
+                    // Validaciones para pool nuevo
+                    if (poolDTO.getPreguntas() == null || poolDTO.getPreguntas().isEmpty()) {
+                         throw new RuntimeException("El nuevo pool '" + poolDTO.getNombre() + "' no tiene preguntas.");
+                    }
+                
                     // Crear un nuevo pool y asociarlo a la oferta del módulo
                     Pool pool = new Pool();
                     pool.setIdPool(UUID.randomUUID());

@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,6 +20,10 @@ import com.example.demo.enums.TipoPregunta;
 import com.example.demo.model.Opcion;
 import com.example.demo.model.Pool;
 import com.example.demo.model.Pregunta;
+import com.example.demo.model.Curso;
+import com.example.demo.model.Modulo;
+import com.example.demo.model.Actividad;
+import com.example.demo.model.Material;
 import com.example.demo.repository.OpcionRepository;
 import com.example.demo.repository.OfertaAcademicaRepository;
 import com.example.demo.repository.PoolRepository;
@@ -44,6 +49,12 @@ public class PoolController {
     
     @Autowired
     private OfertaAcademicaRepository ofertaAcademicaRepository;
+
+    @Autowired
+    private com.example.demo.repository.MaterialRepository materialRepository;
+
+    @Autowired
+    private com.example.demo.service.IaPoolGeneratorService iaPoolGeneratorService;
     
     /**
      * Crear un pool independiente (sin examen asociado)
@@ -55,7 +66,9 @@ public class PoolController {
             @RequestParam("nombrePool") String nombre,
             @RequestParam(value = "descripcionPool", required = false, defaultValue = "") String descripcion,
             @RequestParam("cantidadPreguntas") Integer cantidadPreguntas,
-            @RequestParam("ofertaId") Long ofertaId) {
+            @RequestParam("ofertaId") Long ofertaId,
+            @RequestParam(value = "esIA", required = false, defaultValue = "false") Boolean esIA,
+            @RequestParam(value = "iaParams", required = false) String iaParams) {
         try {
             Pool pool = new Pool();
             pool.setIdPool(UUID.randomUUID());
@@ -68,13 +81,25 @@ public class PoolController {
                 .orElseThrow(() -> new RuntimeException("Oferta no encontrada para ID: " + ofertaId));
             pool.setOferta(oferta);
             
+            // Configurar IA si aplica
+            if (Boolean.TRUE.equals(esIA)) {
+                pool.setGeneratedByIA(true);
+                pool.setIaStatus(com.example.demo.enums.IaGenerationStatus.PENDING);
+                pool.setIaRequest(iaParams);
+            }
+            
             Pool poolGuardado = poolRepository.save(pool);
+            
+            // Disparar proceso IA si aplica
+            if (Boolean.TRUE.equals(esIA)) {
+                iaPoolGeneratorService.generarPoolIAAsync(poolGuardado.getIdPool(), iaParams);
+            }
             
             System.out.println("Pool creado: " + poolGuardado.getIdPool());
             
             return ResponseEntity.ok()
                 .header("Content-Type", "application/json")
-                .body("{\"success\": true, \"message\": \"Pool creado exitosamente\", \"idPool\": \"" + poolGuardado.getIdPool() + "\"}");
+                .body("{\"success\": true, \"message\": \"Pool creado exitosamente\", \"idPool\": \"" + poolGuardado.getIdPool() + "\", \"iaStatus\": \"" + pool.getIaStatus() + "\"}");
             
         } catch (Exception e) {
             e.printStackTrace();
@@ -83,6 +108,64 @@ public class PoolController {
                 .body("{\"success\": false, \"message\": \"Error al crear el pool: " + e.getMessage().replace("\"", "'") + "\"}");
         }
     }
+
+    /**
+     * Consultar estado IA
+     */
+    @GetMapping("/estado/{poolId}")
+    @PreAuthorize("hasAnyAuthority('DOCENTE', 'ADMIN')")
+    @ResponseBody
+    public ResponseEntity<?> consultarEstadoIA(@PathVariable String poolId) {
+        try {
+            Pool pool = poolRepository.findById(UUID.fromString(poolId))
+                .orElseThrow(() -> new RuntimeException("Pool no encontrado"));
+            
+            java.util.Map<String, Object> response = new java.util.HashMap<>();
+            response.put("success", true);
+            response.put("status", pool.getIaStatus());
+            response.put("errorMessage", pool.getIaErrorMessage());
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+             return ResponseEntity.badRequest()
+                 .body("{\"success\": false, \"message\": \"" + e.getMessage() + "\"}");
+        }
+    }
+    
+    @GetMapping("/materiales/{ofertaId}")
+    @PreAuthorize("hasAnyAuthority('DOCENTE', 'ADMIN')")
+    @ResponseBody
+    @Transactional(readOnly = true)
+    public ResponseEntity<?> obtenerMateriales(@PathVariable Long ofertaId) {
+        try {
+            // Verificar que la oferta existe (opcional, pero buena práctica)
+            if (!ofertaAcademicaRepository.existsById(ofertaId)) {
+                return ResponseEntity.badRequest().body(java.util.Collections.singletonMap("error", "Oferta no encontrada"));
+            }
+            
+            // Usar repositorio optimizado
+            List<Material> materialesList = materialRepository.findByModulo_Curso_IdOferta(ofertaId);
+            
+            List<java.util.Map<String, Object>> materiales = new ArrayList<>();
+            for (Material material : materialesList) {
+                java.util.Map<String, Object> matMap = new java.util.HashMap<>();
+                matMap.put("id", material.getIdActividad());
+                matMap.put("titulo", material.getTitulo());
+                // Obtener nombre del modulo de forma segura
+                String moduloNombre = (material.getModulo() != null) ? material.getModulo().getNombre() : "Sin módulo";
+                matMap.put("moduloNombre", moduloNombre);
+                materiales.add(matMap);
+            }
+            
+            return ResponseEntity.ok(materiales);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body(java.util.Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+    // Antiguo endpoint renombrado o mantenido por compatibilidad si se usa directamente sin param IA
+    // Se ha fusionado en el endpoint /crear principal para simplificar.
     
     @PostMapping("/editar/{poolId}")
     @PreAuthorize("hasAnyAuthority('DOCENTE', 'ADMIN')")
@@ -300,6 +383,58 @@ public class PoolController {
             e.printStackTrace();
             return ResponseEntity.badRequest()
                 .body("{\"success\": false, \"message\": \"Error al listar pools: " + e.getMessage() + "\"}");
+        }
+    }
+    
+    /**
+     * Obtener detalle de un pool con todas sus preguntas y opciones
+     */
+    @GetMapping("/detalle/{poolId}")
+    @PreAuthorize("hasAnyAuthority('DOCENTE', 'ADMIN')")
+    @ResponseBody
+    public ResponseEntity<?> obtenerDetallePool(@PathVariable String poolId) {
+        try {
+            Pool pool = poolRepository.findById(UUID.fromString(poolId))
+                .orElseThrow(() -> new RuntimeException("Pool no encontrado"));
+            
+            List<java.util.Map<String, Object>> preguntasDTO = new ArrayList<>();
+            
+            if (pool.getPreguntas() != null) {
+                for (Pregunta pregunta : pool.getPreguntas()) {
+                    java.util.Map<String, Object> preguntaMap = new java.util.HashMap<>();
+                    preguntaMap.put("idPregunta", pregunta.getIdPregunta());
+                    preguntaMap.put("enunciado", pregunta.getEnunciado());
+                    preguntaMap.put("tipoPregunta", pregunta.getTipoPregunta().toString());
+                    preguntaMap.put("puntaje", pregunta.getPuntaje());
+                    
+                    // Agregar opciones si existen
+                    List<java.util.Map<String, Object>> opcionesDTO = new ArrayList<>();
+                    if (pregunta.getOpciones() != null) {
+                        for (Opcion opcion : pregunta.getOpciones()) {
+                            java.util.Map<String, Object> opcionMap = new java.util.HashMap<>();
+                            opcionMap.put("idOpcion", opcion.getIdOpcion());
+                            opcionMap.put("descripcion", opcion.getDescripcion());
+                            opcionMap.put("esCorrecta", opcion.getEsCorrecta());
+                            opcionesDTO.add(opcionMap);
+                        }
+                    }
+                    preguntaMap.put("opciones", opcionesDTO);
+                    preguntasDTO.add(preguntaMap);
+                }
+            }
+            
+            java.util.Map<String, Object> response = new java.util.HashMap<>();
+            response.put("success", true);
+            response.put("pool", pool.getNombre());
+            response.put("descripcion", pool.getDescripcion());
+            response.put("cantidadPreguntas", pool.getCantidadPreguntas());
+            response.put("preguntas", preguntasDTO);
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest()
+                .body("{\"success\": false, \"message\": \"Error al obtener detalle del pool: " + e.getMessage() + "\"}");
         }
     }
     

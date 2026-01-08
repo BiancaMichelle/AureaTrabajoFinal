@@ -34,6 +34,17 @@ public class Pool {
     @ManyToOne
     @JoinColumn(name = "oferta_id")
     private com.example.demo.model.OfertaAcademica oferta;
+
+    // Campos para generación por IA
+    private Boolean generatedByIA = false;
+    
+    @jakarta.persistence.Column(length = 2000)
+    private String iaRequest; // JSON con parámetros
+    
+    @jakarta.persistence.Enumerated(jakarta.persistence.EnumType.STRING)
+    private com.example.demo.enums.IaGenerationStatus iaStatus = com.example.demo.enums.IaGenerationStatus.NONE;
+    
+    private String iaErrorMessage;
     
     // Un pool puede ser usado por múltiples exámenes (relación inversa de ManyToMany)
     // JsonIgnore para evitar referencia circular al serializar
