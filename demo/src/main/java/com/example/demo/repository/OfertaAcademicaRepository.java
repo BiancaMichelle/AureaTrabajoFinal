@@ -1,5 +1,6 @@
 package com.example.demo.repository;
 
+import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -15,4 +16,5 @@ public interface OfertaAcademicaRepository extends JpaRepository<OfertaAcademica
     
     // Buscar ofertas por estado
     List<OfertaAcademica> findByEstado(EstadoOferta estado);
+    List<OfertaAcademica> findByEstadoIn(Collection<EstadoOferta> estados);
 }

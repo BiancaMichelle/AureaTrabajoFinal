@@ -79,6 +79,9 @@
     <header class="main-header">
         <h1><i class="fas fa-graduation-cap"></i> Gestión de Ofertas Académicas</h1>
         <div class="header-actions">
+            <button id="btn-show-report-modal" class="btn-secondary" style="background-color: #28a745; color: white; margin-right: 10px;">
+                <i class="fas fa-file-alt"></i> Generar Informes
+            </button>
             <button id="btn-show-form" class="btn-primary">
                 <i class="fas fa-plus-circle"></i> Nueva Oferta
             </button>
@@ -4133,6 +4136,90 @@
         
         console.log('🔄 Sistema de modificación de ofertas inicializado');
     </script>
+
+
+<!-- Modal de Reportes -->
+<div id="report-modal" class="modal" style="display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5);">
+    <div class="modal-content" style="background-color: #fefefe; margin: 10% auto; padding: 25px; border: 1px solid #888; width: 90%; max-width: 500px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <span class="close-report-modal" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+        <h2 style="margin-top: 0; color: #333; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px;"><i class="fas fa-file-invoice"></i> Generar Informe</h2>
+        
+        <form id="report-form" action="/admin/reportes/ofertas/descargar" method="get" style="margin-top: 20px;">
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label for="report-formato" style="display: block; margin-bottom: 5px; font-weight: 500;">Formato de salida:</label>
+                <select id="report-formato" name="formato" class="form-control" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="pdf">PDF (Documento portátil)</option>
+                    <option value="excel">Excel (Hoja de cálculo)</option>
+                </select>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label for="report-nombre" style="display: block; margin-bottom: 5px; font-weight: 500;">Filtrar por Nombre:</label>
+                <input type="text" id="report-nombre" name="nombre" class="form-control" placeholder="Opcional..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label for="report-estado" style="display: block; margin-bottom: 5px; font-weight: 500;">Estado:</label>
+                <select id="report-estado" name="estado" class="form-control" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="">Todos los estados</option>
+                    <option value="BORRADOR">Borrador</option>
+                    <option value="PUBLICADO">Publicado</option>
+                    <option value="DE_BAJA">De Baja</option>
+                </select>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: 500;">Fecha de Inicio (Rango):</label>
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex: 1;">
+                        <small>Desde:</small>
+                        <input type="date" name="fechaInicio" class="form-control" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    </div>
+                    <div style="flex: 1;">
+                        <small>Hasta:</small>
+                        <input type="date" name="fechaFin" class="form-control" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-actions" style="text-align: right; margin-top: 25px; border-top: 1px solid #f0f0f0; padding-top: 15px;">
+                <button type="button" class="close-report-btn" style="padding: 8px 16px; margin-right: 10px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancelar</button>
+                <button type="submit" style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    <i class="fas fa-download"></i> Descargar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const reportModal = document.getElementById('report-modal');
+        const btnShowReport = document.getElementById('btn-show-report-modal');
+        const closeSpan = document.querySelector('.close-report-modal');
+        const closeBtn = document.querySelector('.close-report-btn');
+
+        if(btnShowReport) {
+            btnShowReport.onclick = function(e) {
+                e.preventDefault();
+                reportModal.style.display = "block";
+            }
+        }
+
+        function closeModal() {
+            reportModal.style.display = "none";
+        }
+
+        if(closeSpan) closeSpan.onclick = closeModal;
+        if(closeBtn) closeBtn.onclick = closeModal;
+
+        window.onclick = function(event) {
+            if (event.target == reportModal) {
+                closeModal();
+            }
+        }
+    });
+</script>
 
 </body>
 </html>

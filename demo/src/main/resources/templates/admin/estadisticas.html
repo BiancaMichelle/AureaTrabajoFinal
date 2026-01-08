@@ -1,71 +1,277 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/adminBase :: layout(~{::title}, ~{::content})}"
-      lang="es">
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/adminBase :: layout(~{::title}, ~{::content})}" lang="es">
 <head>
-    <title>Estadísticas Académicas - Panel de Administración</title>
+    <title>Estadísticas Académicas - Aurea</title>
 </head>
 <body>
 <div th:fragment="content" class="main-content">
-    <!-- Contenido principal del dashboard -->
+    
+    <style>
+        /* Modern Dashboard Styles */
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --success-gradient: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            --warning-gradient: linear-gradient(135deg, #fce38a 0%, #f38181 100%);
+            --danger-gradient: linear-gradient(135deg, #ff9966 0%, #ff5e62 100%);
+            --card-shadow: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
+            --hover-shadow: 0 7px 14px rgba(50, 50, 93, 0.1), 0 3px 6px rgba(0, 0, 0, 0.08);
+        }
+
+        .dashboard-header {
+            background: white;
+            padding: 1.5rem 2rem;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .dashboard-header h1 {
+            font-size: 1.8rem;
+            color: #2d3748;
+            margin: 0;
+            font-weight: 700;
+        }
+
+        .dashboard-header p {
+            color: #718096;
+            margin-top: 0.5rem;
+        }
+
+        /* Stats Cards */
+        .stats-card {
+            border: none;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+        }
+
+        .stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--hover-shadow);
+        }
+
+        .stats-card .card-body {
+            padding: 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .stats-card .icon-bg {
+            position: absolute;
+            right: -10px;
+            bottom: -10px;
+            font-size: 5rem;
+            opacity: 0.1;
+            transform: rotate(-15deg);
+            z-index: 0;
+        }
+
+        .bg-gradient-primary { background: var(--primary-gradient); color: white; }
+        .bg-gradient-success { background: var(--success-gradient); color: white; }
+        .bg-gradient-info { background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%); color: white; }
+        .bg-gradient-warning { background: var(--warning-gradient); color: white; }
+
+        .stats-value {
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .stats-label {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.9;
+        }
+
+        /* Chart Cards */
+        .metric-card {
+            background: white;
+            border: none;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 2rem;
+            height: 100%;
+        }
+
+        .metric-card .card-header {
+            background: transparent;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 1.2rem 1.5rem;
+            font-weight: 600;
+            color: #2d3748;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+            padding: 1rem;
+        }
+
+        /* Table Styling */
+        .custom-table thead th {
+            background-color: #f8fafc;
+            color: #4a5568;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            border-top: none;
+        }
+        
+        .custom-table tbody td {
+            vertical-align: middle;
+            color: #2d3748;
+        }
+
+        .badge-demanda {
+            padding: 0.4em 0.8em;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        /* Action Buttons */
+        .action-btn {
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .btn-generate-report {
+            background: var(--success-gradient);
+            color: white;
+            box-shadow: 0 4px 6px rgba(17, 153, 142, 0.3);
+        }
+        
+        .btn-generate-report:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(17, 153, 142, 0.4);
+            color: white;
+        }
+
+        .btn-refresh {
+            background: #fff;
+            color: #4a5568;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .btn-refresh:hover {
+            background: #f7fafc;
+            color: #2d3748;
+        }
+
+        /* Report Modal custom styles */
+        .modal-report-header {
+            background: var(--primary-gradient);
+            color: white;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+            padding: 1.5rem;
+        }
+        
+        .form-section-label {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            color: #a0aec0;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+    </style>
+
+    <!-- Header / Actions -->
     <div class="container-fluid py-4">
-        <!-- Header del Dashboard -->
         <div class="dashboard-header">
-            <h1><i class="fas fa-chart-line"></i> Dashboard de Estadísticas</h1>
-            <p class="mb-0">Análisis y métricas del sistema educativo</p>
+            <div>
+                <h1><i class="fas fa-chart-line text-primary me-2"></i>Dashboard Académico</h1>
+                <p class="mb-0">Visión general del rendimiento y métricas clave del sistema</p>
+            </div>
+            <div class="d-flex gap-3">
+                <button id="btnRefreshCharts" class="action-btn btn-refresh">
+                    <i class="fas fa-sync-alt"></i> Actualizar
+                </button>
+                <button id="btnOpenReportModal" class="action-btn btn-generate-report">
+                    <i class="fas fa-file-download"></i> Exportar Reportes
+                </button>
+            </div>
         </div>
         
-        <!-- Alertas y notificaciones -->
+        <!-- Alerts -->
         <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="fas fa-exclamation-triangle"></i> <span th:text="${error}"></span>
+            <i class="fas fa-exclamation-circle me-2"></i> <span th:text="${error}"></span>
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
         
-        <!-- Cards de métricas principales -->
-        <div class="row mb-4">
-            <div class="col-lg-3 col-md-6 mb-3">
-                <div class="card stats-card h-100 text-center">
+        <!-- KPI Cards Row -->
+        <div class="row mb-4 g-4">
+            <!-- Usuarios -->
+            <div class="col-xl-3 col-md-6">
+                <div class="stats-card bg-gradient-info h-100">
                     <div class="card-body">
-                        <i class="fas fa-users fa-3x mb-3"></i>
-                        <h3 class="card-title" th:text="${metricas != null ? (metricas['totalUsuarios'] != null ? metricas['totalUsuarios'] : 0) : 0}">0</h3>
-                        <p class="card-text">Total Usuarios</p>
+                        <i class="fas fa-users icon-bg"></i>
+                        <span class="stats-value" th:text="${metricas != null ? metricas['totalUsuarios'] : 0}">0</span>
+                        <span class="stats-label">Usuarios Registrados</span>
                     </div>
                 </div>
             </div>
-            <div class="col-lg-3 col-md-6 mb-3">
-                <div class="card stats-card h-100 text-center">
+            <!-- Ofertas -->
+            <div class="col-xl-3 col-md-6">
+                <div class="stats-card bg-gradient-primary h-100">
                     <div class="card-body">
-                        <i class="fas fa-graduation-cap fa-3x mb-3"></i>
-                        <h3 class="card-title" th:text="${metricas != null ? (metricas['totalOfertas'] != null ? metricas['totalOfertas'] : 0) : 0}">0</h3>
-                        <p class="card-text">Ofertas Académicas</p>
+                        <i class="fas fa-book-open icon-bg"></i>
+                        <span class="stats-value" th:text="${metricas != null ? metricas['totalOfertas'] : 0}">0</span>
+                        <span class="stats-label">Ofertas Activas</span>
                     </div>
                 </div>
             </div>
-            <div class="col-lg-3 col-md-6 mb-3">
-                <div class="card stats-card h-100 text-center">
+            <!-- Inscripciones -->
+            <div class="col-xl-3 col-md-6">
+                <div class="stats-card bg-gradient-success h-100">
                     <div class="card-body">
-                        <i class="fas fa-user-check fa-3x mb-3"></i>
-                        <h3 class="card-title" th:text="${metricas != null ? (metricas['totalInscripciones'] != null ? metricas['totalInscripciones'] : 0) : 0}">0</h3>
-                        <p class="card-text">Total Inscripciones</p>
+                        <i class="fas fa-user-graduate icon-bg"></i>
+                        <span class="stats-value" th:text="${metricas != null ? metricas['totalInscripciones'] : 0}">0</span>
+                        <span class="stats-label">Inscripciones Totales</span>
                     </div>
                 </div>
             </div>
-            <div class="col-lg-3 col-md-6 mb-3">
-                <div class="card stats-card h-100 text-center">
+            <!-- Ingresos -->
+            <div class="col-xl-3 col-md-6">
+                <div class="stats-card bg-gradient-warning h-100">
                     <div class="card-body">
-                        <i class="fas fa-dollar-sign fa-3x mb-3"></i>
-                        <h3 class="card-title" th:text="${metricas != null ? (metricas['ingresosTotales'] != null ? metricas['ingresosTotales'] : '0.00') : '0.00'}">0.00</h3>
-                        <p class="card-text">Ingresos Totales</p>
+                        <i class="fas fa-coins icon-bg"></i>
+                        <span class="stats-value" th:text="${metricas != null ? ('$' + metricas['ingresosTotales']) : '$0.00'}">$0.00</span>
+                        <span class="stats-label">Ingresos Generados</span>
                     </div>
                 </div>
             </div>
         </div>
-        
-        <!-- Gráficos de estadísticas -->
+
+        <!-- Charts Row -->
         <div class="row mb-4">
-            <div class="col-xl-6 col-lg-12 mb-4">
-                <div class="card metric-card h-100">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Ofertas por Tipo</h5>
+            <div class="col-lg-6 mb-4">
+                <div class="metric-card">
+                    <div class="card-header">
+                        <span>Ofertas por Tipo</span>
+                        <select id="ofertasPeriodo" class="form-select form-select-sm w-auto">
+                            <option value="year">Este Año</option>
+                            <option value="all">Histórico</option>
+                        </select>
                     </div>
                     <div class="card-body">
                         <div class="chart-container">
@@ -74,10 +280,10 @@
                     </div>
                 </div>
             </div>
-            <div class="col-xl-6 col-lg-12 mb-4">
-                <div class="card metric-card h-100">
-                    <div class="card-header bg-info text-white">
-                        <h5 class="mb-0"><i class="fas fa-users-cog"></i> Usuarios por Rol</h5>
+            <div class="col-lg-6 mb-4">
+                <div class="metric-card">
+                    <div class="card-header">
+                        <span>Distribución de Usuarios</span>
                     </div>
                     <div class="card-body">
                         <div class="chart-container">
@@ -87,37 +293,53 @@
                 </div>
             </div>
         </div>
-        <!-- Análisis de demanda -->
-        <div class="row mb-4" th:if="${demandaOfertas != null and !#lists.isEmpty(demandaOfertas)}">
+
+        <!-- Detailed Analysis Row -->
+        <div class="row mb-4">
             <div class="col-12">
-                <div class="card metric-card">
-                    <div class="card-header bg-warning text-dark">
-                        <h5 class="mb-0"><i class="fas fa-search"></i> Análisis de Demanda de Ofertas</h5>
+                <div class="metric-card">
+                    <div class="card-header">
+                        <span><i class="fas fa-fire me-2 text-danger"></i>Demanda Académica</span>
                     </div>
-                    <div class="card-body">
-                        <div class="table-responsive" style="max-height: 350px;">
-                            <table class="table table-striped table-hover mb-0">
-                                <thead class="table-dark">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table custom-table table-hover mb-0">
+                                <thead>
                                     <tr>
-                                        <th>Oferta</th>
-                                        <th>Inscritos</th>
-                                        <th>Nivel de Demanda</th>
-                                        <th>Tasa Ocupación</th>
+                                        <th class="ps-4">Oferta Académica</th>
+                                        <th class="text-center">Inscritos</th>
+                                        <th class="text-center">Estado</th>
+                                        <th class="text-center">Tasa Ocupación</th>
+                                        <th class="text-center">Demanda</th>
                                     </tr>
                                 </thead>
                                 <tbody>
+                                    <tr th:if="${demandaOfertas == null or #lists.isEmpty(demandaOfertas)}">
+                                        <td colspan="5" class="text-center py-4 text-muted">No hay datos de demanda disponibles</td>
+                                    </tr>
                                     <tr th:each="oferta : ${demandaOfertas}">
-                                        <td th:text="${oferta.tituloOferta}"></td>
-                                        <td th:text="${oferta.cantidadInscritos}"></td>
-                                        <td>
-                                            <span class="badge"
-                                                  th:classappend="${oferta.nivelDemanda == 'ALTA' ? 'bg-success' : 
-                                                                   oferta.nivelDemanda == 'MEDIA' ? 'bg-warning' : 'bg-danger'}"
-                                                  th:text="${oferta.nivelDemanda}">
-                                            </span>
+                                        <td class="ps-4 fw-bold" th:text="${oferta['tituloOferta']}">Nombre Oferta</td>
+                                        <td class="text-center" th:text="${oferta['cantidadInscritos']}">0</td>
+                                        <td class="text-center">
+                                            <span class="badge bg-light text-dark border">Activo</span>
                                         </td>
-                                        <td>
-                                            <span th:text="${oferta.tasaOcupacion != null ? #numbers.formatPercent(oferta.tasaOcupacion, 1, 1) : '0%'}"></span>
+                                        <td class="text-center">
+                                            <div class="d-flex align-items-center justify-content-center">
+                                                <div class="progress w-50" style="height: 6px;">
+                                                    <div class="progress-bar" role="progressbar" 
+                                                        th:style="'width: ' + ${oferta['tasaOcupacion'] * 100} + '%'"
+                                                        th:classappend="${oferta['tasaOcupacion'] > 0.8 ? 'bg-danger' : (oferta['tasaOcupacion'] > 0.5 ? 'bg-info' : 'bg-success')}">
+                                                    </div>
+                                                </div>
+                                                <span class="ms-2 small" th:text="${#numbers.formatPercent(oferta['tasaOcupacion'], 1, 0)}">0%</span>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge-demanda"
+                                                  th:classappend="${oferta['nivelDemanda'] == 'ALTA' ? 'bg-soft-success text-success' : 
+                                                                   (oferta['nivelDemanda'] == 'MEDIA' ? 'bg-soft-warning text-warning' : 'bg-soft-danger text-danger')}"
+                                                  th:text="${oferta['nivelDemanda']}">MEDIA
+                                            </span>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -127,300 +349,162 @@
                 </div>
             </div>
         </div>
-        
-        <!-- Análisis de deserción -->
-        <div class="row mb-4" th:if="${analisisDesercion != null}">
-            <div class="col-lg-6 mb-4">
-                <div class="card metric-card h-100">
-                    <div class="card-header bg-danger text-white">
-                        <h5 class="mb-0"><i class="fas fa-user-times"></i> Análisis de Deserción</h5>
-                    </div>
-                    <div class="card-body analysis-card">
-                        <h2 class="display-4 text-danger" th:text="${analisisDesercion.tasaDesercion != null ? #numbers.formatPercent(analisisDesercion.tasaDesercion, 1, 1) : '0%'}">0%</h2>
-                        <p class="text-muted">Tasa de Deserción</p>
-                        <div class="metrics-row">
-                            <div class="row">
-                                <div class="col-4">
-                                    <strong th:text="${analisisDesercion != null ? (analisisDesercion.estudiantesActivos != null ? analisisDesercion.estudiantesActivos : 0) : 0}">0</strong>
-                                    <small>Activos</small>
+
+    </div>
+
+    <!-- Report Modal -->
+    <div id="statsReportModal" class="modal" tabindex="-1" style="display: none; background: rgba(0,0,0,0.5); position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1050;">
+        <div class="modal-dialog modal-dialog-centered" style="margin: 1.75rem auto; max-width: 500px;">
+            <div class="modal-content shadow-lg border-0" style="background-color: #fff; border-radius: 0.5rem;">
+                <div class="modal-header modal-report-header">
+                    <h5 class="modal-title fw-bold" style="color: white;"><i class="fas fa-file-invoice me-2"></i>Generar Reporte</h5>
+                    <button type="button" class="btn-close btn-close-white close-modal-trigger" style="filter: invert(1); background: transparent; border: 0; font-size: 1.5rem; line-height: 1;">&times;</button>
+                </div>
+                <div class="modal-body p-4">
+                    <form id="statsReportForm" action="/admin/reportes/ofertas/descargar" method="get">
+                        <div class="mb-4">
+                            <label class="form-section-label">Formato de Salida</label>
+                            <div class="d-flex gap-2">
+                                <div class="w-50">
+                                    <input type="radio" class="btn-check visually-hidden" name="formato" id="fmtPdf" value="pdf" checked>
+                                    <label class="btn btn-outline-danger w-100 py-3" for="fmtPdf" style="display: block; text-align: center; border: 1px solid #dc3545; border-radius: 0.375rem; color: #dc3545; cursor: pointer;">
+                                        <i class="fas fa-file-pdf fa-2x mb-2"></i><br>PDF
+                                    </label>
                                 </div>
-                                <div class="col-4">
-                                    <strong th:text="${analisisDesercion != null ? (analisisDesercion.estudiantesInactivos != null ? analisisDesercion.estudiantesInactivos : 0) : 0}">0</strong>
-                                    <small>Inactivos</small>
-                                </div>
-                                <div class="col-4">
-                                    <strong th:text="${analisisDesercion != null ? (analisisDesercion.totalEstudiantes != null ? analisisDesercion.totalEstudiantes : 0) : 0}">0</strong>
-                                    <small>Total</small>
+                                <div class="w-50">
+                                    <input type="radio" class="btn-check visually-hidden" name="formato" id="fmtExcel" value="excel">
+                                    <label class="btn btn-outline-success w-100 py-3" for="fmtExcel" style="display: block; text-align: center; border: 1px solid #198754; border-radius: 0.375rem; color: #198754; cursor: pointer;">
+                                        <i class="fas fa-file-excel fa-2x mb-2"></i><br>Excel
+                                    </label>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-6 mb-4">
-                <div class="card metric-card h-100">
-                    <div class="card-header bg-secondary text-white">
-                        <h5 class="mb-0"><i class="fas fa-chart-area"></i> Proyección de Crecimiento</h5>
-                    </div>
-                    <div class="card-body analysis-card" th:if="${proyeccionCrecimiento != null}">
-                        <h3 class="text-primary">
-                            <span th:text="${proyeccionCrecimiento['tasaCrecimiento'] != null ? proyeccionCrecimiento['tasaCrecimiento'] : 0}">0</span>%
-                        </h3>
-                        <p class="text-muted">Tasa de Crecimiento Mensual</p>
-                        <div class="metrics-row">
-                            <div class="row">
-                                <div class="col-6">
-                                    <strong th:text="${proyeccionCrecimiento != null ? (proyeccionCrecimiento['proyeccionProximoMes'] != null ? proyeccionCrecimiento['proyeccionProximoMes'] : 0) : 0}">0</strong>
-                                    <small>Próximo Mes</small>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-muted small text-uppercase">Filtros Opcionales</label>
+                            <input type="text" name="nombre" class="form-control mb-2" placeholder="Buscar por palabra clave..." style="display: block; width: 100%; padding: 0.375rem 0.75rem;">
+                            <select name="estado" class="form-select mb-2" style="display: block; width: 100%; padding: 0.375rem 2.25rem 0.375rem 0.75rem;">
+                                <option value="">Todos los estados</option>
+                                <option value="PUBLICADO">Publicado</option>
+                                <option value="BORRADOR">Borrador</option>
+                                <option value="DE_BAJA">De Baja</option>
+                            </select>
+                            
+                            <div class="row g-2" style="display: flex; gap: 0.5rem;">
+                                <div class="col-6" style="flex: 1;">
+                                    <label class="small text-muted">Desde</label>
+                                    <input type="date" name="fechaInicio" class="form-control" style="width: 100%;">
                                 </div>
-                                <div class="col-6">
-                                    <strong th:text="${proyeccionCrecimiento != null ? (proyeccionCrecimiento['proyeccionTrimestre'] != null ? proyeccionCrecimiento['proyeccionTrimestre'] : 0) : 0}">0</strong>
-                                    <small>Trimestre</small>
+                                <div class="col-6" style="flex: 1;">
+                                    <label class="small text-muted">Hasta</label>
+                                    <input type="date" name="fechaFin" class="form-control" style="width: 100%;">
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Botones de acciones -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card metric-card">
-                    <div class="card-header bg-dark text-white">
-                        <h5 class="mb-0"><i class="fas fa-cogs"></i> Acciones del Sistema</h5>
-                    </div>
-                    <div class="card-body text-center">
-                        <div class="d-flex flex-wrap justify-content-center gap-3">
-                            <button id="btnAccionesAutomaticas" class="btn btn-primary btn-lg">
-                                <i class="fas fa-robot"></i> Ejecutar Acciones Automáticas
-                            </button>
-                            <button id="btnGenerarReporte" class="btn btn-success btn-lg">
-                                <i class="fas fa-file-alt"></i> Generar Reporte
-                            </button>
-                            <button id="btnRefreshCharts" class="btn btn-info btn-lg">
-                                <i class="fas fa-sync-alt"></i> Actualizar Datos
-                            </button>
                         </div>
                         
-                        <!-- Spinner de carga -->
-                        <div id="loadingSpinner" class="mt-3" style="display: none;">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Cargando...</span>
-                            </div>
-                            <p class="mt-2 text-muted">Procesando...</p>
+                        <div class="d-grid mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg" style="width: 100%; padding: 0.5rem 1rem; background-color: #0d6efd; border-color: #0d6efd; color: white;">
+                                <i class="fas fa-download me-2"></i>Descargar Reporte
+                            </button>
                         </div>
-                    </div>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
-    
-    <!-- Scripts -->
-    <!-- Chart.js para gráficos de estadísticas -->
+
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <script>
-        // Variables globales
-        let chartOfertas, chartUsuarios;
-        
-        // Colores para los gráficos
-        const colors = [
-            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
-            '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0', '#FF6384'
-        ];
-        
-        // Inicializar dashboard al cargar la página
         document.addEventListener('DOMContentLoaded', function() {
-            initializeCharts();
-            setupEventListeners();
-        });
-        
-        // Configurar event listeners
-        function setupEventListeners() {
-            const btnRefresh = document.getElementById('btnRefreshCharts');
-            const btnAcciones = document.getElementById('btnAccionesAutomaticas');
-            const btnReporte = document.getElementById('btnGenerarReporte');
+            // Chart Visualization
+            initCharts();
             
-            if (btnRefresh) btnRefresh.addEventListener('click', refreshAllCharts);
-            if (btnAcciones) btnAcciones.addEventListener('click', ejecutarAccionesAutomaticas);
-            if (btnReporte) btnReporte.addEventListener('click', generarReporte);
-        }
-        
-        // Inicializar todos los gráficos
-        function initializeCharts() {
-            initChartOfertas();
-            initChartUsuarios();
-        }
-        
-        // Gráfico de ofertas por tipo
-        function initChartOfertas() {
-            fetch('/admin/estadisticas/api/grafico-ofertas')
-                .then(response => response.json())
-                .then(data => {
-                    const ctx = document.getElementById('chartOfertas').getContext('2d');
-                    chartOfertas = new Chart(ctx, {
-                        type: 'doughnut',
-                        data: {
-                            labels: data.labels || ['Sin datos'],
-                            datasets: [{
-                                data: data.data || [1],
-                                backgroundColor: colors,
-                                borderWidth: 2,
-                                borderColor: '#fff'
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    position: 'bottom'
-                                }
-                            }
-                        }
-                    });
-                })
-                .catch(error => {
-                    console.error('Error cargando gráfico de ofertas:', error);
-                    // Mostrar gráfico con datos vacíos
-                    const ctx = document.getElementById('chartOfertas').getContext('2d');
-                    chartOfertas = new Chart(ctx, {
-                        type: 'doughnut',
-                        data: {
-                            labels: ['Sin datos'],
-                            datasets: [{
-                                data: [1],
-                                backgroundColor: ['#cccccc']
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false
-                        }
-                    });
-                });
-        }
-        
-        // Gráfico de usuarios por rol
-        function initChartUsuarios() {
-            fetch('/admin/estadisticas/api/grafico-usuarios')
-                .then(response => response.json())
-                .then(data => {
-                    const ctx = document.getElementById('chartUsuarios').getContext('2d');
-                    chartUsuarios = new Chart(ctx, {
-                        type: 'bar',
-                        data: {
-                            labels: data.labels || ['Sin datos'],
-                            datasets: [{
-                                label: 'Cantidad de Usuarios',
-                                data: data.data || [0],
-                                backgroundColor: colors,
-                                borderWidth: 1
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    display: false
-                                }
-                            },
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    ticks: {
-                                        stepSize: 1
-                                    }
-                                }
-                            }
-                        }
-                    });
-                })
-                .catch(error => {
-                    console.error('Error cargando gráfico de usuarios:', error);
-                    // Mostrar gráfico con datos vacíos
-                    const ctx = document.getElementById('chartUsuarios').getContext('2d');
-                    chartUsuarios = new Chart(ctx, {
-                        type: 'bar',
-                        data: {
-                            labels: ['Sin datos'],
-                            datasets: [{
-                                data: [0],
-                                backgroundColor: ['#cccccc']
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false
-                        }
-                    });
-                });
-        }
-        
-        // Actualizar todos los gráficos
-        function refreshAllCharts() {
-            showLoading();
-            window.location.reload(); // Recarga la página para obtener datos frescos
-        }
-        
-        // Ejecutar acciones automáticas
-        function ejecutarAccionesAutomaticas() {
-            if (!confirm('¿Estás seguro de ejecutar las acciones automáticas? Esto puede modificar el estado de las ofertas.')) {
-                return;
+            // Modal Logic
+            const modal = document.getElementById('statsReportModal');
+            const openBtn = document.getElementById('btnOpenReportModal');
+            const closeBtns = document.querySelectorAll('.close-modal-trigger');
+            
+            if(openBtn) {
+                openBtn.onclick = () => {
+                    modal.style.display = 'block';
+                    modal.classList.add('show');
+                };
             }
             
-            showLoading();
-            fetch('/admin/estadisticas/api/acciones-automaticas', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                hideLoading();
-                if (data.success) {
-                    alert(`Acciones ejecutadas exitosamente: ${data.totalAcciones} acciones realizadas`);
-                    setTimeout(() => window.location.reload(), 1000);
-                } else {
-                    alert(data.error || 'Error ejecutando acciones');
-                }
-            })
-            .catch(error => {
-                hideLoading();
-                alert('Error de conexión al ejecutar acciones automáticas');
-                console.error('Error:', error);
+            closeBtns.forEach(btn => {
+                btn.onclick = () => modal.style.display = 'none';
             });
-        }
-        
-        // Generar reporte
-        function generarReporte() {
-            showLoading();
-            fetch('/admin/estadisticas/api/generar-reporte?tipoReporte=general')
-                .then(response => response.json())
+            
+            window.onclick = (e) => {
+                if(e.target == modal) modal.style.display = 'none';
+            };
+
+            // Refresh Button
+            document.getElementById('btnRefreshCharts').onclick = () => window.location.reload();
+        });
+
+        function initCharts() {
+            // Colors config
+            const colors = {
+                primary: ['#667eea', '#764ba2'],
+                info: ['#89f7fe', '#66a6ff'],
+                palette: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF']
+            };
+
+            // Fetch Data for Charts
+            fetch('/admin/estadisticas/api/grafico-ofertas')
+                .then(r => r.json())
                 .then(data => {
-                    hideLoading();
-                    alert('Reporte generado exitosamente');
-                })
-                .catch(error => {
-                    hideLoading();
-                    alert('Error generando reporte');
-                    console.error('Error:', error);
+                    const ctx = document.getElementById('chartOfertas').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: data.labels || [],
+                            datasets: [{
+                                data: data.data || [],
+                                backgroundColor: colors.palette,
+                                borderWidth: 0
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            cutout: '70%',
+                            plugins: {
+                                legend: { position: 'right', labels: { usePointStyle: true } }
+                            }
+                        }
+                    });
                 });
-        }
-        
-        // Mostrar loading
-        function showLoading() {
-            const spinner = document.getElementById('loadingSpinner');
-            if (spinner) spinner.style.display = 'block';
-        }
-        
-        // Ocultar loading
-        function hideLoading() {
-            const spinner = document.getElementById('loadingSpinner');
-            if (spinner) spinner.style.display = 'none';
+
+            fetch('/admin/estadisticas/api/grafico-usuarios')
+                .then(r => r.json())
+                .then(data => {
+                    const ctx = document.getElementById('chartUsuarios').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: data.labels || [],
+                            datasets: [{
+                                label: 'Usuarios',
+                                data: data.data || [],
+                                backgroundColor: '#667eea',
+                                borderRadius: 5
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                y: { beginAtZero: true, grid: { borderDash: [2, 4] } },
+                                x: { grid: { display: false } }
+                            }
+                        }
+                    });
+                });
         }
     </script>
 </div>

@@ -152,8 +152,15 @@ public class EstadisticasService {
      */
     public List<Map<String, Object>> analizarDemandaOfertas() {
         try {
-            List<OfertaAcademica> ofertasActivas = ofertaRepository.findByEstado(EstadoOferta.ACTIVA);
-            
+            List<EstadoOferta> estados = Arrays.asList(EstadoOferta.ACTIVA, EstadoOferta.ENCURSO);
+            List<OfertaAcademica> ofertasActivas = ofertaRepository.findByEstadoIn(estados);
+
+            // Logging para depuración
+            System.out.println("🔍 Ofertas consideradas para demanda: " + ofertasActivas.size());
+            for (OfertaAcademica o : ofertasActivas) {
+                System.out.println("   - Oferta ID: " + o.getIdOferta() + ", estado=" + o.getEstado() + ", nombre=" + o.getNombre());
+            }
+
             List<Map<String, Object>> demandaOfertas = new ArrayList<>();
             
             for (OfertaAcademica oferta : ofertasActivas) {
