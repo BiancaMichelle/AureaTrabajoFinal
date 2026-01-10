@@ -351,6 +351,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         y: {
                             beginAtZero: true,
                             ticks: {
+                                stepSize: 1,
+                                precision: 0,
                                 color: '#64748b',
                                 font: {
                                     size: 12

@@ -30,4 +30,13 @@ public interface InscripcionRepository extends JpaRepository<Inscripciones, Long
     Optional<Inscripciones> findByAlumnoDniAndOfertaId(String dniAlumno, Long idOferta);
 
     List<Inscripciones> findByOfertaIdOferta(Long ofertaId);
+    
+    // Contar inscripciones por rango de fecha
+    long countByFechaInscripcionBetween(java.time.LocalDate inicio, java.time.LocalDate fin);
+
+    // Contar inscripciones activas (finalizaron) en ofertas cerradas
+    long countByOfertaEstadoAndEstadoInscripcionTrue(com.example.demo.enums.EstadoOferta estado);
+
+    // Contar total inscripciones en ofertas cerradas
+    long countByOfertaEstado(com.example.demo.enums.EstadoOferta estado);
 }

@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/adminBase :: layout(~{::title}, ~{::main})}">
 <head>
-    <title>Dashboard Administrativo - Instituto Aurea</title>
+    <title>Panel Administrativo - Instituto Aurea</title>
 </head>
 <body>
 <main class="main-content">
     <header class="main-header">
-        <h1><i class="fas fa-tachometer-alt"></i> Dashboard Administrativo</h1>
+        <h1><i class="fas fa-tachometer-alt"></i> Panel Administrativo</h1>
     </header>
 
     <!-- KPI Cards Section -->
@@ -73,44 +73,13 @@
             <div class="chart-wrapper">
                 <canvas id="ofertasChart"></canvas>
             </div>
-            <div class="chart-stats">
-                <div class="stat-item">
-                    <span class="stat-label">Cursos:</span>
-                    <span class="stat-value" th:text="${totalCursos ?: 0}">0</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-label">Formaciones:</span>
-                    <span class="stat-value" th:text="${totalFormaciones ?: 0}">0</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-label">Seminarios:</span>
-                    <span class="stat-value" th:text="${totalSeminarios ?: 0}">0</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-label">Charlas:</span>
-                    <span class="stat-value" th:text="${totalCharlas ?: 0}">0</span>
-                </div>
-            </div>
+            
         </div>
         
         <div class="chart-container">
             <h3><i class="fas fa-chart-bar"></i> Comparación de Usuarios</h3>
             <div class="chart-wrapper">
                 <canvas id="usuariosChart"></canvas>
-            </div>
-            <div class="chart-stats">
-                <div class="stat-item">
-                    <span class="stat-label">Estudiantes:</span>
-                    <span class="stat-value" th:text="${totalAlumnos}">0</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-label">Docentes:</span>
-                    <span class="stat-value" th:text="${totalDocentes}">0</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-label">Ratio:</span>
-                    <span class="stat-value" th:text="${ratioAlumnosDocentes ?: '0:1'}">0:1</span>
-                </div>
             </div>
         </div>
         
@@ -120,46 +89,28 @@
                 <canvas id="actividadChart"></canvas>
             </div>
         </div>
-        
-        <div class="chart-container">
-            <h3><i class="fas fa-star"></i> Rendimiento General</h3>
-            <div class="performance-metrics">
-                <div class="metric-card">
-                    <div class="metric-number" th:text="${promedioCalificaciones ?: 8.5}">8.5</div>
-                    <div class="metric-label">Promedio de Calificaciones</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-number" th:text="${satisfaccionPromedio ?: 92}">92</div>
-                    <div class="metric-label">% Satisfacción</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-number" th:text="${asistenciaPromedio ?: 87}">87</div>
-                    <div class="metric-label">% Asistencia</div>
-                </div>
-            </div>
-        </div>
     </section>
 
     <!-- Quick Actions Section -->
     <section id="actions-section" class="quick-actions">
         <h2><i class="fas fa-bolt"></i> Acciones Rápidas</h2>
         <div class="actions-grid">
-            <a href="/admin/usuarios" class="action-card">
+            <a th:href="@{/admin/gestion-usuarios}" class="action-card">
                 <i class="fas fa-users"></i>
                 <h4>Gestionar Usuarios</h4>
                 <p>Administrar alumnos y docentes</p>
             </a>
-            <a href="/admin/ofertas" class="action-card">
+            <a th:href="@{/admin/gestion-ofertas}" class="action-card">
                 <i class="fas fa-plus-circle"></i>
                 <h4>Nueva Oferta</h4>
                 <p>Crear curso o formación</p>
             </a>
-            <a href="/admin/reportes" class="action-card">
+            <a th:href="@{/admin/estadisticas}" class="action-card">
                 <i class="fas fa-file-alt"></i>
                 <h4>Generar Reportes</h4>
                 <p>Estadísticas y análisis</p>
             </a>
-            <a href="/admin/configuracion" class="action-card">
+            <a th:href="@{/admin/configuracion}" class="action-card">
                 <i class="fas fa-cog"></i>
                 <h4>Configuración</h4>
                 <p>Ajustes del sistema</p>

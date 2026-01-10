@@ -185,11 +185,11 @@ public class ChatServiceSimple {
         }
         
         String systemPrompt = "Eres un asistente académico inteligente para una plataforma educativa llamada Aurea. " +
-            "Ayudas a estudiantes y docentes con consultas sobre cursos, materiales de estudio, " +
-            "evaluaciones y contenido académico. Responde de forma clara, profesional y educativa. " +
-            "Mantén las respuestas concisas pero informativas. Usa formato markdown cuando sea apropiado.\n\n" +
+            "IMPORTANTE: SOLO responde con información que tengas explícitamente en el contexto a continuación. " +
+            "Si no sabes algo o no está en el contexto, di 'Lo siento, no tengo información sobre eso'. " +
+            "NO inventes cursos, fechas ni datos. NO alucines. NO des información de relleno.\n\n" +
             "INFORMACIÓN PÚBLICA DE LA PLATAFORMA:\n" + contextoOfertas + "\n\n";
-            
+
         if (!contextoUsuario.isEmpty()) {
             systemPrompt += "INFORMACIÓN DEL USUARIO (PRIVADO - NO COMPARTIR CON TERCEROS):\n" + contextoUsuario + "\n" +
                             "NOTA: No tienes acceso a notas, pagos detallados ni contraseñas. Si el usuario pregunta por ello, indica que deben consultar su panel personal.\n";
@@ -261,17 +261,64 @@ public class ChatServiceSimple {
     
     private String obtenerContextoOfertas() {
         try {
-            List<com.example.demo.model.OfertaAcademica> ofertasActivas = ofertaAcademicaRepository.findByEstado(com.example.demo.enums.EstadoOferta.ACTIVA);
+            // Buscamos ofertas ACTIVAS y EN CURSO
+            List<com.example.demo.enums.EstadoOferta> estadosVisibles = Arrays.asList(
+                com.example.demo.enums.EstadoOferta.ACTIVA,
+                com.example.demo.enums.EstadoOferta.ENCURSO
+            );
             
-            if (ofertasActivas.isEmpty()) {
-                return "No hay ofertas académicas activas en este momento.";
+            List<com.example.demo.model.OfertaAcademica> ofertas = ofertaAcademicaRepository.findByEstadoIn(estadosVisibles);
+            
+            if (ofertas.isEmpty()) {
+                return "No hay información de ofertas académicas disponible en este momento.";
             }
             
-            StringBuilder sb = new StringBuilder("Las ofertas académicas activas actualmente son:\n");
-            for (com.example.demo.model.OfertaAcademica oferta : ofertasActivas) {
-                sb.append("- ").append(oferta.getNombre())
-                  .append(" (").append(oferta.getDescripcion()).append(")\n");
+            java.time.LocalDate hoy = java.time.LocalDate.now();
+            Set<String> categorias = new HashSet<>();
+            StringBuilder sb = new StringBuilder("=== CATÁLOGO DE OFERTAS ACADÉMICAS ===\n");
+            
+            // Agrupar por estado para mejor organización
+            List<com.example.demo.model.OfertaAcademica> proximas = new ArrayList<>();
+            List<com.example.demo.model.OfertaAcademica> enCurso = new ArrayList<>();
+            
+            for (com.example.demo.model.OfertaAcademica o : ofertas) {
+                // Recolectar categorías
+                o.getCategorias().forEach(c -> categorias.add(c.getNombre()));
+                
+                if (o.getEstado() == com.example.demo.enums.EstadoOferta.ENCURSO || 
+                   (o.getFechaInicio() != null && !o.getFechaInicio().isAfter(hoy))) {
+                    enCurso.add(o);
+                } else {
+                    proximas.add(o);
+                }
             }
+            
+            if (!proximas.isEmpty()) {
+                sb.append("\n-- PRÓXIMOS INICIOS --\n");
+                for (com.example.demo.model.OfertaAcademica oferta : proximas) {
+                    sb.append("• ").append(oferta.getNombre())
+                      .append(" (Inicia: ").append(oferta.getFechaInicio()).append(")")
+                      .append(" - $").append(oferta.getCostoInscripcion())
+                      .append(" - ").append(oferta.getDescripcion())
+                      .append("\n");
+                }
+            }
+            
+            if (!enCurso.isEmpty()) {
+                sb.append("\n-- EN CURSO / DISPONIBLES --\n");
+                for (com.example.demo.model.OfertaAcademica oferta : enCurso) {
+                    sb.append("• ").append(oferta.getNombre())
+                      .append(" (Estado: ").append(oferta.getEstado()).append(")")
+                       .append(" - ").append(oferta.getDescripcion())
+                      .append("\n");
+                }
+            }
+            
+            sb.append("\n=== INSTRUCCIONES DE RECOMENDACIÓN ===\n")
+              .append("1. Tienes acceso a TODA la lista de ofertas anterior (Próximas y En Curso).\n")
+              .append("2. Si faltan detalles de una oferta específica, indícalo, pero usa la descripción provista.\n")
+              .append("3. Categorías disponibles: ").append(String.join(", ", categorias)).append(".\n");
+            
             return sb.toString();
         } catch (Exception e) {
             System.err.println("Error al obtener contexto de ofertas: " + e.getMessage());
@@ -290,7 +337,7 @@ public class ChatServiceSimple {
             requestBody.put("messages", messages);
             requestBody.put("stream", false);
             requestBody.put("options", Map.of(
-                "temperature", 0.7,
+                "temperature", 0.2,
                 "top_p", 0.9,
                 "num_predict", 512,
                 "stop", Arrays.asList("[INST]", "[/INST]")

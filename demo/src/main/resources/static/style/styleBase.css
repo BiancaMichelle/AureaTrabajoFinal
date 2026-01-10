@@ -171,13 +171,15 @@ ul {
     transition: width 0.3s ease;
 }
 
-.nav-menu-link:hover {
+.nav-menu-link:hover,
+.nav-menu-link.active {
     color: var(--white);
     background: rgba(229, 56, 59, 0.15);
     transform: translateY(-2px);
 }
 
-.nav-menu-link:hover::before {
+.nav-menu-link:hover::before,
+.nav-menu-link.active::before {
     width: 80%;
 }
 

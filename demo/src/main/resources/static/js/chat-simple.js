@@ -66,7 +66,7 @@ class SimpleChat {
                 Chat IA Aurea
                 <button id="close-chat" style="float: right; background: none; border: none; color: white; font-size: 18px; cursor: pointer;">×</button>
             </div>
-            <div id="chat-messages" style="flex: 1; padding: 15px; overflow-y: auto; max-height: 350px;">
+            <div id="chat-messages" style="flex: 1; padding: 15px; overflow-y: auto; max-height: 350px; overflow-wrap: break-word; word-wrap: break-word; word-break: break-word;">
                 <div style="color: #666; font-size: 14px; margin-bottom: 10px;">
                     ¡Hola! Soy tu asistente de IA. ¿En qué puedo ayudarte?
                 </div>

@@ -61,6 +61,8 @@ import com.example.demo.repository.CursoRepository;
 import com.example.demo.repository.DocenteRepository;
 import com.example.demo.repository.FormacionRepository;
 import com.example.demo.repository.HorarioRepository;
+import com.example.demo.repository.InscripcionRepository;
+import com.example.demo.repository.AuditLogRepository;
 import com.example.demo.repository.OfertaAcademicaRepository;
 import com.example.demo.repository.SeminarioRepository;
 import com.example.demo.repository.UsuarioRepository;
@@ -123,6 +125,12 @@ public class AdminController {
 
     @Autowired
     private HorarioRepository horarioRepository;
+    
+    @Autowired
+    private InscripcionRepository inscripcionRepository;
+    
+    @Autowired
+    private AuditLogRepository auditLogRepository;
 
 
     public AdminController(LocacionAPIService locacionApiService,
@@ -133,10 +141,91 @@ public class AdminController {
 
     @GetMapping("/admin/dashboard")
     public String adminDashboard(Model model) {
-        // Obtener estadísticas básicas
+        // 1. Estadísticas de Ofertas
         long totalOfertas = ofertaAcademicaRepository.count();
+        long ofertasActivas = ofertaAcademicaRepository.countByEstado(EstadoOferta.ACTIVA) + 
+                             ofertaAcademicaRepository.countByEstado(EstadoOferta.ENCURSO);
+
+        long totalCursos = cursoRepository.count();
+        long totalFormaciones = formacionRepository.count();
+        long totalSeminarios = seminarioRepository.count();
+        long totalCharlas = charlaRepository.count();
+
+        // 2. Estadísticas de Usuarios
+        List<Usuario> alumnos = usuarioRepository.findByRolesNombre("ALUMNO");
+        long totalAlumnos = alumnos.size();
         
+        List<Usuario> docentes = usuarioRepository.findByRolesNombre("DOCENTE");
+        long totalDocentes = docentes.size();
+
+        String ratio = totalDocentes > 0 ? String.format("%.1f:1", (double) totalAlumnos / totalDocentes) : "0:1";
+
+        // 3. Inscripciones del mes actual
+        LocalDate now = LocalDate.now();
+        LocalDate startOfMonth = now.withDayOfMonth(1);
+        LocalDate endOfMonth = now.withDayOfMonth(now.lengthOfMonth());
+        long inscripcionesMes = inscripcionRepository.countByFechaInscripcionBetween(startOfMonth, endOfMonth);
+
+        // 4. Tasa de Finalización (Alumnos que terminaron / Total inscripciones en ofertas finalizadas)
+        long inscripcionesFinalizadas = inscripcionRepository.countByOfertaEstadoAndEstadoInscripcionTrue(EstadoOferta.FINALIZADA);
+        long totalInscripcionesEnFinalizadas = inscripcionRepository.countByOfertaEstado(EstadoOferta.FINALIZADA);
+        
+        long tasaFinalizacion = totalInscripcionesEnFinalizadas > 0 
+                ? (inscripcionesFinalizadas * 100 / totalInscripcionesEnFinalizadas) 
+                : 0;
+
+        // 5. Actividad Mensual (Últimos 6 meses para gráfica)
+        List<Map<String, Object>> actividadMensual = new ArrayList<>();
+        String[] nombresMeses = {"Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"};
+        
+        for (int i = 5; i >= 0; i--) {
+            LocalDate date = now.minusMonths(i);
+            LocalDate start = date.withDayOfMonth(1);
+            LocalDate end = date.withDayOfMonth(date.lengthOfMonth());
+            long count = inscripcionRepository.countByFechaInscripcionBetween(start, end);
+            
+            Map<String, Object> mesData = new HashMap<>();
+            mesData.put("mes", nombresMeses[date.getMonthValue() - 1]);
+            mesData.put("inscripciones", count);
+            mesData.put("completados", 0); // Dato simulado por falta de fecha fin inscripción
+            actividadMensual.add(mesData);
+        }
+
+        // 6. Actividad Reciente
+        List<com.example.demo.model.AuditLog> logs = auditLogRepository.findRecentLogs(org.springframework.data.domain.PageRequest.of(0, 5)).getContent();
+        List<Map<String, Object>> actividadesRecientes = logs.stream().map(log -> {
+            Map<String, Object> map = new HashMap<>();
+            String accion = log.getAccion() != null ? log.getAccion().toLowerCase() : "";
+            
+            String tipo = "otro";
+            if (accion.contains("alta") || accion.contains("registro") || accion.contains("crear")) tipo = "registro";
+            else if (accion.contains("inscri")) tipo = "inscripcion";
+            else if (accion.contains("finaliz") || accion.contains("complet")) tipo = "completado";
+            
+            map.put("tipo", tipo);
+            map.put("descripcion", log.getDetalles() != null ? log.getDetalles() : log.getAccion());
+            map.put("fechaHora", log.getFecha() + " " + log.getHora());
+            return map;
+        }).collect(Collectors.toList());
+
+        // Pasar al modelo
         model.addAttribute("totalOfertas", totalOfertas);
+        model.addAttribute("ofertasActivas", ofertasActivas);
+        
+        model.addAttribute("totalCursos", totalCursos);
+        model.addAttribute("totalFormaciones", totalFormaciones);
+        model.addAttribute("totalSeminarios", totalSeminarios);
+        model.addAttribute("totalCharlas", totalCharlas);
+
+        model.addAttribute("totalAlumnos", totalAlumnos);
+        model.addAttribute("totalDocentes", totalDocentes);
+        model.addAttribute("ratioAlumnosDocentes", ratio);
+        
+        model.addAttribute("inscripcionesMes", inscripcionesMes);
+        model.addAttribute("tasaFinalizacion", tasaFinalizacion);
+        
+        model.addAttribute("actividadMensual", actividadMensual);
+        model.addAttribute("actividadesRecientes", actividadesRecientes);
         
         return "admin/panelAdmin";
     }

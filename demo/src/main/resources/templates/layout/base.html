@@ -62,33 +62,33 @@
 
             <ul class="nav-menu">
                 <!-- Links para todos -->
-                <li class="nav-menu-item"><a th:href="@{/}" class="nav-menu-link">Inicio</a></li>
+                <li class="nav-menu-item"><a th:href="@{/}" class="nav-menu-link" th:classappend="${currentUri == contextPath + '/'} ? 'active'">Inicio</a></li>
 
                 <!-- Links solo para Administrador -->
                 <li class="nav-menu-item" sec:authorize="hasAuthority('ADMIN')">
-                    <a th:href="@{/admin/dashboard}" class="nav-menu-link">Panel Admin</a>
+                    <a th:href="@{/admin/dashboard}" class="nav-menu-link" th:classappend="${currentUri != null and currentUri.startsWith(contextPath + '/admin')} ? 'active'">Panel Admin</a>
                 </li>
 
                 <!-- Links solo para Alumno -->
                 <li class="nav-menu-item" sec:authorize="hasAuthority('ALUMNO')">
-                    <a th:href="@{/alumno/mi-espacio}" class="nav-menu-link">Mi Espacio</a>
+                    <a th:href="@{/alumno/mi-espacio}" class="nav-menu-link" th:classappend="${currentUri != null and currentUri.startsWith(contextPath + '/alumno/mi-espacio')} ? 'active'">Mi Espacio</a>
                 </li>
                 <li class="nav-menu-item" sec:authorize="hasAuthority('ALUMNO')">
-                    <a th:href="@{/alumno/mis-ofertas}" class="nav-menu-link">Mis Ofertas Académicas</a>
+                    <a th:href="@{/alumno/mis-ofertas}" class="nav-menu-link" th:classappend="${currentUri != null and currentUri.startsWith(contextPath + '/alumno/mis-ofertas')} ? 'active'">Mis Ofertas Académicas</a>
                 </li>
                 <li class="nav-menu-item" sec:authorize="hasAuthority('ALUMNO')">
-                    <a th:href="@{/alumno/mis-pagos}" class="nav-menu-link">Mis Pagos</a>
+                    <a th:href="@{/alumno/mis-pagos}" class="nav-menu-link" th:classappend="${currentUri != null and currentUri.startsWith(contextPath + '/alumno/mis-pagos')} ? 'active'">Mis Pagos</a>
                 </li>
 
                 <!-- Links solo para Docente -->
                 <li class="nav-menu-item" sec:authorize="hasAuthority('DOCENTE')">
-                    <a th:href="@{/docente/mi-espacio}" class="nav-menu-link">Mi Espacio</a>
+                    <a th:href="@{/docente/mi-espacio}" class="nav-menu-link" th:classappend="${currentUri != null and currentUri.startsWith(contextPath + '/docente/mi-espacio')} ? 'active'">Mi Espacio</a>
                 </li>
                 <li class="nav-menu-item" sec:authorize="hasAuthority('DOCENTE')">
-                    <a th:href="@{/docente/mis-ofertas}" class="nav-menu-link">Mis Ofertas Académicas</a>
+                    <a th:href="@{/docente/mis-ofertas}" class="nav-menu-link" th:classappend="${currentUri != null and currentUri.startsWith(contextPath + '/docente/mis-ofertas')} ? 'active'">Mis Ofertas Académicas</a>
                 </li>
                 <li class="nav-menu-item" sec:authorize="hasAuthority('DOCENTE')">
-                    <a th:href="@{/docente/mis-pagos}" class="nav-menu-link">Mis Pagos</a>
+                    <a th:href="@{/docente/mis-pagos}" class="nav-menu-link" th:classappend="${currentUri != null and currentUri.startsWith(contextPath + '/docente/mis-pagos')} ? 'active'">Mis Pagos</a>
                 </li>
                 
                 <!-- Links de Autenticación -->
