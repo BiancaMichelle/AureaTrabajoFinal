@@ -74,6 +74,15 @@
         .modal-footer .btn {
             min-width: 140px;
         }
+
+        /* Overrides for table column widths to match content */
+        #usuarios-table th:nth-child(1), #usuarios-table td:nth-child(1) { width: 10% !important; } /* DNI */
+        #usuarios-table th:nth-child(2), #usuarios-table td:nth-child(2) { width: 25% !important; } /* Nombre */
+        #usuarios-table th:nth-child(3), #usuarios-table td:nth-child(3) { width: 20% !important; } /* Correo */
+        #usuarios-table th:nth-child(4), #usuarios-table td:nth-child(4) { width: 15% !important; } /* Roles */
+        #usuarios-table th:nth-child(5), #usuarios-table td:nth-child(5) { width: 10% !important; } /* Estado */
+        #usuarios-table th:nth-child(6), #usuarios-table td:nth-child(6) { width: 10% !important; } /* Fecha */
+        #usuarios-table th:nth-child(7), #usuarios-table td:nth-child(7) { width: 10% !important; } /* Acciones */
     </style>
 </head>
 <body>
@@ -454,7 +463,7 @@
             </div>
             
             <div class="table-container">
-                <table id="usuarios-table" class="data-table">
+                <table id="usuarios-table" class="ofertas-table">
                     <thead>
                         <tr>
                             <th>DNI</th>

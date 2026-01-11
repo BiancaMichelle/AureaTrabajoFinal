@@ -281,7 +281,7 @@ body {
 /* =================   SIDEBAR   ================= */
 .sidebar {
     width: var(--sidebar-width);
-    background: linear-gradient(135deg, var(--sidebar-bg) 0%, #232940 100%);
+    background: var(--sidebar-bg); /* linear-gradient removed */
     height: 100vh;
     position: fixed;
     top: 0;
@@ -309,7 +309,7 @@ body {
 .sidebar-logo {
     width: 48px;
     height: 48px;
-    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    background: var(--primary-color);
     border-radius: 12px;
     display: flex;
     align-items: center;
@@ -326,7 +326,7 @@ body {
 }
 
 .sidebar-logo:hover {
-    background: linear-gradient(135deg, var(--primary-hover), var(--accent-color));
+    background: var(--primary-hover);
     transform: scale(1.05);
     box-shadow: var(--shadow-lg);
     color: white;
@@ -407,7 +407,7 @@ body {
 }
 
 .sidebar-nav a.active {
-    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    background: var(--primary-color);
     color: white;
     box-shadow: var(--shadow-md);
 }
@@ -446,7 +446,7 @@ body {
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    background: var(--primary-color);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -530,7 +530,7 @@ body {
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+    background: var(--primary-color);
 }
 
 .kpi-content {
@@ -659,7 +659,7 @@ body {
 .metric-card {
     text-align: center;
     padding: 1.5rem 1rem;
-    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+    background: #f8fafc;
     border-radius: 12px;
     border: 1px solid var(--border-color);
 }
@@ -780,7 +780,7 @@ body {
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    background: var(--primary-color);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -909,7 +909,7 @@ body {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+    background: var(--primary-color);
     color: white;
     padding: 1rem 2rem;
     border: none;
@@ -1000,7 +1000,7 @@ body {
 }
 
 .form-header {
-    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    background: var(--primary-color);
     color: white;
     padding: 1.5rem 2rem;
     display: flex;
@@ -1127,7 +1127,7 @@ body {
 }
 
 .btn-add-item {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #667eea;
     color: white;
     border: none;
     border-radius: 50%;
@@ -1165,7 +1165,7 @@ body {
 }
 
 .btn-add-horario {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    background: #10b981;
     color: white;
     border: none;
     border-radius: 8px;
@@ -1199,7 +1199,7 @@ body {
 }
 
 .horario-chip {
-    background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+    background: #3b82f6;
     color: white;
     padding: 12px 16px;
     border-radius: 12px;
@@ -1498,7 +1498,7 @@ body {
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
-    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    background: var(--primary-color);
     color: white;
     border-radius: 20px;
     font-size: 0.75rem;
@@ -1542,51 +1542,51 @@ body {
 
 /* Colores específicos para chips de categorías */
 .category-chip[data-category="programacion"] {
-    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    background: #3b82f6;
 }
 
 .category-chip[data-category="diseno"] {
-    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    background: #8b5cf6;
 }
 
 .category-chip[data-category="marketing"] {
-    background: linear-gradient(135deg, #06b6d4, #0891b2);
+    background: #06b6d4;
 }
 
 .category-chip[data-category="administracion"] {
-    background: linear-gradient(135deg, #10b981, #059669);
+    background: #10b981;
 }
 
 .category-chip[data-category="idiomas"] {
-    background: linear-gradient(135deg, #f59e0b, #d97706);
+    background: #f59e0b;
 }
 
 .category-chip[data-category="oficios"] {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
+    background: #ef4444;
 }
 
 .category-chip[data-category="salud"] {
-    background: linear-gradient(135deg, #ec4899, #db2777);
+    background: #ec4899;
 }
 
 .category-chip[data-category="tecnologia"] {
-    background: linear-gradient(135deg, #64748b, #475569);
+    background: #64748b;
 }
 
 .category-chip[data-category="finanzas"] {
-    background: linear-gradient(135deg, #16a34a, #15803d);
+    background: #16a34a;
 }
 
 .category-chip[data-category="educacion"] {
-    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    background: #2563eb;
 }
 
 .category-chip[data-category="arte"] {
-    background: linear-gradient(135deg, #ea580c, #c2410c);
+    background: #ea580c;
 }
 
 .category-chip[data-category="gastronomia"] {
-    background: linear-gradient(135deg, #7c2d12, #92400e);
+    background: #7c2d12;
 }
 
 /* Horarios */
@@ -1731,7 +1731,7 @@ body {
 }
 
 .data-table th, .mini-table th {
-    background: linear-gradient(135deg, #2563eb, #1e40af);
+    background: #2563eb;
     padding: 1.5rem 1rem;
     text-align: center;
     font-weight: 700;
@@ -1784,7 +1784,7 @@ body {
 }
 
 .data-table th:hover {
-    background: linear-gradient(135deg, #1d4ed8, #1e3a8a);
+    background: #1d4ed8;
     transform: translateY(-1px);
 }
 
@@ -1828,7 +1828,7 @@ body {
 }
 
 .data-table tbody tr:hover, .mini-table tbody tr:hover {
-    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+    background: #f8fafc;
     transform: translateY(-2px);
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
     z-index: 1;
@@ -1990,12 +1990,12 @@ body {
 }
 
 .table-container::-webkit-scrollbar-thumb {
-    background: linear-gradient(135deg, #cbd5e1, #94a3b8);
+    background: #cbd5e1;
     border-radius: 4px;
 }
 
 .table-container::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(135deg, #94a3b8, #64748b);
+    background: #94a3b8;
 }
 
 /* Status badges */
@@ -2023,61 +2023,61 @@ body {
 }
 
 .status-curso {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(37, 99, 235, 0.1));
+    background: rgba(59, 130, 246, 0.1);
     color: #1e40af;
     border-color: rgba(59, 130, 246, 0.2);
 }
 
 .status-formacion {
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1));
+    background: rgba(16, 185, 129, 0.1);
     color: #047857;
     border-color: rgba(16, 185, 129, 0.2);
 }
 
 .status-seminario {
-    background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.1));
+    background: rgba(245, 158, 11, 0.1);
     color: #92400e;
     border-color: rgba(245, 158, 11, 0.2);
 }
 
 .status-charla {
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(124, 58, 237, 0.1));
+    background: rgba(139, 92, 246, 0.1);
     color: #6d28d9;
     border-color: rgba(139, 92, 246, 0.2);
 }
 
 .status-online {
-    background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(8, 145, 178, 0.1));
+    background: rgba(6, 182, 212, 0.1);
     color: #0891b2;
     border-color: rgba(6, 182, 212, 0.2);
 }
 
 .status-presencial {
-    background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(22, 163, 74, 0.1));
+    background: rgba(34, 197, 94, 0.1);
     color: #15803d;
     border-color: rgba(34, 197, 94, 0.2);
 }
 
 .status-hibrida {
-    background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(147, 51, 234, 0.1));
+    background: rgba(168, 85, 247, 0.1);
     color: #7c3aed;
     border-color: rgba(168, 85, 247, 0.2);
 }
 
 .status-activa {
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1));
+    background: rgba(16, 185, 129, 0.1);
     color: #047857;
     border-color: rgba(16, 185, 129, 0.2);
 }
 
 .status-inactiva {
-    background: linear-gradient(135deg, rgba(107, 114, 128, 0.1), rgba(75, 85, 99, 0.1));
+    background: rgba(107, 114, 128, 0.1);
     color: #4b5563;
     border-color: rgba(107, 114, 128, 0.2);
 }
 
 .status-finalizada {
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.1));
+    background: rgba(239, 68, 68, 0.1);
     color: #dc2626;
     border-color: rgba(239, 68, 68, 0.2);
 }
@@ -2120,7 +2120,7 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0));
+    background: rgba(255, 255, 255, 0.1);
     opacity: 0;
     transition: opacity 0.3s ease;
 }
@@ -2130,13 +2130,13 @@ body {
 }
 
 .btn-edit {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(37, 99, 235, 0.1));
+    background: rgba(59, 130, 246, 0.1);
     color: #1e40af;
     border-color: rgba(59, 130, 246, 0.2);
 }
 
 .btn-edit:hover {
-    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    background: #3b82f6;
     color: white;
     transform: translateY(-2px);
     box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
@@ -2144,13 +2144,13 @@ body {
 }
 
 .btn-view {
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1));
+    background: rgba(16, 185, 129, 0.1);
     color: #047857;
     border-color: rgba(16, 185, 129, 0.2);
 }
 
 .btn-view:hover {
-    background: linear-gradient(135deg, #10b981, #059669);
+    background: #10b981;
     color: white;
     transform: translateY(-2px);
     box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
@@ -2158,13 +2158,13 @@ body {
 }
 
 .btn-delete {
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.1));
+    background: rgba(239, 68, 68, 0.1);
     color: #dc2626;
     border-color: rgba(239, 68, 68, 0.2);
 }
 
 .btn-delete:hover {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
+    background: #ef4444;
     color: white;
     transform: translateY(-2px);
     box-shadow: 0 8px 25px rgba(239, 68, 68, 0.3);
@@ -2279,7 +2279,7 @@ body {
 }
 
 .btn-submit {
-    background: linear-gradient(135deg, var(--success-color), #22c55e);
+    background: var(--success-color);
     color: white;
     border: none;
     padding: 0.75rem 2rem;
@@ -2460,13 +2460,13 @@ body {
 }
 
 .notification-success {
-    background: linear-gradient(135deg, #d4edda, #c3e6cb);
+    background: #d4edda;
     border-left: 4px solid #28a745;
     color: #155724;
 }
 
 .notification-error {
-    background: linear-gradient(135deg, #f8d7da, #f1b6ba);
+    background: #f8d7da;
     border-left: 4px solid #dc3545;
     color: #721c24;
 }
@@ -2559,19 +2559,19 @@ body {
 
 /* Colores específicos para chips de roles */
 .category-chip[data-role="alumno"] {
-    background: linear-gradient(135deg, #3498db, #2980b9);
+    background: #3498db;
 }
 
 .category-chip[data-role="docente"] {
-    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    background: #2ecc71;
 }
 
 .category-chip[data-role="admin"] {
-    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    background: #e74c3c;
 }
 
 .category-chip[data-role="coordinador"] {
-    background: linear-gradient(135deg, #9b59b6, #8e44ad);
+    background: #9b59b6;
 }
 
 /* Estados de usuario */
@@ -2937,7 +2937,7 @@ html, body {
 
 /* Botón de subida */
 .btn-upload {
-    background: linear-gradient(135deg, var(--success-color), #22c55e);
+    background: var(--success-color);
     color: white;
     border: none;
     padding: 0.75rem 2rem;
@@ -3491,7 +3491,7 @@ textarea.form-control:focus {
     display: flex;
     justify-content: between;
     align-items: center;
-    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    background: var(--primary-color);
     color: white;
     border-radius: 12px 12px 0 0;
 }
@@ -3558,7 +3558,7 @@ textarea.form-control:focus {
 .modal-separator {
     border: none;
     height: 1px;
-    background: linear-gradient(to right, transparent, var(--border-color), transparent);
+    background: var(--border-color);
     margin: 2rem 0;
 }
 
@@ -4009,7 +4009,7 @@ textarea.form-control:focus {
 
 /* Encabezados de la tabla */
 .ofertas-table thead {
-    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    background: var(--primary-color);
 }
 
 .ofertas-table th {
@@ -4179,7 +4179,7 @@ textarea.form-control:focus {
 .data-table thead,
 .mini-table thead,
 .table.table-striped thead {
-    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    background: var(--primary-color);
 }
 
 .data-table th,
@@ -4820,7 +4820,7 @@ textarea.form-control:focus {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #667eea;
     color: white;
     padding: 6px 12px;
     border-radius: 20px;
@@ -5272,37 +5272,37 @@ textarea.form-control:focus {
 }
 
 .status-badge.success {
-    background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+    background: #d1fae5;
     color: #065f46;
     border-color: #a7f3d0;
 }
 
 .status-badge.error {
-    background: linear-gradient(135deg, #fee2e2, #fca5a5);
+    background: #fee2e2;
     color: #7f1d1d;
     border-color: #fca5a5;
 }
 
 .status-badge.admin {
-    background: linear-gradient(135deg, #ede9fe, #c4b5fd);
+    background: #ede9fe;
     color: #581c87;
     border-color: #c4b5fd;
 }
 
 .status-badge.docente {
-    background: linear-gradient(135deg, #dbeafe, #93c5fd);
+    background: #dbeafe;
     color: #1e3a8a;
     border-color: #93c5fd;
 }
 
 .status-badge.alumno {
-    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    background: #fef3c7;
     color: #92400e;
     border-color: #fde68a;
 }
 
 .status-badge.default {
-    background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+    background: #f1f5f9;
     color: #475569;
     border-color: #cbd5e1;
 }
@@ -5521,7 +5521,7 @@ textarea.form-control:focus {
 
 /* =================   ESTADÍSTICAS DASHBOARD   ================= */
 .stats-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #667eea;
     border: none;
     color: white;
     transition: all 0.3s ease;
@@ -5532,15 +5532,7 @@ textarea.form-control:focus {
 }
 
 .stats-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
-    opacity: 0;
-    transition: opacity 0.3s ease;
+    display: none;
 }
 
 .stats-card:hover {
