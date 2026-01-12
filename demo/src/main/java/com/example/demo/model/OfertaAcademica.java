@@ -110,11 +110,11 @@ public class OfertaAcademica {
      * Devuelve el tipo específico de oferta para mostrar en la tabla
      */
     public String getTipoOferta() {
-        if (this instanceof Curso) return "CURSO";
-        if (this instanceof Formacion) return "FORMACION"; 
-        if (this instanceof Seminario) return "SEMINARIO";
-        if (this instanceof Charla) return "CHARLA";
-        return "GENERAL";
+        if (this instanceof Curso) return "Curso";
+        if (this instanceof Formacion) return "Formación"; 
+        if (this instanceof Seminario) return "Seminario";
+        if (this instanceof Charla) return "Charla";
+        return "General";
     }
     
     /**
@@ -129,10 +129,10 @@ public class OfertaAcademica {
      */
     public String getIconoTipo() {
         switch (getTipoOferta()) {
-            case "CURSO": return "fas fa-book";
-            case "FORMACION": return "fas fa-graduation-cap";
-            case "SEMINARIO": return "fas fa-users";
-            case "CHARLA": return "fas fa-microphone";
+            case "Curso": return "fas fa-book";
+            case "Formación": return "fas fa-graduation-cap";
+            case "Seminario": return "fas fa-users";
+            case "Charla": return "fas fa-microphone";
             default: return "fas fa-folder";
         }
     }

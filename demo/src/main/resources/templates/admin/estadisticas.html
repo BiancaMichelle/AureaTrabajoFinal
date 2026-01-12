@@ -267,7 +267,7 @@
             <div class="col-lg-6 mb-4">
                 <div class="metric-card">
                     <div class="card-header">
-                        <span>Ofertas por Tipo</span>
+                        <span>Ofertas Activas por Tipo</span>
                         <select id="ofertasPeriodo" class="form-select form-select-sm w-auto">
                             <option value="year">Este Año</option>
                             <option value="all">Histórico</option>
@@ -362,6 +362,7 @@
                 </div>
                 <div class="modal-body p-4">
                     <form id="statsReportForm" action="/admin/reportes/ofertas/descargar" method="get">
+                        <input type="hidden" name="tipoReporte" value="estadistico">
                         <div class="mb-4">
                             <label class="form-section-label">Formato de Salida</label>
                             <div class="d-flex gap-2">
@@ -499,7 +500,13 @@
                             maintainAspectRatio: false,
                             plugins: { legend: { display: false } },
                             scales: {
-                                y: { beginAtZero: true, grid: { borderDash: [2, 4] } },
+                                y: { 
+                                    beginAtZero: true, 
+                                    grid: { borderDash: [2, 4] },
+                                    ticks: {
+                                        precision: 0 // Asegura números enteros
+                                    }
+                                },
                                 x: { grid: { display: false } }
                             }
                         }

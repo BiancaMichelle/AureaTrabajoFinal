@@ -41,6 +41,7 @@ public class ReporteController {
             @RequestParam(required = false) Long categoriaId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
+            @RequestParam(required = false, defaultValue = "ofertas") String tipoReporte,
             HttpServletRequest request
     ) throws Exception {
         
@@ -52,12 +53,17 @@ public class ReporteController {
 
         if ("excel".equalsIgnoreCase(formato)) {
             stream = reporteService.generarReporteExcel(ofertas);
-            filename = "reporte_ofertas.xlsx";
+            filename = "reporte_" + tipoReporte + ".xlsx";
             mediaType = MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         } else {
             // Default to PDF
-            stream = reporteService.generarReportePDF(ofertas);
-            filename = "reporte_ofertas.pdf";
+            if ("estadistico".equalsIgnoreCase(tipoReporte)) {
+                stream = reporteService.generarReporteEstadisticoPDF(ofertas, fechaInicio, fechaFin);
+                filename = "reporte_estadistico.pdf";
+            } else {
+                stream = reporteService.generarReportePDF(ofertas);
+                filename = "reporte_ofertas.pdf";
+            }
             mediaType = MediaType.APPLICATION_PDF;
         }
         

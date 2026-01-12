@@ -312,27 +312,13 @@ public class EstadisticasService {
      */
     private Map<String, Long> obtenerOfertasPorTipo() {
         try {
-            Map<String, Long> ofertasPorTipo = new HashMap<>();
+            // Obtener todas las ofertas activas y en curso
+            List<EstadoOferta> estados = Arrays.asList(EstadoOferta.ACTIVA, EstadoOferta.ENCURSO);
+            List<OfertaAcademica> ofertasActivas = ofertaRepository.findByEstadoIn(estados);
             
-            // Obtener todas las ofertas activas
-            List<OfertaAcademica> ofertasActivas = ofertaRepository.findByEstado(EstadoOferta.ACTIVA);
-            
-            // Contar por cada categoría
-            for (OfertaAcademica oferta : ofertasActivas) {
-                if (oferta.getCategorias() != null && !oferta.getCategorias().isEmpty()) {
-                    for (Categoria categoria : oferta.getCategorias()) {
-                        String nombreCategoria = categoria.getNombre();
-                        ofertasPorTipo.put(nombreCategoria, 
-                            ofertasPorTipo.getOrDefault(nombreCategoria, 0L) + 1L);
-                    }
-                } else {
-                    // Ofertas sin categoría
-                    ofertasPorTipo.put("Sin categoría", 
-                        ofertasPorTipo.getOrDefault("Sin categoría", 0L) + 1L);
-                }
-            }
-            
-            return ofertasPorTipo;
+            // Agrupar por el método getTipoOferta() que devuelve "Curso", "Formación", etc.
+            return ofertasActivas.stream()
+                .collect(Collectors.groupingBy(OfertaAcademica::getTipoOferta, Collectors.counting()));
             
         } catch (Exception e) {
             System.err.println("Error en obtenerOfertasPorTipo: " + e.getMessage());
