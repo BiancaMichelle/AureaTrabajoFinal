@@ -19,4 +19,7 @@ public interface CursoRepository extends JpaRepository<Curso, Long> {
     Optional<Curso> findByIdOferta(Long idOferta);
     @Query("SELECT c FROM Curso c JOIN c.docentes d WHERE d.id = :docenteId")
     List<Curso> findByDocentesId(@Param("docenteId") UUID docenteId);
+
+    // Método derivado estándar de Spring Data JPA (más seguro que @Query manual para boolean)
+    long countByDocentesIdAndEstadoIn(UUID docenteId, List<EstadoOferta> estados);
 }

@@ -401,37 +401,39 @@ if (typeof window.AIChat === 'undefined') {
         }
     }
     
-    async clearChat() {
-        if (!confirm('¿Estás seguro de que quieres limpiar el chat?')) {
-            return;
-        }
-        
-        try {
-            if (this.sessionId) {
-                await fetch(`/ia/chat/session/${this.sessionId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
+    clearChat() {
+        ModalConfirmacion.show(
+            'Limpiar Chat',
+            '¿Estás seguro de que quieres limpiar el chat?',
+            async () => {
+                try {
+                    if (this.sessionId) {
+                        await fetch(`/ia/chat/session/${this.sessionId}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        });
                     }
-                });
+                    
+                    if (this.messagesContainer) {
+                        this.messagesContainer.innerHTML = `
+                            <div class="ai-welcome-message">
+                                <h4><i class="fas fa-brain"></i> Chat limpiado</h4>
+                                <p>Puedes empezar una nueva conversación.</p>
+                            </div>
+                        `;
+                    }
+                    
+                    // Inicializar nueva sesión
+                    await this.initializeSession();
+                    
+                } catch (error) {
+                    console.error('Error limpiando chat:', error);
+                    this.showErrorMessage('Error limpiando el chat');
+                }
             }
-            
-            if (this.messagesContainer) {
-                this.messagesContainer.innerHTML = `
-                    <div class="ai-welcome-message">
-                        <h4><i class="fas fa-brain"></i> Chat limpiado</h4>
-                        <p>Puedes empezar una nueva conversación.</p>
-                    </div>
-                `;
-            }
-            
-            // Inicializar nueva sesión
-            await this.initializeSession();
-            
-        } catch (error) {
-            console.error('Error limpiando chat:', error);
-            this.showErrorMessage('Error limpiando el chat');
-        }
+        );
     }
     
     scrollToBottom() {

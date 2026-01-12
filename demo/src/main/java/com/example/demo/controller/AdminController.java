@@ -17,6 +17,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -48,6 +49,7 @@ import com.example.demo.model.Curso;
 import com.example.demo.model.Docente;
 import com.example.demo.model.Formacion;
 import com.example.demo.model.Horario;
+import com.example.demo.model.Inscripciones;
 import com.example.demo.model.Instituto;
 import com.example.demo.model.OfertaAcademica;
 import com.example.demo.model.Pais;
@@ -432,7 +434,7 @@ public class AdminController {
                 // Intentar dar de alta
                 exito = oferta.darDeAlta();
                 if (!exito) {
-                    mensajeError = "No se puede activar la oferta. Verifique que las fechas sean válidas (Fecha fin debe ser futura).";
+                    mensajeError = "No se puede activar: La fecha de inicio no debe ser anterior a hoy y la fecha fin debe ser futura.";
                     motivoCodigo = "VALIDACION_ALTA";
                 } else {
                     System.out.println("🟢 Cambiando a " + oferta.getEstado());
@@ -646,9 +648,14 @@ public class AdminController {
     public ResponseEntity<List<Map<String, Object>>> buscarDocentes(@RequestParam(value = "q", defaultValue = "") String query) {
         try {
             // Si la query está vacía, devolver todos los docentes
-            List<Docente> docentes = query.trim().isEmpty() ? 
+            List<Docente> todosDocentes = query.trim().isEmpty() ? 
                 docenteRepository.findAllDocentes() : 
                 docenteRepository.buscarPorNombreApellidoOMatricula(query);
+            
+            // FILTRAR SOLO DOCENTES ACTIVOS
+            List<Docente> docentes = todosDocentes.stream()
+                .filter(d -> Boolean.TRUE.equals(d.isEstado()))
+                .collect(Collectors.toList());
             
             List<Map<String, Object>> resultado = new ArrayList<>();
             
@@ -1250,7 +1257,7 @@ public class AdminController {
             @RequestParam(required = false) String enlace) {
         
         try {
-            System.out.println("🔄 MODIFICACIÓN DE OFERTA INICIADA");
+            System.out.println("MODIFICACIÓN DE OFERTA INICIADA");
             System.out.println("ID Oferta: " + idOferta);
             System.out.println("Tipo: " + tipoOferta);
             System.out.println("Nombre: " + nombre);
@@ -1280,7 +1287,7 @@ public class AdminController {
             if (!ofertaExistente.puedeSerEditada()) {
                 Map<String, Object> errorResponse = new HashMap<>();
                 errorResponse.put("success", false);
-                errorResponse.put("message", "No se puede modificar esta oferta porque ya finalizó o tiene inscripciones activas");
+                errorResponse.put("message", "No se puede modificar una oferta finalizada");
                 return ResponseEntity.badRequest().body(errorResponse);
             }
             
@@ -1466,7 +1473,7 @@ public class AdminController {
             ofertaModificada = ofertaAcademicaRepository.save(ofertaExistente);
             
             if (ofertaModificada != null) {
-                System.out.println("✅ Oferta modificada exitosamente: " + ofertaModificada.getNombre());
+                System.out.println("Oferta modificada exitosamente: " + ofertaModificada.getNombre());
                 
                 Map<String, Object> response = new HashMap<>();
                 response.put("success", true);
@@ -1582,7 +1589,7 @@ public class AdminController {
             @RequestParam(required = false) String ultimosEstudios) {
         
         try {
-            System.out.println("📝 Registrando usuario desde admin:");
+            System.out.println("Registrando usuario desde admin:");
             System.out.println("   - DNI: " + dni);
             System.out.println("   - Nombre: " + nombre);
             System.out.println("   - Apellido: " + apellido);
@@ -1619,13 +1626,13 @@ public class AdminController {
                     horariosList = objectMapper.readValue(horariosDisponibilidad, 
                         objectMapper.getTypeFactory().constructCollectionType(List.class, Map.class));
                     
-                    System.out.println("📅 Horarios procesados: " + horariosList.size());
+                    System.out.println("Horarios procesados: " + horariosList.size());
                     for (Map<String, String> horario : horariosList) {
                         System.out.println("   - " + horario.get("diaSemana") + ": " + 
                                         horario.get("horaInicio") + " - " + horario.get("horaFin"));
                     }
                 } catch (Exception e) {
-                    System.out.println("⚠️ Error parseando horarios: " + e.getMessage());
+                    System.out.println("Error parseando horarios: " + e.getMessage());
                 }
             }
 
@@ -1651,7 +1658,7 @@ public class AdminController {
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
-            System.out.println("❌ Error al registrar usuario desde admin: " + e.getMessage());
+            System.out.println("Error al registrar usuario desde admin: " + e.getMessage());
             e.printStackTrace();
             
             Map<String, Object> response = new HashMap<>();
@@ -1765,11 +1772,24 @@ public class AdminController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
             }
 
+            // Validar que no se elimine a sí mismo
+            String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+            // currentUsername es el DNI según CustomUsuarioDetails
+            if (usuarioOpt.get().getDni().equals(currentUsername)) {
+                response.put("success", false);
+                response.put("message", "No puedes dar de baja a tu propia cuenta de usuario.");
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+            }
+
             registroService.eliminarUsuarioAdministrativo(usuarioOpt.get());
 
             response.put("success", true);
-            response.put("message", "Usuario eliminado correctamente");
+            response.put("message", "Usuario dado de baja correctamente");
             return ResponseEntity.ok(response);
+        } catch (IllegalStateException ex) {
+            response.put("success", false);
+            response.put("message", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
         } catch (DataIntegrityViolationException ex) {
             response.put("success", false);
             response.put("message", "El usuario no puede eliminarse porque tiene registros asociados");
@@ -1777,6 +1797,32 @@ public class AdminController {
         } catch (Exception e) {
             response.put("success", false);
             response.put("message", "Error al eliminar usuario: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @PutMapping("/admin/usuarios/{identificador}/reactivar")
+    @Auditable(action = "REACTIVAR_USUARIO", entity = "Usuario")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> reactivarUsuario(@PathVariable String identificador) {
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            Optional<Usuario> usuarioOpt = buscarUsuarioPorIdentificador(identificador);
+            if (usuarioOpt.isEmpty()) {
+                response.put("success", false);
+                response.put("message", "Usuario no encontrado");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            }
+
+            registroService.reactivarUsuarioAdministrativo(usuarioOpt.get());
+
+            response.put("success", true);
+            response.put("message", "Usuario reactivado correctamente");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "Error al reactivar usuario: " + e.getMessage());
             return ResponseEntity.badRequest().body(response);
         }
     }
@@ -1929,6 +1975,71 @@ public class AdminController {
         data.put("estado", usuario.getEstado());
         data.put("estadoBoolean", usuario.isEstado());
         data.put("fechaRegistro", usuario.getFechaRegistro());
+
+        // Lógica de validación para baja
+        boolean canBeDeleted = true;
+        List<String> warnings = new ArrayList<>();
+        String blockingReason = null;
+
+        // Validar si el usuario es el mismo que está logueado
+        String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+        // currentUsername es el DNI
+        if (usuario.getDni().equals(currentUsername)) {
+            canBeDeleted = false;
+            blockingReason = "No puedes dar de baja a tu propia cuenta de usuario.";
+        }
+
+        // Validar si es Admin
+        boolean esAdmin = usuario.getRoles().stream().anyMatch(r -> "ADMIN".equals(r.getNombre()));
+        if (esAdmin) {
+            warnings.add("Este usuario es ADMINISTRADOR. Tenga cuidado al darlo de baja.");
+        }
+
+        if (usuario instanceof Alumno) {
+            Alumno alumno = (Alumno) usuario;
+            data.put("colegioEgreso", alumno.getColegioEgreso());
+            data.put("añoEgreso", alumno.getAñoEgreso());
+            data.put("ultimosEstudios", alumno.getUltimosEstudios());
+            
+            // Validar inscripciones activas
+            List<Inscripciones> inscripciones = inscripcionRepository.findByAlumno(alumno);
+            long activas = inscripciones.stream().filter(i -> Boolean.TRUE.equals(i.getEstadoInscripcion())).count();
+            if (activas > 0) {
+                warnings.add("El alumno tiene " + activas + " inscripción(es) activa(s). Se recomienda verificar antes de dar de baja.");
+            }
+        }
+
+        if (usuario instanceof Docente) {
+            Docente docente = (Docente) usuario;
+            data.put("matricula", docente.getMatricula());
+            data.put("experiencia", docente.getAñosExperiencia());
+
+            // Validar cursos activos
+            List<Curso> cursos = cursoRepository.findByDocentesId(docente.getId());
+            for (Curso curso : cursos) {
+                if (curso.getEstado() == EstadoOferta.ACTIVA || curso.getEstado() == EstadoOferta.ENCURSO) {
+                    // REGLA ESTRICTA: Si está en un curso activo, BLOQUEAR.
+                    canBeDeleted = false;
+                    blockingReason = "No se puede dar de baja: El docente está asignado al curso activo '" + curso.getNombre() + "'.";
+                    break;
+                }
+            }
+
+            if (docente.getHorario() != null) {
+                List<Map<String, Object>> horarios = docente.getHorario().stream().map(horario -> {
+                    Map<String, Object> horarioMap = new HashMap<>();
+                    horarioMap.put("diaSemana", horario.getDia() != null ? horario.getDia().name() : null);
+                    horarioMap.put("horaInicio", horario.getHoraInicio() != null ? horario.getHoraInicio().toString().substring(0, 5) : null);
+                    horarioMap.put("horaFin", horario.getHoraFin() != null ? horario.getHoraFin().toString().substring(0, 5) : null);
+                    return horarioMap;
+                }).collect(Collectors.toList());
+                data.put("horariosDisponibilidad", horarios);
+            }
+        }
+        
+        data.put("canBeDeleted", canBeDeleted);
+        data.put("warnings", warnings);
+        data.put("blockingReason", blockingReason);
 
         List<String> rolesRaw = usuario.getRoles().stream()
                 .map(Rol::getNombre)

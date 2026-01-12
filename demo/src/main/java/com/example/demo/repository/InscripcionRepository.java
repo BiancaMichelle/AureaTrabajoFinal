@@ -39,4 +39,6 @@ public interface InscripcionRepository extends JpaRepository<Inscripciones, Long
 
     // Contar total inscripciones en ofertas cerradas
     long countByOfertaEstado(com.example.demo.enums.EstadoOferta estado);
+
+    boolean existsByAlumnoAndEstadoInscripcionTrue(Usuario alumno);
 }

@@ -224,8 +224,7 @@ public class OfertaAcademica {
      * Verifica si la oferta puede ser editada
      */
     public Boolean puedeSerEditada() {
-        return estado != EstadoOferta.FINALIZADA && 
-               estado != EstadoOferta.DE_BAJA;
+        return estado != EstadoOferta.FINALIZADA;
     }
     /**
      * Verifica si puede ser eliminada
@@ -265,7 +264,7 @@ public class OfertaAcademica {
      * Verifica si la oferta puede cambiar de estado (dar de baja/alta)
      */
     public Boolean puedeCambiarEstado() {
-        return estado != EstadoOferta.FINALIZADA && estado != EstadoOferta.DE_BAJA;
+        return estado != EstadoOferta.FINALIZADA;
     }
 
     /**
@@ -372,9 +371,15 @@ public class OfertaAcademica {
      */
     public Boolean darDeAlta() {
         LocalDate hoy = LocalDate.now();
+        
+        // Validación: La fecha de inicio no debe ser anterior a hoy
+        if (fechaInicio != null && fechaInicio.isBefore(hoy)) {
+            return false;
+        }
+
         // Determinar el estado correcto basado en la fecha
         if (fechaInicio != null && !fechaInicio.isAfter(hoy)) {
-            // Si ya comenzó, intentamos ponerla EN CURSO
+            // Si ya comenzó (solo HOY, pues anteriores se filtran arriba), intentamos ponerla EN CURSO
             return cambiarEstado(EstadoOferta.ENCURSO);
         }
         // Si es futura, ACTIVA

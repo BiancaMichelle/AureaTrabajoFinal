@@ -581,23 +581,48 @@
                 document.getElementById('btnGuardarText').textContent = 'Crear Categoría';
             },
 
-            async eliminarCategoria(id) {
-                if (!confirm('¿Estás seguro de que deseas eliminar esta categoría?')) {
-                    return;
-                }
+            eliminarCategoria(id) {
+                ModalConfirmacion.show(
+                    'Eliminar Categoría',
+                    '¿Estás seguro de que deseas eliminar esta categoría?',
+                    async () => {
+                        try {
+                            const response = await fetch(`/api/categorias/${id}`, {
+                                method: 'DELETE',
+                                headers: {
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="_csrf"]').content
+                                }
+                            });
 
-                try {
-                    const response = await fetch(`/api/categorias/${id}`, {
-                        method: 'DELETE',
-                        headers: {
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="_csrf"]').content
+                            if (!response.ok) {
+                                const error = await response.json();
+                                throw new Error(error.message || 'Error al eliminar la categoría');
+                            }
+                            
+                            // Notificar éxito y recargar
+                            // (If you have a notification system, use it here)
+                            if(typeof mostrarNotificacion === 'function') {
+                                mostrarNotificacion('Categoría eliminada', 'success');
+                            }
+                            
+                            // Recargar lista si existe la función
+                             if(typeof cargarCategorias === 'function') {
+                                cargarCategorias();
+                            } else {
+                                window.location.reload();
+                            }
+
+                        } catch (error) {
+                             console.error('Error:', error);
+                            if(typeof mostrarNotificacion === 'function') {
+                                mostrarNotificacion(error.message, 'error');
+                            } else {
+                                alert(error.message);
+                            }
                         }
-                    });
-
-                    if (!response.ok) {
-                        const error = await response.json();
-                        throw new Error(error.message || 'Error al eliminar la categoría');
                     }
+                );
+            },
 
                     this.mostrarAlerta('Categoría eliminada correctamente');
                     this.cargarCategorias();

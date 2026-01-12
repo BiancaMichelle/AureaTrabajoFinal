@@ -10,6 +10,10 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 
+import com.example.demo.repository.CursoRepository;
+import com.example.demo.repository.InscripcionRepository;
+import com.example.demo.enums.EstadoOferta;
+
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +28,8 @@ import com.example.demo.model.Pais;
 import com.example.demo.model.Provincia;
 import com.example.demo.model.Rol;
 import com.example.demo.model.Usuario;
+import com.example.demo.model.Curso;
+import com.example.demo.model.Inscripciones;
 import com.example.demo.repository.AlumnoRepository;
 import com.example.demo.repository.CiudadRepository;
 import com.example.demo.repository.DocenteRepository;
@@ -50,6 +56,8 @@ public class RegistroService {
     private final LocacionAPIService locacionApiService;
     private final HorarioRepository horarioRepository;
     private final ObjectMapper objectMapper;
+    private final InscripcionRepository inscripcionRepository;
+    private final CursoRepository cursoRepository;
 
 
     public RegistroService(UsuarioRepository usuarioRepository,
@@ -63,7 +71,9 @@ public class RegistroService {
                           EmailService emailService,
                           LocacionAPIService locacionApiService,
                           HorarioRepository horarioRepository, 
-                          ObjectMapper objectMapper) { 
+                          ObjectMapper objectMapper,
+                          InscripcionRepository inscripcionRepository,
+                          CursoRepository cursoRepository) { 
         this.usuarioRepository = usuarioRepository;
         this.alumnoRepository = alumnoRepository;
         this.docenteRepository = docenteRepository;
@@ -76,6 +86,8 @@ public class RegistroService {
         this.locacionApiService = locacionApiService;
         this.horarioRepository = horarioRepository;
         this.objectMapper = objectMapper; 
+        this.inscripcionRepository = inscripcionRepository;
+        this.cursoRepository = cursoRepository;
     }
 
     // 🔑 MÉTODO PARA GENERAR CONTRASEÑA (se mantiene igual)
@@ -603,25 +615,49 @@ public class RegistroService {
         }
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public void eliminarUsuarioAdministrativo(Usuario usuario) {
         if (usuario == null) {
             throw new IllegalArgumentException("El usuario a eliminar no existe");
         }
 
         try {
-            if (usuario instanceof Docente) {
-                Docente docente = (Docente) usuario;
-                horarioRepository.deleteByDocente(docente);
-                docenteRepository.delete(docente);
-                return;
-            }
-
+            // ✅ VALIDACIÓN: Alumno con inscripciones activas
             if (usuario instanceof Alumno) {
-                alumnoRepository.delete((Alumno) usuario);
-                return;
+                // Ya no bloqueamos la eliminación de alumnos con inscripciones activas
+                // Se asume que el frontend ya mostró la advertencia requerida y el usuario confirmó.
+                
+                // Opcional: Podríamos cancelar las inscripciones aquí si se desea lógica de limpieza,
+                // pero "baja lógica" suele mantener el histórico.
             }
 
-            usuarioRepository.delete(usuario);
+            // ✅ VALIDACIÓN: Docente con cursos activos
+            if (usuario instanceof Docente) {
+                // Usamos lista y filtro en memoria para mayor seguridad
+                List<Curso> cursos = cursoRepository.findByDocentesId(usuario.getId());
+                
+                for (Curso curso : cursos) {
+                    if (curso.getEstado() == EstadoOferta.ACTIVA || curso.getEstado() == EstadoOferta.ENCURSO) {
+                        // REGLA DE NEGOCIO ESTRICTA: No se puede dar de baja si está asociado a un curso activo
+                        throw new IllegalStateException("El docente tiene cursos activos asignados ('" + curso.getNombre() + "'). No se puede dar de baja mientras el curso esté en curso o activo.");
+                        
+                        /* Lógica anterior (más permisiva) removida por requerimiento estricto
+                        if (curso.getDocentes().size() <= 1) {
+                            throw new IllegalStateException(...);
+                        } else {
+                             curso.getDocentes().remove(usuario);
+                             ...
+                        }
+                        */
+                    }
+                }
+            }
+
+            // ✅ BAJA LÓGICA (No eliminar físicamente)
+            usuario.setEstado(false); // false = INACTIVO / BAJA
+            usuarioRepository.save(usuario);
+            
+            System.out.println("✅ Usuario dado de baja lógicamente: " + usuario.getDni());
             
         } catch (Exception e) {
             throw e;
@@ -719,5 +755,14 @@ public class RegistroService {
     private Usuario guardarUsuarioBase(Usuario usuario) {
         return usuarioRepository.save(Objects.requireNonNull(usuario, "usuario no puede ser nulo"));
     }
-}
 
+    @org.springframework.transaction.annotation.Transactional
+    public void reactivarUsuarioAdministrativo(Usuario usuario) {
+        if (usuario == null) {
+            throw new IllegalArgumentException("El usuario a reactivar no existe");
+        }
+        usuario.setEstado(true);
+        usuarioRepository.save(usuario);
+        System.out.println("✅ Usuario reactivado: " + usuario.getDni());
+    }
+}

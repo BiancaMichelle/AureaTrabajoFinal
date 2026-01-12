@@ -5884,3 +5884,17 @@ textarea.form-control:focus {
         text-align: center;
     }
 }
+/* Modal Confirmacion Small */
+.modal-confirmation {
+    max-width: 400px !important;
+    min-height: auto;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+

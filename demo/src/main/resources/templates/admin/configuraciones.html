@@ -301,9 +301,9 @@
                                                      th:data-full-src="@{'/api/carrusel/imagen/' + ${imagen.id}}" />
                                                 <div class="image-overlay">
                                                     <form th:action="@{'/admin/configuracion/carrusel/eliminar/' + ${imagen.id}}" 
-                                                          method="POST" style="display: inline;">
-                                                        <button type="submit" class="btn-delete-image" 
-                                                                onclick="event.stopPropagation(); return confirm('¿Estás seguro de que quieres eliminar esta imagen?')">
+                                                          method="POST" style="display: inline;" 
+                                                          th:attr="onsubmit='event.preventDefault(); var form = this; ModalConfirmacion.show(\'Eliminar Imagen\', \'¿Estás seguro de que quieres eliminar esta imagen?\', function() { form.submit(); });'">
+                                                        <button type="submit" class="btn-delete-image" onclick="event.stopPropagation();">
                                                             <i class="fas fa-trash"></i>
                                                         </button>
                                                     </form>

@@ -284,35 +284,37 @@ class AIChat {
     }
 
     // Limpiar sesión y crear nueva
-    async clearSession() {
-        if (!confirm('¿Quieres iniciar una nueva conversación? Se perderá el historial actual.')) {
-            return;
-        }
-
-        try {
-            // Limpiar sesión anterior si existe
-            if (this.sessionId) {
-                await fetch(`/ia/chat/session/${this.sessionId}`, { method: 'DELETE' });
+    clearSession() {
+        ModalConfirmacion.show(
+            'Nueva Conversación',
+            '¿Quieres iniciar una nueva conversación? Se perderá el historial actual.',
+            async () => {
+                try {
+                    // Limpiar sesión anterior si existe
+                    if (this.sessionId) {
+                        await fetch(`/ia/chat/session/${this.sessionId}`, { method: 'DELETE' });
+                    }
+                    
+                    // Crear nueva sesión
+                    await this.initializeSession();
+                    
+                    // Limpiar mensajes en la interfaz
+                    const messagesContainer = this.messagesContainer;
+                    const welcomeMessage = messagesContainer.querySelector('.ai-welcome-message');
+                    const suggestions = messagesContainer.querySelector('.ai-quick-suggestions');
+                    
+                    messagesContainer.innerHTML = '';
+                    messagesContainer.appendChild(welcomeMessage);
+                    messagesContainer.appendChild(suggestions);
+                    
+                    this.showNotification('Nueva conversación iniciada', 'success');
+                    
+                } catch (error) {
+                    console.error('Error limpiando sesión:', error);
+                    this.showNotification('Error al iniciar nueva conversación', 'error');
+                }
             }
-            
-            // Crear nueva sesión
-            await this.initializeSession();
-            
-            // Limpiar mensajes en la interfaz
-            const messagesContainer = this.messagesContainer;
-            const welcomeMessage = messagesContainer.querySelector('.ai-welcome-message');
-            const suggestions = messagesContainer.querySelector('.ai-quick-suggestions');
-            
-            messagesContainer.innerHTML = '';
-            messagesContainer.appendChild(welcomeMessage);
-            messagesContainer.appendChild(suggestions);
-            
-            this.showNotification('Nueva conversación iniciada', 'success');
-            
-        } catch (error) {
-            console.error('Error limpiando sesión:', error);
-            this.showNotification('Error al iniciar nueva conversación', 'error');
-        }
+        );
     }
 
     // Enviar mensaje

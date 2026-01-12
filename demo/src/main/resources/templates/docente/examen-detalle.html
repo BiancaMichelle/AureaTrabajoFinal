@@ -454,10 +454,16 @@
             e.preventDefault();
             
             // Confirmación
-            if (!confirm('¿Está seguro que desea modificar la pregunta?')) {
-                return;
-            }
-            
+            ModalConfirmacion.show(
+                'Modificar Pregunta',
+                '¿Está seguro que desea modificar la pregunta?',
+                () => {
+                    procesarEdicionPregunta();
+                }
+            );
+        });
+
+        function procesarEdicionPregunta() {
             const tipo = document.getElementById('editTipo').value;
             let opciones = [];
             

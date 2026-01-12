@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const ciudadSelect = document.getElementById('ciudad');
 
     const modalDetalleUsuario = document.getElementById('modalDetalleUsuario');
-    const modalEditarUsuarioBtn = document.getElementById('btn-editar-usuario-modal');
+    const btnDarBajaUsuario = document.getElementById('btn-dar-baja-usuario'); // Cambiado a botón de baja
     const modalDetalleRefs = {
         foto: document.getElementById('detalle-usuario-foto'),
         sinFoto: document.getElementById('detalle-usuario-sin-foto'),
@@ -125,15 +125,150 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
-        if (modalEditarUsuarioBtn) {
-            modalEditarUsuarioBtn.addEventListener('click', () => {
+        if (btnDarBajaUsuario) {
+            btnDarBajaUsuario.addEventListener('click', () => {
                 const identifier = modalDetalleUsuario.dataset.identifier;
-                const nombre = modalDetalleUsuario.dataset.nombre;
-                cerrarModalDetalleUsuario();
-                if (identifier) {
-                    editUsuario({ identifier, nombre });
+                const canBeDeleted = modalDetalleUsuario.dataset.canBeDeleted === 'true';
+                const isActive = modalDetalleUsuario.dataset.active === 'true'; // Leer estado
+                const blockingReason = modalDetalleUsuario.dataset.blockingReason;
+                const warningsStr = modalDetalleUsuario.dataset.warnings || '';
+                
+                if (!identifier) return;
+
+                // SI EL USUARIO ESTÁ INACTIVO -> DAR DE ALTA
+                if (!isActive) {
+                    ModalConfirmacion.show(
+                        'Reactivar Usuario',
+                        '¿Está seguro de que desea reactivar este usuario? Tendrá acceso nuevamente al sistema.',
+                        () => {
+                            darDeAltaUsuario(identifier);
+                        }
+                    );
+                    return;
                 }
+
+                // SI EL USUARIO ESTÁ ACTIVO -> DAR DE BAJA
+                // 1. Si hay bloqueo, mostrar error y no continuar
+                if (!canBeDeleted) {
+                    mostrarNotificacion(blockingReason || 'No se puede dar de baja al usuario.', 'error');
+                    // Opcional: Usar un alert modal si mostrarNotificacion es muy sutil
+                    ModalConfirmacion.show(
+                        '⛔ ACCIÓN NO PERMITIDA', 
+                        blockingReason || 'El usuario no puede ser eliminado en este momento.'
+                    ).then(() => {}); // Solo cerrar
+                    return;
+                }
+
+                // 2. Construir mensaje de confirmación
+                let mensaje = '¿Está seguro de que desea dar de baja a este usuario?';
+                let type = 'warning'; // Por defecto
+
+                if (warningsStr) {
+                    const warnings = JSON.parse(warningsStr);
+                    if (warnings.length > 0) {
+                        mensaje = '⚠️ ADVERTENCIAS:\n\n' + warnings.map(w => '• ' + w).join('\n') + '\n\n' + mensaje;
+                        type = 'danger'; // Rojo para advertencias fuertes
+                    }
+                }
+
+                // 3. Mostrar modal de confirmación
+                // Usamos callback ya que ModalConfirmacion.show no devuelve una promesa
+                ModalConfirmacion.show(
+                    'Confirmar Baja de Usuario', 
+                    mensaje, 
+                    () => {
+                        darDeBajaUsuario(identifier);
+                    }
+                );
             });
+        }
+    }
+
+    function darDeBajaUsuario(identifier) {
+        // Obtener tokens CSRF del layout base
+        const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+        const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+
+        if (csrfToken && csrfHeader) {
+            headers[csrfHeader] = csrfToken;
+        }
+
+        fetch(`/admin/usuarios/${identifier}`, {
+            method: 'DELETE',
+            headers: headers
+        })
+        .then(response => {
+            if (response.status === 403) {
+                throw new Error('No tiene permisos para realizar esta acción (Error 403)');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                mostrarNotificacion('Usuario dado de baja exitosamente', 'success');
+                cerrarModalDetalleUsuario();
+                loadUsuarios(currentPage); // Recargar tabla
+            } else {
+                mostrarNotificacion(data.message || 'Error al dar de baja', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarNotificacion(error.message || 'Error de conexión', 'error');
+        });
+    }
+
+    function darDeAltaUsuario(identifier) {
+        // Obtener tokens CSRF del layout base
+        const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+        const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+
+        if (csrfToken && csrfHeader) {
+            headers[csrfHeader] = csrfToken;
+        }
+
+        fetch(`/admin/usuarios/${identifier}/reactivar`, {
+            method: 'PUT',
+            headers: headers
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarNotificacion('Usuario reactivado exitosamente', 'success');
+                cerrarModalDetalleUsuario();
+                loadUsuarios(currentPage); // Recargar tabla
+            } else {
+                mostrarNotificacion(data.message || 'Error al reactivar', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarNotificacion('Error de conexión', 'error');
+        });
+    }
+
+    function updateActionButton(isActive) {
+        if (!btnDarBajaUsuario) return;
+        
+        // true si es indefinido (por defecto activo)
+        const active = isActive !== false && isActive !== 'false';
+
+        if (active) {
+            // Estado: ACTIVO -> Botón DAR DE BAJA
+            btnDarBajaUsuario.innerHTML = '<i class="fas fa-user-slash"></i> Dar de Baja';
+            btnDarBajaUsuario.className = 'btn btn-outline-danger';
+        } else {
+            // Estado: INACTIVO -> Botón DAR DE ALTA
+            btnDarBajaUsuario.innerHTML = '<i class="fas fa-user-check"></i> Dar de Alta';
+            btnDarBajaUsuario.className = 'btn btn-success'; // Verde para activar
         }
     }
 
@@ -151,6 +286,14 @@ document.addEventListener('DOMContentLoaded', function () {
         } else {
             delete modalDetalleUsuario.dataset.identifier;
         }
+
+        // Guardar metadata de validación en el dataset del modal
+        modalDetalleUsuario.dataset.canBeDeleted = detalle.canBeDeleted !== undefined ? detalle.canBeDeleted : 'true';
+        modalDetalleUsuario.dataset.blockingReason = detalle.blockingReason || '';
+        modalDetalleUsuario.dataset.warnings = JSON.stringify(detalle.warnings || []);
+        modalDetalleUsuario.dataset.active = detalle.estadoBoolean !== undefined ? detalle.estadoBoolean : 'true'; // Nuevo: Estado activo/inactivo
+
+        updateActionButton(detalle.estadoBoolean); // Actualizar UI del botón
 
         if (context.nombre) {
             modalDetalleUsuario.dataset.nombre = context.nombre;
@@ -1627,45 +1770,47 @@ document.addEventListener('DOMContentLoaded', function () {
             const displayName = nombre || 'usuario';
             const label = dni || identifier;
 
-            if (!confirm(`¿Está seguro de que desea eliminar el usuario "${displayName}" (ID: ${label})?`)) {
-                return;
-            }
+            ModalConfirmacion.show(
+                'Confirmar Baja',
+                `¿Está seguro de que desea dar de baja al usuario "${displayName}" (ID: ${label})?`,
+                () => {
+                    const headers = {
+                        'Accept': 'application/json'
+                    };
 
-            const headers = {
-                'Accept': 'application/json'
-            };
+                    if (csrfToken && csrfHeader) {
+                        headers[csrfHeader] = csrfToken;
+                    }
 
-            if (csrfToken && csrfHeader) {
-                headers[csrfHeader] = csrfToken;
-            }
+                    // showLoading(`Eliminando ${displayName}...`);
 
-            // showLoading(`Eliminando ${displayName}...`);
+                    fetch(`/admin/usuarios/${encodeURIComponent(identifier)}`, {
+                        method: 'DELETE',
+                        headers
+                    })
+                    .then(response => response.json().catch(() => ({})).then(body => ({ response, body })))
+                    .then(({ response, body }) => {
+                        if (!response.ok || body.success === false) {
+                            const message = body?.message || `Error al eliminar el usuario (HTTP ${response.status})`;
+                            throw new Error(message);
+                        }
 
-            fetch(`/admin/usuarios/${encodeURIComponent(identifier)}`, {
-                method: 'DELETE',
-                headers
-            })
-            .then(response => response.json().catch(() => ({})).then(body => ({ response, body })))
-            .then(({ response, body }) => {
-                if (!response.ok || body.success === false) {
-                    const message = body?.message || `Error al eliminar el usuario (HTTP ${response.status})`;
-                    throw new Error(message);
+                        showNotification(body?.message || '✅ Usuario eliminado correctamente', 'success');
+                        usuariosCache.delete(String(identifier));
+                        if (dni) {
+                            usuariosCache.delete(String(dni));
+                        }
+                        loadUsuarios(Math.max(1, currentPage));
+                    })
+                    .catch(error => {
+                        console.error('Error eliminando usuario:', error);
+                        showNotification(`❌ ${error.message || 'No se pudo eliminar el usuario'}`, 'error', 10000);
+                    })
+                    .finally(() => {
+                        // hideLoading();
+                    });
                 }
-
-                showNotification(body?.message || '✅ Usuario eliminado correctamente', 'success');
-                usuariosCache.delete(String(identifier));
-                if (dni) {
-                    usuariosCache.delete(String(dni));
-                }
-                loadUsuarios(Math.max(1, currentPage));
-            })
-            .catch(error => {
-                console.error('Error eliminando usuario:', error);
-                showNotification(`❌ ${error.message || 'No se pudo eliminar el usuario'}`, 'error', 10000);
-            })
-            .finally(() => {
-                // hideLoading();
-            });
+            );
         }
     
         // Validación del formulario

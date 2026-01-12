@@ -492,3 +492,57 @@ document.addEventListener('DOMContentLoaded', function () {
 
     console.log('Admin Dashboard initialized successfully');
 });
+// ================= GLOBAL NOTIFICATION SYSTEM =================
+
+// Funci�n para mostrar notificaciones
+function mostrarNotificacion(mensaje, tipo = 'success') {
+    const notificationArea = document.getElementById('notification-area');
+    const notification = document.getElementById('notification');
+    const notificationIcon = document.getElementById('notification-icon');
+    const notificationMessage = document.getElementById('notification-message');
+    
+    if (!notificationArea || !notification || !notificationIcon || !notificationMessage) {
+        console.error('Elementos de notificaci�n no encontrados en el DOM');
+        return;
+    }
+
+    // Configurar icono seg�n tipo
+    let iconClass = 'fas fa-check-circle';
+    if (tipo === 'error') {
+        iconClass = 'fas fa-exclamation-circle';
+    } else if (tipo === 'warning') {
+        iconClass = 'fas fa-exclamation-triangle';
+    }
+    
+    notificationIcon.className = iconClass;
+    notificationMessage.textContent = mensaje;
+    
+    // Limpiar clases anteriores y agregar nueva
+    notification.className = 'notification notification-' + tipo;
+    
+    // Mostrar notificaci�n
+    notificationArea.style.display = 'block';
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 10);
+    
+    // Auto-ocultar despu�s de 5 segundos
+    setTimeout(() => {
+        ocultarNotificacion();
+    }, 5000);
+}
+
+// Funci�n para ocultar notificaci�n
+function ocultarNotificacion() {
+    const notificationArea = document.getElementById('notification-area');
+    const notification = document.getElementById('notification');
+    
+    if (notification) {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            if (notificationArea) {
+                notificationArea.style.display = 'none';
+            }
+        }, 300);
+    }
+}

@@ -637,10 +637,14 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function deleteOferta(id, nombre) {
-        if (confirm(`¿Está seguro de que desea eliminar la oferta "${nombre}"?`)) {
-            console.log(`Eliminar oferta ${id}: ${nombre}`);
-            // Implementar lógica de eliminación
-        }
+        ModalConfirmacion.show(
+            'Confirmar Eliminación',
+            `¿Está seguro de que desea eliminar la oferta "${nombre}"?`,
+            () => {
+                console.log(`Eliminar oferta ${id}: ${nombre}`);
+                // Implementar lógica de eliminación
+            }
+        );
     }
 
     // Validación del formulario

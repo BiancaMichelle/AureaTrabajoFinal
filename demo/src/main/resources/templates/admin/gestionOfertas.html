@@ -88,16 +88,7 @@
         </div>
     </header>
 
-    <!-- Área de notificaciones -->
-    <div id="notification-area" class="notification-area" style="display: none;">
-        <div id="notification" class="notification">
-            <i id="notification-icon" class="fas fa-check-circle"></i>
-            <span id="notification-message">Mensaje de notificación</span>
-            <button type="button" id="notification-close" class="notification-close">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-    </div>
+
 
     <!-- Formulario de Registro (colapsable) -->
     <div id="form-container" class="form-container" style="display: none;">
@@ -1162,17 +1153,26 @@
                     
                     // Verificar si estamos en modo edición
                     if (typeof modoEdicion !== 'undefined' && modoEdicion) {
-                        if (!confirm('¿Estás seguro que deseas cancelar la modificación? Los cambios no guardados se perderán.')) {
-                            return;
-                        }
-                        // Si confirma, reseteamos el modo edición
-                        if (typeof resetearModoEdicion === 'function') {
-                            resetearModoEdicion();
-                        }
-                        // Y limpiamos el formulario
-                        if (typeof limpiarFormularioCompleto === 'function') {
-                            limpiarFormularioCompleto();
-                        }
+                        ModalConfirmacion.show(
+                            'Cancelar Modificación',
+                            '¿Estás seguro que deseas cancelar la modificación? Los cambios no guardados se perderán.',
+                            () => {
+                                // Si confirma, reseteamos el modo edición
+                                if (typeof resetearModoEdicion === 'function') {
+                                    resetearModoEdicion();
+                                }
+                                // Y limpiamos el formulario
+                                if (typeof limpiarFormularioCompleto === 'function') {
+                                    limpiarFormularioCompleto();
+                                }
+                                console.log('❌ CERRANDO FORMULARIO');
+                                formContainer.classList.remove('show');
+                                setTimeout(() => {
+                                    formContainer.style.display = 'none';
+                                }, 500);
+                            }
+                        );
+                        return;
                     }
                     
                     console.log('❌ CERRANDO FORMULARIO');
@@ -1191,17 +1191,30 @@
                     
                     // Verificar si estamos en modo edición
                     if (typeof modoEdicion !== 'undefined' && modoEdicion) {
-                        if (!confirm('¿Estás seguro que deseas cancelar la modificación? Los cambios no guardados se perderán.')) {
-                            return;
-                        }
-                        // Si confirma, reseteamos el modo edición
-                        if (typeof resetearModoEdicion === 'function') {
-                            resetearModoEdicion();
-                        }
-                        // Y limpiamos el formulario
-                        if (typeof limpiarFormularioCompleto === 'function') {
-                            limpiarFormularioCompleto();
-                        }
+                        ModalConfirmacion.show(
+                            'Cancelar Modificación',
+                            '¿Estás seguro que deseas cancelar la modificación? Los cambios no guardados se perderán.',
+                            () => {
+                                // Si confirma, reseteamos el modo edición
+                                if (typeof resetearModoEdicion === 'function') {
+                                    resetearModoEdicion();
+                                }
+                                // Y limpiamos el formulario
+                                if (typeof limpiarFormularioCompleto === 'function') {
+                                    limpiarFormularioCompleto();
+                                }
+                                formContainer.classList.remove('show');
+                                setTimeout(() => {
+                                    formContainer.style.display = 'none';
+                                }, 500);
+                            }
+                        );
+                        return;
+                    }
+                    
+                    // Y limpiamos el formulario
+                    if (typeof limpiarFormularioCompleto === 'function') {
+                        limpiarFormularioCompleto();
                     }
                     
                     console.log('❌ CANCELANDO FORMULARIO');
@@ -1939,27 +1952,32 @@
         
         window.eliminarCategoria = function(id) {
             console.log('🗑️ Eliminando categoría:', id);
-            if (confirm('¿Estás seguro de que deseas eliminar esta categoría?')) {
-                fetch(`/api/categorias/${id}`, {
-                    method: 'DELETE'
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        console.log('✅ Categoría eliminada');
-                        cargarCategorias();
-                        cargarCategoriasSelect();
-                        mostrarNotificacion(data.message || 'Categoría eliminada exitosamente', 'success');
-                    } else {
-                        console.error('❌ Error:', data.message);
-                        mostrarNotificacion(data.message || 'Error al eliminar la categoría', 'error');
-                    }
-                })
-                .catch(error => {
-                    console.error('❌ Error:', error);
-                    mostrarNotificacion('Error al eliminar categoría: ' + error.message, 'error');
-                });
-            }
+            
+            ModalConfirmacion.show(
+                'Eliminar Categoría',
+                '¿Estás seguro de que deseas eliminar esta categoría?',
+                () => {
+                    fetch(`/api/categorias/${id}`, {
+                        method: 'DELETE'
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            console.log('✅ Categoría eliminada');
+                            cargarCategorias();
+                            cargarCategoriasSelect();
+                            mostrarNotificacion(data.message || 'Categoría eliminada exitosamente', 'success');
+                        } else {
+                            console.error('❌ Error:', data.message);
+                            mostrarNotificacion(data.message || 'Error al eliminar la categoría', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('❌ Error:', error);
+                        mostrarNotificacion('Error al eliminar categoría: ' + error.message, 'error');
+                    });
+                }
+            );
         };
         
         // Función global para remover categoría (accesible desde onclick)
@@ -2315,11 +2333,9 @@
 
             case 'CHARLA':
             case 'SEMINARIO': {
-                const enlaceId = tipoOferta === 'CHARLA' ? 'enlaceCharla' : 'enlaceSeminario';
-                const lugarId = tipoOferta === 'CHARLA' ? 'lugarCharla' : 'lugarSeminario';
-                
-                const enlaceEl = document.getElementById(enlaceId);
-                const lugarEl = document.getElementById(lugarId);
+                // IDs genéricos para lugar y enlace
+                const enlaceEl = document.getElementById('enlace');
+                const lugarEl = document.getElementById('lugar');
                 
                 const enlace = enlaceEl ? enlaceEl.value.trim() : '';
                 const lugar = lugarEl ? lugarEl.value.trim() : '';
@@ -2437,49 +2453,7 @@
             });
         }
         
-        // Función para mostrar notificaciones
-        function mostrarNotificacion(mensaje, tipo = 'success') {
-            const notificationArea = document.getElementById('notification-area');
-            const notification = document.getElementById('notification');
-            const notificationIcon = document.getElementById('notification-icon');
-            const notificationMessage = document.getElementById('notification-message');
-            
-            // Configurar icono según tipo
-            let iconClass = 'fas fa-check-circle';
-            if (tipo === 'error') {
-                iconClass = 'fas fa-exclamation-circle';
-            } else if (tipo === 'warning') {
-                iconClass = 'fas fa-exclamation-triangle';
-            }
-            
-            notificationIcon.className = iconClass;
-            notificationMessage.textContent = mensaje;
-            
-            // Limpiar clases anteriores y agregar nueva
-            notification.className = `notification notification-${tipo}`;
-            
-            // Mostrar notificación
-            notificationArea.style.display = 'block';
-            setTimeout(() => {
-                notification.classList.add('show');
-            }, 10);
-            
-            // Auto-ocultar después de 5 segundos
-            setTimeout(() => {
-                ocultarNotificacion();
-            }, 5000);
-        }
-        
-        // Función para ocultar notificación
-        function ocultarNotificacion() {
-            const notificationArea = document.getElementById('notification-area');
-            const notification = document.getElementById('notification');
-            
-            notification.classList.remove('show');
-            setTimeout(() => {
-                notificationArea.style.display = 'none';
-            }, 300);
-        }
+
         
         // Función para limpiar formulario completo
         function limpiarFormularioCompleto() {
@@ -3169,6 +3143,7 @@
             
             // Obtener elementos del DOM
             const btnCambiarEstado = document.getElementById('btn-cambiar-estado');
+            const textEstado = document.getElementById('text-estado');
             
             // Verificar que el botón existe
             if (!btnCambiarEstado) {
@@ -3176,7 +3151,33 @@
                 mostrarNotificacion('Error: Botón de estado no encontrado', 'error');
                 return;
             }
+
+            // Determinar acción y mensaje
+            let tituloAccion = 'Cambiar Estado';
+            let mensajeConfirmacion = '¿Está seguro de que desea cambiar el estado de esta oferta?';
             
+            if (textEstado) {
+                const textoActual = textEstado.textContent.trim();
+                if (textoActual === 'Dar de Baja') {
+                    tituloAccion = 'Dar de Baja';
+                    mensajeConfirmacion = '¿Está seguro de que desea dar de baja esta oferta? No estará disponible para nuevas inscripciones.';
+                } else if (textoActual === 'Dar de Alta') {
+                    tituloAccion = 'Activar Oferta';
+                    mensajeConfirmacion = '¿Está seguro de que desea reactivar esta oferta?';
+                }
+            }
+
+            // Mostrar modal de confirmación
+            ModalConfirmacion.show(
+                tituloAccion,
+                mensajeConfirmacion,
+                () => {
+                    ejecutarCambioEstado(btnCambiarEstado);
+                }
+            );
+        };
+
+        function ejecutarCambioEstado(btnCambiarEstado) {
             // Deshabilitar botón durante la operación
             const textoOriginal = btnCambiarEstado.innerHTML;
             btnCambiarEstado.disabled = true;
@@ -3522,11 +3523,14 @@
                 return;
             }
 
-            // Confirmación nativa
-            if (confirm(`¿Estás seguro de que deseas eliminar la oferta académica "${nombre || 'seleccionada'}"?`)) {
-                ofertaEliminarId = id;
-                ejecutarEliminacion();
-            }
+            ModalConfirmacion.show(
+                'Eliminar Oferta',
+                `¿Estás seguro de que deseas eliminar la oferta académica "${nombre || 'seleccionada'}"?`,
+                () => {
+                    ofertaEliminarId = id;
+                    ejecutarEliminacion();
+                }
+            );
         };
 
         window.eliminarOfertaDesdeModal = function() {
@@ -3653,31 +3657,33 @@
                         }
                         
                         // Mostrar confirmación
-                        if (confirm(mensajeConfirmacion)) {
-                            console.log('✅ Usuario confirmó modificación');
+                        ModalConfirmacion.show(
+                            'Modificar Oferta',
+                            mensajeConfirmacion,
+                            () => {
+                                console.log('✅ Usuario confirmó modificación');
                             
-                            // Activar modo edición
-                            modoEdicion = true;
-                            idOfertaModificar = idOferta;
-                            estadoOfertaEnEdicion = oferta.estado;
-                            console.log('📝 Modo edición activado. Estado original:', estadoOfertaEnEdicion);
+                                // Activar modo edición
+                                modoEdicion = true;
+                                idOfertaModificar = idOferta;
+                                estadoOfertaEnEdicion = oferta.estado;
+                                console.log('📝 Modo edición activado. Estado original:', estadoOfertaEnEdicion);
                             
-                            // Cambiar el texto del botón submit
-                            const btnSubmit = document.getElementById('btn-submit-form');
-                            const btnSubmitText = document.getElementById('btn-submit-text');
-                            if (btnSubmit && btnSubmitText) {
-                                btnSubmitText.textContent = 'Guardar Modificaciones';
-                                btnSubmit.classList.add('btn-update');
+                                // Cambiar el texto del botón submit
+                                const btnSubmit = document.getElementById('btn-submit-form');
+                                const btnSubmitText = document.getElementById('btn-submit-text');
+                                if (btnSubmit && btnSubmitText) {
+                                    btnSubmitText.textContent = 'Guardar Modificaciones';
+                                    btnSubmit.classList.add('btn-update');
+                                }
+                            
+                                // Poblar el formulario con los datos ya obtenidos
+                                poblarFormulario(oferta);
+                            
+                                // Mostrar el formulario
+                                mostrarFormulario();
                             }
-                            
-                            // Poblar el formulario con los datos ya obtenidos
-                            poblarFormulario(oferta);
-                            
-                            // Mostrar el formulario
-                            mostrarFormulario();
-                        } else {
-                            console.log('❌ Usuario canceló modificación');
-                        }
+                        );
                     } else {
                         mostrarNotificacion('Error al obtener los datos de la oferta para verificar.', 'error');
                     }
@@ -3876,11 +3882,11 @@
                         
                     } else if (tipoOferta === 'CHARLA') {
                         console.log('🎤 Cargando datos de CHARLA');
-                        if (document.getElementById('lugarCharla')) {
-                            document.getElementById('lugarCharla').value = oferta.lugar || '';
+                        if (document.getElementById('lugar')) {
+                            document.getElementById('lugar').value = oferta.lugar || '';
                         }
-                        if (document.getElementById('enlaceCharla')) {
-                            document.getElementById('enlaceCharla').value = oferta.enlace || '';
+                        if (document.getElementById('enlace')) {
+                            document.getElementById('enlace').value = oferta.enlace || '';
                         }
                         if (document.getElementById('duracionEstimada')) {
                             document.getElementById('duracionEstimada').value = oferta.duracionEstimada || '';
@@ -3898,11 +3904,11 @@
                         
                     } else if (tipoOferta === 'SEMINARIO') {
                         console.log('🏛️ Cargando datos de SEMINARIO');
-                        if (document.getElementById('lugarSeminario')) {
-                            document.getElementById('lugarSeminario').value = oferta.lugar || '';
+                        if (document.getElementById('lugar')) {
+                            document.getElementById('lugar').value = oferta.lugar || '';
                         }
-                        if (document.getElementById('enlaceSeminario')) {
-                            document.getElementById('enlaceSeminario').value = oferta.enlace || '';
+                        if (document.getElementById('enlace')) {
+                            document.getElementById('enlace').value = oferta.enlace || '';
                         }
                         if (document.getElementById('duracionMinutos')) {
                             document.getElementById('duracionMinutos').value = oferta.duracionMinutos || '';
@@ -4020,25 +4026,24 @@
 
                 if (modoEdicion) {
                     // Confirmación para modificar
-                    if (confirm('¿Está seguro que desea modificar los datos de esta oferta?')) {
-                        console.log('Enviando actualización de oferta');
-                        enviarActualizacionOferta();
-                    } else {
-                        console.log('Modificación cancelada por el usuario');
-                        limpiarFormularioCompleto();
-                        resetearModoEdicion();
-                        cerrarFormulario();
-                    }
+                    ModalConfirmacion.show(
+                        'Modificar Oferta',
+                        '¿Está seguro que desea modificar los datos de esta oferta?',
+                        () => {
+                            console.log('Enviando actualización de oferta');
+                            enviarActualizacionOferta();
+                        }
+                    );
                 } else {
                     // Confirmación para registrar
-                    if (confirm('¿Está seguro que desea registrar esta nueva oferta?')) {
-                        console.log('Enviando nueva oferta');
-                        enviarFormularioAjax(); // Función existente para crear
-                    } else {
-                        console.log('Registro cancelado por el usuario');
-                        limpiarFormularioCompleto();
-                        cerrarFormulario();
-                    }
+                    ModalConfirmacion.show(
+                        'Registrar Oferta',
+                        '¿Está seguro que desea registrar esta nueva oferta?',
+                        async () => {
+                            console.log('Enviando nueva oferta');
+                            enviarFormularioAjax(); // Función existente para crear
+                        }
+                    );
                 }
             });
         }
@@ -4053,13 +4058,18 @@
             const formData = new FormData(formulario);
             
             // Agregar el ID de la oferta
-            formData.append('idOferta', idOfertaModificar);
+            if (typeof idOfertaModificar !== 'undefined' && idOfertaModificar) {
+                formData.append('idOferta', idOfertaModificar);
+            }
             
             // Mostrar loading
             const btnSubmit = document.getElementById('btn-submit-form');
-            const textoOriginal = btnSubmit.innerHTML;
-            btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Actualizando...';
-            btnSubmit.disabled = true;
+            let textoOriginal = '';
+            if (btnSubmit) {
+                textoOriginal = btnSubmit.innerHTML;
+                btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Actualizando...';
+                btnSubmit.disabled = true;
+            }
             
             fetch('/admin/ofertas/modificar', {
                 method: 'POST',
@@ -4076,47 +4086,48 @@
                     // Verificar si estaba DE_BAJA para ofrecer dar de alta
                     if (estadoOfertaEnEdicion === 'DE_BAJA') {
                         console.log('💡 Oferta estaba DE_BAJA, preguntando si activar...');
-                        if (confirm('La oferta se ha modificado correctamente. ¿Desea darla de alta ahora?')) {
-                            // Intentar dar de alta
-                            const token = obtenerCsrfToken();
-                            const headerName = obtenerCsrfHeaderName();
-                            const headers = {
-                                'Content-Type': 'application/json',
-                                'X-Requested-With': 'XMLHttpRequest'
-                            };
-                            if (token && headerName) headers[headerName] = token;
-
-                            fetch(`/admin/ofertas/cambiar-estado/${idOfertaModificar}`, {
-                                method: 'POST',
-                                headers: headers
-                            })
-                            .then(r => r.json())
-                            .then(resp => {
-                                if (resp.success) {
-                                    mostrarNotificacion('Oferta dada de alta correctamente', 'success');
-                                } else {
-                                    mostrarNotificacion('No se pudo dar de alta: ' + resp.message, 'warning');
+                        
+                        setTimeout(() => {
+                            ModalConfirmacion.show(
+                                'Activar Oferta',
+                                'La oferta se ha modificado correctamente. ¿Desea darla de alta ahora?',
+                                () => {
+                                    // Intentar dar de alta
+                                    const token = obtenerCsrfToken();
+                                    const headerName = obtenerCsrfHeaderName();
+                                    const headers = {
+                                        'Content-Type': 'application/json',
+                                        'X-Requested-With': 'XMLHttpRequest'
+                                    };
+                                    if (token && headerName) headers[headerName] = token;
+        
+                                    fetch(`/admin/ofertas/cambiar-estado/${idOfertaModificar}`, {
+                                        method: 'POST',
+                                        headers: headers
+                                    })
+                                    .then(r => r.json())
+                                    .then(resp => {
+                                        if (resp.success) {
+                                            mostrarNotificacion('Oferta activada correctamente', 'success');
+                                            cargarOfertas();
+                                        } else {
+                                            mostrarNotificacion('No se pudo activar la oferta: ' + resp.message, 'warning');
+                                        }
+                                    });
                                 }
-                            })
-                            .catch(err => console.error('Error al dar de alta post-edición', err))
-                            .finally(() => {
-                                limpiarFormularioCompleto();
-                                resetearModoEdicion();
-                                cerrarFormulario();
-                                actualizarTablaOfertas();
-                            });
-                            return; // Salir para esperar el fetch asíncrono
-                        }
-                    }
+                            );
+                        }, 500);
 
-                    // Limpiar formulario y resetear modo
-                    limpiarFormularioCompleto();
-                    resetearModoEdicion();
-                    cerrarFormulario();
-                    
-                    // Recargar la tabla
-                    actualizarTablaOfertas();
-                    
+                        limpiarFormularioCompleto();
+                        resetearModoEdicion();
+                        cerrarFormulario();
+                        actualizarTablaOfertas();
+                    } else {
+                        limpiarFormularioCompleto();
+                        resetearModoEdicion();
+                        cerrarFormulario();
+                        actualizarTablaOfertas();
+                    }
                 } else {
                     console.error('Error al actualizar:', data.message);
                     mostrarNotificacion('Error al actualizar la oferta: ' + data.message, 'error');
@@ -4127,9 +4138,10 @@
                 mostrarNotificacion('Error de conexión al actualizar la oferta', 'error');
             })
             .finally(() => {
-                // Restaurar botón
-                btnSubmit.innerHTML = textoOriginal;
-                btnSubmit.disabled = false;
+                if (btnSubmit) {
+                    btnSubmit.innerHTML = textoOriginal;
+                    btnSubmit.disabled = false;
+                }
             });
         }
         

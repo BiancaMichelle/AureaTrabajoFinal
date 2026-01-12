@@ -316,9 +316,11 @@ function setupFormSubmission() {
     if (resetButton) {
         console.log('✅ Botón de restablecer encontrado');
         resetButton.addEventListener('click', function() {
-            if (confirm('¿Está seguro de que desea restablecer la configuración? Se perderán todos los cambios no guardados.')) {
-                resetConfiguration();
-            }
+            ModalConfirmacion.show(
+                'Confirmar Restablecimiento',
+                '¿Está seguro de que desea restablecer la configuración? Se perderán todos los cambios no guardados.',
+                () => resetConfiguration()
+            );
         });
     } else {
         console.warn('⚠️ No se encontró el botón btn-reset-config');
