@@ -44,6 +44,16 @@ public class Clase {
     private Boolean transcripcionHabilitada;
     private Boolean preguntasAleatorias;
     private Integer cantidadPreguntas;
+    
+    // Configuración de resumen automático (CU-27)
+    private Boolean generarResumenAutomatico;
+    private Boolean publicarResumenAutomaticamente;
+    
+    // Permisos de alumnos durante la clase (CU-26)
+    private Boolean permisoMicrofono;
+    private Boolean permisoCamara;
+    private Boolean permisoCompartirPantalla;
+    private Boolean permisoChat;
 
     @ManyToOne
     @JoinColumn(name = "curso_id")

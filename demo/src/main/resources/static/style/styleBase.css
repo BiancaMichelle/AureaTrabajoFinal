@@ -395,6 +395,38 @@ ul {
     display: block;
 }
 
+/* =================   AI CHAT TOOLTIP & PULSE ================= */
+/* Pulso para llamar la atención al botón flotante del chat */
+.ai-chat-toggle.pulse {
+    animation: ai-pulse 1.4s infinite;
+    box-shadow: 0 6px 18px rgba(13,76,146,0.15);
+    transform-origin: center;
+}
+
+@keyframes ai-pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.06); }
+    100% { transform: scale(1); }
+}
+
+/* Tooltip contextual junto al botón del chat */
+.ai-tooltip {
+    position: fixed;
+    right: 90px;
+    bottom: 28px;
+    background: var(--dark-blue);
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 8px;
+    z-index: 9998;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.2);
+    font-size: 0.95rem;
+}
+
+@media (max-width: 600px) {
+    .ai-tooltip { right: 70px; bottom: 20px; font-size: 0.9rem; }
+}
+
 /* =================   MAIN CONTENT   ================= */
 main {
     margin-top: var(--header-height); /* Se añade el margen aquí */

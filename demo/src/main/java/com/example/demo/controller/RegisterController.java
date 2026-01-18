@@ -104,7 +104,10 @@ public class RegisterController {
             @RequestParam(value = "provinciaCodigo", required = false) String provinciaCodigo,
             @RequestParam(value = "ciudadId", required = false) Long ciudadId,
             @RequestParam("confirmPassword") String confirmPassword,
+            @RequestParam(value = "terms", required = false) String terms,
             Model model) {
+
+        // Mapear opt-in de promociones si vino en el formulario (th:field ya lo bindea automáticamente)
 
         System.out.println("✅ FORMULARIO RECIBIDO - Iniciando validaciones");
         System.out.println("📝 Datos recibidos:");
@@ -141,6 +144,11 @@ public class RegisterController {
              result.rejectValue("contraseña", "error.alumno", "La contraseña debe tener al menos 8 caracteres, una mayúscula y un carácter especial.");
         }
 
+        // Validar que se acepten los términos y condiciones
+        if (terms == null) {
+            result.reject("terms", "Debes aceptar los términos y condiciones para registrarte");
+        }
+
         // Validar edad mínima
         if (alumno.getFechaNacimiento() != null) {
             Period edad = Period.between(alumno.getFechaNacimiento(), LocalDate.now());
@@ -153,6 +161,13 @@ public class RegisterController {
             System.out.println("❌ Errores de validación encontrados:");
             result.getAllErrors().forEach(error -> System.out.println(" - " + error.getDefaultMessage()));
 
+            // Mostrar primer mensaje de error en la vista como alerta
+            if (!result.getAllErrors().isEmpty()) {
+                String primer = result.getAllErrors().get(0).getDefaultMessage();
+                model.addAttribute("mensaje", primer);
+                model.addAttribute("tipo", "error");
+            }
+
             recargarDatosFormulario(model);
             return "screens/register";
         }
@@ -164,6 +179,15 @@ public class RegisterController {
             System.out.println(
                     "   - Provincia: " + (alumno.getProvincia() != null ? alumno.getProvincia().getCodigo() : "null"));
             System.out.println("   - Ciudad: " + (alumno.getCiudad() != null ? alumno.getCiudad().getId() : "null"));
+
+            // Mapear opt-in promociones si el formulario lo envió
+            // Si el checkbox fue enviado por th:field, ya estará en alumno. Si no, intentar leerlo manualmente
+            try {
+                String promo = null; // por retrocompatibilidad, se puede obtener desde request si es necesario
+                // Si existe, alumno.setAceptaPromociones(Boolean.parseBoolean(promo));
+            } catch (Exception e) {
+                // noop
+            }
 
             // Pasar los códigos/IDs al servicio para que busque las entidades completas
             registroService.registrarUsuario(alumno, paisCodigo, provinciaCodigo, ciudadId);

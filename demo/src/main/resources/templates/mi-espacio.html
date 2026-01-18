@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Tareas</title>
     <!-- Incluyendo Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <th:block th:if="${@environment.getProperty('app.useTailwindCdn','true') == 'true'}">
+        <script src="https://cdn.tailwindcss.com"></script>
+    </th:block>
     <style>
         /* Usamos la fuente Inter, que es común en diseños modernos */
         body {

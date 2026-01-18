@@ -802,6 +802,24 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
+    // Botón cancelar: preguntar con modal global antes de salir
+    const cancelBtn = document.getElementById('cancelBtn');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', function () {
+            if (typeof ModalConfirmacion !== 'undefined' && ModalConfirmacion && ModalConfirmacion.show) {
+                ModalConfirmacion.show('Confirmar cancelación', '¿Estás seguro de cancelar el registro? No se creará ninguna cuenta.', function () {
+                    // Redirigir al inicio o página pública
+                    window.location.href = '/';
+                });
+            } else {
+                // Fallback simple
+                if (confirm('¿Estás seguro de cancelar el registro? No se creará ninguna cuenta.')) {
+                    window.location.href = '/';
+                }
+            }
+        });
+    }
+
     nextBtn.addEventListener("click", async function () {
     console.log("🔄 Validando paso antes de avanzar...");
     

@@ -8,7 +8,6 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import com.example.demo.model.CustomUsuarioDetails;
-import com.example.demo.model.Rol;
 import com.example.demo.model.Usuario;
 import com.example.demo.repository.UsuarioRepository;
 

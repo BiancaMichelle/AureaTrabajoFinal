@@ -49,6 +49,20 @@ public class ClaseService {
 
         Docente docente = docenteRepository.findByDni(dniDocente)
                 .orElseThrow(() -> new RuntimeException("Docente no encontrado"));
+        
+        // Validar que el docente esté asignado al curso (Precondición CU-26)
+        boolean docenteAsignado = false;
+        if (modulo.getCurso() instanceof com.example.demo.model.Curso curso) {
+            docenteAsignado = curso.getDocentes().stream()
+                    .anyMatch(d -> d.getDni().equals(dniDocente));
+        } else if (modulo.getCurso() instanceof com.example.demo.model.Formacion formacion) {
+            docenteAsignado = formacion.getDocentes().stream()
+                    .anyMatch(d -> d.getDni().equals(dniDocente));
+        }
+        
+        if (!docenteAsignado) {
+            throw new RuntimeException("El docente no está asignado a este curso");
+        }
 
         clase.setModulo(modulo);
         clase.setDocente(docente);
@@ -62,10 +76,17 @@ public class ClaseService {
         String meetingUrl = jitsiClaseService.generateRoomUrl(clase.getRoomName(), docente, true);
         clase.setMeetingUrl(meetingUrl);
 
-        System.out.println("🎯 Clase creada con Jitsi Meet:");
+        System.out.println("🎯 Clase creada con configuración completa:");
         System.out.println("   - Room: " + clase.getRoomName());
         System.out.println("   - Meeting URL: " + meetingUrl);
-        System.out.println("   - Room Name: " + clase.getRoomName());
+        System.out.println("   - Asistencia automática: " + clase.getAsistenciaAutomatica());
+        System.out.println("   - Preguntas aleatorias: " + clase.getPreguntasAleatorias() + 
+                          (Boolean.TRUE.equals(clase.getPreguntasAleatorias()) ? 
+                           " (Cantidad: " + clase.getCantidadPreguntas() + ")" : ""));
+        System.out.println("   - Permisos: Mic=" + clase.getPermisoMicrofono() + 
+                          ", Cam=" + clase.getPermisoCamara() + 
+                          ", Pantalla=" + clase.getPermisoCompartirPantalla() + 
+                          ", Chat=" + clase.getPermisoChat());
 
         return claseRepository.save(clase);
     }

@@ -2,7 +2,9 @@
 <html lang="es" xmlns:th="http://www.thymeleaf.org" layout:decorate="~{layout/base}">
 <head>
     <title>Gestión de Examen</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <th:block th:if="${@environment.getProperty('app.useTailwindCdn','true') == 'true'}">
+        <script src="https://cdn.tailwindcss.com"></script>
+    </th:block>
     <script>
         tailwind.config = {
             theme: {

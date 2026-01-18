@@ -33,6 +33,7 @@ import com.example.demo.DTOMP.ReferenceRequest;
 import com.example.demo.DTOMP.ResponseDTO;
 import com.example.demo.enums.EstadoCuota;
 import com.example.demo.enums.EstadoIntento;
+import com.example.demo.enums.EstadoOferta;
 import com.example.demo.enums.EstadoPago;
 import com.example.demo.enums.TipoGenero;
 import com.example.demo.model.Alumno;
@@ -47,7 +48,10 @@ import com.example.demo.model.Modulo;
 import com.example.demo.model.OfertaAcademica;
 import com.example.demo.model.Pago;
 import com.example.demo.model.Usuario;
+import com.example.demo.model.Tarea;
+import com.example.demo.model.Entrega;
 import com.example.demo.repository.CuotaRepository;
+import com.example.demo.repository.EntregaRepository;
 import com.example.demo.repository.InscripcionRepository;
 import com.example.demo.repository.IntentoRepository;
 import com.example.demo.repository.ModuloRepository;
@@ -56,6 +60,12 @@ import com.example.demo.repository.UsuarioRepository;
 import com.example.demo.repository.PagoRepository;
 import com.example.demo.service.MercadoPagoService;
 import com.example.demo.service.InstitutoService;
+import com.example.demo.service.ReporteService;
+import com.example.demo.service.EmailService;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 
 @Controller
 @RequestMapping("/alumno")
@@ -82,6 +92,21 @@ public class AlumnoController {
                     .orElseThrow(() -> new RuntimeException("Alumno no encontrado"));
             
             model.addAttribute("alumno", alumno);
+
+            // Alerta de próximos pagos
+            LocalDate hoy = LocalDate.now();
+            // Filtrar cuotas del alumno que vencen en los proximos 5 dias
+            java.util.List<Cuota> cuotasProximas = cuotaRepository.findByUsuarioId(alumno.getId()).stream()
+                .filter(c -> c.getEstado() == EstadoCuota.PENDIENTE)
+                .filter(c -> c.getFechaVencimiento() != null)
+                .filter(c -> !c.getFechaVencimiento().isBefore(hoy)) 
+                .filter(c -> c.getFechaVencimiento().isBefore(hoy.plusDays(6))) // < hoy+6 means <= hoy+5
+                .collect(Collectors.toList());
+            
+            if (!cuotasProximas.isEmpty()) {
+                model.addAttribute("alertaPagoProximo", true);
+                model.addAttribute("cuotasProximasVencer", cuotasProximas);
+            }
             
             return "alumno/mi-espacio";
             
@@ -110,6 +135,11 @@ public class AlumnoController {
             if (cuota.getInscripcion() == null || cuota.getInscripcion().getAlumno() == null
                     || !cuota.getInscripcion().getAlumno().getId().equals(alumno.getId())) {
                 redirectAttributes.addFlashAttribute("error", "No tienes acceso a esta cuota");
+                return "redirect:/alumno/mis-pagos";
+            }
+
+            if (cuota.getInscripcion().getOferta().getEstado() != EstadoOferta.ACTIVA) {
+                redirectAttributes.addFlashAttribute("error", "La oferta académica asociada ya no está activa");
                 return "redirect:/alumno/mis-pagos";
             }
 
@@ -293,6 +323,36 @@ public class AlumnoController {
         }
     }
 
+    @GetMapping("/mis-pagos/comprobante/{pagoId}")
+    public ResponseEntity<ByteArrayResource> descargarComprobante(@PathVariable Long pagoId, Principal principal) {
+        try {
+            String dni = principal.getName();
+            Usuario alumno = usuarioRepository.findByDni(dni)
+                    .orElseThrow(() -> new RuntimeException("Alumno no encontrado"));
+
+            Pago pago = pagoRepository.findById(pagoId)
+                    .orElseThrow(() -> new RuntimeException("Pago no encontrado"));
+
+            if (!pago.getUsuario().getId().equals(alumno.getId())) {
+                return ResponseEntity.status(403).build();
+            }
+
+            java.io.ByteArrayInputStream pdfStream = reporteService.generarComprobantePagoPDF(pago);
+            byte[] data = pdfStream.readAllBytes();
+            ByteArrayResource resource = new ByteArrayResource(data);
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment;filename=Comprobante_" + pago.getIdPago() + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .contentLength(data.length)
+                    .body(resource);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
     private final OfertaAcademicaRepository ofertaAcademicaRepository;
     private final InscripcionRepository inscripcionRepository;
     private final UsuarioRepository usuarioRepository;
@@ -302,6 +362,9 @@ public class AlumnoController {
     private final PagoRepository pagoRepository;
     private final CuotaRepository cuotaRepository;
     private final InstitutoService institutoService;
+    private final ReporteService reporteService;
+    private final EmailService emailService;
+    private final EntregaRepository entregaRepository;
 
     public AlumnoController(OfertaAcademicaRepository ofertaAcademicaRepository,
                           InscripcionRepository inscripcionRepository,
@@ -311,7 +374,10 @@ public class AlumnoController {
                           MercadoPagoService mercadoPagoService,
                           PagoRepository pagoRepository,
                           CuotaRepository cuotaRepository,
-                          InstitutoService institutoService) {
+                          InstitutoService institutoService,
+                          ReporteService reporteService,
+                          EmailService emailService,
+                          EntregaRepository entregaRepository) {
         this.ofertaAcademicaRepository = ofertaAcademicaRepository;
         this.inscripcionRepository = inscripcionRepository;
         this.usuarioRepository = usuarioRepository;
@@ -321,6 +387,9 @@ public class AlumnoController {
         this.pagoRepository = pagoRepository;
         this.cuotaRepository = cuotaRepository;
         this.institutoService = institutoService;
+        this.reporteService = reporteService;
+        this.emailService = emailService;
+        this.entregaRepository = entregaRepository;
     }
 
     private BigDecimal calcularSaldoPendiente(Cuota cuota) {
@@ -421,10 +490,11 @@ public class AlumnoController {
 
             // Verificar si ya está inscrito
             List<Inscripciones> inscripcionesExistentes = inscripcionRepository.findByAlumnoDni(dni);
-            boolean yaInscrito = inscripcionesExistentes.stream()
-                    .anyMatch(ins -> ins.getOferta().getIdOferta().equals(ofertaIdSeguro));
+            boolean yaInscritoActivo = inscripcionesExistentes.stream()
+                    .filter(ins -> ins.getOferta().getIdOferta().equals(ofertaIdSeguro))
+                    .anyMatch(ins -> Boolean.TRUE.equals(ins.getEstadoInscripcion()));
             
-            if (yaInscrito) {
+            if (yaInscritoActivo) {
                 redirectAttributes.addFlashAttribute("error", "Ya estás inscrito en esta oferta");
                 return "redirect:/publico";
             }
@@ -461,6 +531,53 @@ public class AlumnoController {
         }
     }
 
+    // ✅ CU-08: Darse de baja de una oferta académica
+    @PostMapping("/darse-de-baja/{inscripcionId}")
+    public String darseDeBaja(@PathVariable Long inscripcionId,
+                              Principal principal,
+                              RedirectAttributes redirectAttributes) {
+        try {
+            String dni = principal.getName();
+            Usuario alumno = usuarioRepository.findByDni(dni)
+                    .orElseThrow(() -> new RuntimeException("Alumno no encontrado"));
+
+            Inscripciones inscripcion = inscripcionRepository.findById(inscripcionId)
+                    .orElseThrow(() -> new RuntimeException("Inscripción no encontrada"));
+
+            // 1. Validar pertenencia
+            if (!inscripcion.getAlumno().getId().equals(alumno.getId())) {
+                redirectAttributes.addFlashAttribute("error", "No tienes permiso para realizar esta acción.");
+                return "redirect:/alumno/mis-ofertas";
+            }
+
+            // 2. Realizar baja lógica
+            inscripcion.setEstadoInscripcion(false);
+            inscripcionRepository.save(inscripcion);
+
+            // 3. Notificación por Email (Requisito del CU)
+            try {
+                if (alumno.getCorreo() != null && !alumno.getCorreo().isEmpty()) {
+                    String subject = "Confirmación de baja - Aurea";
+                    String body = "Hola " + alumno.getNombre() + ",<br><br>" +
+                            "Confirmamos que te has dado de baja de la oferta académica: <strong>" + inscripcion.getOferta().getNombre() + "</strong>.<br>" +
+                            "Fecha de baja: " + LocalDate.now() + "<br><br>" +
+                            "Si deseas retomar el curso en el futuro, deberás inscribirte nuevamente.<br><br>" +
+                            "Saludos,<br>Equipo Aurea.";
+                    emailService.sendEmail(alumno.getCorreo(), subject, body);
+                }
+            } catch (Exception mailEx) {
+                System.out.println("⚠️ No se pudo enviar email de baja: " + mailEx.getMessage());
+            }
+
+            redirectAttributes.addFlashAttribute("success", "Te has dado de baja correctamente de: " + inscripcion.getOferta().getNombre());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            redirectAttributes.addFlashAttribute("error", "Error al procesar la baja: " + e.getMessage());
+        }
+        return "redirect:/alumno/mis-ofertas";
+    }
+
     // Ver mis ofertas académicas (inscripciones)
     @GetMapping("/mis-ofertas")
     public String misOfertasAcademicas(Principal principal, Model model) {
@@ -472,14 +589,19 @@ public class AlumnoController {
                     .orElseThrow(() -> new RuntimeException("Alumno no encontrado"));
             
             // ✅ Buscar inscripciones del alumno
-            List<Inscripciones> inscripciones = inscripcionRepository.findByAlumnoDni(dni);
+            List<Inscripciones> todasInscripciones = inscripcionRepository.findByAlumnoDni(dni);
+
+            // ✅ FILTRAR SOLO LAS ACTIVAS (estadoInscripcion = true)
+            List<Inscripciones> inscripciones = todasInscripciones.stream()
+                    .filter(i -> Boolean.TRUE.equals(i.getEstadoInscripcion()))
+                    .collect(Collectors.toList());
             
             // ✅ Extraer TODAS las ofertas académicas (Cursos Y Formaciones)
             List<OfertaAcademica> ofertas = inscripciones.stream()
                     .map(Inscripciones::getOferta)
                     .collect(Collectors.toList());
             
-            System.out.println("📊 Inscripciones encontradas: " + inscripciones.size());
+            System.out.println("📊 Inscripciones activas encontradas: " + inscripciones.size());
             System.out.println("📊 Ofertas académicas: " + ofertas.size());
             
             // Debug: mostrar tipos de ofertas
@@ -511,8 +633,24 @@ public class AlumnoController {
             System.out.println("🔍 Accediendo al aula para oferta ID: " + ofertaIdSeguro + ", usuario: " + dni);
             
                 // Buscar la inscripción del alumno en esta oferta
-                Inscripciones inscripcion = inscripcionRepository.findByAlumnoDniAndOfertaId(dni, ofertaIdSeguro)
-                    .orElseThrow(() -> new RuntimeException("Inscripción no encontrada"));
+                List<Inscripciones> inscripciones = inscripcionRepository.findByAlumnoDniAndOfertaId(dni, ofertaIdSeguro);
+                
+                // Buscar una inscripción ACTIVA
+                Inscripciones inscripcion = inscripciones.stream()
+                    .filter(i -> Boolean.TRUE.equals(i.getEstadoInscripcion()))
+                    .findFirst()
+                    .orElse(null);
+
+                // Si no hay activa, buscar cualquiera para mostrar error adecuado o redirigir
+                if (inscripcion == null) {
+                    if (!inscripciones.isEmpty()) {
+                         // Hay inscripciones pero ninguna activa
+                         System.out.println("❌ Inscripción encontrada pero inactiva (Dada de baja)");
+                         model.addAttribute("error", "Esta inscripción no está activa. Debes inscribirte nuevamente.");
+                         return "misOfertasAcademicas";
+                    }
+                    throw new RuntimeException("Inscripción no encontrada");
+                }
 
                 Usuario alumno = inscripcion.getAlumno();
                 if (alumno == null) {
@@ -521,8 +659,8 @@ public class AlumnoController {
 
             System.out.println("✅ Inscripción encontrada ID: " + inscripcion.getIdInscripcion());
 
-            // Verificar que la inscripción esté activa
-            if (!inscripcion.getEstadoInscripcion()) {
+            // Validación redundante pero segura
+            if (!Boolean.TRUE.equals(inscripcion.getEstadoInscripcion())) {
                 System.out.println("❌ Inscripción inactiva");
                 model.addAttribute("error", "Esta inscripción no está activa");
                 return "misOfertasAcademicas";
@@ -590,6 +728,8 @@ public class AlumnoController {
                 }
                 
                 Map<Long, Map<String, Object>> examenesResumen = null;
+                Map<Long, Entrega> tareasEntregas = new HashMap<>(); // Mapa para las entregas
+
                 if (!puedeModificar && modulos != null) {
                     examenesResumen = new HashMap<>();
                     for (Modulo moduloActual : modulos) {
@@ -628,6 +768,10 @@ public class AlumnoController {
                                 resumen.put("requiereRevision", requiereRevision);
 
                                 examenesResumen.put(examenActividad.getIdActividad(), resumen);
+                            } else if (actividad instanceof Tarea tarea) {
+                                // Buscar entrega para la tarea
+                                entregaRepository.findByTareaAndEstudiante(tarea, alumno)
+                                    .ifPresent(entrega -> tareasEntregas.put(tarea.getIdActividad(), entrega));
                             }
                         }
                     }
@@ -636,6 +780,7 @@ public class AlumnoController {
                 model.addAttribute("curso", oferta); // Mantener nombre "curso" para compatibilidad
                 model.addAttribute("modulos", modulos);
                 model.addAttribute("examenIntentos", examenesResumen != null ? examenesResumen : Collections.emptyMap());
+                model.addAttribute("tareasEntregas", tareasEntregas);
                 model.addAttribute("inscripcion", inscripcion);
                 model.addAttribute("puedeModificar", puedeModificar);
                 System.out.println("👤 Puede modificar: " + puedeModificar);

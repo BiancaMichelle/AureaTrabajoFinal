@@ -2,7 +2,9 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <title>Esperando al docente</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <th:block th:if="${@environment.getProperty('app.useTailwindCdn','true') == 'true'}">
+        <script src="https://cdn.tailwindcss.com"></script>
+    </th:block>
 </head>
 <body class="bg-gray-100">
     <div class="min-h-screen flex items-center justify-center">

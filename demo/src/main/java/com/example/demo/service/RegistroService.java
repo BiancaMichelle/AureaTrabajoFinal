@@ -10,30 +10,28 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 
-import com.example.demo.repository.CursoRepository;
-import com.example.demo.repository.InscripcionRepository;
-import com.example.demo.enums.EstadoOferta;
-
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.demo.enums.Dias;
+import com.example.demo.enums.EstadoOferta;
 import com.example.demo.enums.TipoGenero;
 import com.example.demo.model.Alumno;
 import com.example.demo.model.Ciudad;
+import com.example.demo.model.Curso;
 import com.example.demo.model.Docente;
 import com.example.demo.model.Horario;
 import com.example.demo.model.Pais;
 import com.example.demo.model.Provincia;
 import com.example.demo.model.Rol;
 import com.example.demo.model.Usuario;
-import com.example.demo.model.Curso;
-import com.example.demo.model.Inscripciones;
 import com.example.demo.repository.AlumnoRepository;
 import com.example.demo.repository.CiudadRepository;
+import com.example.demo.repository.CursoRepository;
 import com.example.demo.repository.DocenteRepository;
 import com.example.demo.repository.HorarioRepository;
+import com.example.demo.repository.InscripcionRepository;
 import com.example.demo.repository.PaisRepository;
 import com.example.demo.repository.ProvinciaRepository;
 import com.example.demo.repository.RolRepository;

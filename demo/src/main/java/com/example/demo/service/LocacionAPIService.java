@@ -4,7 +4,10 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import com.example.demo.model.Ciudad;
@@ -21,7 +24,7 @@ public class LocacionAPIService {
     private final RestTemplate restTemplate;
     private final String API_URL = "https://api.countrystatecity.in/v1";
     
-    public LocacionAPIService(RestTemplate restTemplate) {
+    public LocacionAPIService(@Qualifier("locacionRestTemplate") RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
     }
     
@@ -41,6 +44,9 @@ public class LocacionAPIService {
                 logger.warn("La API devolvió null para la lista de países");
                 return List.of();
             }
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
+            logger.error("Error API Locacion: {} - Cuerpo: {}", e.getStatusCode(), e.getResponseBodyAsString());
+            throw e;
         } catch (Exception e) {
             logger.error("Error al obtener países desde la API: {}", e.getMessage());
             throw new RuntimeException("Error al obtener países: " + e.getMessage(), e);

@@ -126,9 +126,7 @@ public class SeminarioService {
             if (modalidad != null && !modalidad.isEmpty()) {
                 seminarioExistente.setModalidad(com.example.demo.enums.Modalidad.valueOf(modalidad.toUpperCase()));
             }
-            
-            // TODO: Manejar imagen, categorías y disertantes según sea necesario
-            
+                        
             // Guardar cambios
             return seminarioRepository.save(seminarioExistente);
             

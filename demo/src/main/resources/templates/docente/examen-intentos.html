@@ -5,7 +5,9 @@
     <title th:text="${examen.titulo} + ' · Intentos'">Intentos del examen</title>
     
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <th:block th:if="${@environment.getProperty('app.useTailwindCdn','true') == 'true'}">
+        <script src="https://cdn.tailwindcss.com"></script>
+    </th:block>
     
     <!-- Google Fonts: Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">

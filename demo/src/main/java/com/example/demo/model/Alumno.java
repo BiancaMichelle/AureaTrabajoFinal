@@ -42,4 +42,7 @@ public class Alumno extends Usuario {
 
     @OneToMany(mappedBy = "alumno", cascade = CascadeType.ALL)
     private List<Inscripciones> inscripciones;
+
+    // Opt-in para recibir promociones e información relevante del instituto
+    private boolean aceptaPromociones = false;
 }

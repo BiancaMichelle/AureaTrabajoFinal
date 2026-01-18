@@ -45,15 +45,17 @@ public class MercadoPagoService {
     private final InscripcionRepository inscripcionRepository;
     private final EmailService emailService;
     private final CuotaRepository cuotaRepository;
+    private final ReporteService reporteService;
 
         public MercadoPagoService(MPClient mpClient, PagoRepository pagoRepository,
             InscripcionRepository inscripcionRepository, EmailService emailService,
-            CuotaRepository cuotaRepository) {
+            CuotaRepository cuotaRepository, ReporteService reporteService) {
         this.mpClient = mpClient;
         this.pagoRepository = pagoRepository;
         this.inscripcionRepository = inscripcionRepository;
         this.emailService = emailService;
         this.cuotaRepository = cuotaRepository;
+        this.reporteService = reporteService;
     }
 
     public ResponseDTO createPreference(ReferenceRequest inputData, Usuario usuario, OfertaAcademica oferta)
@@ -559,10 +561,15 @@ public class MercadoPagoService {
                     pago.getFechaAprobacion(),
                     pago.getTipoPago());
 
-            emailService.sendEmail(to, subject, body);
+            // Generar PDF y enviar correo con adjunto
+            java.io.ByteArrayInputStream pdfStream = reporteService.generarComprobantePagoPDF(pago);
+            byte[] pdfBytes = pdfStream.readAllBytes();
+
+            emailService.sendEmailWithAttachment(to, subject, body, pdfBytes, "Comprobante_" + pago.getExternalReference() + ".pdf");
+            
             pago.setComprobanteEnviado(true);
             pagoRepository.save(pago);
-            log.info("📧 Comprobante enviado a {}", to);
+            log.info("📧 Comprobante (con PDF) enviado a {}", to);
 
         } catch (Exception e) {
             log.error("❌ Error al enviar comprobante de pago", e);

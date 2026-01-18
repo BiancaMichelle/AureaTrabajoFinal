@@ -17,15 +17,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.example.demo.enums.TipoPregunta;
+import com.example.demo.model.Material;
 import com.example.demo.model.Opcion;
 import com.example.demo.model.Pool;
 import com.example.demo.model.Pregunta;
-import com.example.demo.model.Curso;
-import com.example.demo.model.Modulo;
-import com.example.demo.model.Actividad;
-import com.example.demo.model.Material;
-import com.example.demo.repository.OpcionRepository;
 import com.example.demo.repository.OfertaAcademicaRepository;
+import com.example.demo.repository.OpcionRepository;
 import com.example.demo.repository.PoolRepository;
 import com.example.demo.repository.PreguntaRepository;
 import com.fasterxml.jackson.core.type.TypeReference;

@@ -27,4 +27,6 @@ public interface CuotaRepository extends JpaRepository<Cuota, Long> {
     @Query("SELECT c FROM Cuota c WHERE c.fechaVencimiento BETWEEN :fechaInicio AND :fechaFin")
     List<Cuota> findCuotasEnRangoFecha(@Param("fechaInicio") LocalDate fechaInicio, 
                                        @Param("fechaFin") LocalDate fechaFin);
+
+    List<Cuota> findByEstadoAndFechaVencimientoBetween(com.example.demo.enums.EstadoCuota estado, LocalDate fechaInicio, LocalDate fechaFin);
 }

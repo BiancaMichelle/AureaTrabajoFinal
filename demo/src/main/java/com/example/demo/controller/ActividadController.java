@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,15 +23,18 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.example.demo.enums.TipoEntrega;
 import com.example.demo.enums.TipoPregunta;
 import com.example.demo.model.Archivo;
 import com.example.demo.model.Examen;
 import com.example.demo.model.Material;
 import com.example.demo.model.Modulo;
+import com.example.demo.model.Tarea;
 import com.example.demo.repository.ArchivoRepository;
 import com.example.demo.repository.MaterialRepository;
 import com.example.demo.repository.ModuloRepository;
 import com.example.demo.service.ExamenService;
+import com.example.demo.service.TareaService;
 import com.example.demo.service.ExamenService.PoolDTO;
 import com.example.demo.service.ExamenService.PreguntaDTO;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -41,6 +45,9 @@ public class ActividadController {
 
     @Autowired
     private ExamenService examenService;
+    
+    @Autowired
+    private TareaService tareaService;
     
     @Autowired
     private ObjectMapper objectMapper;
@@ -130,6 +137,80 @@ public class ActividadController {
         preguntaDTO.setTipoPregunta(TipoPregunta.valueOf(request.getTipoPregunta()));
         preguntaDTO.setPuntaje(request.getPuntaje());
         return preguntaDTO;
+    }
+
+    /**
+     * Endpoint para crear una nueva tarea siguiendo el flujo del CU-30.
+     * 
+     * Precondiciones verificadas:
+     * - @PreAuthorize valida que el usuario sea DOCENTE o ADMIN (Precondición 3)
+     * - TareaService valida que el módulo exista (Precondición 1)
+     * - TareaService valida que el curso esté en estado ACTIVA (Precondición 2)
+     */
+    @PostMapping("/actividad/crearTarea")
+    @PreAuthorize("hasAnyAuthority('DOCENTE', 'ADMIN')")
+    @ResponseBody
+    public ResponseEntity<?> crearTarea(
+            @RequestParam("moduloId") String moduloId,
+            @RequestParam("titulo") String titulo,
+            @RequestParam("descripcion") String descripcion,
+            @RequestParam("limiteEntrega") String limiteEntrega,
+            @RequestParam(value = "tipoEntrega", required = false) List<String> tiposEntrega,
+            @RequestParam(value = "entregasTardias", required = false, defaultValue = "false") Boolean entregasTardias,
+            @RequestParam(value = "modificaciones", required = false, defaultValue = "false") Boolean modificaciones,
+            @RequestParam(value = "visibilidad", required = false, defaultValue = "true") Boolean visibilidad) {
+        
+        try {
+            // Paso 3 del CU-30: El docente completa los datos
+            Tarea tarea = new Tarea();
+            tarea.setTitulo(titulo);
+            tarea.setDescripcion(descripcion);
+            tarea.setLimiteEntrega(LocalDateTime.parse(limiteEntrega));
+            
+            // Paso 2: Convertir tipos de entrega de String a enum
+            if (tiposEntrega != null && !tiposEntrega.isEmpty()) {
+                List<TipoEntrega> tiposEntregaEnum = new ArrayList<>();
+                for (String tipo : tiposEntrega) {
+                    try {
+                        tiposEntregaEnum.add(TipoEntrega.valueOf(tipo));
+                    } catch (IllegalArgumentException e) {
+                        return ResponseEntity.badRequest()
+                                .body(Map.of("success", false, "message", "Tipo de entrega inválido: " + tipo));
+                    }
+                }
+                tarea.setTipoEntrega(tiposEntregaEnum);
+            }
+            
+            // Pasos 4-5: Configuración de entregas
+            tarea.setEntregasTardias(entregasTardias);
+            tarea.setModificaciones(modificaciones);
+            
+            // Pasos 6-7: Configuración de visibilidad
+            tarea.setVisibilidad(visibilidad);
+            
+            // Pasos 8-10: Validar datos y guardar (delegado al servicio)
+            Tarea tareaGuardada = tareaService.crearTarea(tarea, UUID.fromString(moduloId));
+            
+            // Paso 10: Confirmar la carga exitosa
+            return ResponseEntity.ok().body(Map.of(
+                "success", true, 
+                "message", "Tarea creada exitosamente" + (visibilidad ? " y publicada para los alumnos" : " (oculta para los alumnos)"),
+                "idTarea", tareaGuardada.getIdActividad()
+            ));
+            
+        } catch (IllegalArgumentException e) {
+            // Paso 8 (alternativo): Error en formato de datos
+            return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "Error en el formato de los datos: " + e.getMessage()));
+        } catch (RuntimeException e) {
+            // Paso 8 (alternativo): Validación fallida o precondiciones no cumplidas
+            return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", e.getMessage()));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("success", false, "message", "Error al crear la tarea: " + e.getMessage()));
+        }
     }
 
     @DeleteMapping("/actividad/{actividadId}/eliminar")

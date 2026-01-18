@@ -135,9 +135,7 @@ public class FormacionService {
             formacionExistente.setCostoMora(costoMora);
             formacionExistente.setNrCuotas(nrCuotas);
             formacionExistente.setDiaVencimiento(diaVencimiento);
-            
-            // TODO: Manejar imagen, categorías, horarios y docentes según sea necesario
-            
+                        
             // Guardar cambios
             return formacionRepository.save(formacionExistente);
             

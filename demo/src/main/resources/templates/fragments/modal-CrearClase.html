@@ -42,18 +42,98 @@
                     </select>
                 </div>
                 
-                <div class="mb-4">
-                    <label class="flex items-center">
-                        <input type="checkbox" name="asistenciaAutomatica" class="rounded border-gray-300 text-customBlue focus:ring-customBlue" value="true">
-                        <span class="ml-2 text-sm text-gray-700">Asistencia automática</span>
+                <!-- Configuración de Asistencia -->
+                <div class="mb-4 border-t pt-4">
+                    <h4 class="text-sm font-semibold text-gray-700 mb-3">
+                        <i class="fas fa-clipboard-check me-1"></i>Configuración de Asistencia
+                    </h4>
+                    
+                    <label class="flex items-center mb-2">
+                        <input type="checkbox" id="asistenciaAutomatica" name="asistenciaAutomatica" 
+                               class="rounded border-gray-300 text-customBlue focus:ring-customBlue" value="true">
+                        <span class="ml-2 text-sm text-gray-700">Tomar asistencia automática</span>
+                    </label>
+                    
+                    <label class="flex items-center mb-2">
+                        <input type="checkbox" id="preguntasAleatorias" name="preguntasAleatorias" 
+                               class="rounded border-gray-300 text-customBlue focus:ring-customBlue" value="true">
+                        <span class="ml-2 text-sm text-gray-700">Realizar preguntas aleatorias durante la clase</span>
+                    </label>
+                    
+                    <div id="cantidadPreguntasContainer" class="ml-6 mt-2 hidden">
+                        <label class="block text-sm font-medium text-gray-700">Cantidad de preguntas</label>
+                        <input type="number" name="cantidadPreguntas" min="1" max="10" value="3"
+                               class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2">
+                    </div>
+                </div>
+
+                <!-- Permisos de Alumnos -->
+                <div class="mb-4 border-t pt-4">
+                    <h4 class="text-sm font-semibold text-gray-700 mb-3">
+                        <i class="fas fa-users-cog me-1"></i>Permisos de Alumnos
+                    </h4>
+                    
+                    <label class="flex items-center mb-2">
+                        <input type="checkbox" name="permisoMicrofono" 
+                               class="rounded border-gray-300 text-customBlue focus:ring-customBlue" value="true">
+                        <span class="ml-2 text-sm text-gray-700">
+                            <i class="fas fa-microphone text-gray-500 me-1"></i>Activar micrófono
+                        </span>
+                    </label>
+                    
+                    <label class="flex items-center mb-2">
+                        <input type="checkbox" name="permisoCamara" 
+                               class="rounded border-gray-300 text-customBlue focus:ring-customBlue" value="true">
+                        <span class="ml-2 text-sm text-gray-700">
+                            <i class="fas fa-video text-gray-500 me-1"></i>Activar cámara
+                        </span>
+                    </label>
+                    
+                    <label class="flex items-center mb-2">
+                        <input type="checkbox" name="permisoCompartirPantalla" 
+                               class="rounded border-gray-300 text-customBlue focus:ring-customBlue" value="true">
+                        <span class="ml-2 text-sm text-gray-700">
+                            <i class="fas fa-desktop text-gray-500 me-1"></i>Compartir pantalla
+                        </span>
+                    </label>
+                    
+                    <label class="flex items-center mb-2">
+                        <input type="checkbox" name="permisoChat" checked
+                               class="rounded border-gray-300 text-customBlue focus:ring-customBlue" value="true">
+                        <span class="ml-2 text-sm text-gray-700">
+                            <i class="fas fa-comments text-gray-500 me-1"></i>Escribir en el chat
+                        </span>
                     </label>
                 </div>
 
                 <div class="mb-4">
                     <label class="flex items-center">
-                        <input type="checkbox" name="transcripcionHabilitada" class="rounded border-gray-300 text-customBlue focus:ring-customBlue" value="true">
+                        <input type="checkbox" name="transcripcionHabilitada" id="transcripcionHabilitada"
+                               class="rounded border-gray-300 text-customBlue focus:ring-customBlue" value="true">
                         <span class="ml-2 text-sm text-gray-700">Habilitar Transcripción</span>
                     </label>
+                </div>
+                
+                <!-- Configuración de Resumen (CU-27) -->
+                <div class="mb-4 border-t pt-4">
+                    <h4 class="text-sm font-semibold text-gray-700 mb-3">
+                        <i class="fas fa-file-alt me-1"></i>Resumen Automático con IA
+                    </h4>
+                    
+                    <label class="flex items-center mb-2">
+                        <input type="checkbox" name="generarResumenAutomatico" id="generarResumenAutomatico"
+                               class="rounded border-gray-300 text-customBlue focus:ring-customBlue" value="true">
+                        <span class="ml-2 text-sm text-gray-700">Generar resumen automáticamente al finalizar la clase</span>
+                    </label>
+                    
+                    <div id="publicarResumenContainer" class="ml-6 mt-2 hidden">
+                        <label class="flex items-center">
+                            <input type="checkbox" name="publicarResumenAutomaticamente" 
+                                   class="rounded border-gray-300 text-customBlue focus:ring-customBlue" value="true">
+                            <span class="ml-2 text-sm text-gray-700">Publicar resumen en el módulo automáticamente</span>
+                        </label>
+                        <p class="text-xs text-gray-500 ml-6 mt-1">Si no se marca, el resumen quedará solo visible para el docente</p>
+                    </div>
                 </div>
                 
                 <div class="flex justify-end space-x-2">
@@ -91,6 +171,30 @@
             }
         });
 
+        // Mostrar/ocultar cantidad de preguntas
+        document.getElementById('preguntasAleatorias')?.addEventListener('change', function() {
+            const container = document.getElementById('cantidadPreguntasContainer');
+            container.classList.toggle('hidden', !this.checked);
+            const cantidadInput = document.querySelector('input[name="cantidadPreguntas"]');
+            if (cantidadInput) {
+                cantidadInput.required = this.checked;
+            }
+        });
+        
+        // Mostrar/ocultar opción de publicación automática de resumen (CU-27)
+        document.getElementById('generarResumenAutomatico')?.addEventListener('change', function() {
+            const container = document.getElementById('publicarResumenContainer');
+            container.classList.toggle('hidden', !this.checked);
+        });
+        
+        // Advertencia si se marca generar resumen sin transcripción
+        document.getElementById('generarResumenAutomatico')?.addEventListener('change', function() {
+            const transcripcionCheck = document.getElementById('transcripcionHabilitada');
+            if (this.checked && !transcripcionCheck.checked) {
+                alert('⚠️ Recomendación: Active la transcripción para generar un resumen más completo.');
+            }
+        });
+
         // Manejar envío del formulario
         document.getElementById('createClassForm')?.addEventListener('submit', function(e) {
             const inicioInput = document.querySelector('input[name="inicio"]');
@@ -105,6 +209,14 @@
             if (!duracionSelect.value) {
                 e.preventDefault();
                 alert('Por favor, selecciona una duración');
+                return;
+            }
+            
+            const preguntasCheck = document.getElementById('preguntasAleatorias');
+            const cantidadInput = document.querySelector('input[name="cantidadPreguntas"]');
+            if (preguntasCheck?.checked && (!cantidadInput.value || cantidadInput.value < 1)) {
+                e.preventDefault();
+                alert('Por favor, especifica la cantidad de preguntas (mínimo 1)');
                 return;
             }
         });

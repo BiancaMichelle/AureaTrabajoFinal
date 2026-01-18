@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.example.demo.model.OfertaAcademica;
+import com.example.demo.model.Pago;
 import com.example.demo.model.Curso;
 import com.example.demo.model.Docente;
 import com.example.demo.model.Usuario;
@@ -708,5 +709,90 @@ public class ReporteService {
         }
         
         doc.add(chartTable);
+    }
+
+    public ByteArrayInputStream generarComprobantePagoPDF(Pago pago) {
+        Document document = new Document(PageSize.A4);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+        try {
+            PdfWriter.getInstance(document, out);
+            document.open();
+
+            // Estilos
+            com.lowagie.text.Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18);
+            com.lowagie.text.Font headerFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12);
+            com.lowagie.text.Font normalFont = FontFactory.getFont(FontFactory.HELVETICA, 12);
+            com.lowagie.text.Font smallFont = FontFactory.getFont(FontFactory.HELVETICA, 10);
+
+            // Título
+            Paragraph title = new Paragraph("AUREA - Comprobante de Pago", titleFont);
+            title.setAlignment(Element.ALIGN_CENTER);
+            document.add(title);
+            document.add(Chunk.NEWLINE);
+            document.add(Chunk.NEWLINE);
+
+            // Datos del Alumno
+            document.add(new Paragraph("Datos del Alumno:", headerFont));
+            document.add(new Paragraph("Nombre: " + (pago.getUsuario() != null ? pago.getUsuario().getNombre() + " " + pago.getUsuario().getApellido() : "N/A"), normalFont));
+            document.add(new Paragraph("DNI: " + (pago.getUsuario() != null ? pago.getUsuario().getDni() : "N/A"), normalFont));
+            document.add(new Paragraph("Email: " + (pago.getEmailPagador() != null ? pago.getEmailPagador() : "N/A"), normalFont));
+            document.add(Chunk.NEWLINE);
+
+            // Datos del Pago
+            document.add(new Paragraph("Detalles de la Transacción:", headerFont));
+            
+            PdfPTable table = new PdfPTable(2);
+            table.setWidthPercentage(100);
+            table.setSpacingBefore(10f);
+            table.setSpacingAfter(10f);
+
+            addTableRow(table, "Concepto:", pago.getDescripcion() != null ? pago.getDescripcion() : "Inscripción");
+            addTableRow(table, "Oferta Académica:", pago.getOferta() != null ? pago.getOferta().getNombre() : "N/A");
+            addTableRow(table, "Referencia de Pago:", pago.getExternalReference() != null ? pago.getExternalReference() : "N/A");
+            addTableRow(table, "ID Transacción (MP):", pago.getPaymentId() != null ? pago.getPaymentId().toString() : "N/A");
+            addTableRow(table, "Método de Pago:", pago.getTipoPago() != null ? pago.getTipoPago() : "N/A");
+            addTableRow(table, "Fecha:", pago.getFechaAprobacion() != null ? pago.getFechaAprobacion().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : LocalDate.now().toString());
+            
+            // Monto destacado
+            PdfPCell cellLabel = new PdfPCell(new Phrase("Monto Pagado:", headerFont));
+            cellLabel.setBorder(0);
+            cellLabel.setPadding(5);
+            table.addCell(cellLabel);
+
+            PdfPCell cellValue = new PdfPCell(new Phrase("$ " + (pago.getMonto() != null ? pago.getMonto().toString() : "0.00"), titleFont));
+            cellValue.setBorder(0);
+            cellValue.setPadding(5);
+            table.addCell(cellValue);
+
+            document.add(table);
+            document.add(Chunk.NEWLINE);
+
+            // Pie de página
+            Paragraph footer = new Paragraph("Este documento es un comprobante válido de pago emitido por Aurea.", smallFont);
+            footer.setAlignment(Element.ALIGN_CENTER);
+            document.add(footer);
+
+            document.close();
+        } catch (DocumentException e) {
+            e.printStackTrace();
+        }
+
+        return new ByteArrayInputStream(out.toByteArray());
+    }
+
+    private void addTableRow(PdfPTable table, String label, String value) {
+        com.lowagie.text.Font boldFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12);
+        com.lowagie.text.Font normalFont = FontFactory.getFont(FontFactory.HELVETICA, 12);
+
+        PdfPCell cell1 = new PdfPCell(new Phrase(label, boldFont));
+        cell1.setBorder(0);
+        cell1.setPadding(5);
+        table.addCell(cell1);
+
+        PdfPCell cell2 = new PdfPCell(new Phrase(value, normalFont));
+        cell2.setBorder(0);
+        cell2.setPadding(5);
+        table.addCell(cell2);
     }
 }

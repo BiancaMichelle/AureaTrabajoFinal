@@ -35,6 +35,16 @@ public class Modulo {
     private UUID idModulo;
     private String nombre;
     private String descripcion;
+    
+    @Column(columnDefinition = "TEXT")
+    private String objetivos;
+    
+    @Column(columnDefinition = "TEXT")
+    private String temario;
+    
+    @Column(columnDefinition = "TEXT")
+    private String bibliografia;
+
     private LocalDate fechaInicioModulo;
     private LocalDate fechaFinModulo;
     

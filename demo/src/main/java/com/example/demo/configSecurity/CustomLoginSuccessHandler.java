@@ -11,7 +11,6 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.stereotype.Component;
 
 import com.example.demo.model.AuditLog;
-import com.example.demo.model.Auditable;
 import com.example.demo.model.CustomUsuarioDetails;
 import com.example.demo.model.Usuario;
 import com.example.demo.service.AuditLogService;
@@ -47,8 +46,12 @@ public class CustomLoginSuccessHandler implements AuthenticationSuccessHandler {
 
         if (roles.contains("ADMIN")) {
             response.sendRedirect("/admin/dashboard");
+        } else if (roles.contains("DOCENTE")) {
+            response.sendRedirect("/docente/mi-espacio");
+        } else if (roles.contains("ALUMNO")) {
+            response.sendRedirect("/alumno/mi-espacio");
         } else {
-            response.sendRedirect("/");
+            response.sendRedirect("/"); // Usuario normal o sin rol específico
         }
     }
 

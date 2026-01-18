@@ -150,7 +150,7 @@ public class OfertaAcademica {
      */
     public String getInfoCupos() {
         if (cupos == null || cupos == Integer.MAX_VALUE) return "Sin límite";
-        int ocupados = inscripciones != null ? inscripciones.size() : 0;
+        long ocupados = inscripciones != null ? inscripciones.stream().filter(i -> Boolean.TRUE.equals(i.getEstadoInscripcion())).count() : 0;
         return ocupados + " / " + cupos;
     }
     /**
@@ -158,7 +158,7 @@ public class OfertaAcademica {
      */
     public Double getPorcentajeOcupacion() {
         if (cupos == null || cupos == 0 || cupos == Integer.MAX_VALUE) return 0.0;
-        int ocupados = inscripciones != null ? inscripciones.size() : 0;
+        long ocupados = inscripciones != null ? inscripciones.stream().filter(i -> Boolean.TRUE.equals(i.getEstadoInscripcion())).count() : 0;
         return (ocupados * 100.0) / cupos;
     }
     /**
@@ -174,9 +174,19 @@ public class OfertaAcademica {
      */
     public Integer getCuposDisponibles() {
         if (cupos == null || cupos == Integer.MAX_VALUE) return null; // Sin límite
-        int ocupados = inscripciones != null ? inscripciones.size() : 0;
-        return Math.max(0, cupos - ocupados);
+        long ocupados = inscripciones != null ? inscripciones.stream().filter(i -> Boolean.TRUE.equals(i.getEstadoInscripcion())).count() : 0;
+        return Math.max(0, cupos - (int)ocupados);
     }
+
+    /**
+     * Obtiene la cantidad de alumnos activos (inscripción activa)
+     */
+    public Long getCantidadAlumnosActivos() {
+        return inscripciones != null 
+            ? inscripciones.stream().filter(i -> Boolean.TRUE.equals(i.getEstadoInscripcion())).count() 
+            : 0L;
+    }
+
     /**
      * Devuelve las categorías como texto para filtros
      */

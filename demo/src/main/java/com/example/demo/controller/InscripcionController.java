@@ -15,7 +15,9 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.example.demo.DTOMP.ReferenceRequest;
 import com.example.demo.DTOMP.ResponseDTO;
+import com.example.demo.enums.EstadoOferta;
 import com.example.demo.model.Curso;
+import com.example.demo.service.EmailService;
 import com.example.demo.model.Docente;
 import com.example.demo.model.Formacion;
 import com.example.demo.model.Inscripciones;
@@ -44,6 +46,7 @@ public class InscripcionController {
         private final InscripcionRepository inscripcionRepository;
         private final MercadoPagoService mercadoPagoService;
         private final com.example.demo.repository.PagoRepository pagoRepository;
+        private final EmailService emailService;
 
         @Value("${app.base-url}")
         private String baseUrl;
@@ -54,13 +57,15 @@ public class InscripcionController {
                         OfertaAcademicaRepository ofertaAcademicaRepository,
                         InscripcionRepository inscripcionRepository,
                         MercadoPagoService mercadoPagoService,
-                        com.example.demo.repository.PagoRepository pagoRepository) {
+                        com.example.demo.repository.PagoRepository pagoRepository,
+                        EmailService emailService) {
                 this.usuarioRepository = usuarioRepository;
                 this.docenteRepository = docenteRepository;
                 this.ofertaAcademicaRepository = ofertaAcademicaRepository;
                 this.inscripcionRepository = inscripcionRepository;
                 this.mercadoPagoService = mercadoPagoService;
                 this.pagoRepository = pagoRepository;
+                this.emailService = emailService;
         }
 
         @PostMapping("/{ofertaId}")
@@ -91,6 +96,18 @@ public class InscripcionController {
 
                         System.out.println("📚 Oferta encontrada: " + oferta.getNombre() + " (Tipo: "
                                         + oferta.getClass().getSimpleName() + ")");
+
+                        // Validar si la oferta está activa
+                        if (oferta.getEstado() != EstadoOferta.ACTIVA) {
+                                redirectAttributes.addFlashAttribute("error", "Esta oferta académica no se encuentra activa");
+                                return redirectSegunRol(rol);
+                        }
+
+                        // Validar cupos disponibles
+                        if (!oferta.tieneCuposDisponibles()) {
+                                redirectAttributes.addFlashAttribute("error", "No hay cupos disponibles para esta oferta");
+                                return redirectSegunRol(rol);
+                        }
 
                         // ========================================
                         // VALIDACIÓN ESPECIAL PARA DOCENTES
@@ -126,10 +143,13 @@ public class InscripcionController {
 
                         // Verificar si ya está inscrito
                         List<Inscripciones> inscripcionesExistentes = inscripcionRepository.findByAlumnoDni(dni);
-                        boolean yaInscrito = inscripcionesExistentes.stream()
-                                        .anyMatch(ins -> ins.getOferta().getIdOferta().equals(ofertaId));
+                        
+                        // Buscar si existe alguna inscripción ACTIVA
+                        boolean yaInscritoActivo = inscripcionesExistentes.stream()
+                                        .filter(ins -> ins.getOferta().getIdOferta().equals(ofertaId))
+                                        .anyMatch(ins -> Boolean.TRUE.equals(ins.getEstadoInscripcion()));
 
-                        if (yaInscrito) {
+                        if (yaInscritoActivo) {
                                 redirectAttributes.addFlashAttribute("error", "Ya estás inscrito en esta oferta");
                                 return redirectSegunRol(rol);
                         }
@@ -159,6 +179,22 @@ public class InscripcionController {
                                 nuevaInscripcion.setEstadoInscripcion(true);
                                 nuevaInscripcion.setFechaInscripcion(LocalDate.now());
                                 inscripcionRepository.save(nuevaInscripcion);
+
+                                // Enviar email de confirmación
+                                try {
+                                        String asunto = "Inscripción Exitosa - " + oferta.getNombre();
+                                        String mensaje = "<h1>¡Inscripción Confirmada!</h1>" +
+                                                        "<p>Hola " + usuario.getNombre() + ",</p>" +
+                                                        "<p>Te has inscrito exitosamente a <strong>" + oferta.getNombre()
+                                                        + "</strong>.</p>" +
+                                                        "<p>Fecha de inicio: " + oferta.getFechaInicio() + "</p>" +
+                                                        "<p>¡Bienvenido!</p>";
+                                        emailService.sendEmail(usuario.getCorreo(), asunto, mensaje);
+                                } catch (Exception e) {
+                                        System.err.println(
+                                                        "⚠️ Error al enviar email de confirmación (inscripción gratuita): "
+                                                                        + e.getMessage());
+                                }
 
                                 redirectAttributes.addFlashAttribute("success",
                                                 "¡Te has inscrito exitosamente a " + oferta.getNombre() + "!");

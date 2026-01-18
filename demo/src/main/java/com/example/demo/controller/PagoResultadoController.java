@@ -6,6 +6,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import com.example.demo.enums.EstadoPago;
 import com.example.demo.model.Inscripciones;
 import com.example.demo.model.Pago;
 import com.example.demo.repository.PagoRepository;
@@ -49,6 +50,22 @@ public class PagoResultadoController {
             @RequestParam(required = false) String external_reference,
             Model model) {
         log.info("❌ Pago fallido recibido - Status: {}, Ref: {}", collection_status, external_reference);
+
+        if (external_reference != null) {
+            pagoRepository.findByExternalReference(external_reference).ifPresent(pago -> {
+                // Solo actualizamos si estaba pendiente o en proceso
+                if (pago.getEstadoPago() == EstadoPago.PENDIENTE || pago.getEstadoPago() == EstadoPago.EN_PROCESO) {
+                     if ("rejected".equalsIgnoreCase(collection_status)) {
+                         pago.setEstadoPago(EstadoPago.FALLIDO);
+                     } else {
+                         pago.setEstadoPago(EstadoPago.CANCELADO);
+                     }
+                     pagoRepository.save(pago);
+                     log.info("🔄 Estado de pago actualizado a {} para ref {}", pago.getEstadoPago(), external_reference);
+                }
+            });
+        }
+
         return "redirect:/pago-resultado?status=failure&external_reference=" + external_reference;
     }
 

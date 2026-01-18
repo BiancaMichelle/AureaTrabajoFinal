@@ -43,7 +43,7 @@ public class CursoService {
                 .orElseThrow(() -> new RuntimeException("Curso no encontrado"));
     }
 
-    public Modulo crearModulo(String nombre, String descripcion,
+    public Modulo crearModulo(String nombre, String descripcion, String objetivos, String temario, String bibliografia,
             LocalDate fechaInicio, LocalDate fechaFin,
             Boolean visibilidad, Long cursoId) {
         // ✅ Buscar en OfertaAcademicaRepository para soportar Cursos Y Formaciones
@@ -52,13 +52,33 @@ public class CursoService {
 
         OfertaAcademica curso = ofertaAcademicaRepository.findById(cursoIdSeguro)
                 .orElseThrow(() -> new RuntimeException("Oferta académica no encontrada"));
+        
+        // Validación de Estado de la Oferta (Precondición CU-23: El curso debe estar en estado de alta)
+        if (curso.getEstado() != EstadoOferta.ACTIVA && curso.getEstado() != EstadoOferta.ENCURSO) {
+            // Asumimos que ACTIVA o ENCURSO son estados válidos para agregar contenido.
+             throw new RuntimeException("No se pueden agregar módulos a una oferta que no está activa o en curso.");
+        }
 
         System.out.println(
                 "📚 Creando módulo para: " + curso.getNombre() + " (Tipo: " + curso.getClass().getSimpleName() + ")");
 
+        // Validación de datos obligatorios
+        if (nombre == null || nombre.trim().isEmpty()) {
+            throw new IllegalArgumentException("El nombre del módulo es obligatorio.");
+        }
+        if (fechaInicio == null || fechaFin == null) {
+            throw new IllegalArgumentException("Las fechas de inicio y fin son obligatorias.");
+        }
+        if (fechaFin.isBefore(fechaInicio)) {
+             throw new IllegalArgumentException("La fecha de fin no puede ser anterior a la fecha de inicio.");
+        }
+
         Modulo modulo = new Modulo();
         modulo.setNombre(nombre);
         modulo.setDescripcion(descripcion);
+        modulo.setObjetivos(objetivos);
+        modulo.setTemario(temario);
+        modulo.setBibliografia(bibliografia);
         modulo.setFechaInicioModulo(fechaInicio);
         modulo.setFechaFinModulo(fechaFin);
         modulo.setVisibilidad(visibilidad != null ? visibilidad : true);
@@ -69,13 +89,24 @@ public class CursoService {
         return moduloRepository.save(modulo);
     }
 
-    public Modulo actualizarModulo(UUID moduloId, String nombre, String descripcion,
-            LocalDate fechaInicio, LocalDate fechaFin, Boolean visibilidad) {
+    public Modulo actualizarModulo(UUID moduloId, String nombre, String descripcion, String objetivos, String temario, String bibliografia,
+            LocalDate fechaInicio, LocalDate fechaFin, Boolean visibilidad, Long cursoId) {
         UUID moduloIdSeguro = Objects.requireNonNull(moduloId,
                 "El identificador del módulo es obligatorio");
 
         Modulo modulo = moduloRepository.findById(moduloIdSeguro)
                 .orElseThrow(() -> new RuntimeException("Módulo no encontrado"));
+
+        // Validar que el módulo pertenece al curso indicado
+        if (cursoId != null && !modulo.getCurso().getIdOferta().equals(cursoId)) {
+             throw new IllegalArgumentException("El módulo no pertenece al curso especificado");
+        }
+
+        // Validar Estado del Curso (CU-24)
+        EstadoOferta estado = modulo.getCurso().getEstado();
+        if (estado != EstadoOferta.ACTIVA && estado != EstadoOferta.ENCURSO) {
+            throw new IllegalStateException("El curso no se encuentra en estado ACTIVA o ENCURSO, por lo que no puede ser modificado.");
+        }
 
         if (nombre == null || nombre.trim().isEmpty()) {
             throw new IllegalArgumentException("El nombre del módulo no puede estar vacío");
@@ -92,15 +123,36 @@ public class CursoService {
         if (fechaFin.isBefore(fechaInicio)) {
             throw new IllegalArgumentException("La fecha de fin no puede ser anterior a la fecha de inicio");
         }
+        
+        // Detectar cambios críticos para notificaciones
+        boolean fechasCambiadas = !Objects.equals(modulo.getFechaInicioModulo(), fechaInicio) || !Objects.equals(modulo.getFechaFinModulo(), fechaFin);
+        // Manejo de null en visibilidad actual
+        boolean visibilidadActual = modulo.getVisibilidad() != null ? modulo.getVisibilidad() : false;
+        boolean nuevaVisibilidad = visibilidad != null ? visibilidad : false;
+        boolean visibilidadCambiada = visibilidadActual != nuevaVisibilidad;
 
         modulo.setNombre(nombre.trim());
         modulo.setDescripcion(descripcion.trim());
+        modulo.setObjetivos(objetivos);
+        modulo.setTemario(temario);
+        modulo.setBibliografia(bibliografia);
 
         modulo.setFechaInicioModulo(fechaInicio);
         modulo.setFechaFinModulo(fechaFin);
-        modulo.setVisibilidad(Boolean.TRUE.equals(visibilidad));
+        modulo.setVisibilidad(nuevaVisibilidad);
 
-        return moduloRepository.save(modulo);
+        Modulo moduloGuardado = moduloRepository.save(modulo);
+        
+        if (fechasCambiadas || visibilidadCambiada) {
+            notificarCambioModulo(moduloGuardado);
+        }
+        
+        return moduloGuardado;
+    }
+
+    private void notificarCambioModulo(Modulo modulo) {
+        // TODO: Integrar con sistema real de notificaciones
+        System.out.println("Stub Notificación: Se ha modificado el módulo " + modulo.getNombre() + " (ID: " + modulo.getIdModulo() + ")");
     }
 
     public Modulo actualizarVisibilidadModulo(UUID moduloId, Boolean visibilidad) {
@@ -114,12 +166,31 @@ public class CursoService {
         return moduloRepository.save(modulo);
     }
 
+    public Modulo obtenerModuloPorId(UUID moduloId) {
+        return moduloRepository.findById(moduloId)
+                .orElseThrow(() -> new RuntimeException("Módulo no encontrado"));
+    }
+
     @Transactional
     public void eliminarModulo(UUID moduloId) {
         UUID moduloIdSeguro = Objects.requireNonNull(moduloId, "El identificador del módulo es obligatorio");
 
         Modulo modulo = moduloRepository.findById(moduloIdSeguro)
                 .orElseThrow(() -> new RuntimeException("Módulo no encontrado"));
+
+        // Validar Estado del Curso (Precondición CU-25)
+        EstadoOferta estado = modulo.getCurso().getEstado();
+        if (estado != EstadoOferta.ACTIVA && estado != EstadoOferta.ENCURSO) {
+            throw new IllegalStateException("El curso no se encuentra en estado ACTIVA o ENCURSO, por lo que no se pueden eliminar módulos.");
+        }
+
+        // RF-02: Verificar que no tenga contenido activo (clases o actividades)
+        boolean tieneClases = modulo.getClases() != null && !modulo.getClases().isEmpty();
+        boolean tieneActividades = modulo.getActividades() != null && !modulo.getActividades().isEmpty();
+
+        if (tieneClases || tieneActividades) {
+            throw new IllegalStateException("No se puede eliminar el módulo porque contiene clases o actividades activas. Elimine el contenido primero.");
+        }
 
         moduloRepository.delete(modulo);
     }

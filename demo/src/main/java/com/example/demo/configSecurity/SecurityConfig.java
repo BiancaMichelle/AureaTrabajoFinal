@@ -27,16 +27,19 @@ public class SecurityConfig {
     private final UsuarioJpaService usuarioJpaService;
     private final CustomLoginSuccessHandler loginSuccessHandler;
     private final CustomLogoutSuccessHandler logoutSuccessHandler;
+    private final CustomAuthenticationFailureHandler failureHandler; // ✅ Inyectado
 
     @Value("${app.base-url}")
     private String baseUrl;
 
     public SecurityConfig(UsuarioJpaService usuarioJpaService, 
                          CustomLoginSuccessHandler loginSuccessHandler,
-                         CustomLogoutSuccessHandler logoutSuccessHandler) {
+                         CustomLogoutSuccessHandler logoutSuccessHandler,
+                         CustomAuthenticationFailureHandler failureHandler) {
         this.usuarioJpaService = usuarioJpaService;
         this.loginSuccessHandler = loginSuccessHandler;
         this.logoutSuccessHandler = logoutSuccessHandler;
+        this.failureHandler = failureHandler;
     }
 
     @Bean
@@ -89,7 +92,9 @@ public class SecurityConfig {
                         .anyRequest().authenticated())
                 .formLogin(form -> form
                         .loginPage("/login")
-                        .failureUrl("/login?error=true")
+                        .usernameParameter("dni") // ✅ Verificación por DNI
+                        .passwordParameter("password")
+                        .failureHandler(failureHandler) // ✅ Manejador personalizado
                         .successHandler(loginSuccessHandler)
                         .permitAll())
                 .logout(logout -> logout
@@ -114,8 +119,8 @@ public class SecurityConfig {
     @Value("${csc.api.key}")
     private String apiKey;
 
-    @Bean
-    public RestTemplate restTemplate() {
+    @Bean("locacionRestTemplate")
+    public RestTemplate locacionRestTemplate() {
         RestTemplate restTemplate = new RestTemplate();
 
         restTemplate.getInterceptors().add((request, body, execution) -> {

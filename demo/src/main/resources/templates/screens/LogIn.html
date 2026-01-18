@@ -59,7 +59,7 @@
                 <form th:action="@{/login}" method="post">
                     <div class="form-group">
                         <label for="username">DNI:</label>
-                        <input type="text" id="username" name="username" required>
+                        <input type="text" id="username" name="dni" required>
                     </div>
                     <div class="form-group">
                         <label for="password">Contraseña:</label>
@@ -201,8 +201,24 @@
             }
             
             // Manejar errores de login
-            if (urlParams.get('error')) {
-                showNotification('Usuario o contraseña incorrectos', 'error', 5000);
+            const errorType = urlParams.get('error');
+            const errorMsg = urlParams.get('message');
+            
+            if (errorType) {
+                // Si viene un mensaje del servidor, usarlo; sino mensaje genérico
+                let text = errorMsg ? decodeURIComponent(errorMsg.replace(/\+/g, ' ')) : 'Usuario o contraseña incorrectos';
+
+                // Lógica específica para alternativas del CU-02
+                if (errorType === 'not_found') {
+                    text += ' <br><a href="/register" style="color:white;text-decoration:underline;">Regístrate aquí</a>';
+                } else if (errorType === 'disabled') {
+                    text += ' <br><a href="#" style="color:white;text-decoration:underline;">Contactar soporte</a>';
+                } else if (errorType === 'bad_password') {
+                     // Ya mostramos el link en el formulario, pero podemos enfatizarlo
+                     text += ' <br>Intenta recuperar tu contraseña.';
+                }
+
+                showNotification(text, 'error', 8000);
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
             

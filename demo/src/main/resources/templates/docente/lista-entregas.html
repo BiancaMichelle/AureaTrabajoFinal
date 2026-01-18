@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Corrección de Entregas</title>
+    <!-- Tailwind CSS desde Application Properties -->
+    <th:block th:if="${@environment.getProperty('app.useTailwindCdn','true') == 'true'}">
+        <script src="https://cdn.tailwindcss.com"></script>
+    </th:block>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        .font-inter { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body>
+    
+    <div layout:fragment="content" class="bg-gray-50 min-h-screen font-inter">
+        
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <a th:if="${idCurso != null}" th:href="@{/docente/aula/{id}(id=${idCurso})}" class="text-blue-600 hover:text-blue-800 mb-2 inline-block font-medium">&larr; Volver al Aula</a>
+                <a th:unless="${idCurso != null}" th:href="@{/docente/mi-espacio}" class="text-blue-600 hover:text-blue-800 mb-2 inline-block font-medium">&larr; Volver a Mi Espacio</a>
+                
+                <h1 class="text-3xl font-bold text-gray-800">
+                    Corrección: <span class="text-blue-600" th:text="${tarea.titulo}">Título Tarea</span>
+                </h1>
+                <p class="text-gray-500 mt-1" th:text="${tarea.descripcion}">Descripción breve...</p>
+            </div>
+        </div>
+
+        <div class="flex flex-col lg:flex-row gap-6 items-start">
+            <!-- Lista de Estudiantes (Columna Izquierda 2/3) -->
+            <div class="w-full lg:w-2/3 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+                    <h2 class="text-lg font-bold text-gray-800">Entregas Recibidas</h2>
+                    <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded" th:text="${entregas.size() + ' Entregas'}">0 Entregas</span>
+                </div>
+                
+                <div th:if="${#lists.isEmpty(entregas)}" class="p-8 text-center text-gray-500">
+                    <p>No hay entregas registradas para esta tarea aún.</p>
+                </div>
+
+                <div th:unless="${#lists.isEmpty(entregas)}" class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-gray-50 text-gray-600 text-xs uppercase tracking-wider">
+                            <tr>
+                                <th class="py-3 px-6 font-semibold">Estudiante</th>
+                                <th class="py-3 px-6 font-semibold">Fecha</th>
+                                <th class="py-3 px-6 font-semibold">Estado</th>
+                                <th class="py-3 px-6 font-semibold">Nota</th>
+                                <th class="py-3 px-6 text-center font-semibold">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            <tr th:each="entrega : ${entregas}" class="hover:bg-blue-50 transition duration-150 ease-in-out cursor-pointer"
+                                th:onclick="'abrirPanel(' + ${entrega.idEntrega} + ')'"
+                                th:classappend="${entrega.calificacion == null} ? 'bg-white' : 'bg-gray-50'">
+                                
+                                <td class="py-4 px-6">
+                                    <div class="flex items-center">
+                                        <div class="h-8 w-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold mr-3">
+                                            <span th:text="${#strings.substring(entrega.estudiante.nombre,0,1)}">A</span>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium text-gray-800" th:text="${entrega.estudiante.nombre + ' ' + entrega.estudiante.apellido}">Nombre</p>
+                                            <p class="text-xs text-gray-500" th:text="${entrega.estudiante.correo}">correo@ejemplo.com</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="py-4 px-6 text-sm text-gray-600">
+                                    <span th:text="${#temporals.format(entrega.fechaEntrega, 'dd MMM HH:mm')}">Fecha</span>
+                                </td>
+                                <td class="py-4 px-6">
+                                    <span th:if="${entrega.esTardia}" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                        Tardía
+                                    </span>
+                                    <span th:unless="${entrega.esTardia}" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        A tiempo
+                                    </span>
+                                </td>
+                                <td class="py-4 px-6">
+                                    <div th:if="${entrega.calificacion != null}" class="font-bold text-gray-800" th:classappend="${entrega.calificacion >= 70} ? 'text-green-600' : 'text-red-500'">
+                                        <span th:text="${entrega.calificacion}">100</span>
+                                    </div>
+                                    <span th:if="${entrega.calificacion == null}" class="text-gray-400 text-sm italic">Pendiente</span>
+                                </td>
+                                <td class="py-4 px-6 text-center">
+                                    <button class="text-blue-600 hover:text-blue-900 font-medium text-sm">Evaluar &rarr;</button>
+                                </td>
+
+                                <!-- Hidden Fields -->
+                                <input type="hidden" th:id="'data-nombre-' + ${entrega.idEntrega}" th:value="${entrega.estudiante.nombre + ' ' + entrega.estudiante.apellido}">
+                                <input type="hidden" th:id="'data-fecha-' + ${entrega.idEntrega}" th:value="${#temporals.format(entrega.fechaEntrega, 'dd/MM/yyyy HH:mm')}">
+                                <input type="hidden" th:id="'data-archivo-' + ${entrega.idEntrega}" th:value="${entrega.nombreArchivo != null ? entrega.nombreArchivo : ''}">
+                                <input type="hidden" th:id="'data-archivo-real-' + ${entrega.idEntrega}" th:value="${entrega.archivoNombreGuardado != null ? entrega.archivoNombreGuardado : ''}">
+                                <input type="hidden" th:id="'data-contenido-' + ${entrega.idEntrega}" th:value="${entrega.contenido != null ? entrega.contenido : ''}">
+                                <input type="hidden" th:id="'data-calificacion-' + ${entrega.idEntrega}" th:value="${entrega.calificacion}">
+                                <input type="hidden" th:id="'data-comentario-' + ${entrega.idEntrega}" th:value="${entrega.comentarios}">
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Panel Lateral (Columna Derecha 1/3) -->
+            <div id="panel-container" class="w-full lg:w-1/3 transition-all duration-300">
+                <!-- Estado Vacío -->
+                <div id="panel-placeholder" class="bg-gray-100 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 p-10 h-64">
+                    <svg class="w-12 h-12 mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                    <p class="text-center font-medium">Selecciona un estudiante de la lista<br>para calificar su entrega.</p>
+                </div>
+
+                <!-- Formulario de Calificación -->
+                <div id="panel-correccion" class="bg-white rounded-xl shadow-lg border border-gray-200 hidden sticky top-6">
+                    <div class="bg-blue-600 text-white p-4 rounded-t-xl flex justify-between items-center">
+                        <h3 class="font-bold text-lg">Evaluación</h3>
+                        <button onclick="cerrarPanel()" class="text-blue-100 hover:text-white">&times;</button>
+                    </div>
+                    
+                    <div class="p-6">
+                        <div class="mb-6 pb-6 border-b border-gray-100">
+                            <p class="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-1">Estudiante</p>
+                            <p id="panel-nombre" class="font-bold text-xl text-gray-800">Nombre Estudiante</p>
+                            <p id="panel-fecha" class="text-sm text-gray-500 mt-1">Entregado el: --/--/----</p>
+                        </div>
+
+                        <div class="mb-6">
+                            <p class="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-2">Entregable</p>
+                            
+                            <!-- Archivo Adjunto -->
+                            <div id="panel-archivo-block" class="hidden mb-3">
+                                <a id="panel-archivo-link" href="#" target="_blank" class="flex items-center p-3 bg-gray-50 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition group">
+                                    <svg class="w-8 h-8 text-gray-400 group-hover:text-blue-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                    <div class="overflow-hidden">
+                                        <p id="panel-archivo-nombre" class="font-medium text-sm truncate">archivo.pdf</p>
+                                        <p class="text-xs text-gray-500">Click para descargar</p>
+                                    </div>
+                                </a>
+                            </div>
+
+                            <!-- Contenido Texto -->
+                            <div id="panel-contenido-block" class="hidden">
+                                <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 max-h-40 overflow-y-auto">
+                                    <p id="panel-contenido-texto" class="text-sm text-gray-700 whitespace-pre-wrap"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <form th:action="@{/entrega/corregir}" method="post">
+                            <input type="hidden" name="idEntrega" id="form-idEntrega">
+                            
+                            <div class="mb-5">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Calificación (0-100)</label>
+                                <div class="relative rounded-md shadow-sm">
+                                    <input type="number" name="calificacion" id="form-calificacion" min="0" max="100" step="0.1" required
+                                           class="form-input block w-full pl-4 pr-12 py-3 border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 sm:text-lg font-semibold"
+                                           placeholder="0.0">
+                                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                        <span class="text-gray-500 sm:text-sm">/ 100</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-6">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Feedback / Comentarios</label>
+                                <textarea name="comentarios" id="form-comentarios" rows="5" 
+                                          class="form-textarea block w-full border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm text-sm"
+                                          placeholder="Escribe tus observaciones aquí para el estudiante..."></textarea>
+                            </div>
+
+                            <div class="flex items-center justify-between gap-4 pt-4 border-t border-gray-100">
+                                <button type="button" onclick="cerrarPanel()" class="text-sm text-gray-500 hover:text-gray-700 font-medium">Cancelar</button>
+                                <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 shadow-md transition transform hover:-translate-y-0.5">
+                                    Guardar Calificación
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function abrirPanel(idEntrega) {
+            // Retrieve hidden data
+            const nombre = document.getElementById('data-nombre-' + idEntrega).value;
+            const fecha = document.getElementById('data-fecha-' + idEntrega).value;
+            const archivo = document.getElementById('data-archivo-' + idEntrega).value;
+            const archivoReal = document.getElementById('data-archivo-real-' + idEntrega).value;
+            const contenido = document.getElementById('data-contenido-' + idEntrega).value;
+            const calificacion = document.getElementById('data-calificacion-' + idEntrega).value;
+            const comentario = document.getElementById('data-comentario-' + idEntrega).value;
+
+            // Populate Info
+            document.getElementById('panel-nombre').innerText = nombre;
+            document.getElementById('panel-fecha').innerText = 'Entregado el: ' + fecha;
+            
+            // Populate Form
+            document.getElementById('form-idEntrega').value = idEntrega;
+            document.getElementById('form-calificacion').value = (calificacion && calificacion !== 'null') ? parseFloat(calificacion) : '';
+            document.getElementById('form-comentarios').value = (comentario && comentario !== 'null') ? comentario : '';
+
+            // Handle Deliverables Display
+            const archivoBlock = document.getElementById('panel-archivo-block');
+            const linkEl = document.getElementById('panel-archivo-link');
+            const contenidoBlock = document.getElementById('panel-contenido-block');
+            const textoEl = document.getElementById('panel-contenido-texto');
+            
+            // Reset visibility
+            archivoBlock.classList.add('hidden');
+            contenidoBlock.classList.add('hidden');
+
+            if (archivo && archivo !== 'null' && archivo !== '') {
+                archivoBlock.classList.remove('hidden');
+                document.getElementById('panel-archivo-nombre').innerText = archivo;
+                
+                // Usar el nombre real si existe, sino fallback al nombre original (para retrocompatibilidad si usamos contenido antes)
+                // Pero como cambiamos la logica de subida, esto funcionará para nuevos.
+                const fileToDownload = (archivoReal && archivoReal !== 'null' && archivoReal !== '') ? archivoReal : archivo;
+                
+                linkEl.href = '/uploads/tareas/' + encodeURIComponent(fileToDownload); 
+            }
+
+            if (contenido && contenido !== 'null' && contenido !== '') {
+                contenidoBlock.classList.remove('hidden');
+                textoEl.innerText = contenido;
+            }
+
+            // Show Panel
+            document.getElementById('panel-placeholder').classList.add('hidden');
+            document.getElementById('panel-correccion').classList.remove('hidden');
+            
+            // Scroll to panel on mobile
+            if (window.innerWidth < 1024) {
+                document.getElementById('panel-correccion').scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        function cerrarPanel() {
+            document.getElementById('panel-correccion').classList.add('hidden');
+            document.getElementById('panel-placeholder').classList.remove('hidden');
+        }
+    </script>
+    </div> <!-- End content fragment -->
+</body>
+</html>

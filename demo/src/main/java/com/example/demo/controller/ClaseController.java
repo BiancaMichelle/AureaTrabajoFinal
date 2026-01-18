@@ -72,36 +72,91 @@ public class ClaseController {
             @RequestParam UUID moduloId,
             @RequestParam Integer duracion,
             @RequestParam(required = false, defaultValue = "false") Boolean asistenciaAutomatica,
+            @RequestParam(required = false, defaultValue = "false") Boolean preguntasAleatorias,
+            @RequestParam(required = false) Integer cantidadPreguntas,
+            @RequestParam(required = false, defaultValue = "false") Boolean permisoMicrofono,
+            @RequestParam(required = false, defaultValue = "false") Boolean permisoCamara,
+            @RequestParam(required = false, defaultValue = "false") Boolean permisoCompartirPantalla,
+            @RequestParam(required = false, defaultValue = "true") Boolean permisoChat,
             @RequestParam(required = false, defaultValue = "false") Boolean transcripcionHabilitada,
+            @RequestParam(required = false, defaultValue = "false") Boolean generarResumenAutomatico,
+            @RequestParam(required = false, defaultValue = "false") Boolean publicarResumenAutomaticamente,
             Principal principal) {
         try {
-            System.out.println("🎯 Creando clase con Jitsi:");
+            // Validar que existe el módulo (Precondición CU-26)
+            Modulo modulo = moduloRepository.findById(moduloId)
+                    .orElseThrow(() -> new IllegalArgumentException("Módulo no encontrado"));
+            
+            // Validar estado del curso (Precondición CU-26)
+            com.example.demo.enums.EstadoOferta estado = modulo.getCurso().getEstado();
+            if (estado != com.example.demo.enums.EstadoOferta.ACTIVA && 
+                estado != com.example.demo.enums.EstadoOferta.ENCURSO) {
+                throw new IllegalStateException("El curso debe estar en estado ACTIVA o ENCURSO para crear clases");
+            }
+            
+            // Validar campos obligatorios (RF-06)
+            if (titulo == null || titulo.trim().isEmpty()) {
+                throw new IllegalArgumentException("El título de la clase es obligatorio");
+            }
+            
+            if (inicio == null) {
+                throw new IllegalArgumentException("La fecha y hora de inicio son obligatorias");
+            }
+            
+            // Validar preguntas aleatorias (Paso 5 CU-26)
+            if (Boolean.TRUE.equals(preguntasAleatorias)) {
+                if (cantidadPreguntas == null || cantidadPreguntas < 1) {
+                    throw new IllegalArgumentException("Debe especificar la cantidad de preguntas (mínimo 1)");
+                }
+            }
+
+            System.out.println("🎯 Creando clase con configuración completa:");
             System.out.println("   - Título: " + titulo);
             System.out.println("   - Módulo ID: " + moduloId);
+            System.out.println("   - Permisos: Mic=" + permisoMicrofono + ", Cam=" + permisoCamara + 
+                             ", Pantalla=" + permisoCompartirPantalla + ", Chat=" + permisoChat);
+            System.out.println("   - Asistencia: Auto=" + asistenciaAutomatica + ", Preguntas=" + preguntasAleatorias +
+                             (Boolean.TRUE.equals(preguntasAleatorias) ? " (Cantidad: " + cantidadPreguntas + ")" : ""));
 
             Clase clase = new Clase();
-            clase.setTitulo(titulo);
-            clase.setDescripcion(descripcion);
+            clase.setTitulo(titulo.trim());
+            clase.setDescripcion(descripcion != null ? descripcion.trim() : "");
             clase.setInicio(inicio);
             clase.setFin(inicio.plusHours(duracion));
             clase.setAsistenciaAutomatica(asistenciaAutomatica);
+            clase.setPreguntasAleatorias(preguntasAleatorias);
+            clase.setCantidadPreguntas(Boolean.TRUE.equals(preguntasAleatorias) ? cantidadPreguntas : null);
+            clase.setPermisoMicrofono(permisoMicrofono);
+            clase.setPermisoCamara(permisoCamara);
+            clase.setPermisoCompartirPantalla(permisoCompartirPantalla);
+            clase.setPermisoChat(permisoChat);
             clase.setTranscripcionHabilitada(transcripcionHabilitada);
+            clase.setGenerarResumenAutomatico(generarResumenAutomatico);
+            clase.setPublicarResumenAutomaticamente(publicarResumenAutomaticamente);
 
             Clase claseCreada = claseService.crearClase(clase, moduloId, principal.getName());
 
-            Modulo modulo = moduloRepository.findById(moduloId)
-                    .orElseThrow(() -> new RuntimeException("Módulo no encontrado"));
-            com.example.demo.model.OfertaAcademica curso = modulo.getCurso();
+            System.out.println("✅ Clase creada exitosamente con ID: " + claseCreada.getIdClase());
+            
+            // Notificar a los alumnos del curso (Postcondición CU-26)
+            notificarNuevaClase(claseCreada);
 
-            System.out.println("✅ Clase Jitsi creada exitosamente");
+            return "redirect:/docente/aula/" + modulo.getCurso().getIdOferta();
 
-            return "redirect:/docente/aula/" + curso.getIdOferta();
-
-        } catch (Exception e) {
-            System.out.println("❌ Error al crear clase Jitsi: " + e.getMessage());
-            e.printStackTrace();
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            System.out.println("❌ Error de validación: " + e.getMessage());
             return "redirect:/docente/mis-ofertas?error=" + e.getMessage();
+        } catch (Exception e) {
+            System.out.println("❌ Error al crear clase: " + e.getMessage());
+            e.printStackTrace();
+            return "redirect:/docente/mis-ofertas?error=Error+interno+del+servidor";
         }
+    }
+
+    private void notificarNuevaClase(Clase clase) {
+        // TODO: Integrar con sistema de notificaciones
+        System.out.println("📧 Stub Notificación: Nueva clase '" + clase.getTitulo() + 
+                          "' creada para el " + clase.getInicio());
     }
 
     @GetMapping("/unirse/{claseId}")
@@ -175,18 +230,41 @@ public class ClaseController {
     @PostMapping("/finalizar-con-resumen/{claseId}")
     public ResponseEntity<?> finalizarConResumen(@PathVariable UUID claseId, @org.springframework.web.bind.annotation.RequestBody String transcripcion, Principal principal) {
         try {
+            // Paso 1: Verificar que la clase existe (Precondición CU-27)
             Clase clase = claseService.findById(claseId)
                     .orElseThrow(() -> new RuntimeException("Clase no encontrada"));
 
-            // 1. Generar resumen con IA
+            // Paso 2: Verificar si está habilitada la generación de resumen (CU-27)
+            if (!Boolean.TRUE.equals(clase.getGenerarResumenAutomatico())) {
+                // Secuencia Alternativa Paso 2: Preguntar al docente
+                return ResponseEntity.ok().body(Map.of(
+                    "preguntarDocente", true,
+                    "message", "¿Desea generar un resumen de esta clase?"
+                ));
+            }
+            
+            // Paso 3: Verificar que hay transcripción disponible
+            if (transcripcion == null || transcripcion.trim().isEmpty()) {
+                return ResponseEntity.status(400).body(Map.of(
+                    "error", "No hay transcripción disponible para generar el resumen"
+                ));
+            }
+
+            System.out.println("🎯 Generando resumen de clase: " + clase.getTitulo());
+
+            // Paso 4: Generar resumen con IA
             String resumenHtml = chatServiceSimple.generarResumenClase(transcripcion);
 
-            // 2. Crear Material
+            // Paso 5: Verificar si debe publicarse automáticamente
+            boolean publicarAutomaticamente = Boolean.TRUE.equals(clase.getPublicarResumenAutomaticamente());
+            
+            // Paso 6: Crear Material (siempre se crea, pero la visibilidad depende de la configuración)
             com.example.demo.model.Material material = new com.example.demo.model.Material();
             material.setTitulo("Resumen IA: " + clase.getTitulo());
-            material.setDescripcion("Resumen generado automáticamente por IA para la clase del " + LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+            material.setDescripcion("Resumen generado automáticamente por IA para la clase del " + 
+                                   LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")));
             material.setFechaCreacion(LocalDateTime.now());
-            material.setVisibilidad(true);
+            material.setVisibilidad(publicarAutomaticamente); // Secuencia Alternativa Paso 5
             material.setModulo(clase.getModulo());
             
             // Asignar docente
@@ -196,7 +274,7 @@ public class ClaseController {
             
             material = materialRepository.save(material);
 
-            // 3. Crear Archivo HTML
+            // Crear Archivo HTML con el resumen
             com.example.demo.model.Archivo archivo = new com.example.demo.model.Archivo();
             archivo.setNombre("resumen-" + claseId + ".html");
             archivo.setTipoMime("text/html");
@@ -207,11 +285,37 @@ public class ClaseController {
             
             archivoRepository.save(archivo);
 
-            return ResponseEntity.ok().body(Map.of("message", "Resumen generado y guardado exitosamente", "materialId", material.getIdActividad()));
+            System.out.println("✅ Resumen generado y guardado");
+            System.out.println("   - Material ID: " + material.getIdActividad());
+            System.out.println("   - Visible para alumnos: " + publicarAutomaticamente);
+
+            // Paso 7: Notificar (Postcondición CU-27)
+            notificarResumenGenerado(clase, material, publicarAutomaticamente);
+
+            return ResponseEntity.ok().body(Map.of(
+                "success", true,
+                "message", publicarAutomaticamente 
+                    ? "Resumen generado y publicado en el módulo exitosamente" 
+                    : "Resumen generado y guardado (solo visible para el docente)",
+                "materialId", material.getIdActividad(),
+                "publicado", publicarAutomaticamente
+            ));
 
         } catch (Exception e) {
+            System.err.println("❌ Error al generar resumen: " + e.getMessage());
             e.printStackTrace();
-            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(500).body(Map.of("error", "Error al generar resumen: " + e.getMessage()));
+        }
+    }
+    
+    private void notificarResumenGenerado(Clase clase, com.example.demo.model.Material material, boolean publicado) {
+        // TODO: Integrar con sistema de notificaciones
+        System.out.println("📧 Stub Notificación: Resumen generado para clase '" + clase.getTitulo() + "'");
+        System.out.println("   - Docente: " + clase.getDocente().getNombre() + " " + clase.getDocente().getApellido());
+        if (publicado) {
+            System.out.println("   - Alumnos del curso: Resumen disponible en el módulo");
+        } else {
+            System.out.println("   - Solo visible para el docente");
         }
     }
 
