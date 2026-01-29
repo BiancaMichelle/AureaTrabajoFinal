@@ -780,7 +780,13 @@
                                                             <span th:if="${clase.meetingUrl}" class="text-green-600 font-medium"><i class="fas fa-circle text-[8px] me-1"></i> En vivo</span>
                                                         </div>
                                                     </div>
-                                                    <a th:href="@{/clase/unirse/} + ${clase.idClase}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                                    <a href="#" 
+                                                       th:data-id="${clase.idClase}"
+                                                       th:data-titulo="${clase.titulo}"
+                                                       onclick="iniciarIngresoClase(this.getAttribute('data-id'), this.getAttribute('data-titulo')); return false;"
+                                                       class="btn btn-sm rounded-pill px-3"
+                                                       th:classappend="${docente != null} ? 'btn-primary text-white' : 'btn-outline-primary'"
+                                                       th:text="${docente != null} ? 'Iniciar Clase' : 'Entrar'">
                                                         Entrar
                                                     </a>
                                                 </div>
@@ -1006,6 +1012,44 @@
         </nav>
     </aside>
 
+
+
+    <!-- Modal Reconfirmación Ingreso -->
+    <div id="ingresoModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg p-6 w-full max-w-sm">
+            <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-lock text-blue-600 me-2"></i>Validación de Seguridad
+            </h3>
+            <p class="text-sm text-gray-600 mb-4">
+                El sistema solicita validación para ingresar a la clase <strong id="modalClaseTitulo"></strong>.
+            </p>
+            
+            <form id="ingresoForm" onsubmit="validarIngreso(event)">
+                <input type="hidden" id="modalClaseId">
+                
+                <div class="mb-3">
+                    <label class="block text-xs font-semibold text-gray-500 uppercase">DNI</label>
+                    <input type="text" id="inputDniIngreso" required class="w-full border rounded px-3 py-2 mt-1" 
+                           th:value="${alumno != null ? alumno.dni : (docente != null ? docente.dni : '')}">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-xs font-semibold text-gray-500 uppercase">Contraseña</label>
+                    <input type="password" id="inputPassIngreso" required class="w-full border rounded px-3 py-2 mt-1">
+                </div>
+                
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="document.getElementById('ingresoModal').classList.add('hidden')" 
+                            class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                        Verificar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -4042,6 +4086,38 @@
             });
         }
 
+        function confirmarEliminarEntrega(idEntrega) {
+            if(confirm('¿Estás seguro de que deseas eliminar tu entrega? Esta acción no se puede deshacer.')) {
+                eliminarEntrega(idEntrega);
+            }
+        }
+
+        async function eliminarEntrega(idEntrega) {
+            try {
+                const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+                const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+                
+                const response = await fetch('/entrega/eliminar/' + idEntrega, {
+                    method: 'DELETE',
+                    headers: {
+                        [csrfHeader]: csrfToken
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    alert(data.message);
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + (data.error || 'No se pudo eliminar la entrega'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al procesar la solicitud');
+            }
+        }
+
         function abrirModalTarea(btn) {
             const id = btn.getAttribute('data-id');
             const titulo = btn.getAttribute('data-titulo');
@@ -4099,13 +4175,18 @@
                                 
                                 ${fueraDePlazo ? '<p class="text-xs text-orange-600"><i class="fas fa-exclamation-triangle mr-1"></i>Advertencia: La modificación será marcada como tardía</p>' : ''}
                                 
-                                <div class="flex justify-end gap-2 pt-2">
-                                    <button type="button" onclick="document.getElementById('tareaModal').remove()" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition">
-                                        Cancelar
+                                <div class="flex justify-between pt-2">
+                                    <button type="button" onclick="confirmarEliminarEntrega('${entregaId}')" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
+                                        <i class="fas fa-trash mr-1"></i>Eliminar
                                     </button>
-                                    <button type="submit" class="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition">
-                                        <i class="fas fa-save mr-1"></i>Guardar Cambios
-                                    </button>
+                                    <div class="flex gap-2">
+                                        <button type="button" onclick="document.getElementById('tareaModal').remove()" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition">
+                                            Cancelar
+                                        </button>
+                                        <button type="submit" class="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition">
+                                            <i class="fas fa-save mr-1"></i>Guardar Cambios
+                                        </button>
+                                    </div>
                                 </div>
                             </form>
                         </div>
@@ -4174,7 +4255,71 @@
               .replace(/'/g, "&#039;");
         }
 
-        /*]]>*/
+            async function iniciarIngresoClase(claseId, claseTitulo) {
+            try {
+                // Paso 1: Verificar estado de la clase (Horario)
+                const response = await fetch('/clase/estado/' + claseId);
+                if (!response.ok) throw new Error("Error consultando estado");
+                const data = await response.json();
+
+                // Si NO está iniciada, redirigir directo a la sala de espera (manejado por el controlador)
+                if (!data.iniciada) {
+                    window.location.href = '/clase/unirse/' + claseId;
+                    return;
+                }
+
+                // Paso 2: Si es horario, solicitar validación de credenciales
+                document.getElementById('modalClaseId').value = claseId;
+                document.getElementById('modalClaseTitulo').textContent = claseTitulo;
+                document.getElementById('inputDniIngreso').value = ''; 
+                document.getElementById('inputPassIngreso').value = '';
+                document.getElementById('ingresoModal').classList.remove('hidden');
+
+            } catch (e) {
+                console.error('Error al iniciar ingreso:', e);
+                // Fallback en caso de error: intentar redirigir directamente
+                window.location.href = '/clase/unirse/' + claseId;
+            }
+        }
+
+        async function validarIngreso(event) {
+            event.preventDefault();
+            const claseId = document.getElementById('modalClaseId').value;
+            const dni = document.getElementById('inputDniIngreso').value;
+            const password = document.getElementById('inputPassIngreso').value;
+            const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+
+            try {
+                const response = await fetch('/clase/validar-ingreso', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken
+                    },
+                    body: JSON.stringify({ dni, password })
+                });
+
+                const data = await response.json();
+
+                if (data.valid) {
+                    // Cierra validación y muestra confirmación (ModalConfirmacion existente)
+                    document.getElementById('ingresoModal').classList.add('hidden');
+                    ModalConfirmacion.show(
+                        'Confirmar Ingreso',
+                        '¿Deseas ingresar a la clase ahora?',
+                        () => {
+                            window.location.href = '/clase/unirse/' + claseId;
+                        }
+                    );
+                } else {
+                    alert('❌ Error: ' + (data.message || 'Credenciales incorrectas'));
+                }
+            } catch (error) {
+                console.error('Error validando:', error);
+                alert('Error de conexión al validar.');
+            }
+        }
+    /*]]>*/
     </script>
     <!-- Incluir modal de crear clase -->
 

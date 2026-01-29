@@ -44,6 +44,7 @@ public class Clase {
     private Boolean transcripcionHabilitada;
     private Boolean preguntasAleatorias;
     private Integer cantidadPreguntas;
+    private Integer tiempoPreguntas; // Intervalo en minutos para preguntas de asistencia (CU-10)
     
     // Configuración de resumen automático (CU-27)
     private Boolean generarResumenAutomatico;

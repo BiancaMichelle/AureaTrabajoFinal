@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import java.security.Principal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -20,13 +21,21 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import com.example.demo.model.Clase;
+import com.example.demo.model.Cuota;
+import com.example.demo.model.Inscripciones;
 import com.example.demo.model.Modulo;
 import com.example.demo.model.Usuario;
+import com.example.demo.repository.CuotaRepository;
 import com.example.demo.repository.CursoRepository;
 import com.example.demo.repository.ModuloRepository;
 import com.example.demo.repository.UsuarioRepository;
 import com.example.demo.service.ClaseService;
+import com.example.demo.service.InstitutoService;
 import com.example.demo.service.JitsiClaseService;
+
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 @Controller
 @RequestMapping("/clase")
@@ -44,6 +53,10 @@ public class ClaseController {
     private final com.example.demo.repository.MaterialRepository materialRepository;
     private final com.example.demo.repository.ArchivoRepository archivoRepository;
     private final com.example.demo.repository.DocenteRepository docenteRepository;
+    private final com.example.demo.repository.InscripcionRepository inscripcionRepository;
+    private final CuotaRepository cuotaRepository;
+    private final InstitutoService institutoService;
+    private final PasswordEncoder passwordEncoder;
 
     public ClaseController(ClaseService claseService,
             JitsiClaseService jitsiClaseService,
@@ -53,7 +66,11 @@ public class ClaseController {
             com.example.demo.ia.service.ChatServiceSimple chatServiceSimple,
             com.example.demo.repository.MaterialRepository materialRepository,
             com.example.demo.repository.ArchivoRepository archivoRepository,
-            com.example.demo.repository.DocenteRepository docenteRepository) {
+            com.example.demo.repository.DocenteRepository docenteRepository,
+            com.example.demo.repository.InscripcionRepository inscripcionRepository,
+            CuotaRepository cuotaRepository,
+            InstitutoService institutoService,
+            PasswordEncoder passwordEncoder) {
         this.claseService = claseService;
         this.jitsiClaseService = jitsiClaseService;
         this.moduloRepository = moduloRepository;
@@ -63,6 +80,10 @@ public class ClaseController {
         this.materialRepository = materialRepository;
         this.archivoRepository = archivoRepository;
         this.docenteRepository = docenteRepository;
+        this.inscripcionRepository = inscripcionRepository;
+        this.cuotaRepository = cuotaRepository;
+        this.institutoService = institutoService;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @PostMapping("/crear")
@@ -74,6 +95,7 @@ public class ClaseController {
             @RequestParam(required = false, defaultValue = "false") Boolean asistenciaAutomatica,
             @RequestParam(required = false, defaultValue = "false") Boolean preguntasAleatorias,
             @RequestParam(required = false) Integer cantidadPreguntas,
+            @RequestParam(required = false) Integer tiempoPreguntas,
             @RequestParam(required = false, defaultValue = "false") Boolean permisoMicrofono,
             @RequestParam(required = false, defaultValue = "false") Boolean permisoCamara,
             @RequestParam(required = false, defaultValue = "false") Boolean permisoCompartirPantalla,
@@ -126,6 +148,7 @@ public class ClaseController {
             clase.setAsistenciaAutomatica(asistenciaAutomatica);
             clase.setPreguntasAleatorias(preguntasAleatorias);
             clase.setCantidadPreguntas(Boolean.TRUE.equals(preguntasAleatorias) ? cantidadPreguntas : null);
+            clase.setTiempoPreguntas(Boolean.TRUE.equals(preguntasAleatorias) ? tiempoPreguntas : null);
             clase.setPermisoMicrofono(permisoMicrofono);
             clase.setPermisoCamara(permisoCamara);
             clase.setPermisoCompartirPantalla(permisoCompartirPantalla);
@@ -145,11 +168,12 @@ public class ClaseController {
 
         } catch (IllegalArgumentException | IllegalStateException e) {
             System.out.println("❌ Error de validación: " + e.getMessage());
-            return "redirect:/docente/mis-ofertas?error=" + e.getMessage();
+            return "redirect:/docente/mis-ofertas?error=" + java.net.URLEncoder.encode(e.getMessage(), java.nio.charset.StandardCharsets.UTF_8);
         } catch (Exception e) {
             System.out.println("❌ Error al crear clase: " + e.getMessage());
             e.printStackTrace();
-            return "redirect:/docente/mis-ofertas?error=Error+interno+del+servidor";
+            String errorMsg = e.getMessage() != null ? e.getMessage() : "Error interno desconocido";
+            return "redirect:/docente/mis-ofertas?error=" + java.net.URLEncoder.encode(errorMsg, java.nio.charset.StandardCharsets.UTF_8);
         }
     }
 
@@ -162,18 +186,66 @@ public class ClaseController {
     @GetMapping("/unirse/{claseId}")
     public String unirseAClase(@PathVariable UUID claseId, Principal principal, Model model) {
         try {
-            System.out.println("🎯 Uniéndose a clase Jitsi ID: " + claseId);
-
-            String meetingUrl = claseService.unirseAClase(claseId, principal.getName());
             Clase clase = claseService.findById(claseId)
                     .orElseThrow(() -> new RuntimeException("Clase no encontrada"));
 
+            // Validar existencia de usuario
             Usuario usuario = usuarioRepository.findByDni(principal.getName())
                     .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
             boolean esDocente = usuario.getRoles().stream()
                     .anyMatch(r -> r.getNombre().equals("DOCENTE") || r.getNombre().equals("ADMIN"));
 
+            // 1. Verificación de inscripción (Precondición)
+            if (!esDocente) {
+                Long ofertaId = clase.getModulo().getCurso().getIdOferta();
+                List<Inscripciones> inscripciones = inscripcionRepository.findByAlumnoDniAndOfertaId(principal.getName(), ofertaId);
+                
+                Inscripciones inscripcionActiva = inscripciones.stream()
+                        .filter(i -> Boolean.TRUE.equals(i.getEstadoInscripcion()))
+                        .findFirst()
+                        .orElse(null);
+                
+                if (inscripcionActiva == null) {
+                    model.addAttribute("error", "No estás inscrito en este curso o tu inscripción no está activa.");
+                    return "redirect:/alumno/mis-ofertas?error=no-inscrito";
+                }
+                
+                // Validar Mora (Nuevo)
+                Integer diasMoraPermitidos = institutoService.obtenerInstituto().getDiasMoraBloqueoAula();
+                // Importante: usar import com.example.demo.enums.EstadoCuota; si no está, usar FQCN o importarlo
+                List<Cuota> cuotas = cuotaRepository.findByInscripcionIdInscripcion(inscripcionActiva.getIdInscripcion());
+                List<Cuota> cuotasVencidas = cuotas.stream()
+                    .filter(c -> com.example.demo.enums.EstadoCuota.PENDIENTE.equals(c.getEstado()) && 
+                                 c.getFechaVencimiento().isBefore(java.time.LocalDate.now()))
+                    .toList();
+                
+                if (!cuotasVencidas.isEmpty()) {
+                    long maxDiasMora = cuotasVencidas.stream()
+                        .mapToLong(c -> java.time.temporal.ChronoUnit.DAYS.between(c.getFechaVencimiento(), LocalDateTime.now()))
+                        .max().orElse(0);
+                        
+                    if (maxDiasMora > diasMoraPermitidos) {
+                         return "aula-bloqueada"; 
+                    }
+                }
+            }
+
+            // 2. Verificación de Horario (Secuencia Alternativa Paso 2)
+            // Permitimos entrar a docentes 15 min antes, alumnos solo si ya inició (o 5 min antes)
+            LocalDateTime ahora = LocalDateTime.now();
+            if (!esDocente && ahora.isBefore(clase.getInicio().minusMinutes(5))) {
+                // Redirigir a sala de espera
+                model.addAttribute("clase", clase);
+                model.addAttribute("mensajeEspera", "La clase comenzará el: " + 
+                    java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm").format(clase.getInicio()));
+                return "clase-espera";
+            }
+
+            System.out.println("🎯 Uniéndose a clase Jitsi ID: " + claseId);
+
+            String meetingUrl = claseService.unirseAClase(claseId, principal.getName());
+            
             model.addAttribute("meetingUrl", meetingUrl);
             model.addAttribute("clase", clase);
             model.addAttribute("codigoMeet", clase.getRoomName());
@@ -187,8 +259,45 @@ public class ClaseController {
         } catch (Exception e) {
             System.out.println("❌ Error en unirseAClase Jitsi: " + e.getMessage());
             model.addAttribute("error", "No se pudo cargar la sala de Jitsi: " + e.getMessage());
-            return "clase-VideoConferencia";
+            // Si es un error grave, podemos mandar a la espera o volver al aula
+            return "clase-espera"; 
         }
+    }
+
+    @PostMapping("/validar-ingreso")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> validarIngreso(@RequestBody Map<String, String> credenciales, Principal principal) {
+        String dni = credenciales.get("dni");
+        String password = credenciales.get("password");
+        
+        // Validar que el DNI coincida con el usuario logueado (seguridad básica)
+        if (!principal.getName().equals(dni)) {
+             return ResponseEntity.status(403).body(Map.of("valid", false, "message", "El DNI no corresponde al usuario actual."));
+        }
+
+        Usuario usuario = usuarioRepository.findByDni(dni).orElse(null);
+        if (usuario != null && passwordEncoder.matches(password, usuario.getContraseña())) {
+            return ResponseEntity.ok(Map.of("valid", true));
+        } else {
+            return ResponseEntity.ok(Map.of("valid", false, "message", "Credenciales inválidas."));
+        }
+    }
+
+    @GetMapping("/estado/{claseId}")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> estadoClase(@PathVariable UUID claseId) {
+        return claseService.findById(claseId)
+            .map(clase -> {
+                boolean iniciada = LocalDateTime.now().isAfter(clase.getInicio().minusMinutes(5));
+                // Aquí podríamos chequear si el docente está conectado si tuviéramos esa info en tiempo real
+                // Por ahora usamos el horario
+                return ResponseEntity.ok(Map.<String, Object>of(
+                    "iniciada", iniciada,
+                    "inicio", clase.getInicio(),
+                    "docenteEnSala", iniciada // Simplificado por regla de negocio horaria
+                ));
+            })
+            .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/detalle/{claseId}")
@@ -317,6 +426,35 @@ public class ClaseController {
         } else {
             System.out.println("   - Solo visible para el docente");
         }
+    }
+
+    @PostMapping("/{claseId}/finalizar")
+    @org.springframework.web.bind.annotation.ResponseBody
+    public ResponseEntity<?> finalizarClase(@PathVariable UUID claseId, Principal principal) {
+         try {
+             // Obtener el bean manualmente ya que no lo inyectamos en el constructor original
+             // Esto es un parche rápido para no modificar todo el constructor y romper otros tests
+             org.springframework.context.ApplicationContext context = 
+                org.springframework.web.context.support.WebApplicationContextUtils
+                    .getRequiredWebApplicationContext(
+                        ((jakarta.servlet.http.HttpServletRequest) 
+                            ((org.springframework.web.context.request.ServletRequestAttributes) 
+                                org.springframework.web.context.request.RequestContextHolder.getRequestAttributes())
+                                    .getRequest()).getServletContext()
+                    );
+             
+             com.example.demo.service.AsistenciaEnVivoService asistenciaService = context.getBean(com.example.demo.service.AsistenciaEnVivoService.class);
+             
+             asistenciaService.consolidarAsistenciaClase(claseId);
+             
+             System.out.println("✅ Clase finalizada y asistencia calculada para: " + claseId);
+             
+             return ResponseEntity.ok().body(Map.of("success", true, "message", "Clase finalizada y asistencia calculada"));
+         } catch (Exception e) {
+             System.err.println("❌ Error finalizando clase: " + e.getMessage());
+             e.printStackTrace();
+             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+         }
     }
 
 }

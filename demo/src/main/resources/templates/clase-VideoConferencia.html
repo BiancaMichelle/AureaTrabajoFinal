@@ -119,6 +119,32 @@
             </div>
         </div>
 
+        <!-- Modal Pregunta Asistencia -->
+        <div id="modalPreguntaAsistencia" class="fixed inset-0 bg-black bg-opacity-75 hidden z-50 flex items-center justify-center">
+            <div class="bg-white rounded-xl shadow-2xl p-8 max-w-lg w-full relative transform transition-all scale-100">
+                <div class="mb-6 text-center">
+                    <div class="bg-blue-100 text-blue-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-question text-3xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 mb-2">Control de Asistencia</h3>
+                    <p class="text-gray-600">Por favor, respondé la siguiente pregunta para confirmar tu asistencia.</p>
+                </div>
+                
+                <div id="preguntaContainer" class="mb-6">
+                    <p id="preguntaEnunciado" class="font-semibold text-lg mb-4 text-center"></p>
+                    <div id="preguntaOpciones" class="space-y-3">
+                        <!-- Opciones dinámicas -->
+                    </div>
+                </div>
+
+                <!-- Timer -->
+                <div class="w-full bg-gray-200 rounded-full h-2.5 mb-6">
+                <div id="progressBar" class="bg-blue-600 h-2.5 rounded-full" style="width: 100%"></div>
+                </div>
+                <p class="text-xs text-center text-gray-500 mb-4">Tiempo restante: <span id="timeRemaining">180</span>s</p>
+            </div>
+        </div>
+
         <!-- Videoconferencia integrada -->
         <div th:if="${meetingUrl}" class="bg-white rounded-xl shadow-xl p-4 md:p-6">
             <div class="flex justify-between items-center mb-4">
@@ -507,6 +533,86 @@
                     } else {
                         badge.classList.add('hidden');
                     }
+                }
+            }
+
+            // --- LÓGICA DE ASISTENCIA AUTOMÁTICA ---
+            const asistenciaAutomatica = /*[[${clase.asistenciaAutomatica}]]*/ false;
+            const preguntasAleatorias = /*[[${clase.preguntasAleatorias}]]*/ false;
+            
+            if (asistenciaAutomatica && preguntasAleatorias && !isTeacher) {
+                console.log("⏰ Iniciando monitoreo de asistencia automática");
+                setInterval(verificarPreguntaAsistencia, 60000); // Check every minute
+            }
+
+            async function verificarPreguntaAsistencia() {
+                try {
+                    const response = await fetch(`/api/clase/${claseId}/verificar-pregunta`);
+                    if (response.status === 200) {
+                        const pregunta = await response.json();
+                        mostrarPregunta(pregunta);
+                    }
+                } catch (e) {
+                    console.error("Error verificando preguntas:", e);
+                }
+            }
+
+            let currentRonda = 0;
+            let questionTimer = null;
+
+            function mostrarPregunta(pregunta) {
+                currentRonda = pregunta.ronda;
+                document.getElementById('preguntaEnunciado').textContent = pregunta.enunciado;
+                
+                const container = document.getElementById('preguntaOpciones');
+                container.innerHTML = '';
+                
+                pregunta.opciones.forEach(op => {
+                    const btn = document.createElement('button');
+                    btn.className = "w-full text-left px-4 py-3 border border-gray-300 rounded-lg hover:bg-blue-50 hover:border-blue-500 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500";
+                    btn.innerText = op;
+                    btn.onclick = () => enviarRespuesta(op);
+                    container.appendChild(btn);
+                });
+
+                const modal = document.getElementById('modalPreguntaAsistencia');
+                modal.classList.remove('hidden');
+                
+                // Timer
+                let timeLeft = pregunta.tiempoLimite || 180;
+                const totalTime = timeLeft;
+                clearInterval(questionTimer);
+                
+                questionTimer = setInterval(() => {
+                    timeLeft--;
+                    document.getElementById('timeRemaining').innerText = timeLeft;
+                    document.getElementById('progressBar').style.width = ((timeLeft / totalTime) * 100) + "%";
+                    
+                    if (timeLeft <= 0) {
+                        enviarRespuesta("TIMEOUT"); // Ocultar y marcar fallida
+                    }
+                }, 1000);
+            }
+
+            async function enviarRespuesta(respuesta) {
+                clearInterval(questionTimer);
+                document.getElementById('modalPreguntaAsistencia').classList.add('hidden');
+                
+                try {
+                    await fetch(`/api/clase/${claseId}/responder-pregunta`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            [csrfHeader]: csrfToken
+                        },
+                        body: JSON.stringify({
+                            ronda: currentRonda,
+                            respuesta: respuesta
+                        })
+                    });
+                    console.log("✅ Respuesta de asistencia enviada");
+                } catch (e) {
+                    console.error("Error enviando respuesta:", e);
                 }
             }
         </script>

@@ -3458,7 +3458,7 @@ textarea.form-control:focus {
 
 /* Modal Content */
 .modal-content {
-    background: var(--card-bg);
+    background: #ffffff;
     border-radius: 12px;
     box-shadow: var(--shadow-lg);
     max-width: 800px;
@@ -3471,6 +3471,12 @@ textarea.form-control:focus {
 
 .modal-content.modal-lg {
     max-width: 1000px;
+}
+
+/* Override for global modal */
+#globalConfirmationModal .modal-content {
+    background: #ffffff !important;
+    z-index: 10000;
 }
 
 @keyframes slideIn {

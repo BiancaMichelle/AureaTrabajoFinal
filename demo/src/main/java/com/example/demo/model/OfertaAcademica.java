@@ -83,6 +83,7 @@ public class OfertaAcademica {
     @Min(1)
     private Integer cupos;
     private Boolean visibilidad;
+    private Boolean permiteInscripcionTardia = false;
     
     @ManyToMany(fetch = FetchType.EAGER) // Cambié a EAGER para facilitar
     @JoinTable(

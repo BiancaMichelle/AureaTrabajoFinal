@@ -45,7 +45,7 @@ public class DemoApplication implements CommandLineRunner {
     private final DocenteRepository docenteRepository;
     private final AlumnoRepository alumnoRepository;
     private final InstitutoRepository institutoRepository;
-
+ 
     public DemoApplication(RolRepository roleRepository,
             UsuarioRepository usuarioRepository,
             PasswordEncoder passwordEncoder,

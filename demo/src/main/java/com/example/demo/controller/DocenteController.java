@@ -239,6 +239,13 @@ public class DocenteController {
 
             // Buscar módulos de esta oferta
             List<Modulo> modulos = moduloRepository.findByCursoOrderByFechaInicioModuloAsc(oferta);
+            
+            // Inicializar colecciones perezosas para evitar problemas en la vista
+            for (Modulo m : modulos) {
+                m.getClases().size();
+                m.getActividades().size();
+            }
+
             Usuario docente = usuarioRepository.findByDni(dni)
                     .orElseThrow(() -> new RuntimeException("Docente no encontrado"));
             

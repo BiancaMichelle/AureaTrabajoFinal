@@ -17,6 +17,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
@@ -51,6 +52,9 @@ public class EntregaController {
     
     @Autowired
     private com.example.demo.service.EmailService emailService;
+
+    @Autowired
+    private com.example.demo.service.EntregaService entregaService;
 
     private final String UPLOAD_DIR = "uploads/tareas/";
 
@@ -321,6 +325,22 @@ public class EntregaController {
         }
     }
     
+    @DeleteMapping("/eliminar/{idEntrega}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Map<String, Object>> eliminarEntrega(@PathVariable Long idEntrega, Authentication auth) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            entregaService.eliminarEntrega(idEntrega, auth.getName());
+            response.put("success", true);
+            response.put("message", "Entrega eliminada correctamente.");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
+    }
+
     /**
      * Método helper para obtener el ID del curso desde una tarea de forma segura.
      * Previene NullPointerException si las relaciones no están cargadas.

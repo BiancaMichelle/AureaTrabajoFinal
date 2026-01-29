@@ -1,6 +1,7 @@
 package com.example.demo.controller;
 
 import java.security.Principal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -29,13 +30,16 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.example.demo.enums.EstadoCuota;
 import com.example.demo.enums.EstadoIntento;
 import com.example.demo.enums.TipoPregunta;
 import com.example.demo.model.Alumno;
+import com.example.demo.model.Cuota;
 import com.example.demo.model.Curso;
 import com.example.demo.model.Docente;
 import com.example.demo.model.Examen;
 import com.example.demo.model.Formacion;
+import com.example.demo.model.Inscripciones;
 import com.example.demo.model.Intento;
 import com.example.demo.model.OfertaAcademica;
 import com.example.demo.model.Opcion;
@@ -43,11 +47,14 @@ import com.example.demo.model.Pool;
 import com.example.demo.model.Pregunta;
 import com.example.demo.model.RespuestaIntento;
 import com.example.demo.repository.AlumnoRepository;
+import com.example.demo.repository.CuotaRepository;
 import com.example.demo.repository.ExamenRepository;
+import com.example.demo.repository.InscripcionRepository;
 import com.example.demo.repository.IntentoRepository;
 import com.example.demo.repository.PoolRepository;
 import com.example.demo.repository.PreguntaRepository;
 import com.example.demo.repository.UsuarioRepository;
+import com.example.demo.service.InstitutoService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -75,6 +82,15 @@ public class ExamenController {
     
     @Autowired
     private PoolRepository poolRepository;
+
+    @Autowired
+    private InscripcionRepository inscripcionRepository;
+
+    @Autowired
+    private CuotaRepository cuotaRepository;
+
+    @Autowired
+    private InstitutoService institutoService;
     
     @Autowired
     private ObjectMapper objectMapper;
@@ -90,6 +106,50 @@ public class ExamenController {
 
             boolean esDocenteOAdmin = authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("DOCENTE") || a.getAuthority().equals("ADMIN") || a.getAuthority().equals("ROLE_ADMIN"));
+
+            if (!esDocenteOAdmin) {
+                // 1. Validar Inscripción Activa
+                List<Inscripciones> inscripciones = inscripcionRepository.findByAlumnoDniAndOfertaId(
+                    principal.getName(), examen.getModulo().getCurso().getIdOferta());
+                
+                Inscripciones inscripcionActiva = inscripciones.stream()
+                    .filter(i -> Boolean.TRUE.equals(i.getEstadoInscripcion()))
+                    .findFirst()
+                    .orElse(null);
+                    
+                if (inscripcionActiva == null) {
+                    return "redirect:/alumno/mis-ofertas?error=No+tienes+una+inscripcion+activa+para+este+curso";
+                }
+                
+                // 2. Validar Mora
+                Integer diasMoraPermitidos = institutoService.obtenerInstituto().getDiasMoraBloqueoAula();
+                // Usamos findByInscripcion y filtramos en memoria porque findCuotasVencidas no filtra por ID
+                List<Cuota> cuotas = cuotaRepository.findByInscripcionIdInscripcion(inscripcionActiva.getIdInscripcion());
+                List<Cuota> cuotasVencidas = cuotas.stream()
+                    .filter(c -> c.getEstado() == EstadoCuota.PENDIENTE && 
+                                 c.getFechaVencimiento().isBefore(LocalDate.now()))
+                    .collect(Collectors.toList());
+                
+                if (!cuotasVencidas.isEmpty()) {
+                    long maxDiasMora = cuotasVencidas.stream()
+                        .mapToLong(c -> java.time.temporal.ChronoUnit.DAYS.between(c.getFechaVencimiento(), LocalDateTime.now()))
+                        .max().orElse(0);
+                        
+                    if (maxDiasMora > diasMoraPermitidos) {
+                         // Redirigir a vista de bloqueo (reutilizamos la del aula bloqueada)
+                         return "aula-bloqueada"; 
+                    }
+                }
+
+                // 3. Validar Fecha y Hora del Examen
+                LocalDateTime ahora = LocalDateTime.now();
+                if (examen.getFechaApertura() != null && ahora.isBefore(examen.getFechaApertura())) {
+                    return "redirect:/alumno/aula/" + examen.getModulo().getCurso().getIdOferta() + "?error=El+examen+aun+no+esta+disponible";
+                }
+                if (examen.getFechaCierre() != null && ahora.isAfter(examen.getFechaCierre())) {
+                    return "redirect:/alumno/aula/" + examen.getModulo().getCurso().getIdOferta() + "?error=El+plazo+para+el+examen+ha+finalizado";
+                }
+            }
 
             model.addAttribute("examen", examen);
             model.addAttribute("tiempoTotal",
@@ -108,10 +168,58 @@ public class ExamenController {
      * API REST para obtener los datos del examen en formato JSON
      */
     @GetMapping("/api/datos/{examenId}")
-    public ResponseEntity<?> obtenerDatosExamen(@PathVariable Long examenId) {
+    public ResponseEntity<?> obtenerDatosExamen(@PathVariable Long examenId, Principal principal, Authentication authentication) {
         try {
             Examen examen = examenRepository.findById(examenId)
                     .orElseThrow(() -> new RuntimeException("Examen no encontrado"));
+
+            boolean esDocenteOAdmin = authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("DOCENTE") || a.getAuthority().equals("ADMIN") || a.getAuthority().equals("ROLE_ADMIN"));
+
+            if (!esDocenteOAdmin) {
+                if (principal == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+
+                // 1. Validar Inscripción
+                List<Inscripciones> inscripciones = inscripcionRepository.findByAlumnoDniAndOfertaId(
+                    principal.getName(), examen.getModulo().getCurso().getIdOferta());
+                
+                Inscripciones inscripcionActiva = inscripciones.stream()
+                    .filter(i -> Boolean.TRUE.equals(i.getEstadoInscripcion()))
+                    .findFirst()
+                    .orElse(null);
+                    
+                if (inscripcionActiva == null) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "No inscrito o inscripción inactiva"));
+                }
+                
+                // 2. Validar Mora
+                Integer diasMoraPermitidos = institutoService.obtenerInstituto().getDiasMoraBloqueoAula();
+                // Usamos findByInscripcion y filtramos en memoria
+                List<Cuota> cuotas = cuotaRepository.findByInscripcionIdInscripcion(inscripcionActiva.getIdInscripcion());
+                List<Cuota> cuotasVencidas = cuotas.stream()
+                    .filter(c -> c.getEstado() == EstadoCuota.PENDIENTE && 
+                                 c.getFechaVencimiento().isBefore(LocalDate.now()))
+                    .collect(Collectors.toList());
+                
+                if (!cuotasVencidas.isEmpty()) {
+                    long maxDiasMora = cuotasVencidas.stream()
+                        .mapToLong(c -> java.time.temporal.ChronoUnit.DAYS.between(c.getFechaVencimiento(), LocalDateTime.now()))
+                        .max().orElse(0);
+                        
+                    if (maxDiasMora > diasMoraPermitidos) {
+                         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Acceso bloqueado por pagos pendientes"));
+                    }
+                }
+
+                // 3. Validar Fecha
+                LocalDateTime ahora = LocalDateTime.now();
+                if (examen.getFechaApertura() != null && ahora.isBefore(examen.getFechaApertura())) {
+                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "El examen aún no ha comenzado"));
+                }
+                if (examen.getFechaCierre() != null && ahora.isAfter(examen.getFechaCierre())) {
+                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "El examen ha finalizado"));
+                }
+            }
 
             // Construir el objeto de respuesta
             Map<String, Object> response = new HashMap<>();

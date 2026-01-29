@@ -79,8 +79,26 @@ public class ChatController {
             @PathVariable String sessionId,
             @AuthenticationPrincipal UserDetails userDetails) {
         
+        if (userDetails == null) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED).build();
+        }
+
         try {
             List<ChatMessage> historial = chatServiceSimple.obtenerHistorialSesion(sessionId);
+            
+            // Seguridad: Verificar que el historial pertenezca al usuario solicitante
+            if (!historial.isEmpty()) {
+                String ownerDni = historial.get(0).getUserDni();
+                String currentDni = userDetails.getUsername();
+                
+                boolean isAdmin = userDetails.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().contains("ADMIN"));
+                
+                if (!currentDni.equals(ownerDni) && !isAdmin) {
+                    return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).build();
+                }
+            }
+            
             return ResponseEntity.ok(historial);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();

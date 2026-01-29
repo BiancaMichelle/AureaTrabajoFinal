@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.security.Principal;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -23,6 +24,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.example.demo.enums.EstadoAsistencia;
+import com.example.demo.model.Docente;
+import com.example.demo.model.Horario;
 import com.example.demo.model.Asistencia;
 import com.example.demo.model.Inscripciones;
 import com.example.demo.model.OfertaAcademica;
@@ -177,10 +180,49 @@ public class AulaController {
 
     @PostMapping("/api/asistencia/registrar")
     @ResponseBody
-    public ResponseEntity<?> registrarAsistencia(@RequestBody Map<String, Object> payload) {
+    public ResponseEntity<?> registrarAsistencia(@RequestBody Map<String, Object> payload, Principal principal) {
         try {
+            // Validar autenticación
+            if (principal == null) {
+                return ResponseEntity.status(401).body(Map.of("success", false, "message", "No autenticado"));
+            }
+            Usuario usuarioLogueado = usuarioRepository.findByCorreo(principal.getName()).orElseThrow();
+
             Long ofertaId = Long.valueOf(payload.get("ofertaId").toString());
             String dni = payload.get("dni").toString();
+
+            // Validar autorización (Docente del curso o Admin)
+            OfertaAcademica oferta = ofertaRepository.findById(ofertaId)
+                    .orElseThrow(() -> new IllegalArgumentException("Oferta no encontrada"));
+            
+            boolean esDocenteDeLaOferta = false;
+            // Verificar si el usuario es el docente asignado a la oferta
+            if (usuarioLogueado instanceof Docente) {
+                if (oferta.getHorarios() != null) {
+                    esDocenteDeLaOferta = oferta.getHorarios().stream()
+                        .anyMatch(h -> h.getDocente() != null && h.getDocente().getId().equals(usuarioLogueado.getId()));
+                }
+            }
+            
+            // Verificar rol ADMIN
+            boolean esAdmin = usuarioLogueado.getRoles().stream()
+                    .anyMatch(r -> "ADMIN".equalsIgnoreCase(r.getNombre()));
+
+            if (!esDocenteDeLaOferta && !esAdmin) {
+                return ResponseEntity.status(403).body(Map.of("success", false, "message", "No autorizado para modificar asistencia en esta oferta"));
+            }
+
+            // Validar inscripción activa del alumno
+            Usuario alumno = usuarioRepository.findByDni(dni)
+                .orElseThrow(() -> new IllegalArgumentException("Alumno no encontrado"));
+                
+            Inscripciones inscripcion = inscripcionRepository.findByAlumnoAndOferta(alumno, oferta)
+                .orElseThrow(() -> new IllegalArgumentException("El alumno no está inscrito en esta oferta"));
+
+            if (!Boolean.TRUE.equals(inscripcion.getEstadoInscripcion())) {
+                 return ResponseEntity.badRequest().body(Map.of("success", false, "message", "La inscripción del alumno no está activa"));
+            }
+
             LocalDate fecha = LocalDate.parse(payload.get("fecha").toString());
             String estadoStr = payload.get("estado").toString();
             UUID claseId = null;

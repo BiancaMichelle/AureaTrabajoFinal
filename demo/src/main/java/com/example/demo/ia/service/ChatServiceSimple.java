@@ -12,9 +12,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.client.ResourceAccessException;
+import com.example.demo.repository.*;
+import com.example.demo.model.*;
+import com.example.demo.enums.EstadoCuota;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -37,6 +41,25 @@ public class ChatServiceSimple {
 
     @Autowired
     private com.example.demo.repository.InscripcionRepository inscripcionRepository;
+
+    @Autowired
+    private CuotaRepository cuotaRepository;
+
+    @Autowired
+    private TareaRepository tareaRepository;
+
+    @Autowired
+    private ExamenRepository examenRepository;
+
+    @Autowired
+    private HorarioRepository horarioRepository;
+
+    @Autowired
+    private com.example.demo.repository.CursoRepository cursoRepository;
+
+    @Autowired
+    private com.example.demo.repository.IntentoRepository intentoRepository;
+
     
     private final ObjectMapper objectMapper = new ObjectMapper();
     
@@ -122,16 +145,33 @@ public class ChatServiceSimple {
             chatMessage.setResponseTimeMs(endTime - startTime);
             chatMessage.setMessageType(determinarTipoMensaje(userMessage));
             
-            // Guardar en base de datos
-            return chatMessageRepository.save(chatMessage);
+            // Guardar en base de datos (SOLO SI NO ES ANÓNIMO Y ES ALUMNO O DOCENTE) - PRIVACIDAD & SEGURIDAD
+            if (!"ANONIMO".equals(userDni) && validarPermisoGuardado(usuario)) {
+                return chatMessageRepository.save(chatMessage);
+            } else {
+                return chatMessage; // Retornar sin guardar
+            }
             
         } catch (Exception e) {
             System.err.println("❌ Error en procesarMensaje: " + e.getMessage());
             e.printStackTrace();
             chatMessage.setAiResponse(generarRespuestaError(e));
             chatMessage.setResponseTimeMs(0L);
-            return chatMessageRepository.save(chatMessage);
+            
+            // Guardar errores solo de usuarios permitidos
+            if (!"ANONIMO".equals(userDni) && validarPermisoGuardado(usuario)) {
+                return chatMessageRepository.save(chatMessage);
+            } else {
+                return chatMessage;
+            }
         }
+    }
+    
+    // Método auxiliar para verificar si se debe guardar el historial
+    private boolean validarPermisoGuardado(com.example.demo.model.Usuario usuario) {
+        if (usuario == null) return false;
+        return usuario.getRoles().stream()
+                .anyMatch(r -> "ALUMNO".equalsIgnoreCase(r.getNombre()) || "DOCENTE".equalsIgnoreCase(r.getNombre()));
     }
     
     private String sanearMensaje(String mensaje) {
@@ -188,11 +228,16 @@ public class ChatServiceSimple {
             "IMPORTANTE: SOLO responde con información que tengas explícitamente en el contexto a continuación. " +
             "Si no sabes algo o no está en el contexto, di 'Lo siento, no tengo información sobre eso'. " +
             "NO inventes cursos, fechas ni datos. NO alucines. NO des información de relleno.\n\n" +
+            "REGLAS PEDAGÓGICAS (CRÍTICO):\n" +
+            "1. NO resuelvas tareas ni exámenes directamente. Si el alumno pide la respuesta, diles amablemente que no puedes hacer su tarea.\n" +
+            "2. Proporciona explicaciones conceptuales, guías de estudio, bibliografía recomendada o ejemplos similares.\n" +
+            "3. Fomenta el aprendizaje y el pensamiento crítico.\n\n" +
             "INFORMACIÓN PÚBLICA DE LA PLATAFORMA:\n" + contextoOfertas + "\n\n";
 
         if (!contextoUsuario.isEmpty()) {
             systemPrompt += "INFORMACIÓN DEL USUARIO (PRIVADO - NO COMPARTIR CON TERCEROS):\n" + contextoUsuario + "\n" +
-                            "NOTA: No tienes acceso a notas, pagos detallados ni contraseñas. Si el usuario pregunta por ello, indica que deben consultar su panel personal.\n";
+                            "NOTA: Tienes acceso a la información de cuotas pendientes y tareas próximas listadas arriba. Úsala para responder preguntas del usuario sobre su estado.\n" +
+                            "Sin embargo, NO tienes acceso a detalles históricos de calificaciones pasadas ni a contraseñas. Si preguntan por notas antiguas, remítelos a su panel de alumno.\n";
         } else {
             systemPrompt += "NOTA: El usuario es ANÓNIMO. Solo puedes responder sobre información pública de ofertas académicas. " +
                             "Si pregunta por su situación personal, materiales internos o clases, indícale que debe iniciar sesión.\n";
@@ -239,23 +284,141 @@ public class ChatServiceSimple {
     
     private String obtenerContextoUsuario(String userDni) {
         try {
-            com.example.demo.model.Usuario usuario = usuarioRepository.findByDni(userDni).orElse(null);
+            Usuario usuario = usuarioRepository.findByDni(userDni).orElse(null);
             if (usuario == null) return "";
             
-            List<com.example.demo.model.Inscripciones> inscripciones = inscripcionRepository.findByAlumno(usuario);
-            
-            if (inscripciones.isEmpty()) {
-                return "El usuario " + usuario.getNombre() + " " + usuario.getApellido() + " no está inscrito en ningún curso actualmente.";
+            StringBuilder sb = new StringBuilder();
+            sb.append("Usuario: ").append(usuario.getNombre()).append(" ").append(usuario.getApellido());
+            if (usuario.getRoles() != null && !usuario.getRoles().isEmpty()) {
+                sb.append(" (Roles: ");
+                sb.append(usuario.getRoles().stream().map(Rol::getNombre).collect(Collectors.joining(", ")));
+                sb.append(")\n");
+            } else {
+                sb.append("\n");
             }
             
-            StringBuilder sb = new StringBuilder("El usuario " + usuario.getNombre() + " " + usuario.getApellido() + " está inscrito en:\n");
-            for (com.example.demo.model.Inscripciones inscripcion : inscripciones) {
-                sb.append("- ").append(inscripcion.getOferta().getNombre())
-                  .append(" (Estado: ").append(inscripcion.getEstadoInscripcion()).append(")\n");
+            // --- Contexto para DOCENTES ---
+            if (usuario instanceof Docente) {
+                Docente docente = (Docente) usuario;
+                List<Horario> horarios = docente.getHorario(); 
+                
+                sb.append("👨‍🏫 PANEL DOCENTE:\n");
+
+                // 1. Horarios
+                if (horarios != null && !horarios.isEmpty()) {
+                    sb.append("📅 TUS HORARIOS DE CLASE:\n");
+                    for (Horario h : horarios) {
+                        String materia = (h.getOfertaAcademica() != null) ? h.getOfertaAcademica().getNombre() : "Clase";
+                        sb.append("- ").append(materia).append(": ")
+                          .append(h.getDia()).append(" de ").append(h.getHoraInicio()).append(" a ").append(h.getHoraFin()).append("\n");
+                    }
+                }
+
+                // 2. Resumen de Cursos y Alumnos
+                List<Curso> misCursos = cursoRepository.findByDocentesId(docente.getId());
+                if(misCursos != null && !misCursos.isEmpty()){
+                    sb.append("📊 ESTADÍSTICAS DE TUS CURSOS:\n");
+                    for(Curso c : misCursos){
+                        if(c.getEstado() == com.example.demo.enums.EstadoOferta.ACTIVA || c.getEstado() == com.example.demo.enums.EstadoOferta.ENCURSO){
+                            long inscritos = inscripcionRepository.countByOfertaAndEstadoInscripcionTrue(c);
+                            sb.append("- ").append(c.getNombre()).append(": ").append(inscritos).append(" alumnos activos.\n");
+                            
+                            // 3. Alertas de corrección (Exámenes)
+                            if(c.getModulos() != null){
+                                for(Modulo m : c.getModulos()){
+                                    if(m.getActividades() != null){
+                                        for(Actividad a : m.getActividades()){
+                                            if(a instanceof Examen){
+                                                List<Intento> intentos = intentoRepository.findByExamen_IdActividad(a.getIdActividad());
+                                                long sinCorregir = intentos.stream().filter(i -> i.getCalificacion() == null).count();
+                                                if(sinCorregir > 0){
+                                                    sb.append("  ⚠️ Examen '").append(a.getTitulo()).append("' tiene ").append(sinCorregir).append(" intentos sin corregir.\n");
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
+
+            // --- Contexto para ALUMNOS (Inscripciones, Pagos, Tareas) ---
+            // Nota: Un docente también puede ser alumno en otra cosa, así que revisamos inscripciones para todos
+            List<Inscripciones> inscripciones = inscripcionRepository.findByAlumno(usuario);
+            
+            if (!inscripciones.isEmpty()) {
+                sb.append("📚 TUS INSCRIPCIONES Y ESTADO ACADÉMICO:\n");
+                for (Inscripciones inscripcion : inscripciones) {
+                    if (inscripcion.getOferta() == null) continue;
+                    
+                    String nombreOferta = inscripcion.getOferta().getNombre();
+                    Boolean estadoActivo = inscripcion.getEstadoInscripcion();
+                    sb.append("🔹 Curso: ").append(nombreOferta)
+                      .append(" (Estado: ").append(estadoActivo != null && estadoActivo ? "Activo" : "Inactivo").append(")\n");
+
+                    // 1. Verificar Cuotas Pendientes
+                    List<Cuota> cuotas = cuotaRepository.findByInscripcionIdInscripcion(inscripcion.getIdInscripcion());
+                    long pendientes = cuotas.stream().filter(c -> c.getEstado() == EstadoCuota.PENDIENTE).count();
+                    
+                    if (pendientes > 0) {
+                        sb.append("   ⚠️ Tienes ").append(pendientes).append(" cuotas PENDIENTES de pago en este curso.\n");
+                    } else {
+                        sb.append("   ✅ Estás al día con los pagos.\n");
+                    }
+
+                    // 2. Información del Módulo y Clases
+                    if (Boolean.TRUE.equals(estadoActivo) && inscripcion.getOferta() instanceof Curso) {
+                        Curso curso = (Curso) inscripcion.getOferta();
+                        if (curso.getModulos() != null) {
+                            for (Modulo modulo : curso.getModulos()) {
+                                // Información del Contenido del Módulo (Bibliografía y Temario)
+                                sb.append("   📖 Módulo: ").append(modulo.getNombre()).append("\n");
+                                if (modulo.getDescripcion() != null) sb.append("      - Desc: ").append(modulo.getDescripcion()).append("\n");
+                                if (modulo.getTemario() != null) sb.append("      - Temario: ").append(modulo.getTemario()).append("\n");
+                                if (modulo.getBibliografia() != null) sb.append("      - Bibliografía: ").append(modulo.getBibliografia()).append("\n");
+
+                                // Clases del Módulo
+                                if (modulo.getClases() != null && !modulo.getClases().isEmpty()) {
+                                    sb.append("      - Clases:\n");
+                                    for (Clase clase : modulo.getClases()) {
+                                        sb.append("        * ").append(clase.getTitulo())
+                                          .append(" (").append(clase.getInicio().toLocalDate()).append(")\n");
+                                    }
+                                }
+
+                                if (modulo.getActividades() != null) {
+                                    for (Actividad actividad : modulo.getActividades()) {
+                                        // Filtrar actividades pendientes/futuras
+                                        if (actividad instanceof Tarea) {
+                                            Tarea t = (Tarea) actividad;
+                                            if (t.getLimiteEntrega() != null && t.getLimiteEntrega().isAfter(LocalDateTime.now())) {
+                                                sb.append("   📝 Tarea pendiente: ").append(t.getTitulo())
+                                                  .append(" (Vence: ").append(t.getLimiteEntrega().toLocalDate()).append(")\n");
+                                            }
+                                        } else if (actividad instanceof Examen) {
+                                            Examen e = (Examen) actividad;
+                                            if (e.getFechaCierre() != null && e.getFechaCierre().isAfter(LocalDateTime.now())) {
+                                                sb.append("   📝 Examen próximo: ").append(e.getTitulo())
+                                                  .append(" (Cierra: ").append(e.getFechaCierre().toLocalDate()).append(")\n");
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } else if (!(usuario instanceof Docente)) {
+                sb.append("No tienes inscripciones activas actualmente.\n");
+            }
+            
             return sb.toString();
         } catch (Exception e) {
-            return "Error obteniendo contexto de usuario.";
+            System.err.println("Error recuperando contexto profundo: " + e.getMessage());
+            e.printStackTrace();
+            return "Error recuperando información detallada del usuario.";
         }
     }
     
