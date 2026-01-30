@@ -148,15 +148,113 @@
 
     <script>
         // Funciones para el modal de clase
+        
+        // --- MODO CREAR ---
         function openClassModal(moduloId) {
-            // Usar el modal que ya está incluido en la página
+            const form = document.getElementById('createClassForm');
+            const modal = document.getElementById('classModal');
+            
+            // RESETEAR MODO A CREACIÓN
+            // Eliminar dataset mode si existe
+            delete form.dataset.mode; 
+            
+            // Resetear formulario completo
+            form.reset(); 
+            
+            // Restaurar acción original
+            form.action = '/clase/crear'; 
+            
+            // UI RESET (Títulos y Botones)
+            modal.querySelector('h3').innerHTML = '<i class="fas fa-video me-2"></i>Crear Nueva Clase';
+            const btnSubmit = form.querySelector('button[type="submit"]');
+            btnSubmit.innerHTML = '<i class="fas fa-plus me-1"></i>Crear Clase';
+            btnSubmit.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+            btnSubmit.classList.add('bg-customGreen', 'hover:bg-green-700');
+            
+            // Ocultar contenedores condicionales
+            document.getElementById('cantidadPreguntasContainer').classList.add('hidden');
+            document.getElementById('publicarResumenContainer').classList.add('hidden');
+
+            // Establecer moduloId
             document.getElementById('moduloIdInput').value = moduloId;
-            document.getElementById('classModal').classList.remove('hidden');
+            modal.classList.remove('hidden');
             
             // Establecer fecha y hora actual por defecto
             const now = new Date();
-            const localDateTime = now.toISOString().slice(0, 16);
+            // Ajuste de zona horaria simple o uso directo de local ISO
+            const localDateTime = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
             document.querySelector('input[name="inicio"]').value = localDateTime;
+        }
+
+        // --- MODO EDITAR ---
+        function openEditClassModal(claseId) {
+             fetch('/clase/' + claseId + '/datos')
+                .then(r => r.json())
+                .then(data => {
+                    mostrarModalEdicionClase(claseId, data);
+                })
+                .catch(e => {
+                    console.error(e);
+                    alert('Error al cargar datos de la clase');
+                });
+        }
+        
+        function mostrarModalEdicionClase(claseId, data) {
+            const modal = document.getElementById('classModal');
+            const form = document.getElementById('createClassForm');
+            const tituloModal = modal.querySelector('h3');
+            const btnSubmit = form.querySelector('button[type="submit"]');
+
+            // Configurar modo EDICIÓN
+            form.dataset.mode = 'edit';
+            form.action = '/clase/' + claseId + '/modificar';
+
+            // Actualizar UI
+            tituloModal.innerHTML = '<i class="fas fa-edit me-2"></i>Editar Clase';
+            btnSubmit.innerHTML = '<i class="fas fa-save me-1"></i>Guardar Cambios';
+            btnSubmit.classList.remove('bg-customGreen', 'hover:bg-green-700');
+            btnSubmit.classList.add('bg-blue-600', 'hover:bg-blue-700');
+
+            // Llenar campos
+            form.querySelector('input[name="titulo"]').value = data.titulo;
+            form.querySelector('textarea[name="descripcion"]').value = data.descripcion || '';
+            form.querySelector('input[name="inicio"]').value = data.inicio; // Ya viene formateado ISO
+            form.querySelector('select[name="duracion"]').value = data.duracion;
+
+            // Checkboxes y secciones condicionales
+            setCheckbox(form, 'asistenciaAutomatica', data.asistenciaAutomatica);
+            
+            setCheckbox(form, 'preguntasAleatorias', data.preguntasAleatorias);
+            const preguntasContainer = document.getElementById('cantidadPreguntasContainer');
+            if(data.preguntasAleatorias) {
+                preguntasContainer.classList.remove('hidden');
+                form.querySelector('input[name="cantidadPreguntas"]').value = data.cantidadPreguntas;
+            } else {
+                preguntasContainer.classList.add('hidden');
+            }
+
+            setCheckbox(form, 'permisoMicrofono', data.permisoMicrofono);
+            setCheckbox(form, 'permisoCamara', data.permisoCamara);
+            setCheckbox(form, 'permisoCompartirPantalla', data.permisoCompartirPantalla);
+            setCheckbox(form, 'permisoChat', data.permisoChat);
+            setCheckbox(form, 'transcripcionHabilitada', data.transcripcionHabilitada);
+            
+            setCheckbox(form, 'generarResumenAutomatico', data.generarResumenAutomatico);
+            const resumenContainer = document.getElementById('publicarResumenContainer');
+            if(data.generarResumenAutomatico) {
+                resumenContainer.classList.remove('hidden');
+                setCheckbox(form, 'publicarResumenAutomaticamente', data.publicarResumenAutomaticamente);
+            } else {
+                resumenContainer.classList.add('hidden');
+                setCheckbox(form, 'publicarResumenAutomaticamente', false);
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function setCheckbox(form, name, value) {
+            const cb = form.querySelector(`input[name="${name}"]`);
+            if (cb) cb.checked = !!value;
         }
 
         function closeClassModal() {
@@ -196,22 +294,21 @@
         });
 
         // Manejar envío del formulario
-        document.getElementById('createClassForm')?.addEventListener('submit', function(e) {
+        document.getElementById('createClassForm')?.addEventListener('submit', async function(e) {
             const inicioInput = document.querySelector('input[name="inicio"]');
             const duracionSelect = document.querySelector('select[name="duracion"]');
             
+            // Validaciones básicas
             if (!inicioInput.value) {
                 e.preventDefault();
                 alert('Por favor, selecciona una fecha y hora de inicio');
                 return;
             }
-            
             if (!duracionSelect.value) {
                 e.preventDefault();
                 alert('Por favor, selecciona una duración');
                 return;
             }
-            
             const preguntasCheck = document.getElementById('preguntasAleatorias');
             const cantidadInput = document.querySelector('input[name="cantidadPreguntas"]');
             if (preguntasCheck?.checked && (!cantidadInput.value || cantidadInput.value < 1)) {
@@ -219,6 +316,42 @@
                 alert('Por favor, especifica la cantidad de preguntas (mínimo 1)');
                 return;
             }
+            
+            // INTERCEPCIÓN PARA MODO EDICIÓN (AJAX)
+            if (this.dataset.mode === 'edit') {
+                e.preventDefault(); // Evitar submit tradicional
+                
+                const formData = new FormData(this);
+                const action = this.action;
+                const submitBtn = this.querySelector('button[type="submit"]');
+                const originalText = submitBtn.innerHTML;
+                
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Guardando...';
+                
+                try {
+                     const response = await fetch(action, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        // Recargar para ver cambios
+                        window.location.reload();
+                    } else {
+                        alert('Error: ' + (result.message || 'No se pudo actualizar'));
+                    }
+                } catch (error) {
+                    console.error(error);
+                    alert('Error de conexión al guardar cambios');
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                }
+            }
+            // Si NO es edit mode, deja pasar el submit normal (retorno true implícito)
         });
     </script>
 </body>

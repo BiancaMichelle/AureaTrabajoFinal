@@ -33,6 +33,31 @@
             </div>
         </div>
 
+        <!-- Filtros -->
+        <div class="mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-wrap gap-6 items-center">
+             <div class="flex items-center gap-2">
+                 <label for="filtroEstado" class="text-sm font-semibold text-gray-700">Estado:</label>
+                 <select id="filtroEstado" onchange="filtrarEntregas()" class="border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500">
+                     <option value="todos">Todos</option>
+                     <option value="pendiente">Pendientes</option>
+                     <option value="corregida">Corregidas</option>
+                 </select>
+             </div>
+             
+             <div class="flex items-center gap-2">
+                 <label for="filtroResultado" class="text-sm font-semibold text-gray-700">Resultado:</label>
+                 <select id="filtroResultado" onchange="filtrarEntregas()" class="border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500">
+                     <option value="todos">Todos</option>
+                     <option value="aprobada">Aprobadas</option>
+                     <option value="reprobada">Reprobadas</option>
+                 </select>
+             </div>
+
+             <div class="text-sm text-gray-500 ml-auto">
+                 Mostrando <span id="contadorEntregas" class="font-bold text-gray-800" th:text="${entregas.size()}">0</span> entregas
+             </div>
+        </div>
+
         <div class="flex flex-col lg:flex-row gap-6 items-start">
             <!-- Lista de Estudiantes (Columna Izquierda 2/3) -->
             <div class="w-full lg:w-2/3 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -56,10 +81,13 @@
                                 <th class="py-3 px-6 text-center font-semibold">Acción</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-100">
-                            <tr th:each="entrega : ${entregas}" class="hover:bg-blue-50 transition duration-150 ease-in-out cursor-pointer"
+                        <tbody class="divide-y divide-gray-100" id="tablaEntregas">
+                            <tr th:each="entrega : ${entregas}" 
+                                class="hover:bg-blue-50 transition duration-150 ease-in-out cursor-pointer entrega-row"
+                                th:data-estado="${entrega.calificacion == null ? 'pendiente' : 'corregida'}"
+                                th:data-aprobado="${entrega.calificacion != null and entrega.calificacion >= 70 ? 'true' : 'false'}"
                                 th:onclick="'abrirPanel(' + ${entrega.idEntrega} + ')'"
-                                th:classappend="${entrega.calificacion == null} ? 'bg-white' : 'bg-gray-50'">
+                                th:classappend="${entrega.calificacion == null} ? 'bg-white border-l-4 border-yellow-400' : 'bg-gray-50 border-l-4 border-green-500'">
                                 
                                 <td class="py-4 px-6">
                                     <div class="flex items-center">
@@ -98,9 +126,10 @@
                                 <input type="hidden" th:id="'data-fecha-' + ${entrega.idEntrega}" th:value="${#temporals.format(entrega.fechaEntrega, 'dd/MM/yyyy HH:mm')}">
                                 <input type="hidden" th:id="'data-archivo-' + ${entrega.idEntrega}" th:value="${entrega.nombreArchivo != null ? entrega.nombreArchivo : ''}">
                                 <input type="hidden" th:id="'data-archivo-real-' + ${entrega.idEntrega}" th:value="${entrega.archivoNombreGuardado != null ? entrega.archivoNombreGuardado : ''}">
-                                <input type="hidden" th:id="'data-contenido-' + ${entrega.idEntrega}" th:value="${entrega.contenido != null ? entrega.contenido : ''}">
+                                <!-- Usamos textarea oculto para preservar saltos de línea y formateo del contenido -->
+                                <textarea style="display:none;" th:id="'data-contenido-' + ${entrega.idEntrega}" th:text="${entrega.contenido != null ? entrega.contenido : ''}"></textarea>
                                 <input type="hidden" th:id="'data-calificacion-' + ${entrega.idEntrega}" th:value="${entrega.calificacion}">
-                                <input type="hidden" th:id="'data-comentario-' + ${entrega.idEntrega}" th:value="${entrega.comentarios}">
+                                <textarea style="display:none;" th:id="'data-comentario-' + ${entrega.idEntrega}" th:text="${entrega.comentarios}"></textarea>
                             </tr>
                         </tbody>
                     </table>
@@ -130,23 +159,50 @@
                         </div>
 
                         <div class="mb-6">
-                            <p class="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-2">Entregable</p>
+                            <h4 class="text-sm font-bold text-gray-800 uppercase tracking-wider mb-4 border-b pb-2">Entregable del Alumno</h4>
                             
-                            <!-- Archivo Adjunto -->
-                            <div id="panel-archivo-block" class="hidden mb-3">
-                                <a id="panel-archivo-link" href="#" target="_blank" class="flex items-center p-3 bg-gray-50 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition group">
-                                    <svg class="w-8 h-8 text-gray-400 group-hover:text-blue-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                                    <div class="overflow-hidden">
-                                        <p id="panel-archivo-nombre" class="font-medium text-sm truncate">archivo.pdf</p>
-                                        <p class="text-xs text-gray-500">Click para descargar</p>
+                            <!-- Sección Archivo -->
+                            <div class="mb-4">
+                                <p class="text-xs font-semibold text-gray-500 mb-2 flex items-center">
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
+                                    Archivo Adjunto
+                                </p>
+                                
+                                <div id="panel-archivo-block" class="hidden">
+                                    <div class="flex flex-col gap-2">
+                                        <a id="panel-archivo-link" href="#" class="flex items-center p-3 bg-gray-50 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition group">
+                                            <svg class="w-8 h-8 text-gray-400 group-hover:text-blue-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                            <div class="overflow-hidden">
+                                                <p id="panel-archivo-nombre" class="font-medium text-sm truncate">archivo.pdf</p>
+                                                <p class="text-xs text-gray-500">Click para descargar</p>
+                                            </div>
+                                        </a>
+                                        <!-- Botón para ver online -->
+                                        <a id="panel-archivo-view-link" href="#" target="_blank" class="flex items-center justify-center p-2 text-sm text-blue-600 bg-blue-50 border border-blue-100 rounded-lg hover:bg-blue-100 hover:text-blue-800 transition">
+                                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                            Ver Documento
+                                        </a>
                                     </div>
-                                </a>
+                                </div>
+                                <div id="panel-archivo-empty" class="hidden p-3 bg-gray-50 border border-gray-200 border-dashed rounded-lg text-center">
+                                    <p class="text-sm text-gray-400 italic">Sin archivo adjunto</p>
+                                </div>
                             </div>
 
-                            <!-- Contenido Texto -->
-                            <div id="panel-contenido-block" class="hidden">
-                                <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 max-h-40 overflow-y-auto">
-                                    <p id="panel-contenido-texto" class="text-sm text-gray-700 whitespace-pre-wrap"></p>
+                            <!-- Sección Texto -->
+                            <div class="mb-4">
+                                <p class="text-xs font-semibold text-gray-500 mb-2 flex items-center">
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path></svg>
+                                    Respuesta de Texto
+                                </p>
+                                
+                                <div id="panel-contenido-block" class="hidden">
+                                    <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-4 max-h-60 overflow-y-auto">
+                                        <p id="panel-contenido-texto" class="text-sm text-gray-700 whitespace-pre-wrap font-medium"></p>
+                                    </div>
+                                </div>
+                                <div id="panel-contenido-empty" class="hidden p-3 bg-gray-50 border border-gray-200 border-dashed rounded-lg text-center">
+                                    <p class="text-sm text-gray-400 italic">Sin respuesta de texto</p>
                                 </div>
                             </div>
                         </div>
@@ -187,6 +243,46 @@
     </div>
 
     <script>
+        function filtrarEntregas() {
+            const filtroEstado = document.getElementById('filtroEstado').value;
+            const filtroResultado = document.getElementById('filtroResultado').value;
+            const filas = document.querySelectorAll('.entrega-row');
+            let visibles = 0;
+
+            filas.forEach(fila => {
+                const estado = fila.getAttribute('data-estado'); // 'pendiente' o 'corregida'
+                const aprobado = fila.getAttribute('data-aprobado'); // 'true' o 'false'
+                
+                // 1. Validar filtro Estado
+                let matchEstado = false;
+                if (filtroEstado === 'todos') matchEstado = true;
+                else if (filtroEstado === estado) matchEstado = true;
+
+                // 2. Validar filtro Resultado
+                let matchResultado = false;
+                if (filtroResultado === 'todos') {
+                    matchResultado = true;
+                } else if (filtroResultado === 'aprobada') {
+                    // Solo si está aprobada (lo cual implica que ya fue corregida)
+                    matchResultado = (aprobado === 'true');
+                } else if (filtroResultado === 'reprobada') {
+                    // Reprobada implica que fue corregida Y no aprobó.
+                    // Excluimos las pendientes explícitamente porque 'pendiente' tiene aprobado='false'
+                    matchResultado = (estado === 'corregida' && aprobado === 'false');
+                }
+
+                if (matchEstado && matchResultado) {
+                    fila.style.display = '';
+                    visibles++;
+                } else {
+                    fila.style.display = 'none';
+                }
+            });
+            
+            // Actualizar contador
+            document.getElementById('contadorEntregas').innerText = visibles;
+        }
+
         function abrirPanel(idEntrega) {
             // Retrieve hidden data
             const nombre = document.getElementById('data-nombre-' + idEntrega).value;
@@ -208,28 +304,62 @@
 
             // Handle Deliverables Display
             const archivoBlock = document.getElementById('panel-archivo-block');
+            const archivoEmpty = document.getElementById('panel-archivo-empty');
             const linkEl = document.getElementById('panel-archivo-link');
+            const viewLinkEl = document.getElementById('panel-archivo-view-link');
+            
             const contenidoBlock = document.getElementById('panel-contenido-block');
+            const contenidoEmpty = document.getElementById('panel-contenido-empty');
             const textoEl = document.getElementById('panel-contenido-texto');
             
             // Reset visibility
             archivoBlock.classList.add('hidden');
+            archivoEmpty.classList.add('hidden');
             contenidoBlock.classList.add('hidden');
+            contenidoEmpty.classList.add('hidden');
 
+            // --- Lógica de Archivo ---
             if (archivo && archivo !== 'null' && archivo !== '') {
                 archivoBlock.classList.remove('hidden');
                 document.getElementById('panel-archivo-nombre').innerText = archivo;
                 
-                // Usar el nombre real si existe, sino fallback al nombre original (para retrocompatibilidad si usamos contenido antes)
-                // Pero como cambiamos la logica de subida, esto funcionará para nuevos.
-                const fileToDownload = (archivoReal && archivoReal !== 'null' && archivoReal !== '') ? archivoReal : archivo;
-                
-                linkEl.href = '/uploads/tareas/' + encodeURIComponent(fileToDownload); 
+                // Usar endpoint de descarga seguro
+                linkEl.href = '/entrega/descargar/' + idEntrega; 
+                // Endpoint para ver online
+                viewLinkEl.href = '/entrega/descargar/' + idEntrega + '?inline=true';
+            } else {
+                archivoEmpty.classList.remove('hidden');
             }
 
+            // --- Lógica de Texto ---
+            let hasText = false;
             if (contenido && contenido !== 'null' && contenido !== '') {
-                contenidoBlock.classList.remove('hidden');
-                textoEl.innerText = contenido;
+                // Limpiar contenido de rutas de archivo (Legacy cleanup)
+                let cleanContent = contenido;
+                
+                // 1. Split estricto por separador conocido
+                if (cleanContent.includes('| Archivo:')) {
+                    cleanContent = cleanContent.split('| Archivo:')[0];
+                }
+                
+                // 2. Limpieza agresiva de rutas de Windows/Linux
+                cleanContent = cleanContent.replace(/(\s\|\s)?(Archivo:\s)?([a-zA-Z]:)?(\\|\/)?(uploads|Users|home).*$/, '');
+                cleanContent = cleanContent.trim();
+                
+                // 3. Fallback final
+                if (cleanContent.match(/^(uploads|[\w]:\\|\/)/i) || (cleanContent.length > 500 && cleanContent.includes('uploads'))) {
+                     if(cleanContent.length < 200) cleanContent = '';
+                }
+
+                if (cleanContent && cleanContent.length > 0) {
+                    hasText = true;
+                    contenidoBlock.classList.remove('hidden');
+                    textoEl.innerText = cleanContent;
+                }
+            }
+
+            if (!hasText) {
+                contenidoEmpty.classList.remove('hidden');
             }
 
             // Show Panel

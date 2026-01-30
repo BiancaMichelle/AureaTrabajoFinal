@@ -47,13 +47,13 @@ public class JaaSTokenService {
             user.put("name", userName);
             user.put("email", userEmail);
             user.put("avatar", userAvatar);
-            user.put("moderator", isModerator ? "true" : "false");
+            user.put("moderator", isModerator); // Pass as boolean, not string
 
             Map<String, Object> features = new HashMap<>();
-            features.put("livestreaming", "true");
-            features.put("recording", "true");
-            features.put("transcription", "true");
-            features.put("outbound-call", "true");
+            features.put("livestreaming", true);
+            features.put("recording", true);
+            features.put("transcription", true);
+            features.put("outbound-call", true);
 
             context.put("user", user);
             context.put("features", features);
@@ -62,6 +62,7 @@ public class JaaSTokenService {
 
             // Calculate expiration (e.g., 2 hours)
             Instant now = Instant.now();
+            Instant nbf = now.minusSeconds(30); // Allow 30s clock skew
             Instant exp = now.plusSeconds(7200);
 
             return JWT.create()
@@ -74,7 +75,7 @@ public class JaaSTokenService {
                     .withClaim("sub", appId)
                     .withClaim("iss", "chat")
                     .withExpiresAt(Date.from(exp))
-                    .withNotBefore(Date.from(now))
+                    .withNotBefore(Date.from(nbf))
                     .sign(algorithm);
 
         } catch (Exception e) {

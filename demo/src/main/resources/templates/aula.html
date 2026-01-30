@@ -161,7 +161,7 @@
         }
 
         .module-visibility-toggle {
-            display: none;
+            display: inline-flex;
             position: absolute;
             top: 12px;
             right: 12px;
@@ -174,18 +174,57 @@
             color: #28a745;
             border: 1px solid rgba(40, 167, 69, 0.35);
             transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
-            cursor: pointer;
+            cursor: default;
+            opacity: 0.7;
             z-index: 5;
         }
 
         .module-visibility-toggle:hover {
+            /* Keep basic hover styles but they might not trigger if cursor is default? 
+               Actually hover triggers on elements regardless of cursor. 
+               We should scope hover effects to edit-mode if we want them deactivated visually.
+            */
+        }
+
+        body.edit-mode .module-visibility-toggle {
+            cursor: pointer;
+            opacity: 1;
+        }
+
+        body.edit-mode .module-visibility-toggle:hover {
             background-color: #28a745;
             color: white;
             transform: scale(1.05);
         }
 
-        body.edit-mode .module-visibility-toggle {
+        /* Activity Visibility Toggle */
+        .activity-visibility-toggle {
             display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            border-radius: 9999px;
+            background-color: rgba(40, 167, 69, 0.12);
+            color: #28a745;
+            border: 1px solid rgba(40, 167, 69, 0.35);
+            transition: all 0.2s ease;
+            cursor: default;
+            opacity: 0.7;
+            margin-left: 0.5rem;
+            margin-right: 0.25rem;
+            flex-shrink: 0;
+        }
+
+        body.edit-mode .activity-visibility-toggle {
+            cursor: pointer;
+            opacity: 1;
+        }
+
+        body.edit-mode .activity-visibility-toggle:hover {
+            background-color: #28a745;
+            color: white;
+            transform: scale(1.05);
         }
 
         body.edit-mode .module-visibility-toggle:not(:disabled) {
@@ -735,12 +774,12 @@
                                         Fechas
                                     </span>
                                 </div>
+                                <button type="button" class="module-visibility-toggle text-gray-500 hover:text-blue-600" 
+                                    th:if="${puedeModificar}"
+                                    th:attr="data-visible=${modulo.visibilidad != null ? modulo.visibilidad : false}">
+                                    <i class="fas" th:classappend="${modulo.visibilidad != null ? (modulo.visibilidad ? ' fa-eye' : ' fa-eye-slash') : ' fa-eye-slash'}"></i>
+                                </button>
                                 <div class="edit-controls">
-                                    <button type="button" class="module-visibility-toggle text-gray-500 hover:text-blue-600" 
-                                        th:if="${puedeModificar}"
-                                        th:attr="data-visible=${modulo.visibilidad != null ? modulo.visibilidad : false}">
-                                        <i class="fas" th:classappend="${modulo.visibilidad != null ? (modulo.visibilidad ? ' fa-eye' : ' fa-eye-slash') : ' fa-eye-slash'}"></i>
-                                    </button>
                                     <button type="button" class="edit-icon text-blue-600 hover:text-blue-800" data-edit-type="module"
                                         th:data-modulo-id="${modulo.idModulo}">
                                         <i class="fas fa-pen"></i>
@@ -895,6 +934,12 @@
                                                     </div>
                                                 </div>
                                             </div>
+
+                                            <button type="button" class="activity-visibility-toggle text-gray-500 hover:text-blue-600" 
+                                                th:if="${puedeModificar}"
+                                                th:attr="data-visible=${actividad.visibilidad != null ? actividad.visibilidad : false}">
+                                                <i class="fas" th:classappend="${actividad.visibilidad != null ? (actividad.visibilidad ? ' fa-eye' : ' fa-eye-slash') : ' fa-eye-slash'}"></i>
+                                            </button>
 
                                             <div class="edit-controls ml-3">
                                                 <button type="button" class="edit-icon text-blue-600" data-edit-type="actividad" th:data-actividad-id="${actividad.idActividad}"><i class="fas fa-pen"></i></button>
@@ -1070,6 +1115,7 @@
         const editModuleForm = document.getElementById('editModuleForm');
         const editModeHint = document.getElementById('editModeHint');
         const moduleVisibilityButtons = document.querySelectorAll('.module-visibility-toggle');
+        const activityVisibilityButtons = document.querySelectorAll('.activity-visibility-toggle');
         const csrfTokenMeta = document.querySelector('meta[name="_csrf"]');
         const csrfHeaderMeta = document.querySelector('meta[name="_csrf_header"]');
         const csrfToken = csrfTokenMeta ? csrfTokenMeta.getAttribute('content') : '';
@@ -1117,6 +1163,10 @@
 
         function refreshVisibilityButtons() {
             moduleVisibilityButtons.forEach((button) => {
+                const visible = parseVisibilityFlag(button.dataset.visible);
+                updateVisibilityButtonState(button, visible);
+            });
+            activityVisibilityButtons.forEach((button) => {
                 const visible = parseVisibilityFlag(button.dataset.visible);
                 updateVisibilityButtonState(button, visible);
             });
@@ -1174,6 +1224,9 @@
 
                 card.dataset.moduloVisible = String(nextVisible);
                 card.setAttribute('data-modulo-visible', String(nextVisible));
+                
+                // Update button dataset to keep sync
+                button.dataset.visible = String(nextVisible);
 
                 updateVisibilityButtonState(button, nextVisible);
             } catch (error) {
@@ -1186,10 +1239,79 @@
             }
         }
 
+        async function updateActivityVisibilityOnServer(actividadId, visible) {
+            if (!actividadId) {
+                throw new Error('Falta el identificador de la actividad');
+            }
+
+            const payload = new URLSearchParams();
+            payload.set('visibilidad', visible);
+
+            const headers = {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            };
+
+            if (csrfHeader && csrfToken) {
+                headers[csrfHeader] = csrfToken;
+            }
+
+            const response = await fetch(`/actividad/${actividadId}/visibilidad`, {
+                method: 'POST',
+                headers,
+                body: payload.toString()
+            });
+
+            if (!response.ok) {
+                throw new Error('Respuesta no válida del servidor');
+            }
+
+            const result = await response.json().catch(() => ({ success: true }));
+
+            if (result && result.success === false) {
+                throw new Error(result.message || 'No se pudo actualizar la visibilidad');
+            }
+
+            return result;
+        }
+
+        async function toggleActivityVisibility(button) {
+            if (!button) {
+                return;
+            }
+
+            const card = button.closest('.activity-item');
+            const actividadId = card ? card.getAttribute('data-actividad-id') : null;
+            
+            if (!actividadId) {
+                console.error("No se encontró el ID de la actividad");
+                return;
+            }
+            
+            const currentVisible = parseVisibilityFlag(button.dataset.visible);
+            const nextVisible = !currentVisible;
+
+            button.disabled = true;
+            button.classList.add('opacity-60');
+
+            try {
+                await updateActivityVisibilityOnServer(actividadId, nextVisible);
+                updateVisibilityButtonState(button, nextVisible);
+            } catch (error) {
+                console.error('Error al actualizar visibilidad de la actividad', error);
+                alert('No se pudo actualizar la visibilidad de la actividad. Intenta nuevamente.');
+                updateVisibilityButtonState(button, currentVisible);
+            } finally {
+                button.disabled = false;
+                button.classList.remove('opacity-60');
+            }
+        }
+
         function registerVisibilityToggleHandlers() {
             moduleVisibilityButtons.forEach((button) => {
                 const card = button.closest('div[data-modulo-id]');
                 const initialVisible = card ? parseVisibilityFlag(card.getAttribute('data-modulo-visible')) : false;
+                // Sync button state with card state
+                button.dataset.visible = initialVisible;
                 updateVisibilityButtonState(button, initialVisible);
 
                 button.addEventListener('click', async (event) => {
@@ -1198,6 +1320,19 @@
                         return;
                     }
                     await toggleModuleVisibility(card, button);
+                });
+            });
+
+            activityVisibilityButtons.forEach((button) => {
+                const initialVisible = parseVisibilityFlag(button.dataset.visible);
+                updateVisibilityButtonState(button, initialVisible);
+
+                button.addEventListener('click', async (event) => {
+                    event.preventDefault();
+                    if (!isEditModeEnabled) {
+                        return;
+                    }
+                    await toggleActivityVisibility(button);
                 });
             });
         }
@@ -1327,7 +1462,8 @@
                         return;
                     }
                     event.preventDefault();
-                    handlePendingEdit('clases');
+                    const claseId = button.getAttribute('data-clase-id');
+                    openEditClassModal(claseId);
                 });
             });
 
@@ -4255,74 +4391,80 @@
               .replace(/'/g, "&#039;");
         }
 
-            async function iniciarIngresoClase(claseId, claseTitulo) {
-            try {
-                // Paso 1: Verificar estado de la clase (Horario)
-                const response = await fetch('/clase/estado/' + claseId);
-                if (!response.ok) throw new Error("Error consultando estado");
-                const data = await response.json();
+        function mostrarModalAviso(titulo, mensaje, iconoClass = 'text-yellow-500 fas fa-exclamation-triangle') {
+             const modalHTML = `
+                <div id="avisoModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[120]">
+                    <div class="bg-white rounded-lg p-6 w-96 shadow-xl transform transition-all scale-100">
+                        <div class="text-center">
+                            <i class="${iconoClass} text-5xl mb-4"></i>
+                            <h3 class="text-xl font-semibold mb-2 text-gray-800">${escapeHtml(titulo)}</h3>
+                            <p class="text-gray-600 mb-6">${escapeHtml(mensaje)}</p>
+                            <button onclick="document.getElementById('avisoModal').remove()" 
+                                    class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                                Entendido
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
 
-                // Si NO está iniciada, redirigir directo a la sala de espera (manejado por el controlador)
-                if (!data.iniciada) {
-                    window.location.href = '/clase/unirse/' + claseId;
+        async function iniciarIngresoClase(claseId) {
+             try {
+                // Mostrar indicador de carga (opcional)
+                document.body.style.cursor = 'wait';
+
+                const response = await fetch('/clase/estado/' + claseId);
+                const estado = await response.json();
+
+                if (!response.ok) {
+                    throw new Error('Error al consultar estado');
+                }
+
+                document.body.style.cursor = 'default';
+
+                if (estado.finalizada) {
+                     mostrarModalAviso('Clase Finalizada', 'Esta clase ya realizó y ha finalizado.', 'text-red-500 fas fa-door-closed');
+                     return;
+                }
+
+                if (!estado.esHoy) {
+                    const fechaInicio = new Date(estado.inicio);
+                    const opcionesFecha = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+                    // Capitalizar primera letra
+                    let fechaStr = fechaInicio.toLocaleDateString('es-ES', opcionesFecha);
+                    fechaStr = fechaStr.charAt(0).toUpperCase() + fechaStr.slice(1);
+                    
+                    mostrarModalAviso('Fecha Incorrecta', `Esta clase está programada para el ${fechaStr}.`, 'text-blue-500 fas fa-calendar-alt');
                     return;
                 }
 
-                // Paso 2: Si es horario, solicitar validación de credenciales
-                document.getElementById('modalClaseId').value = claseId;
-                document.getElementById('modalClaseTitulo').textContent = claseTitulo;
-                document.getElementById('inputDniIngreso').value = ''; 
-                document.getElementById('inputPassIngreso').value = '';
-                document.getElementById('ingresoModal').classList.remove('hidden');
+                if (!estado.iniciada) {
+                    const fechaInicio = new Date(estado.inicio);
+                    const horaStr = fechaInicio.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                    mostrarModalAviso('Aún no es la hora', `La clase inicia a las ${horaStr}. Podrás ingresar 5 minutos antes.`, 'text-yellow-500 fas fa-clock');
+                    return;
+                }
 
-            } catch (e) {
-                console.error('Error al iniciar ingreso:', e);
-                // Fallback en caso de error: intentar redirigir directamente
+                // Si cumple condiciones (es hoy y ya inició o falta poco), redirigir
                 window.location.href = '/clase/unirse/' + claseId;
-            }
+
+             } catch (error) {
+                 document.body.style.cursor = 'default';
+                 console.error(error);
+                 // Fallback: intentar entrar de todos modos si falla la validación previa, 
+                 // el servidor detendrá si es crítico.
+                 window.location.href = '/clase/unirse/' + claseId;
+             }
         }
 
-        async function validarIngreso(event) {
-            event.preventDefault();
-            const claseId = document.getElementById('modalClaseId').value;
-            const dni = document.getElementById('inputDniIngreso').value;
-            const password = document.getElementById('inputPassIngreso').value;
-            const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
-
-            try {
-                const response = await fetch('/clase/validar-ingreso', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': csrfToken
-                    },
-                    body: JSON.stringify({ dni, password })
-                });
-
-                const data = await response.json();
-
-                if (data.valid) {
-                    // Cierra validación y muestra confirmación (ModalConfirmacion existente)
-                    document.getElementById('ingresoModal').classList.add('hidden');
-                    ModalConfirmacion.show(
-                        'Confirmar Ingreso',
-                        '¿Deseas ingresar a la clase ahora?',
-                        () => {
-                            window.location.href = '/clase/unirse/' + claseId;
-                        }
-                    );
-                } else {
-                    alert('❌ Error: ' + (data.message || 'Credenciales incorrectas'));
-                }
-            } catch (error) {
-                console.error('Error validando:', error);
-                alert('Error de conexión al validar.');
-            }
+        function validarIngreso(event) {
+             // Deprecated
         }
     /*]]>*/
     </script>
     <!-- Incluir modal de crear clase -->
 
 </body>
-
 </html>

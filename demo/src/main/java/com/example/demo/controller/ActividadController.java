@@ -31,6 +31,8 @@ import com.example.demo.model.Material;
 import com.example.demo.model.Modulo;
 import com.example.demo.model.Tarea;
 import com.example.demo.repository.ArchivoRepository;
+import com.example.demo.repository.ActividadRepository;
+import com.example.demo.model.Actividad;
 import com.example.demo.repository.MaterialRepository;
 import com.example.demo.repository.ModuloRepository;
 import com.example.demo.service.ExamenService;
@@ -48,6 +50,9 @@ public class ActividadController {
     
     @Autowired
     private TareaService tareaService;
+
+    @Autowired
+    private ActividadRepository actividadRepository;
     
     @Autowired
     private ObjectMapper objectMapper;
@@ -322,6 +327,23 @@ public class ActividadController {
         }
     }
     
+    @PostMapping("/actividad/{id}/visibilidad")
+    @ResponseBody
+    @PreAuthorize("hasAnyAuthority('DOCENTE', 'ADMIN')")
+    public ResponseEntity<Map<String, Object>> actualizarVisibilidadActividad(@PathVariable Long id,
+            @RequestParam(defaultValue = "false") Boolean visibilidad) {
+        
+        Actividad actividad = actividadRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Actividad no encontrada: " + id));
+        
+        actividad.setVisibilidad(visibilidad);
+        actividadRepository.save(actividad);
+
+        return ResponseEntity.ok(Map.of(
+                "success", Boolean.TRUE,
+                "visibilidad", actividad.getVisibilidad()));
+    }
+
     // Clases internas para recibir datos del frontend
     public static class PoolDTORequest {
         private Long id; // id temporal del frontend

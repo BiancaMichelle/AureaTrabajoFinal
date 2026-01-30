@@ -37,6 +37,11 @@ import com.example.demo.repository.EntregaRepository;
 import com.example.demo.repository.TareaRepository;
 import com.example.demo.repository.UsuarioRepository;
 
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+
 @Controller
 @RequestMapping("/entrega")
 public class EntregaController {
@@ -114,14 +119,13 @@ public class EntregaController {
                     entrega.setNombreArchivo(archivo.getOriginalFilename());
                     entrega.setArchivoNombreGuardado(fileName);
 
-                    // Si es solo archivo, guardamos la ruta en contenido o usamos campo separado logicamente
-                    // Aquí usamos contenido para la ruta si es de tipo archivo y no se usó texto
-                    if (entrega.getContenido() == null) {
-                         entrega.setContenido(filePath.toString());
-                    } else {
-                        // Si hay ambos, quizas concatenar o manejar mejor. Por simplicidad:
-                        entrega.setContenido(entrega.getContenido() + " | Archivo: " + filePath.toString());
+                    // FIX: No concatenar la ruta en el contenido.
+                    // Si no hay texto, dejamos contenido nulo para evitar mostrar rutas al usuario
+                    if (entrega.getContenido() != null && entrega.getContenido().contains(" | Archivo:")) {
+                         // Limpieza preventiva por si acaso
+                         entrega.setContenido(entrega.getContenido().split("\\| Archivo:")[0].trim());
                     }
+                    // Si el contenido era null (solo archivo), sigue siendo null.
                     
                 } catch (IOException e) {
                     throw new RuntimeException("Error al guardar el archivo", e);
@@ -212,14 +216,37 @@ public class EntregaController {
             if (texto != null && !texto.trim().isEmpty()) {
                 // Borrar contenido anterior y reemplazar con el nuevo
                 entregaExistente.setContenido(texto);
-                // Si solo hay texto, limpiar nombre de archivo previo
+            }
+            // NOTA: No borramos archivo si solo se actualiza texto, salvo que se pida explícitamente
+            // Pero la lógica anterior borraba archivo si no venía en request?
+            // "if (archivo == null || archivo.isEmpty())" -> pero esto es multipart.
+            // Si el alumno edita solo texto, el archivo debería mantenerse?
+            // La lógica original decía:
+            /*
+            if (texto != null && !texto.trim().isEmpty()) {
+                entregaExistente.setContenido(texto);
                 if (archivo == null || archivo.isEmpty()) {
-                    entregaExistente.setNombreArchivo(null);
+                    entregaExistente.setNombreArchivo(null); // <--- ESTO BORRABA EL ARCHIVO SI SOLO EDITABAS TEXTO
                 }
+            }
+            */
+            // Para ser amigable, si edita texto y NO sube archivo, deberíamos MANTENER el archivo anterior?
+            // El usuario dice "el alumno desea modificar el contenido... IMPORTANTE: Se reemplaza completamente".
+            // Si es reemplazo completo, entonces sí, si no sube archivo, se borra.
+            // Entonces mantenemos la lógica de borrado si no hay archivo.
+            
+            if (texto != null && !texto.trim().isEmpty()) {
+                 entregaExistente.setContenido(texto);
+                 if (archivo == null || archivo.isEmpty()) {
+                     // Si había archivo, marcarlo para borrado? O nullificar referencias
+                     entregaExistente.setNombreArchivo(null);
+                     entregaExistente.setArchivoNombreGuardado(null);
+                 }
             } else if (archivo == null || archivo.isEmpty()) {
-                // Si no hay texto ni archivo nuevo, limpiar contenido
+                // Ni texto ni archivo -> borrar todo
                 entregaExistente.setContenido(null);
                 entregaExistente.setNombreArchivo(null);
+                entregaExistente.setArchivoNombreGuardado(null);
             }
             
             // Procesar nuevo archivo
@@ -231,17 +258,26 @@ public class EntregaController {
                     }
                     
                     // Eliminar archivo anterior si existe
-                    if (entregaExistente.getNombreArchivo() != null && entregaExistente.getContenido() != null) {
+                    if (entregaExistente.getNombreArchivo() != null) {
                         try {
-                            // Intentar extraer y eliminar el archivo anterior
-                            String contenidoPrevio = entregaExistente.getContenido();
-                            if (contenidoPrevio.contains("uploads/tareas/")) {
-                                String[] partes = contenidoPrevio.split("\\|");
-                                for (String parte : partes) {
-                                    if (parte.contains("uploads/tareas/")) {
-                                        Path archivoViejo = Paths.get(parte.trim().replace("Archivo: ", ""));
-                                        Files.deleteIfExists(archivoViejo);
-                                        System.out.println("🗑️ Archivo anterior eliminado: " + archivoViejo);
+                            // 1. Intentar con archivoNombreGuardado (Nueva lógica)
+                            if (entregaExistente.getArchivoNombreGuardado() != null) {
+                                Path archivoViejo = uploadPath.resolve(entregaExistente.getArchivoNombreGuardado());
+                                Files.deleteIfExists(archivoViejo);
+                            }
+                            
+                            // 2. Intentar con contenido (Lógica antigua/fallback)
+                            if (entregaExistente.getContenido() != null) {
+                                String contenidoPrevio = entregaExistente.getContenido();
+                                if (contenidoPrevio.contains("uploads/tareas/")) {
+                                    String[] partes = contenidoPrevio.split("\\|");
+                                    for (String parte : partes) {
+                                        if (parte.contains("uploads/tareas/")) {
+                                            String rutaStr = parte.trim().replace("Archivo: ", "");
+                                            Path archivoViejo = Paths.get(rutaStr);
+                                            // Solo eliminar si no es el mismo que acabamos de borrar (aunque Files.deleteIfExists no falla)
+                                            Files.deleteIfExists(archivoViejo);
+                                        }
                                     }
                                 }
                             }
@@ -257,15 +293,27 @@ public class EntregaController {
                     
                     // Actualizar información del archivo
                     entregaExistente.setNombreArchivo(archivo.getOriginalFilename());
+                    entregaExistente.setArchivoNombreGuardado(fileName);
                     
                     // Determinar contenido según si hay texto o no
+                    // FIX: Mantener lógica limpia sin concatenación de ruta
                     if (texto != null && !texto.trim().isEmpty()) {
-                        // Si hay texto, agregar referencia al archivo
-                        entregaExistente.setContenido(texto + " | Archivo: " + filePath.toString());
-                    } else {
-                        // Si solo hay archivo, guardar solo la ruta
-                        entregaExistente.setContenido(filePath.toString());
+                        entregaExistente.setContenido(texto);
+                    } else if (entregaExistente.getContenido() != null && entregaExistente.getContenido().contains("Archivo:")) {
+                         // Si antes tenia ruta concatenada y ahora no hay texto, quitamos la ruta
+                         // OJO: Si no hay texto nuevo, pero antes habia texto + archivo, y ahora subimos archivo nuevo...
+                         // La logica arriba dice: "if (texto != null ...) reemplazar". Si texto es null, no se toca el contenido textual?
+                         // Pero al subir archivo se reseteaba.
+                         
+                         // Simplificación:
+                         // Si se ha subido archivo, y no hay texto explicito nuevo,
+                         // asumimos que el contenido es el que estaba (si es texto puro) o null si era ruta
+                         // Pero para asegurar consistencia con el FIX de enviarTarea:
+                         if(entregaExistente.getContenido() != null && (entregaExistente.getContenido().contains("Archivo:") || entregaExistente.getContenido().contains("uploads/"))) {
+                             entregaExistente.setContenido(null);
+                         }
                     }
+                    // Si no hay texto ni nada, que quede null para no ensuciar.
                     
                     System.out.println("✅ Nuevo archivo guardado: " + filePath);
                     
@@ -382,6 +430,77 @@ public class EntregaController {
     // ==========================================
     //  NUEVOS MÉTODOS PARA CORREGIR (DOCENTE)
     // ==========================================
+
+    @GetMapping("/descargar/{idEntrega}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Resource> descargarEntrega(@PathVariable Long idEntrega, 
+                                                     @RequestParam(value = "inline", defaultValue = "false") boolean inline,
+                                                     Authentication auth) {
+        try {
+            Entrega entrega = entregaRepository.findById(idEntrega)
+                    .orElseThrow(() -> new RuntimeException("Entrega no encontrada"));
+            
+            // Validar permisos
+            String username = auth.getName();
+            boolean esPropietario = entrega.getEstudiante().getCorreo().equals(username) || 
+                                    entrega.getEstudiante().getDni().equals(username);
+            
+            boolean esDocenteOAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("DOCENTE") || a.getAuthority().equals("ADMIN"));
+            
+            if (!esPropietario && !esDocenteOAdmin) {
+                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+
+            Path uploadPath = Paths.get(UPLOAD_DIR);
+            String nombreArchivoGuardado = entrega.getArchivoNombreGuardado();
+            
+            // Fallback para entregas antiguas
+            if (nombreArchivoGuardado == null && entrega.getContenido() != null) {
+                String contenido = entrega.getContenido();
+                if (contenido.contains("uploads/tareas/")) {
+                     String[] partes = contenido.split("\\|");
+                     for (String parte : partes) {
+                         if (parte.contains("uploads/tareas/")) {
+                             String rutaCompleta = parte.trim().replace("Archivo: ", "");
+                             Path ruta = Paths.get(rutaCompleta);
+                             nombreArchivoGuardado = ruta.getFileName().toString();
+                             break;
+                         }
+                     }
+                }
+            }
+            
+            if (nombreArchivoGuardado == null) {
+                 return ResponseEntity.notFound().build();
+            }
+
+            Path filePath = uploadPath.resolve(nombreArchivoGuardado);
+            Resource resource = new UrlResource(filePath.toUri());
+
+            if (resource.exists() || resource.isReadable()) {
+                String originalFilename = entrega.getNombreArchivo() != null ? entrega.getNombreArchivo() : nombreArchivoGuardado;
+                
+                // Determinar Content-Type
+                String contentType = Files.probeContentType(filePath);
+                if(contentType == null) {
+                    contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE;
+                }
+
+                String disposition = inline ? "inline" : "attachment";
+
+                return ResponseEntity.ok()
+                        .contentType(MediaType.parseMediaType(contentType))
+                        .header(HttpHeaders.CONTENT_DISPOSITION, disposition + "; filename=\"" + originalFilename + "\"")
+                        .body(resource);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
 
     @GetMapping("/lista/{idTarea}")
     @PreAuthorize("hasAnyAuthority('DOCENTE', 'ADMIN')")

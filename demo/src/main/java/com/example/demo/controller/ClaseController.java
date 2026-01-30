@@ -164,7 +164,7 @@ public class ClaseController {
             // Notificar a los alumnos del curso (Postcondición CU-26)
             notificarNuevaClase(claseCreada);
 
-            return "redirect:/docente/aula/" + modulo.getCurso().getIdOferta();
+            return "redirect:/aula/unidad/" + modulo.getIdModulo();
 
         } catch (IllegalArgumentException | IllegalStateException e) {
             System.out.println("❌ Error de validación: " + e.getMessage());
@@ -175,6 +175,80 @@ public class ClaseController {
             String errorMsg = e.getMessage() != null ? e.getMessage() : "Error interno desconocido";
             return "redirect:/docente/mis-ofertas?error=" + java.net.URLEncoder.encode(errorMsg, java.nio.charset.StandardCharsets.UTF_8);
         }
+    }
+
+    @PostMapping("/{claseId}/modificar")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> modificarClase(@PathVariable UUID claseId,
+            @RequestParam String titulo,
+            @RequestParam String descripcion,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime inicio,
+            @RequestParam Integer duracion,
+            @RequestParam(required = false, defaultValue = "false") Boolean asistenciaAutomatica,
+            @RequestParam(required = false, defaultValue = "false") Boolean preguntasAleatorias,
+            @RequestParam(required = false) Integer cantidadPreguntas,
+            @RequestParam(required = false, defaultValue = "false") Boolean permisoMicrofono,
+            @RequestParam(required = false, defaultValue = "false") Boolean permisoCamara,
+            @RequestParam(required = false, defaultValue = "false") Boolean permisoCompartirPantalla,
+            @RequestParam(required = false, defaultValue = "true") Boolean permisoChat,
+            @RequestParam(required = false, defaultValue = "false") Boolean transcripcionHabilitada,
+            @RequestParam(required = false, defaultValue = "false") Boolean generarResumenAutomatico,
+            @RequestParam(required = false, defaultValue = "false") Boolean publicarResumenAutomaticamente,
+            Principal principal) {
+        
+        try {
+            Clase claseDetalles = new Clase();
+            claseDetalles.setTitulo(titulo.trim());
+            claseDetalles.setDescripcion(descripcion.trim());
+            claseDetalles.setInicio(inicio);
+            claseDetalles.setFin(inicio.plusHours(duracion));
+            
+            claseDetalles.setAsistenciaAutomatica(asistenciaAutomatica);
+            claseDetalles.setPreguntasAleatorias(preguntasAleatorias);
+            claseDetalles.setCantidadPreguntas(Boolean.TRUE.equals(preguntasAleatorias) ? cantidadPreguntas : null);
+            
+            claseDetalles.setPermisoMicrofono(permisoMicrofono);
+            claseDetalles.setPermisoCamara(permisoCamara);
+            claseDetalles.setPermisoCompartirPantalla(permisoCompartirPantalla);
+            claseDetalles.setPermisoChat(permisoChat);
+            claseDetalles.setTranscripcionHabilitada(transcripcionHabilitada);
+            claseDetalles.setGenerarResumenAutomatico(generarResumenAutomatico);
+            claseDetalles.setPublicarResumenAutomaticamente(publicarResumenAutomaticamente);
+
+            claseService.actualizarClase(claseId, claseDetalles);
+            return ResponseEntity.ok(Map.of("success", true, "message", "Clase actualizada correctamente"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Error al actualizar la clase: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/{claseId}/datos")
+    @ResponseBody
+    public ResponseEntity<?> obtenerDatosClase(@PathVariable UUID claseId) {
+        return claseService.findById(claseId)
+                .map(clase -> {
+                    long duracionHoras = java.time.Duration.between(clase.getInicio(), clase.getFin()).toHours();
+                    if (duracionHoras == 0) duracionHoras = 1;
+
+                    return ResponseEntity.ok(Map.ofEntries(
+                        Map.entry("id", clase.getIdClase()),
+                        Map.entry("titulo", clase.getTitulo()),
+                        Map.entry("descripcion", clase.getDescripcion()),
+                        Map.entry("inicio", clase.getInicio().format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME)),
+                        Map.entry("duracion", duracionHoras),
+                        Map.entry("asistenciaAutomatica", clase.getAsistenciaAutomatica() != null && clase.getAsistenciaAutomatica()),
+                        Map.entry("preguntasAleatorias", clase.getPreguntasAleatorias() != null && clase.getPreguntasAleatorias()),
+                        Map.entry("cantidadPreguntas", clase.getCantidadPreguntas() != null ? clase.getCantidadPreguntas() : 3),
+                        Map.entry("permisoMicrofono", clase.getPermisoMicrofono() != null && clase.getPermisoMicrofono()),
+                        Map.entry("permisoCamara", clase.getPermisoCamara() != null && clase.getPermisoCamara()),
+                        Map.entry("permisoCompartirPantalla", clase.getPermisoCompartirPantalla() != null && clase.getPermisoCompartirPantalla()),
+                        Map.entry("permisoChat", clase.getPermisoChat() != null && clase.getPermisoChat()),
+                        Map.entry("transcripcionHabilitada", clase.getTranscripcionHabilitada() != null && clase.getTranscripcionHabilitada()),
+                        Map.entry("generarResumenAutomatico", clase.getGenerarResumenAutomatico() != null && clase.getGenerarResumenAutomatico()),
+                        Map.entry("publicarResumenAutomaticamente", clase.getPublicarResumenAutomaticamente() != null && clase.getPublicarResumenAutomaticamente())
+                    ));
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
     private void notificarNuevaClase(Clase clase) {
@@ -231,9 +305,19 @@ public class ClaseController {
                 }
             }
 
-            // 2. Verificación de Horario (Secuencia Alternativa Paso 2)
-            // Permitimos entrar a docentes 15 min antes, alumnos solo si ya inició (o 5 min antes)
+            // 2. Verificación de Horario
             LocalDateTime ahora = LocalDateTime.now();
+            
+            // A) Verificar si ya terminó (CRITICO: Esto debe ser antes de cualquier credencial)
+            if (ahora.isAfter(clase.getFin())) {
+                model.addAttribute("clase", clase);
+                model.addAttribute("error", "La clase finalizó el " + 
+                    java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm").format(clase.getFin()));
+                return "clase-espera";
+            }
+
+            // B) Verificar si es muy temprano (Solo alumnos)
+            // Permitimos entrar a docentes 15 min antes, alumnos solo si ya inició (o 5 min antes)
             if (!esDocente && ahora.isBefore(clase.getInicio().minusMinutes(5))) {
                 // Redirigir a sala de espera
                 model.addAttribute("clase", clase);
@@ -258,8 +342,15 @@ public class ClaseController {
 
         } catch (Exception e) {
             System.out.println("❌ Error en unirseAClase Jitsi: " + e.getMessage());
-            model.addAttribute("error", "No se pudo cargar la sala de Jitsi: " + e.getMessage());
-            // Si es un error grave, podemos mandar a la espera o volver al aula
+            
+            // INTENTAR RECUPERAR CLASE PARA EL MODELO SI FALLÓ ANTES
+            try {
+                 if (!model.containsAttribute("clase")) {
+                     claseService.findById(claseId).ifPresent(c -> model.addAttribute("clase", c));
+                 }
+            } catch (Exception ex) { /* Ignorar si falla recuperación */ }
+
+            model.addAttribute("error", "No se pudo cargar la sala: " + e.getMessage());
             return "clase-espera"; 
         }
     }
@@ -288,13 +379,26 @@ public class ClaseController {
     public ResponseEntity<Map<String, Object>> estadoClase(@PathVariable UUID claseId) {
         return claseService.findById(claseId)
             .map(clase -> {
-                boolean iniciada = LocalDateTime.now().isAfter(clase.getInicio().minusMinutes(5));
-                // Aquí podríamos chequear si el docente está conectado si tuviéramos esa info en tiempo real
-                // Por ahora usamos el horario
+                LocalDateTime ahora = LocalDateTime.now();
+                LocalDateTime inicio = clase.getInicio();
+                LocalDateTime inicioMenos5 = inicio.minusMinutes(5);
+                
+                boolean iniciada = ahora.isAfter(inicioMenos5);
+                boolean finalizada = clase.getFin() != null && ahora.isAfter(clase.getFin());
+
+                // Calculamos datos para el frontend
+                boolean esHoy = inicio.toLocalDate().isEqual(ahora.toLocalDate());
+                long minutosRestantes = java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME != null 
+                    ? java.time.temporal.ChronoUnit.MINUTES.between(ahora, inicio) 
+                    : 0;
+
                 return ResponseEntity.ok(Map.<String, Object>of(
                     "iniciada", iniciada,
-                    "inicio", clase.getInicio(),
-                    "docenteEnSala", iniciada // Simplificado por regla de negocio horaria
+                    "finalizada", finalizada,
+                    "esHoy", esHoy,
+                    "inicio", inicio, // Serializado por defecto
+                    "minutosRestantes", minutosRestantes,
+                    "mensaje", !esHoy ? "La clase no es hoy" : (iniciada ? "Clase iniciada" : "Aún no es hora") 
                 ));
             })
             .orElse(ResponseEntity.notFound().build());

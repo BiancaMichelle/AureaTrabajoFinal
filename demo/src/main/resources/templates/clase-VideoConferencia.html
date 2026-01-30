@@ -4,8 +4,10 @@
 <head>
     <title th:text="${clase?.titulo ?: 'Videoconferencia'}">Videoconferencia</title>
 
-
-    <script src="https://meet.jit.si/external_api.js"></script>
+    <!-- Script de Jitsi externo, cargado dinámicamente según dominio si es posible, o usar el genérico -->
+    <!-- Usamos 8x8.vc para mejor compatibilidad con JaaS -->
+    <script src="https://8x8.vc/external_api.js"></script>
+    
     <th:block th:if="${@environment.getProperty('app.useTailwindCdn','true') == 'true'}">
         <script src="https://cdn.tailwindcss.com"></script>
     </th:block>
@@ -79,7 +81,7 @@
                     <span>Abrir en nueva pestaña</span>
                 </a>
                 <!-- Botón volver al aula (Estilo Secundario) -->
-                <a th:href="@{/docente/aula/} + ${clase?.modulo?.curso?.idOferta}"
+                <a th:href="${esDocente} ? @{/docente/aula/} + ${clase?.modulo?.curso?.idOferta} : @{/alumno/aula/} + ${clase?.modulo?.curso?.idOferta}"
                     class="bg-white text-gray-700 px-5 py-2.5 rounded-lg border border-gray-300 hover:bg-gray-100 transition-colors duration-200 flex items-center gap-2 font-medium">
                     <i class="fas fa-arrow-left"></i>
                     <span>Volver al aula</span>

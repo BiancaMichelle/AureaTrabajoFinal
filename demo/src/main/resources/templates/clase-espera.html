@@ -13,16 +13,21 @@
             <div class="text-6xl mb-4">⏳</div>
             
             <h1 class="text-2xl font-bold text-gray-800 mb-2">
-                Esperando al docente
+                <span th:if="${error}" class="text-red-600">No se puede acceder</span>
+                <span th:unless="${error}">Esperando al docente</span>
             </h1>
             
-            <p class="text-gray-600 mb-4">
+            <p class="text-gray-600 mb-4" th:if="${mensajeEspera}">
+                <span th:text="${mensajeEspera}"></span>
+            </p>
+
+            <p class="text-gray-600 mb-4" th:unless="${mensajeEspera or error}">
                 El docente <span th:text="${clase?.docente?.nombre + ' ' + clase?.docente?.apellido}">Docente</span> 
                 aún no se ha unido a la clase 
                 "<span th:text="${clase?.titulo}">Clase</span>".
             </p>
             
-            <p class="text-sm text-gray-500 mb-6">
+            <p class="text-sm text-gray-500 mb-6" th:unless="${error}">
                 Podrás unirte a la videollamada cuando el docente inicie la sesión.
             </p>
             
@@ -31,8 +36,8 @@
                 <span th:text="${error}"></span>
             </div>
             
-            <!-- Botón de recargar -->
-            <button onclick="verificarEstado()" 
+            <!-- Botón de recargar (Solo si no hay error permanente) -->
+            <button th:unless="${error}" onclick="verificarEstado()" 
                     class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
                 🔄 Verificar estado
             </button>
@@ -52,7 +57,11 @@
 
     <script>
         function verificarEstado() {
-            const claseId = '[[${clase.idClase}]]';
+            // No verificar si hay un error bloqueante
+            if (document.querySelector('.text-red-600')) return;
+
+            const claseId = '[[${clase?.idClase}]]';
+            if (!claseId) return;
             
             fetch('/clase/estado/' + claseId)
                 .then(response => response.json())

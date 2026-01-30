@@ -158,6 +158,36 @@ public class ClaseService {
         claseRepository.delete(clase);
     }
 
+    @Transactional
+    public Clase actualizarClase(UUID claseId, Clase claseDetalles) {
+        Clase clase = claseRepository.findById(claseId)
+                .orElseThrow(() -> new RuntimeException("Clase no encontrada"));
+
+        clase.setTitulo(claseDetalles.getTitulo());
+        clase.setDescripcion(claseDetalles.getDescripcion());
+        clase.setInicio(claseDetalles.getInicio());
+        if (claseDetalles.getFin() != null) {
+            clase.setFin(claseDetalles.getFin());
+        }
+        
+        // Actualizar configuraciones
+        clase.setAsistenciaAutomatica(claseDetalles.getAsistenciaAutomatica());
+        clase.setPreguntasAleatorias(claseDetalles.getPreguntasAleatorias());
+        clase.setCantidadPreguntas(claseDetalles.getCantidadPreguntas());
+        clase.setTiempoPreguntas(claseDetalles.getTiempoPreguntas());
+        
+        clase.setPermisoMicrofono(claseDetalles.getPermisoMicrofono());
+        clase.setPermisoCamara(claseDetalles.getPermisoCamara());
+        clase.setPermisoCompartirPantalla(claseDetalles.getPermisoCompartirPantalla());
+        clase.setPermisoChat(claseDetalles.getPermisoChat());
+        clase.setTranscripcionHabilitada(claseDetalles.getTranscripcionHabilitada());
+        clase.setGenerarResumenAutomatico(claseDetalles.getGenerarResumenAutomatico());
+        clase.setPublicarResumenAutomaticamente(claseDetalles.getPublicarResumenAutomaticamente());
+        
+        return claseRepository.save(clase);
+    }
+
+
     public List<Clase> findByModulo(UUID moduloId) {
         return claseRepository.findByModuloIdModulo(moduloId);
     }
