@@ -317,41 +317,38 @@
                 return;
             }
             
-            // INTERCEPCIÓN PARA MODO EDICIÓN (AJAX)
-            if (this.dataset.mode === 'edit') {
-                e.preventDefault(); // Evitar submit tradicional
+            // INTERCEPCIÓN AJAX PARA CREAR Y EDITAR
+            e.preventDefault(); 
+            
+            const formData = new FormData(this);
+            const action = this.action;
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+            
+            try {
+                 const response = await fetch(action, {
+                    method: 'POST',
+                    body: formData
+                });
                 
-                const formData = new FormData(this);
-                const action = this.action;
-                const submitBtn = this.querySelector('button[type="submit"]');
-                const originalText = submitBtn.innerHTML;
+                const result = await response.json();
                 
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Guardando...';
-                
-                try {
-                     const response = await fetch(action, {
-                        method: 'POST',
-                        body: formData
-                    });
-                    
-                    const result = await response.json();
-                    
-                    if (result.success) {
-                        // Recargar para ver cambios
-                        window.location.reload();
-                    } else {
-                        alert('Error: ' + (result.message || 'No se pudo actualizar'));
-                    }
-                } catch (error) {
-                    console.error(error);
-                    alert('Error de conexión al guardar cambios');
-                } finally {
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = originalText;
+                if (result.success) {
+                    // Recargar para ver cambios
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + (result.message || 'No se pudo completar la acción'));
                 }
+            } catch (error) {
+                console.error(error);
+                alert('Error de conexión al procesar la solicitud');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
             }
-            // Si NO es edit mode, deja pasar el submit normal (retorno true implícito)
         });
     </script>
 </body>

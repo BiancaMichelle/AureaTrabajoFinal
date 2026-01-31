@@ -127,48 +127,56 @@
         }
 
         .calendar-day {
-            aspect-ratio: 1;
+            min-height: 100px;
             display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 12px;
+            flex-direction: column;
+            align-items: stretch;
+            justify-content: flex-start;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 0.95rem;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
             position: relative;
             color: #2d3748;
             background: #f7fafc;
+            padding: 6px;
+            border: 1px solid #edf2f7;
+        }
+        
+        .day-number {
+            text-align: right;
+            font-weight: 600;
+            margin-bottom: 4px;
+            font-size: 0.9rem;
         }
 
         .calendar-day:hover {
-            background: #e2e8f0;
-            transform: scale(1.05);
+            background: #edf2f7;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         }
 
         .calendar-day.today {
-            background: #667eea;
-            color: white;
-            font-weight: 700;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            background: #fff;
+            border: 2px solid #667eea;
+            color: #2d3748;
+        }
+        
+        .calendar-day.today .day-number {
+            color: #667eea;
+            font-weight: 800;
         }
 
         .calendar-day.other-month {
             color: #cbd5e0;
-            background: transparent;
+            background: #fafbfc;
         }
-
-        .calendar-day.has-event::after {
-            content: '';
-            position: absolute;
-            bottom: 5px;
-            width: 6px;
-            height: 6px;
-            background: #f56565;
-            border-radius: 50%;
-        }
-
-        .calendar-day.today.has-event::after {
-            background: white;
+        
+        .day-events-container {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            overflow: hidden;
         }
 
         /* Panel lateral */
@@ -371,11 +379,8 @@
 
         <!-- Sección de Bienvenida -->
         <div class="welcome-section">
-            <h1>
-                <i class="fas fa-hand-sparkles"></i> 
-                ¡Hola, <span th:text="${alumno.nombre}">Estudiante</span>!
-            </h1>
-            <p>Bienvenido a tu espacio personal. Aquí encontrarás tu calendario, tareas y actividades.</p>
+            <h1 th:text="'¡Hola, ' + ${#strings.capitalize(#authentication.principal.usuario.nombre)} + '!'">¡Hola, Alumno!</h1>
+            <p>Bienvenido a tu espacio personal. Aquí puedes ver un resumen de tu progreso y próximas actividades.</p>
         </div>
 
         <!-- Tarjetas de Estadísticas -->
@@ -386,7 +391,7 @@
                 </div>
                 <div class="stat-content">
                     <h4>Cursos Activos</h4>
-                    <p>3</p>
+                    <p th:text="${cursosActivos}">0</p>
                 </div>
             </div>
 
@@ -396,7 +401,7 @@
                 </div>
                 <div class="stat-content">
                     <h4>Tareas Completadas</h4>
-                    <p>12/15</p>
+                    <p><span th:text="${tareasCompletadas}">0</span>/<span th:text="${totalTareas}">0</span></p>
                 </div>
             </div>
 
@@ -406,17 +411,17 @@
                 </div>
                 <div class="stat-content">
                     <h4>Próximas Entregas</h4>
-                    <p>3</p>
+                    <p th:text="${#lists.size(proximasEntregas)}">0</p>
                 </div>
             </div>
 
             <div class="stat-card">
                 <div class="stat-icon red">
-                    <i class="fas fa-chart-line"></i>
+                    <i class="fas fa-certificate"></i>
                 </div>
                 <div class="stat-content">
-                    <h4>Promedio General</h4>
-                    <p>8.5</p>
+                    <h4>Cursos Finalizados</h4>
+                    <p th:text="${cursosCompletados}">0</p>
                 </div>
             </div>
         </div>
@@ -455,42 +460,78 @@
                         <!-- Los días se generarán dinámicamente con JavaScript -->
                     </div>
                 </div>
+                
+                <div id="selectedDateInfo" class="mt-4 p-4 rounded-lg hidden" style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 1.5rem; margin-top: 1.5rem; display: none;">
+                    <h4 id="selectedDateTitle" style="margin: 0 0 1rem 0; font-weight: 700; color: #2d3748; font-size: 1.1rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem;"></h4>
+                    <div id="selectedDateEvents" style="display: flex; flex-direction: column; gap: 0.75rem;"></div>
+                </div>
             </div>
 
             <!-- Sidebar con Eventos -->
             <div class="sidebar-panels">
+                 <!-- Próximas Clases -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <i class="fas fa-video"></i>
+                        <h3>Próximas Clases</h3>
+                    </div>
+                    <div>
+                        <div th:each="clase : ${proximasClases}" class="event-item urgent">
+                            <div class="event-time">
+                                <i class="fas fa-clock"></i>
+                                <span th:text="${#temporals.format(clase.inicio, 'dd/MM/yyyy HH:mm')}">Fecha</span>
+                            </div>
+                            <div class="event-title">
+                                <a th:href="${clase.meetingUrl}" target="_blank" class="text-blue-600 hover:text-blue-800 flex items-center gap-2" th:if="${clase.meetingUrl}">
+                                    <span th:text="${clase.titulo}">Título Clase</span>
+                                    <i class="fas fa-external-link-alt text-xs"></i>
+                                </a>
+                                <span th:text="${clase.titulo}" th:unless="${clase.meetingUrl}">Título Clase</span>
+                            </div>
+                            <div class="event-description">
+                                <span th:if="${clase.modulo != null}" th:text="${clase.modulo.curso.nombre}">Curso</span>
+                                <span th:if="${clase.modulo == null && clase.curso != null}" th:text="${clase.curso.nombre}">Curso</span>
+                            </div>
+                        </div>
+                        <div th:if="${#lists.isEmpty(proximasClases)}" class="text-center text-gray-500 py-4">
+                            No hay clases próximas
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Próximas Actividades -->
                 <div class="panel">
                     <div class="panel-header">
                         <i class="fas fa-bell"></i>
                         <h3>Próximas Actividades</h3>
                     </div>
-                    <div id="upcomingEvents">
-                        <div class="event-item urgent">
-                            <div class="event-time">
-                                <i class="fas fa-clock"></i>
-                                Hoy, 18:00
-                            </div>
-                            <div class="event-title">Entrega de Proyecto Final</div>
-                            <div class="event-description">Programación Web Avanzada</div>
+                    <div class="activity-list">
+                        <div th:if="${#lists.isEmpty(proximasEntregas) and #lists.isEmpty(proximosExamenes)}" class="empty-state">
+                            <p>No hay actividades próximas.</p>
                         </div>
-
-                        <div class="event-item">
-                            <div class="event-time">
-                                <i class="fas fa-clock"></i>
-                                Mañana, 10:00
+                        <div th:each="entrega : ${proximasEntregas}" class="activity-item">
+                            <div class="activity-icon green">
+                                <i class="fas fa-file-alt"></i>
                             </div>
-                            <div class="event-title">Clase Virtual</div>
-                            <div class="event-description">Base de Datos II</div>
+                            <div class="activity-details">
+                                <p><strong th:text="${entrega.titulo}">Nombre de la Tarea</strong></p>
+                                <span th:text="${'Curso: ' + entrega.curso}">Nombre del Curso</span>
+                            </div>
+                            <div class="activity-time">
+                                <span th:text="${#temporals.format(entrega.fecha, 'dd/MM/yyyy')}">25/05/2024</span>
+                            </div>
                         </div>
-
-                        <div class="event-item">
-                            <div class="event-time">
-                                <i class="fas fa-clock"></i>
-                                15 Nov, 15:00
+                        <div th:each="examen : ${proximosExamenes}" class="activity-item">
+                            <div class="activity-icon red">
+                                <i class="fas fa-pencil-alt"></i>
                             </div>
-                            <div class="event-title">Examen Parcial</div>
-                            <div class="event-description">Desarrollo de Software</div>
+                            <div class="activity-details">
+                                <p><strong th:text="${examen.titulo}">Nombre del Examen</strong></p>
+                                <span th:text="${'Curso: ' + examen.curso.nombre}">Nombre del Curso</span>
+                            </div>
+                            <div class="activity-time">
+                                <span th:text="${#temporals.format(examen.fechaHoraInicio, 'dd/MM/yyyy')}">28/05/2024</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -498,26 +539,19 @@
                 <!-- Tareas Pendientes -->
                 <div class="panel">
                     <div class="panel-header">
-                        <i class="fas fa-clipboard-list"></i>
+                        <i class="fas fa-exclamation-circle"></i>
                         <h3>Tareas Pendientes</h3>
                     </div>
-                    <div id="pendingTasks">
-                        <div class="event-item urgent">
-                            <div class="event-title">Investigación sobre APIs REST</div>
-                            <div class="event-description">Vence: Hoy</div>
+                    <div class="task-list">
+                        <div th:if="${#lists.isEmpty(tareasPendientes)}" class="empty-state">
+                            <p>¡Buen trabajo! No tienes tareas pendientes.</p>
                         </div>
-
-                        <div class="event-item">
-                            <div class="event-title">Lectura Capítulos 5-7</div>
-                            <div class="event-description">Vence: 12 Nov</div>
-                        </div>
-
-                        <div class="event-item completed">
-                            <div class="event-title">
-                                <i class="fas fa-check-circle"></i> 
-                                Ejercicios de SQL
+                        <div th:each="tarea : ${tareasPendientes}" class="task-item">
+                            <div class="task-info">
+                                <p><strong th:text="${tarea.titulo}">Nombre de la Tarea</strong></p>
+                                <span th:text="${'Vence: ' + #temporals.format(tarea.fechaFin, 'dd/MM/yyyy')}">Vence: 05/06/2024</span>
                             </div>
-                            <div class="event-description">Completada</div>
+                            <a th:href="@{/aula/clase/{id}(id=${tarea.modulo.curso.id})}" class="btn-task">Ir a la Tarea</a>
                         </div>
                     </div>
                 </div>
@@ -525,105 +559,235 @@
         </div>
     </div>
 
-    <script>
-        // Variables globales
-        let currentDate = new Date();
-        const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-                          'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    <script th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            const monthYearElement = document.getElementById('monthYear');
+            const calendarDaysElement = document.getElementById('calendarDays');
+            const prevMonthButton = document.getElementById('prevMonth');
+            const nextMonthButton = document.getElementById('nextMonth');
+            const todayButton = document.getElementById('todayBtn');
 
-        // Eventos de ejemplo (posteriormente se cargarán desde el backend)
-        const events = {
-            '2025-11-10': [{ title: 'Entrega Proyecto', type: 'urgent' }],
-            '2025-11-11': [{ title: 'Clase Virtual', type: 'normal' }],
-            '2025-11-15': [{ title: 'Examen Parcial', type: 'important' }],
-            '2025-11-20': [{ title: 'Reunión Equipo', type: 'normal' }]
-        };
+            let currentDate = new Date();
 
-        // Renderizar calendario
-        function renderCalendar() {
-            const year = currentDate.getFullYear();
-            const month = currentDate.getMonth();
-            
-            // Actualizar título
-            document.getElementById('monthYear').textContent = `${monthNames[month]} ${year}`;
-            
-            // Primer día del mes
-            const firstDay = new Date(year, month, 1).getDay();
-            
-            // Último día del mes
-            const lastDate = new Date(year, month + 1, 0).getDate();
-            
-            // Último día del mes anterior
-            const prevLastDate = new Date(year, month, 0).getDate();
-            
-            const calendarDays = document.getElementById('calendarDays');
-            calendarDays.innerHTML = '';
-            
-            // Días del mes anterior
-            for (let i = firstDay; i > 0; i--) {
-                const day = document.createElement('div');
-                day.className = 'calendar-day other-month';
-                day.textContent = prevLastDate - i + 1;
-                calendarDays.appendChild(day);
+            const events = JSON.parse(/*[[${eventsJson}]]*/ '[]');
+
+            function getEventsForDay(date) {
+                // Generar formato YYYY-MM-DD local para comparar strings
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const dateString = `${year}-${month}-${day}`;
+                
+                return events.filter(event => event.start === dateString);
             }
-            
-            // Días del mes actual
-            const today = new Date();
-            for (let i = 1; i <= lastDate; i++) {
-                const day = document.createElement('div');
-                day.className = 'calendar-day';
-                day.textContent = i;
-                
-                // Marcar día actual
-                if (i === today.getDate() && 
-                    month === today.getMonth() && 
-                    year === today.getFullYear()) {
-                    day.classList.add('today');
-                }
-                
-                // Verificar si hay eventos
-                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-                if (events[dateStr]) {
-                    day.classList.add('has-event');
-                }
-                
-                // Click en día
-                day.addEventListener('click', () => {
-                    console.log(`Día seleccionado: ${i}/${month + 1}/${year}`);
-                    // Aquí puedes mostrar eventos del día seleccionado
+
+
+            function showDayDetails(date, events) {
+                const infoPanel = document.getElementById('selectedDateInfo');
+                const title = document.getElementById('selectedDateTitle');
+                const list = document.getElementById('selectedDateEvents');
+
+                if (!infoPanel) return;
+
+                // Reset visual highlight on all days
+                document.querySelectorAll('.calendar-day').forEach(el => {
+                     el.style.transform = '';
+                     el.style.zIndex = '';
+                     el.style.boxShadow = '';
+                     if(el.classList.contains('today')) {
+                         // Keep today style
+                     } else {
+                         el.style.backgroundColor = '';
+                     }
                 });
+
+                if (events.length === 0) {
+                    infoPanel.style.display = 'none';
+                    return;
+                }
+
+                infoPanel.style.display = 'block';
+                const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                let dateStr = date.toLocaleDateString('es-ES', options);
+                title.textContent = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+
+                list.innerHTML = '';
+                events.forEach(evt => {
+                    const item = document.createElement('div');
+                    item.style.padding = '12px';
+                    item.style.backgroundColor = 'white';
+                    item.style.borderLeft = '4px solid';
+                    item.style.borderRadius = '6px';
+                    item.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+                    
+                    let color = '#ccc';
+                    if (evt.className && evt.className.includes('event-clase')) color = '#48bb78';
+                    if (evt.className && evt.className.includes('event-entrega')) color = '#ed8936';
+                    if (evt.className && evt.className.includes('event-examen')) color = '#f56565';
+                    
+                    item.style.borderLeftColor = color;
+                    item.innerHTML = `<div style="font-weight:600; color:#2d3748; font-size: 0.95rem;">${evt.title}</div>`;
+                    
+                    list.appendChild(item);
+                });
+            }
+
+            function renderCalendar() {
+                const year = currentDate.getFullYear();
+                const month = currentDate.getMonth();
+
+                monthYearElement.textContent = `${currentDate.toLocaleString('es-ES', { month: 'long' })} ${year}`.toUpperCase();
+
+                calendarDaysElement.innerHTML = '';
+
+                const firstDayOfMonth = new Date(year, month, 1);
+                const lastDayOfMonth = new Date(year, month + 1, 0);
+                const lastDayOfPrevMonth = new Date(year, month, 0);
+
+                const startDayOfWeek = (firstDayOfMonth.getDay() + 6) % 7; // Lunes como primer día
+
+                // Días del mes anterior
+                for (let i = startDayOfWeek; i > 0; i--) {
+                    const day = lastDayOfPrevMonth.getDate() - i + 1;
+                    const dayElement = createDayElement(day, month - 1, year, ['other-month']);
+                    calendarDaysElement.appendChild(dayElement);
+                }
+
+                // Días del mes actual
+                for (let i = 1; i <= lastDayOfMonth.getDate(); i++) {
+                    const dayDate = new Date(year, month, i);
+                    const classList = [];
+                    const today = new Date();
+                    const isToday = i === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+                    
+                    if (isToday) {
+                        classList.push('today');
+                    }
+
+                    const dayEvents = getEventsForDay(dayDate);
+                    const dayElement = createDayElement(i, month, year, classList);
+                    
+                    // Interaction
+                    dayElement.style.cursor = 'pointer';
+                    dayElement.addEventListener('click', function() {
+                         // Find day element again in DOM or use 'this'
+                         document.querySelectorAll('.calendar-day').forEach(d => {
+                             d.style.boxShadow = '';
+                             if(!d.classList.contains('today')) d.style.backgroundColor = '';
+                         });
+                         
+                         if(!this.classList.contains('today')) {
+                             this.style.backgroundColor = '#ebf8ff';
+                         }
+                         this.style.boxShadow = 'inset 0 0 0 2px #667eea';
+                         
+                         showDayDetails(dayDate, dayEvents);
+                    });
+
+                    if (dayEvents.length > 0) {
+                        dayElement.title = dayEvents.map(e => e.title).join('\n');
+                        
+                        const eventsContainer = document.createElement('div');
+                        eventsContainer.className = 'day-events-container';
+                        
+                        dayEvents.slice(0, 4).forEach(evt => {
+                            const evtDiv = document.createElement('div');
+                            
+                            // Acortar título para mostrar
+                            let displayText = evt.title;
+                            if(displayText.startsWith("Clase: ")) displayText = displayText.substring(7);
+                            if(displayText.startsWith("Entrega: ")) displayText = "Ent: " + displayText.substring(9);
+                            if(displayText.startsWith("Examen: ")) displayText = "Ex: " + displayText.substring(8);
+                            
+                            evtDiv.textContent = displayText;
+                            evtDiv.style.fontSize = '0.75rem';
+                            evtDiv.style.whiteSpace = 'nowrap';
+                            evtDiv.style.overflow = 'hidden';
+                            evtDiv.style.textOverflow = 'ellipsis';
+                            evtDiv.style.padding = '2px 4px';
+                            evtDiv.style.borderRadius = '3px';
+                            evtDiv.style.marginBottom = '2px';
+                            evtDiv.style.fontWeight = '500';
+                            
+                            // Colores
+                            if(evt.className && evt.className.includes('event-clase')) {
+                                evtDiv.style.backgroundColor = '#def7ec'; // verde
+                                evtDiv.style.color = '#03543f';
+                            } else if(evt.className && evt.className.includes('event-entrega')) {
+                                if (evt.className.includes('completed')) {
+                                    evtDiv.style.backgroundColor = '#edf2f7'; // gris claro
+                                    evtDiv.style.color = '#718096';
+                                    evtDiv.style.textDecoration = 'line-through';
+                                } else {
+                                    evtDiv.style.backgroundColor = '#fef3c7'; // naranja
+                                    evtDiv.style.color = '#92400e';
+                                }
+                            } else if(evt.className && evt.className.includes('event-examen')) {
+                                evtDiv.style.backgroundColor = '#fde8e8'; // rojo
+                                evtDiv.style.color = '#9b1c1c';
+                            } else {
+                                evtDiv.style.backgroundColor = '#e5e7eb';
+                                evtDiv.style.color = '#374151';
+                            }
+                            
+                            eventsContainer.appendChild(evtDiv);
+                        });
+                        
+                        if(dayEvents.length > 4) {
+                            const more = document.createElement('div');
+                            more.textContent = `+ ${dayEvents.length - 4} más`;
+                            more.style.fontSize = '0.7rem';
+                            more.style.color = '#6b7280';
+                            more.style.textAlign = 'center';
+                            more.style.marginTop = '2px';
+                            eventsContainer.appendChild(more);
+                        }
+                        
+                        dayElement.appendChild(eventsContainer);
+                    }
+                    calendarDaysElement.appendChild(dayElement);
+                }
+
+                // Días del mes siguiente
+                const remainingDays = 42 - calendarDaysElement.children.length;
+                for (let i = 1; i <= remainingDays; i++) {
+                    const dayElement = createDayElement(i, month + 1, year, ['other-month']);
+                    calendarDaysElement.appendChild(dayElement);
+                }
+            }
+
+            function createDayElement(day, month, year, classes = []) {
+                const dayElement = document.createElement('div');
+                dayElement.classList.add('calendar-day', ...classes);
                 
-                calendarDays.appendChild(day);
+                const dayNum = document.createElement('div');
+                dayNum.className = 'day-number';
+                dayNum.textContent = day;
+                dayElement.appendChild(dayNum);
+
+                dayElement.dataset.date = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                return dayElement;
             }
-            
-            // Días del siguiente mes
-            const remainingDays = 42 - (firstDay + lastDate);
-            for (let i = 1; i <= remainingDays; i++) {
-                const day = document.createElement('div');
-                day.className = 'calendar-day other-month';
-                day.textContent = i;
-                calendarDays.appendChild(day);
+
+            prevMonthButton.addEventListener('click', () => {
+                currentDate.setMonth(currentDate.getMonth() - 1);
+                renderCalendar();
+            });
+
+            nextMonthButton.addEventListener('click', () => {
+                currentDate.setMonth(currentDate.getMonth() + 1);
+                renderCalendar();
+            });
+
+            if (todayButton) {
+                todayButton.addEventListener('click', () => {
+                    currentDate = new Date();
+                    renderCalendar();
+                });
             }
-        }
 
-        // Navegación del calendario
-        document.getElementById('prevMonth').addEventListener('click', () => {
-            currentDate.setMonth(currentDate.getMonth() - 1);
             renderCalendar();
         });
-
-        document.getElementById('nextMonth').addEventListener('click', () => {
-            currentDate.setMonth(currentDate.getMonth() + 1);
-            renderCalendar();
-        });
-
-        document.getElementById('todayBtn').addEventListener('click', () => {
-            currentDate = new Date();
-            renderCalendar();
-        });
-
-        // Inicializar calendario
-        renderCalendar();
     </script>
 </div>
 </html>

@@ -18,4 +18,6 @@ public interface EntregaRepository extends JpaRepository<Entrega, Long> {
     List<Entrega> findByEstudiante(Usuario estudiante);
     
     List<Entrega> findByTarea(Tarea tarea);
+
+    List<Entrega> findByTareaIn(List<Tarea> tareas);
 }

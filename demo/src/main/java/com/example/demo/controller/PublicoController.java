@@ -1,6 +1,10 @@
 package com.example.demo.controller;
 
 import java.util.List;
+import java.security.Principal;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.Collections;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -8,16 +12,10 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
 import com.example.demo.enums.EstadoOferta;
-import com.example.demo.model.CarruselImagen;
-import com.example.demo.model.Categoria;
-import com.example.demo.model.Instituto;
-import com.example.demo.model.OfertaAcademica;
-import com.example.demo.repository.CarruselImagenRepository;
-import com.example.demo.repository.CategoriaRepository;
-import com.example.demo.repository.OfertaAcademicaRepository;
+import com.example.demo.model.*;
+import com.example.demo.repository.*;
 import com.example.demo.service.InstitutoService;
 
-import java.util.List;
 import java.util.stream.Collectors;
 
 @Controller
@@ -34,9 +32,21 @@ public class PublicoController {
 
     @Autowired
     private CategoriaRepository categoriaRepository;
+
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+
+    @Autowired
+    private InscripcionRepository inscripcionRepository;
+
+    @Autowired
+    private CursoRepository cursoRepository;
+
+    @Autowired
+    private FormacionRepository formacionRepository;
     
     @GetMapping({"/", "/publico"})
-    public String publico(Model model) {
+    public String publico(Model model, Principal principal) {
         // Obtener datos del instituto
         Instituto instituto = institutoService.obtenerInstituto();
         
@@ -44,20 +54,44 @@ public class PublicoController {
         List<CarruselImagen> imagenesCarrusel = carruselImagenRepository.findByInstitutoAndActivaTrueOrderByOrden(instituto);
         
         // Obtener ofertas académicas filtradas:
-        // 1. Estado ACTIVA
-        // 2. Estado ENCURSO con inscripción tardía permitida
+        // Solo Estado ACTIVA o ENCURSO (si permite inscripciones o visualización)
         List<OfertaAcademica> ofertas = ofertaAcademicaRepository.findAll().stream()
-            .filter(o -> o.getEstado() == EstadoOferta.ACTIVA || 
-                   (o.getEstado() == EstadoOferta.ENCURSO && Boolean.TRUE.equals(o.getPermiteInscripcionTardia())))
+            .filter(o -> o.getEstado() == EstadoOferta.ACTIVA || o.getEstado() == EstadoOferta.ENCURSO)
             .collect(Collectors.toList());
 
         // Obtener categorías
         List<Categoria> categorias = categoriaRepository.findAll();
         
+        // Verificar inscripciones y docencia del usuario logueado
+        Set<Long> idsInscritos = new HashSet<>();
+        Set<Long> idsDocente = new HashSet<>();
+
+        if (principal != null) {
+            String dni = principal.getName();
+            usuarioRepository.findByDni(dni).ifPresent(usuario -> {
+                // 1. Obtener IDs de ofertas donde está INSCRITO (Como Alumno)
+                List<Inscripciones> inscripciones = inscripcionRepository.findByAlumnoId(usuario.getId());
+                idsInscritos.addAll(inscripciones.stream()
+                        .map(i -> i.getOferta().getIdOferta())
+                        .collect(Collectors.toSet()));
+
+                // 2. Obtener IDs de ofertas donde es DOCENTE
+                // Cursos
+                List<Curso> cursosDocente = cursoRepository.findByDocentesId(usuario.getId());
+                idsDocente.addAll(cursosDocente.stream().map(Curso::getIdOferta).collect(Collectors.toSet()));
+                
+                // Formaciones
+                List<Formacion> formacionesDocente = formacionRepository.findByDocentesId(usuario.getId());
+                idsDocente.addAll(formacionesDocente.stream().map(Formacion::getIdOferta).collect(Collectors.toSet()));
+            });
+        }
+
         model.addAttribute("instituto", instituto);
         model.addAttribute("imagenesCarrusel", imagenesCarrusel);
         model.addAttribute("ofertas", ofertas);
         model.addAttribute("categorias", categorias);
+        model.addAttribute("idsInscritos", idsInscritos);
+        model.addAttribute("idsDocente", idsDocente);
 
         return "publico";
     }

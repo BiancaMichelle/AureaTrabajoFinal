@@ -2,6 +2,7 @@ package com.example.demo.repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -17,7 +18,10 @@ public interface InscripcionRepository extends JpaRepository<Inscripciones, Long
     // Buscar inscripción por usuario (alumno/docente) y oferta
     Optional<Inscripciones> findByAlumnoAndOferta(Usuario alumno, OfertaAcademica oferta);
     
-    // Buscar todas las inscripciones de un usuario
+    // Buscar todas las inscripciones de un usuario por id del alumno
+    List<Inscripciones> findByAlumnoId(UUID alumnoId);
+
+    // Alternativa: buscar por la entidad Usuario cuando se tenga el objeto
     List<Inscripciones> findByAlumno(Usuario alumno);
     
     // Contar inscripciones activas por oferta

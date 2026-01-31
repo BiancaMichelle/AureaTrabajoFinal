@@ -2,29 +2,14 @@ package com.example.demo.service;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.demo.enums.EstadoAsistencia;
-import com.example.demo.model.Alumno;
-import com.example.demo.model.Asistencia;
-import com.example.demo.model.Clase;
-import com.example.demo.model.Inscripciones;
-import com.example.demo.model.Pool;
-import com.example.demo.model.Pregunta;
-import com.example.demo.model.RespuestaAsistencia;
-import com.example.demo.repository.ClaseRepository;
-import com.example.demo.repository.InscripcionRepository;
-import com.example.demo.repository.RespuestaAsistenciaRepository;
-import com.example.demo.repository.UsuarioRepository;
-import com.example.demo.repository.AsistenciaRepository;
+import com.example.demo.model.*;
+import com.example.demo.repository.*;
 
 @Service
 public class AsistenciaEnVivoService {

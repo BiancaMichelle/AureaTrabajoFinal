@@ -321,7 +321,7 @@
                 </div>
                 <div class="stat-content">
                     <h4>Cursos Activos</h4>
-                    <p>4</p>
+                    <p th:text="${cursosActivos}">0</p>
                 </div>
             </div>
 
@@ -331,7 +331,7 @@
                 </div>
                 <div class="stat-content">
                     <h4>Total Alumnos</h4>
-                    <p>87</p>
+                    <p th:text="${totalAlumnos}">0</p>
                 </div>
             </div>
 
@@ -341,7 +341,7 @@
                 </div>
                 <div class="stat-content">
                     <h4>Entregas Pendientes</h4>
-                    <p>15</p>
+                    <p th:text="${entregasPendientes}">0</p>
                 </div>
             </div>
         </div>
@@ -381,26 +381,49 @@
             <div class="sidebar-panels">
                 <div class="panel">
                     <div class="panel-header">
-                        <i class="fas fa-clock"></i>
+                        <i class="fas fa-video"></i>
                         <h3>Próximas Clases</h3>
                     </div>
                     <div>
-                        <div class="event-item urgent">
+                        <div th:each="clase : ${proximasClases}" class="event-item urgent">
                             <div class="event-time">
                                 <i class="fas fa-clock"></i>
-                                Hoy, 14:00
+                                <span th:text="${#temporals.format(clase.inicio, 'dd/MM/yyyy HH:mm')}">Fecha</span>
                             </div>
-                            <div class="event-title">Programación Web</div>
-                            <div class="event-description">Módulo 5: APIs REST</div>
+                            <div class="event-title">
+                                <a th:href="${clase.meetingUrl}" target="_blank" class="text-blue-600 hover:text-blue-800 flex items-center gap-2" th:if="${clase.meetingUrl}">
+                                    <span th:text="${clase.titulo}">Título Clase</span>
+                                    <i class="fas fa-external-link-alt text-xs"></i>
+                                </a>
+                                <span th:text="${clase.titulo}" th:unless="${clase.meetingUrl}">Título Clase</span>
+                            </div>
+                            <div class="event-description">
+                                <span th:if="${clase.modulo != null}" th:text="${clase.modulo.curso.nombre}">Curso</span>
+                                <span th:if="${clase.modulo == null && clase.curso != null}" th:text="${clase.curso.nombre}">Curso</span>
+                            </div>
                         </div>
-
-                        <div class="event-item">
+                        <div th:if="${#lists.isEmpty(proximasClases)}" class="text-center text-gray-500 py-4">
+                            No hay clases próximas
+                        </div>
+                    </div>
+                </div>    
+    
+                <div class="panel">
+                    <div class="panel-header">
+                        <i class="fas fa-clock"></i>
+                        <h3>Próximos Exámenes</h3>
+                    </div>
+                    <div>
+                        <div th:each="examen : ${proximosExamenes}" class="event-item urgent">
                             <div class="event-time">
                                 <i class="fas fa-clock"></i>
-                                Mañana, 10:00
+                                <span th:text="${#temporals.format(examen.fechaApertura, 'dd/MM/yyyy HH:mm')}">Fecha</span>
                             </div>
-                            <div class="event-title">Base de Datos</div>
-                            <div class="event-description">Examen Parcial</div>
+                            <div class="event-title" th:text="${examen.titulo}">Título Examen</div>
+                            <div class="event-description" th:text="${examen.modulo.curso.nombre}">Curso</div>
+                        </div>
+                        <div th:if="${#lists.isEmpty(proximosExamenes)}" class="text-center text-gray-500 py-4">
+                            No hay exámenes próximos
                         </div>
                     </div>
                 </div>
@@ -408,17 +431,19 @@
                 <div class="panel">
                     <div class="panel-header">
                         <i class="fas fa-tasks"></i>
-                        <h3>Tareas por Revisar</h3>
+                        <h3>Próximos Vencimientos</h3>
                     </div>
                     <div>
-                        <div class="event-item urgent">
-                            <div class="event-title">15 entregas pendientes</div>
-                            <div class="event-description">Proyecto Final - Programación Web</div>
+                        <div th:each="tarea : ${proximasTareas}" class="event-item">
+                            <div class="event-time">
+                                <i class="fas fa-clock"></i>
+                                <span th:text="${#temporals.format(tarea.limiteEntrega, 'dd/MM/yyyy')}">Fecha</span>
+                            </div>
+                            <div class="event-title" th:text="${tarea.titulo}">Título Tarea</div>
+                            <div class="event-description" th:text="${tarea.modulo.curso.nombre}">Curso</div>
                         </div>
-
-                        <div class="event-item">
-                            <div class="event-title">8 entregas pendientes</div>
-                            <div class="event-description">Ejercicios SQL - Base de Datos</div>
+                         <div th:if="${#lists.isEmpty(proximasTareas)}" class="text-center text-gray-500 py-4">
+                            No hay tareas próximas
                         </div>
                     </div>
                 </div>
@@ -426,16 +451,23 @@
         </div>
     </div>
 
-    <script>
+    <script th:inline="javascript">
         let currentDate = new Date();
         const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
                           'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
-        const events = {
-            '2025-11-10': [{ title: 'Clase Programación Web', type: 'urgent' }],
-            '2025-11-11': [{ title: 'Examen Parcial', type: 'important' }],
-            '2025-11-15': [{ title: 'Reunión Departamento', type: 'normal' }]
-        };
+        // Datos dinámicos desde el controlador
+        const eventsList = JSON.parse(/*[[${eventsJson}]]*/ '[]');
+        
+        // Convertir lista plana a objeto por fecha para acceso rápido: { "YYYY-MM-DD": [event1, event2] }
+        const eventsMap = {};
+        eventsList.forEach(evt => {
+            // evt.start es "YYYY-MM-DD"
+            if (!eventsMap[evt.start]) {
+                eventsMap[evt.start] = [];
+            }
+            eventsMap[evt.start].push(evt);
+        });
 
         function renderCalendar() {
             const year = currentDate.getFullYear();
@@ -450,6 +482,7 @@
             const calendarDays = document.getElementById('calendarDays');
             calendarDays.innerHTML = '';
             
+            // Días del mes anterior
             for (let i = firstDay; i > 0; i--) {
                 const day = document.createElement('div');
                 day.className = 'calendar-day other-month';
@@ -458,22 +491,64 @@
             }
             
             const today = new Date();
+            // Días del mes actual
             for (let i = 1; i <= lastDate; i++) {
                 const day = document.createElement('div');
                 day.className = 'calendar-day';
-                day.textContent = i;
+                
+                // Contenedor número
+                const dayNum = document.createElement('div');
+                dayNum.textContent = i;
+                day.appendChild(dayNum);
                 
                 if (i === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
                     day.classList.add('today');
                 }
                 
                 const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-                if (events[dateStr]) {
+                
+                if (eventsMap[dateStr]) {
+                    // Mostrar indicadores o los eventos mismos
                     day.classList.add('has-event');
+                    
+                    // Renderizar pequeños indicadores o títulos truncados
+                    eventsMap[dateStr].forEach(evt => {
+                        const evtDiv = document.createElement('div');
+                        evtDiv.className = evt.className || 'calendar-event'; 
+                        // evt.className viene del controller como 'calendar-event exam' o 'calendar-event assignment'
+                        // Pero 'calendar-event' ya tiene estilo base? Depende del CSS.
+                        // Asumamos que queremos mostrar el título pequeño
+                        evtDiv.textContent = evt.title;
+                        evtDiv.style.fontSize = '0.7rem';
+                        evtDiv.style.whiteSpace = 'nowrap';
+                        evtDiv.style.overflow = 'hidden';
+                        evtDiv.style.textOverflow = 'ellipsis';
+                        evtDiv.style.marginTop = '2px';
+                        evtDiv.style.padding = '1px 3px';
+                        evtDiv.style.borderRadius = '3px';
+                        
+                        // Colores simples basados en clase si no están en CSS
+                        if(evt.className && evt.className.includes('exam')) {
+                             evtDiv.style.backgroundColor = '#fed7d7'; // rojizo
+                             evtDiv.style.color = '#c53030';
+                        } else if (evt.className && evt.className.includes('assignment')) {
+                             evtDiv.style.backgroundColor = '#feebc8'; // naranja
+                             evtDiv.style.color = '#c05621';
+                        } else if (evt.className && evt.className.includes('class-session')) {
+                             evtDiv.style.backgroundColor = '#c6f6d5'; // verde claro
+                             evtDiv.style.color = '#22543d'; // verde oscuro
+                        } else {
+                             evtDiv.style.backgroundColor = '#bee3f8'; // azul
+                             evtDiv.style.color = '#2b6cb0';
+                        }
+
+                        day.appendChild(evtDiv);
+                    });
                 }
                 
                 day.addEventListener('click', () => {
-                    console.log(`Día seleccionado: ${i}/${month + 1}/${year}`);
+                    // Podría abrir un modal con detalles
+                    console.log(`Día seleccionado: ${dateStr}`, eventsMap[dateStr]);
                 });
                 
                 calendarDays.appendChild(day);

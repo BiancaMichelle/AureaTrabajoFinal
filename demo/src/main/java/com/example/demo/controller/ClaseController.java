@@ -87,7 +87,8 @@ public class ClaseController {
     }
 
     @PostMapping("/crear")
-    public String crearClase(@RequestParam String titulo,
+    @ResponseBody
+    public ResponseEntity<?> crearClase(@RequestParam String titulo,
             @RequestParam String descripcion,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime inicio,
             @RequestParam UUID moduloId,
@@ -131,7 +132,7 @@ public class ClaseController {
                     throw new IllegalArgumentException("Debe especificar la cantidad de preguntas (mínimo 1)");
                 }
             }
-
+/* 
             System.out.println("🎯 Creando clase con configuración completa:");
             System.out.println("   - Título: " + titulo);
             System.out.println("   - Módulo ID: " + moduloId);
@@ -139,7 +140,7 @@ public class ClaseController {
                              ", Pantalla=" + permisoCompartirPantalla + ", Chat=" + permisoChat);
             System.out.println("   - Asistencia: Auto=" + asistenciaAutomatica + ", Preguntas=" + preguntasAleatorias +
                              (Boolean.TRUE.equals(preguntasAleatorias) ? " (Cantidad: " + cantidadPreguntas + ")" : ""));
-
+*/
             Clase clase = new Clase();
             clase.setTitulo(titulo.trim());
             clase.setDescripcion(descripcion != null ? descripcion.trim() : "");
@@ -164,16 +165,16 @@ public class ClaseController {
             // Notificar a los alumnos del curso (Postcondición CU-26)
             notificarNuevaClase(claseCreada);
 
-            return "redirect:/aula/unidad/" + modulo.getIdModulo();
+            return ResponseEntity.ok(Map.of("success", true, "message", "Clase creada exitosamente", "id", claseCreada.getIdClase()));
 
         } catch (IllegalArgumentException | IllegalStateException e) {
             System.out.println("❌ Error de validación: " + e.getMessage());
-            return "redirect:/docente/mis-ofertas?error=" + java.net.URLEncoder.encode(e.getMessage(), java.nio.charset.StandardCharsets.UTF_8);
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
         } catch (Exception e) {
             System.out.println("❌ Error al crear clase: " + e.getMessage());
             e.printStackTrace();
             String errorMsg = e.getMessage() != null ? e.getMessage() : "Error interno desconocido";
-            return "redirect:/docente/mis-ofertas?error=" + java.net.URLEncoder.encode(errorMsg, java.nio.charset.StandardCharsets.UTF_8);
+            return ResponseEntity.internalServerError().body(Map.of("success", false, "message", errorMsg));
         }
     }
 
@@ -522,7 +523,6 @@ public class ClaseController {
     }
     
     private void notificarResumenGenerado(Clase clase, com.example.demo.model.Material material, boolean publicado) {
-        // TODO: Integrar con sistema de notificaciones
         System.out.println("📧 Stub Notificación: Resumen generado para clase '" + clase.getTitulo() + "'");
         System.out.println("   - Docente: " + clase.getDocente().getNombre() + " " + clase.getDocente().getApellido());
         if (publicado) {

@@ -4,12 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.security.Principal;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import org.springframework.http.ResponseEntity;
@@ -24,16 +19,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.example.demo.enums.EstadoAsistencia;
-import com.example.demo.model.Docente;
-import com.example.demo.model.Horario;
-import com.example.demo.model.Asistencia;
-import com.example.demo.model.Inscripciones;
-import com.example.demo.model.OfertaAcademica;
-import com.example.demo.model.Usuario;
-import com.example.demo.repository.ClaseRepository;
-import com.example.demo.repository.InscripcionRepository;
-import com.example.demo.repository.OfertaAcademicaRepository;
-import com.example.demo.repository.UsuarioRepository;
+import com.example.demo.model.*;
+import com.example.demo.repository.*;
 import com.example.demo.service.AsistenciaService;
 
 @Controller

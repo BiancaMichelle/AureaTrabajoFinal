@@ -6,6 +6,7 @@ import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -48,16 +49,10 @@ import com.example.demo.model.Modulo;
 import com.example.demo.model.OfertaAcademica;
 import com.example.demo.model.Pago;
 import com.example.demo.model.Usuario;
+import com.example.demo.model.Clase;
 import com.example.demo.model.Tarea;
 import com.example.demo.model.Entrega;
-import com.example.demo.repository.CuotaRepository;
-import com.example.demo.repository.EntregaRepository;
-import com.example.demo.repository.InscripcionRepository;
-import com.example.demo.repository.IntentoRepository;
-import com.example.demo.repository.ModuloRepository;
-import com.example.demo.repository.OfertaAcademicaRepository;
-import com.example.demo.repository.UsuarioRepository;
-import com.example.demo.repository.PagoRepository;
+import com.example.demo.repository.*;
 import com.example.demo.service.MercadoPagoService;
 import com.example.demo.service.InstitutoService;
 import com.example.demo.service.ReporteService;
@@ -66,16 +61,68 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Controller
 @RequestMapping("/alumno")
 public class AlumnoController {
-    
+
     @Value("${app.base-url}")
     private String baseUrl;
 
     private static final Locale LOCALE_ES_AR = Locale.forLanguageTag("es-AR");
     private static final DateTimeFormatter FORMATO_FECHA_RESUMEN = DateTimeFormatter.ofPattern("dd MMM yyyy", LOCALE_ES_AR);
+
+    private final TareaRepository tareaRepository;
+    private final ExamenRepository examenRepository;
+    private final InscripcionRepository inscripcionRepository;
+    private final UsuarioRepository usuarioRepository;
+    private final ClaseRepository claseRepository;
+    private final ObjectMapper objectMapper;
+    private final OfertaAcademicaRepository ofertaAcademicaRepository;
+    private final ModuloRepository moduloRepository;
+    private final IntentoRepository intentoRepository;
+    private final MercadoPagoService mercadoPagoService;
+    private final PagoRepository pagoRepository;
+    private final CuotaRepository cuotaRepository;
+    private final InstitutoService institutoService;
+    private final ReporteService reporteService;
+    private final EmailService emailService;
+    private final EntregaRepository entregaRepository;
+
+    public AlumnoController(TareaRepository tareaRepository,
+                          ExamenRepository examenRepository,
+                          InscripcionRepository inscripcionRepository,
+                          UsuarioRepository usuarioRepository,
+                          ClaseRepository claseRepository,
+                          ObjectMapper objectMapper,
+                          OfertaAcademicaRepository ofertaAcademicaRepository,
+                          ModuloRepository moduloRepository,
+                          IntentoRepository intentoRepository,
+                          MercadoPagoService mercadoPagoService,
+                          PagoRepository pagoRepository,
+                          CuotaRepository cuotaRepository,
+                          InstitutoService institutoService,
+                          ReporteService reporteService,
+                          EmailService emailService,
+                          EntregaRepository entregaRepository) {
+        this.tareaRepository = tareaRepository;
+        this.examenRepository = examenRepository;
+        this.inscripcionRepository = inscripcionRepository;
+        this.usuarioRepository = usuarioRepository;
+        this.claseRepository = claseRepository;
+        this.objectMapper = objectMapper;
+        this.ofertaAcademicaRepository = ofertaAcademicaRepository;
+        this.moduloRepository = moduloRepository;
+        this.intentoRepository = intentoRepository;
+        this.mercadoPagoService = mercadoPagoService;
+        this.pagoRepository = pagoRepository;
+        this.cuotaRepository = cuotaRepository;
+        this.institutoService = institutoService;
+        this.reporteService = reporteService;
+        this.emailService = emailService;
+        this.entregaRepository = entregaRepository;
+    }
 
     @GetMapping("/alumno")
     public String alumnoDashboard() {
@@ -93,6 +140,55 @@ public class AlumnoController {
             
             model.addAttribute("alumno", alumno);
 
+            List<Inscripciones> inscripciones = inscripcionRepository.findByAlumnoId(alumno.getId());
+            List<Curso> cursosActivos = inscripciones.stream()
+                .map(Inscripciones::getOferta)
+                .filter(oa -> oa instanceof Curso)
+                .map(oa -> (Curso) oa)
+                .filter(c -> c.getEstado() == EstadoOferta.ACTIVA || c.getEstado() == EstadoOferta.ENCURSO)
+                .collect(Collectors.toList());
+
+            long totalCursosActivos = cursosActivos.size();
+
+            List<Tarea> todasLasTareas = tareaRepository.findByModuloCursoIn(cursosActivos);
+            List<Entrega> todasLasEntregas = entregaRepository.findByEstudiante(alumno);
+
+            // IDs de tareas de cursos activos para asegurar consistencia
+            java.util.Set<Long> tareasActivasIds = todasLasTareas.stream()
+                .map(Tarea::getIdActividad)
+                .collect(Collectors.toSet());
+
+            long tareasCompletadas = todasLasEntregas.stream()
+                .map(e -> e.getTarea().getIdActividad())
+                .filter(tareasActivasIds::contains)
+                .distinct()
+                .count();
+
+            // Cursos Finalizados
+            long cursosCompletados = inscripciones.stream()
+                .filter(i -> Boolean.TRUE.equals(i.getEstadoInscripcion()))
+                .map(Inscripciones::getOferta)
+                .filter(o -> o.getEstado() == EstadoOferta.FINALIZADA || 
+                        (o.getFechaFin() != null && o.getFechaFin().isBefore(LocalDate.now())))
+                .count();
+
+            LocalDateTime ahora = LocalDateTime.now();
+            List<Tarea> proximasEntregas = todasLasTareas.stream()
+                .filter(t -> todasLasEntregas.stream().noneMatch(e -> e.getTarea().equals(t)))
+                .filter(t -> t.getLimiteEntrega() != null && t.getLimiteEntrega().isAfter(ahora))
+                .sorted(Comparator.comparing(Tarea::getLimiteEntrega))
+                .collect(Collectors.toList());
+
+            List<Examen> proximosExamenes = examenRepository.findByModulo_CursoInAndFechaAperturaBetween(cursosActivos, ahora, ahora.plusDays(30));
+
+            model.addAttribute("cursosActivos", totalCursosActivos);
+            model.addAttribute("tareasCompletadas", tareasCompletadas);
+            model.addAttribute("totalTareas", todasLasTareas.size());
+            model.addAttribute("cursosCompletados", cursosCompletados);
+            model.addAttribute("proximasEntregas", proximasEntregas);
+            model.addAttribute("proximosExamenes", proximosExamenes);
+            model.addAttribute("tareasPendientes", proximasEntregas); // Usar la misma lista para ambas secciones
+
             // Alerta de próximos pagos
             LocalDate hoy = LocalDate.now();
             // Filtrar cuotas del alumno que vencen en los proximos 5 dias
@@ -107,11 +203,70 @@ public class AlumnoController {
                 model.addAttribute("alertaPagoProximo", true);
                 model.addAttribute("cuotasProximasVencer", cuotasProximas);
             }
+
+            // Eventos para el calendario
+            List<Map<String, String>> events = new java.util.ArrayList<>();
+            
+            // Agregamos todas las tareas al calendario, independientemente de si fueron entregadas
+            todasLasTareas.stream()
+                .filter(t -> t.getLimiteEntrega() != null)
+                .forEach(t -> {
+                    Map<String, String> event = new HashMap<>();
+                    boolean entregada = todasLasEntregas.stream().anyMatch(e -> e.getTarea().equals(t));
+                    String titulo = "Entrega: " + t.getTitulo();
+                    if (entregada) {
+                         titulo += " (Entregada)";
+                    }
+                    
+                    event.put("title", titulo);
+                    event.put("start", t.getLimiteEntrega().toLocalDate().toString());
+                    // Podríamos cambiar el color si está entregada, pero mantenemos 'event-entrega' por solicitud
+                    // o usamos una clase adicional si se desea estilo diferente
+                    event.put("className", entregada ? "event-entrega completed" : "event-entrega");
+                    events.add(event);
+                });
+
+            proximosExamenes.forEach(ex -> {
+                Map<String, String> event = new HashMap<>();
+                event.put("title", "Examen: " + ex.getTitulo());
+                event.put("start", ex.getFechaApertura().toLocalDate().toString());
+                event.put("className", "event-examen");
+                events.add(event);
+            });
+
+            // Clases Próximas
+            List<Long> cursosIds = cursosActivos.stream().map(Curso::getIdOferta).collect(Collectors.toList());
+            List<Clase> proximasClases = new java.util.ArrayList<>();
+            if (!cursosIds.isEmpty()) {
+                 proximasClases = claseRepository.findProximasClasesAlumnos(cursosIds, ahora);
+            }
+            
+            proximasClases.forEach(c -> {
+                Map<String, String> event = new HashMap<>();
+                String nombreCurso = "Clase";
+                if(c.getModulo() != null && c.getModulo().getCurso() != null) {
+                    nombreCurso = c.getModulo().getCurso().getNombre();
+                } else if(c.getCurso() != null) {
+                    nombreCurso = c.getCurso().getNombre();
+                }
+
+                event.put("title", "Clase: " + c.getTitulo() + " (" + nombreCurso + ")");
+                event.put("start", c.getInicio().toLocalDate().toString());
+                event.put("className", "event-clase");
+                events.add(event);
+            });
+            
+            // Limitamos a 5 para el panel
+            List<Clase> proximasClasesPanel = proximasClases.stream().limit(5).collect(Collectors.toList());
+            model.addAttribute("proximasClases", proximasClasesPanel);
+
+            model.addAttribute("eventsJson", objectMapper.writeValueAsString(events));
             
             return "alumno/mi-espacio";
             
         } catch (Exception e) {
             System.out.println("❌ Error en mi-espacio: " + e.getMessage());
+            e.printStackTrace();
             model.addAttribute("error", "Error al cargar tu espacio");
             return "redirect:/";
         }
@@ -353,45 +508,6 @@ public class AlumnoController {
         }
     }
 
-    private final OfertaAcademicaRepository ofertaAcademicaRepository;
-    private final InscripcionRepository inscripcionRepository;
-    private final UsuarioRepository usuarioRepository;
-    private final ModuloRepository moduloRepository;
-    private final IntentoRepository intentoRepository;
-    private final MercadoPagoService mercadoPagoService;
-    private final PagoRepository pagoRepository;
-    private final CuotaRepository cuotaRepository;
-    private final InstitutoService institutoService;
-    private final ReporteService reporteService;
-    private final EmailService emailService;
-    private final EntregaRepository entregaRepository;
-
-    public AlumnoController(OfertaAcademicaRepository ofertaAcademicaRepository,
-                          InscripcionRepository inscripcionRepository,
-                          UsuarioRepository usuarioRepository,
-                          ModuloRepository moduloRepository,
-                          IntentoRepository intentoRepository,
-                          MercadoPagoService mercadoPagoService,
-                          PagoRepository pagoRepository,
-                          CuotaRepository cuotaRepository,
-                          InstitutoService institutoService,
-                          ReporteService reporteService,
-                          EmailService emailService,
-                          EntregaRepository entregaRepository) {
-        this.ofertaAcademicaRepository = ofertaAcademicaRepository;
-        this.inscripcionRepository = inscripcionRepository;
-        this.usuarioRepository = usuarioRepository;
-        this.moduloRepository = moduloRepository;
-        this.intentoRepository = intentoRepository;
-        this.mercadoPagoService = mercadoPagoService;
-        this.pagoRepository = pagoRepository;
-        this.cuotaRepository = cuotaRepository;
-        this.institutoService = institutoService;
-        this.reporteService = reporteService;
-        this.emailService = emailService;
-        this.entregaRepository = entregaRepository;
-    }
-
     private BigDecimal calcularSaldoPendiente(Cuota cuota) {
         BigDecimal monto = Optional.ofNullable(cuota.getMonto()).orElse(BigDecimal.ZERO);
         BigDecimal pagado = Optional.ofNullable(cuota.getMontoPagado()).orElse(BigDecimal.ZERO);
@@ -499,9 +615,50 @@ public class AlumnoController {
                 return "redirect:/publico";
             }
             
-            // ✅ Verificar cupos disponibles
-            if (!oferta.tieneCuposDisponibles()) {
-                redirectAttributes.addFlashAttribute("error", "No hay cupos disponibles para esta oferta");
+            // ✅ Verificar cupos disponibles (Validación consistente con Frontend)
+            // Usamos los datos de la entidad cargada para asegurar consistencia con lo que ve el usuario
+            long inscritosReales = oferta.getCantidadAlumnosActivos();
+            int cuposTotales = oferta.getCupos() != null ? oferta.getCupos() : Integer.MAX_VALUE;
+            
+            System.out.println("📊 Verificando cupos: " + inscritosReales + " inscritos de " + cuposTotales + " totales.");
+
+            if (inscritosReales >= cuposTotales) {
+                 System.out.println("❌ Cupos agotados. Redirigiendo con errorCupo.");
+                 // Buscar recomendaciones (IA Simulada): Misma Categoría o Nombre similar, y ACTIVA con cupos
+                List<OfertaAcademica> recomendaciones = ofertaAcademicaRepository.findAll().stream()
+                    .filter(o -> !o.getIdOferta().equals(ofertaIdSeguro)) // Excluir actual
+                    .filter(o -> o.getEstado() == EstadoOferta.ACTIVA) // Solo activas
+                    .filter(o -> { // Validar cupos de recomendación
+                         long ocupadosRec = inscripcionRepository.countByOfertaAndEstadoInscripcionTrue(o);
+                         int cuposRec = o.getCupos() != null ? o.getCupos() : Integer.MAX_VALUE;
+                         return ocupadosRec < cuposRec;
+                    })
+                    .sorted((o1, o2) -> {
+                        // Prioridad 1: Misma Categoría
+                        boolean cat1 = !Collections.disjoint(o1.getCategorias(), oferta.getCategorias());
+                        boolean cat2 = !Collections.disjoint(o2.getCategorias(), oferta.getCategorias());
+                        if (cat1 && !cat2) return -1;
+                        if (!cat1 && cat2) return 1;
+                        
+                        // Prioridad 2: Similitud Nombre simple
+                         boolean nombre1 = o1.getNombre().contains(oferta.getNombre().split(" ")[0]);
+                         boolean nombre2 = o2.getNombre().contains(oferta.getNombre().split(" ")[0]);
+                         if (nombre1 && !nombre2) return -1;
+                         if (!nombre1 && nombre2) return 1;
+
+                        return 0;
+                    })
+                    .limit(3)
+                    .collect(Collectors.toList());
+
+                // Actualizar atributos flash para el modal y la alerta
+                redirectAttributes.addFlashAttribute("errorCupo", true);
+                redirectAttributes.addFlashAttribute("ofertaLlena", oferta);
+                redirectAttributes.addFlashAttribute("recomendaciones", recomendaciones);
+                
+                // Mensaje de error explícito para la alerta visual (fallback si falla el modal)
+                redirectAttributes.addFlashAttribute("error", "Lo sentimos, el cupo para '" + oferta.getNombre() + "' se ha completado. Hemos seleccionado algunas recomendaciones para ti.");
+                
                 return "redirect:/publico";
             }
 
@@ -592,27 +749,43 @@ public class AlumnoController {
             List<Inscripciones> todasInscripciones = inscripcionRepository.findByAlumnoDni(dni);
 
             // ✅ FILTRAR SOLO LAS ACTIVAS (estadoInscripcion = true)
-            List<Inscripciones> inscripciones = todasInscripciones.stream()
+            List<Inscripciones> inscripcionesActivas = todasInscripciones.stream()
                     .filter(i -> Boolean.TRUE.equals(i.getEstadoInscripcion()))
                     .collect(Collectors.toList());
+
+            // Dividir en "En Curso" y "Finalizadas" / "Terminadas"
+            List<Inscripciones> inscripcionesEnCurso = new ArrayList<>();
+            List<Inscripciones> inscripcionesFinalizadas = new ArrayList<>();
+
+            for (Inscripciones insc : inscripcionesActivas) {
+                OfertaAcademica oferta = insc.getOferta();
+                if (oferta.getEstado() == EstadoOferta.FINALIZADA || 
+                   (oferta.getEstado() == EstadoOferta.DE_BAJA) ||
+                   (oferta.getFechaFin() != null && oferta.getFechaFin().isBefore(LocalDate.now()))) {
+                     inscripcionesFinalizadas.add(insc);
+                } else {
+                     inscripcionesEnCurso.add(insc);
+                }
+            }
             
             // ✅ Extraer TODAS las ofertas académicas (Cursos Y Formaciones)
-            List<OfertaAcademica> ofertas = inscripciones.stream()
+            List<OfertaAcademica> ofertas = inscripcionesActivas.stream()
                     .map(Inscripciones::getOferta)
                     .collect(Collectors.toList());
             
-            System.out.println("📊 Inscripciones activas encontradas: " + inscripciones.size());
+            System.out.println("📊 Inscripciones activas encontradas: " + inscripcionesActivas.size());
             System.out.println("📊 Ofertas académicas: " + ofertas.size());
             
             // Debug: mostrar tipos de ofertas
             for (OfertaAcademica oferta : ofertas) {
                 System.out.println("   - " + oferta.getClass().getSimpleName() + ": " + oferta.getNombre());
             }
-            
+
             model.addAttribute("alumno", alumno);
             model.addAttribute("cursos", ofertas); // Mantener nombre "cursos" para compatibilidad con vista
-            model.addAttribute("inscripciones", inscripciones);
-            
+            model.addAttribute("inscripciones", inscripcionesActivas); // Mantener compatibilidad
+            model.addAttribute("inscripcionesEnCurso", inscripcionesEnCurso);
+            model.addAttribute("inscripcionesFinalizadas", inscripcionesFinalizadas);
             return "misOfertasAcademicas";
             
         } catch (Exception e) {
