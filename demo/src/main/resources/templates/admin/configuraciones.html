@@ -148,6 +148,42 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Configuración de Bloqueos por Mora -->
+                        <div class="form-section">
+                            <h4><i class="fas fa-lock"></i> Configuración de Bloqueos por Mora</h4>
+                            <p class="text-muted mb-3"><small>Defina cuántos días de mora se permiten antes de bloquear el acceso a los contenidos.</small></p>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="diasMoraBloqueoExamen">Bloqueo de Exámenes (días)</label>
+                                    <input type="number" id="diasMoraBloqueoExamen" name="diasMoraBloqueoExamen" 
+                                           class="form-control" min="0" placeholder="Ej: 5"
+                                           th:value="${instituto?.diasMoraBloqueoExamen}">
+                                    <div class="form-text">Días de mora permitidos antes de bloquear exámenes</div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="diasMoraBloqueoMaterial">Bloqueo de Materiales (días)</label>
+                                    <input type="number" id="diasMoraBloqueoMaterial" name="diasMoraBloqueoMaterial" 
+                                           class="form-control" min="0" placeholder="Ej: 10"
+                                           th:value="${instituto?.diasMoraBloqueoMaterial}">
+                                    <div class="form-text">Días de mora permitidos antes de bloquear materiales</div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="diasMoraBloqueoActividad">Bloqueo de Actividades (días)</label>
+                                    <input type="number" id="diasMoraBloqueoActividad" name="diasMoraBloqueoActividad" 
+                                           class="form-control" min="0" placeholder="Ej: 7"
+                                           th:value="${instituto?.diasMoraBloqueoActividad}">
+                                    <div class="form-text">Días de mora permitidos antes de bloquear actividades</div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="diasMoraBloqueoAula">Bloqueo total del Aula (días)</label>
+                                    <input type="number" id="diasMoraBloqueoAula" name="diasMoraBloqueoAula" 
+                                           class="form-control" min="0" placeholder="Ej: 15"
+                                           th:value="${instituto?.diasMoraBloqueoAula}">
+                                    <div class="form-text">Si la mora supera estos días, el alumno no podrá acceder al aula hasta regularizar el pago.</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Columna Derecha: Logo y configuraciones avanzadas -->
@@ -176,7 +212,7 @@
                                     <label for="colorPrimario">Color Primario</label>
                                     <div class="color-input-container">
                                         <input type="color" id="colorPrimario" name="colorPrimario" 
-                                               class="color-picker" th:value="${instituto.colores != null and instituto.colores.size() > 0 ? instituto.colores[0] : '#1f2937'}">
+                                               class="color-picker color-input" th:value="${instituto.colores != null and instituto.colores.size() > 0 ? instituto.colores[0] : '#1f2937'}">
                                         <input type="text" class="color-text" th:value="${instituto.colores != null and instituto.colores.size() > 0 ? instituto.colores[0] : '#1f2937'}" readonly>
                                     </div>
                                     <div class="form-text">
@@ -187,7 +223,7 @@
                                     <label for="colorSecundario">Color Secundario</label>
                                     <div class="color-input-container">
                                         <input type="color" id="colorSecundario" name="colorSecundario" 
-                                               class="color-picker" th:value="${instituto.colores != null and instituto.colores.size() > 1 ? instituto.colores[1] : '#f8fafc'}">
+                                               class="color-picker color-input" th:value="${instituto.colores != null and instituto.colores.size() > 1 ? instituto.colores[1] : '#f8fafc'}">
                                         <input type="text" class="color-text" th:value="${instituto.colores != null and instituto.colores.size() > 1 ? instituto.colores[1] : '#f8fafc'}" readonly>
                                     </div>
                                     <div class="form-text">
@@ -198,7 +234,7 @@
                                     <label for="colorTexto">Color de Texto</label>
                                     <div class="color-input-container">
                                         <input type="color" id="colorTexto" name="colorTexto" 
-                                               class="color-picker" th:value="${instituto.colores != null and instituto.colores.size() > 2 ? instituto.colores[2] : '#374151'}">
+                                               class="color-picker color-input" th:value="${instituto.colores != null and instituto.colores.size() > 2 ? instituto.colores[2] : '#374151'}">
                                         <input type="text" class="color-text" th:value="${instituto.colores != null and instituto.colores.size() > 2 ? instituto.colores[2] : '#374151'}" readonly>
                                     </div>
                                     <div class="form-text">

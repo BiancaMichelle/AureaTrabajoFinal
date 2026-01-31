@@ -1584,7 +1584,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             try {
-                showLoading(`Cargando datos de ${nombre || 'usuario'}...`);
+                // showLoading(`Cargando datos de ${nombre || 'usuario'}...`);
                 const detalle = await obtenerUsuarioDetalle(identifier);
                 await hydrateUserForm(detalle, { mode: 'edit', identifier });
                 showForm();
@@ -1592,7 +1592,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.error('Error cargando usuario para edición:', error);
                 showNotification(`❌ ${error.message || 'No se pudo cargar el formulario de edición'}`, 'error', 10000);
             } finally {
-                hideLoading();
+                // hideLoading();
             }
         }
 
@@ -1605,14 +1605,14 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             try {
-                showLoading(`Cargando detalles de ${nombre || 'usuario'}...`);
+                // showLoading(`Cargando detalles de ${nombre || 'usuario'}...`);
                 const detalle = await obtenerUsuarioDetalle(identifier);
                 mostrarModalDetalleUsuario(detalle, context);
             } catch (error) {
                 console.error('Error cargando usuario para visualización:', error);
                 showNotification(`❌ ${error.message || 'No se pudo mostrar el usuario seleccionado'}`, 'error', 10000);
             } finally {
-                hideLoading();
+                // hideLoading();
             }
         }
 
@@ -1639,7 +1639,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 headers[csrfHeader] = csrfToken;
             }
 
-            showLoading(`Eliminando ${displayName}...`);
+            // showLoading(`Eliminando ${displayName}...`);
 
             fetch(`/admin/usuarios/${encodeURIComponent(identifier)}`, {
                 method: 'DELETE',
@@ -1664,7 +1664,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 showNotification(`❌ ${error.message || 'No se pudo eliminar el usuario'}`, 'error', 10000);
             })
             .finally(() => {
-                hideLoading();
+                // hideLoading();
             });
         }
     
@@ -1793,11 +1793,11 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             const loadingMessage = isEditMode ? 'Guardando cambios...' : 'Registrando usuario...';
-            showLoading(loadingMessage);
+            // showLoading(loadingMessage);
 
             const submitBtn = form.querySelector('button[type="submit"]');
             const originalText = submitBtn.innerHTML;
-            submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${isEditMode ? 'Guardando...' : 'Registrando...'}`;
+            submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${isEditMode ? 'Modificando...' : 'Registrando...'}`;
             submitBtn.disabled = true;
             
             if (selectedRoles.length > 0) {
@@ -1892,7 +1892,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 // ✅ RESTAURAR BOTÓN
                 submitBtn.innerHTML = originalText;
                 submitBtn.disabled = false;
-                hideLoading();
+                // hideLoading();
             });
         }
         

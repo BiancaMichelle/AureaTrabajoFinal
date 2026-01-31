@@ -122,251 +122,253 @@ document.addEventListener('DOMContentLoaded', function () {
     handleMobileMenu();
 
     // ================= CHARTS CONFIGURATION =================
-    Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-    Chart.defaults.color = '#64748b';
-    Chart.defaults.borderColor = '#e2e8f0';
+    if (typeof Chart !== 'undefined') {
+        Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+        Chart.defaults.color = '#64748b';
+        Chart.defaults.borderColor = '#e2e8f0';
 
-    // 1. Gráfico de Distribución de Ofertas (Dona)
-    const ofertasCtx = document.getElementById('ofertasChart');
-    if (ofertasCtx) {
-        new Chart(ofertasCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Cursos', 'Formaciones', 'Seminarios', 'Charlas'],
-                datasets: [{
-                    label: 'Distribución de Ofertas',
-                    data: [
-                        chartData.totalCursos || 0,
-                        chartData.totalFormaciones || 0,
-                        chartData.totalSeminarios || 0,
-                        chartData.totalCharlas || 0
-                    ],
-                    backgroundColor: [
-                        '#3b82f6', // Primary
-                        '#10b981', // Success
-                        '#06b6d4', // Accent
-                        '#f59e0b'  // Warning
-                    ],
-                    borderColor: '#ffffff',
-                    borderWidth: 3,
-                    hoverBorderWidth: 4,
-                    hoverOffset: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            padding: 20,
-                            usePointStyle: true,
-                            font: {
-                                size: 12,
-                                weight: 500
+        // 1. Gráfico de Distribución de Ofertas (Dona)
+        const ofertasCtx = document.getElementById('ofertasChart');
+        if (ofertasCtx) {
+            new Chart(ofertasCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Cursos', 'Formaciones', 'Seminarios', 'Charlas'],
+                    datasets: [{
+                        label: 'Distribución de Ofertas',
+                        data: [
+                            chartData.totalCursos || 0,
+                            chartData.totalFormaciones || 0,
+                            chartData.totalSeminarios || 0,
+                            chartData.totalCharlas || 0
+                        ],
+                        backgroundColor: [
+                            '#3b82f6', // Primary
+                            '#10b981', // Success
+                            '#06b6d4', // Accent
+                            '#f59e0b'  // Warning
+                        ],
+                        borderColor: '#ffffff',
+                        borderWidth: 3,
+                        hoverBorderWidth: 4,
+                        hoverOffset: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true,
+                                font: {
+                                    size: 12,
+                                    weight: 500
+                                }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: '#1e293b',
+                            titleColor: '#f8fafc',
+                            bodyColor: '#f8fafc',
+                            cornerRadius: 8,
+                            padding: 12,
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : 0;
+                                    return `${context.label}: ${context.parsed} (${percentage}%)`;
+                                }
                             }
                         }
                     },
-                    tooltip: {
-                        backgroundColor: '#1e293b',
-                        titleColor: '#f8fafc',
-                        bodyColor: '#f8fafc',
-                        cornerRadius: 8,
-                        padding: 12,
-                        callbacks: {
-                            label: function(context) {
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : 0;
-                                return `${context.label}: ${context.parsed} (${percentage}%)`;
-                            }
-                        }
+                    animation: {
+                        animateRotate: true,
+                        duration: 1500
                     }
-                },
-                animation: {
-                    animateRotate: true,
-                    duration: 1500
                 }
-            }
-        });
-    }
+            });
+        }
 
-    // 2. Gráfico de Distribución de Usuarios (Barras)
-    const usuariosCtx = document.getElementById('usuariosChart');
-    if (usuariosCtx) {
-        new Chart(usuariosCtx, {
-            type: 'bar',
-            data: {
-                labels: ['Alumnos', 'Docentes'],
-                datasets: [{
-                    label: 'Total de Usuarios',
-                    data: [
-                        chartData.totalAlumnos || 0,
-                        chartData.totalDocentes || 0
-                    ],
-                    backgroundColor: [
-                        '#3b82f6',
-                        '#10b981'
-                    ],
-                    borderRadius: 8,
-                    borderSkipped: false,
-                    hoverBackgroundColor: [
-                        '#2563eb',
-                        '#059669'
-                    ]
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                indexAxis: 'y',
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        backgroundColor: '#1e293b',
-                        titleColor: '#f8fafc',
-                        bodyColor: '#f8fafc',
-                        cornerRadius: 8,
-                        padding: 12
-                    }
+        // 2. Gráfico de Distribución de Usuarios (Barras)
+        const usuariosCtx = document.getElementById('usuariosChart');
+        if (usuariosCtx) {
+            new Chart(usuariosCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Alumnos', 'Docentes'],
+                    datasets: [{
+                        label: 'Total de Usuarios',
+                        data: [
+                            chartData.totalAlumnos || 0,
+                            chartData.totalDocentes || 0
+                        ],
+                        backgroundColor: [
+                            '#3b82f6',
+                            '#10b981'
+                        ],
+                        borderRadius: 8,
+                        borderSkipped: false,
+                        hoverBackgroundColor: [
+                            '#2563eb',
+                            '#059669'
+                        ]
+                    }]
                 },
-                scales: {
-                    x: {
-                        beginAtZero: true,
-                        ticks: {
-                            color: '#64748b',
-                            font: {
-                                size: 12
-                            }
-                        },
-                        grid: {
-                            color: '#e2e8f0',
-                            drawBorder: false
-                        }
-                    },
-                    y: {
-                        ticks: {
-                            color: '#64748b',
-                            font: {
-                                size: 12,
-                                weight: 500
-                            }
-                        },
-                        grid: {
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: {
                             display: false
-                        }
-                    }
-                },
-                animation: {
-                    duration: 1500,
-                    easing: 'easeOutCubic'
-                }
-            }
-        });
-    }
-
-    // 3. Gráfico de Actividad Mensual (Líneas)
-    const actividadCtx = document.getElementById('actividadChart');
-    if (actividadCtx) {
-        // Sample data for monthly activity
-        const actividadData = chartData.actividadMensual || [
-            { mes: 'Ene', inscripciones: 15, completados: 12 },
-            { mes: 'Feb', inscripciones: 22, completados: 18 },
-            { mes: 'Mar', inscripciones: 28, completados: 25 },
-            { mes: 'Abr', inscripciones: 35, completados: 30 },
-            { mes: 'May', inscripciones: 42, completados: 38 },
-            { mes: 'Jun', inscripciones: 38, completados: 35 }
-        ];
-
-        new Chart(actividadCtx, {
-            type: 'line',
-            data: {
-                labels: actividadData.map(item => item.mes),
-                datasets: [
-                    {
-                        label: 'Inscripciones',
-                        data: actividadData.map(item => item.inscripciones),
-                        borderColor: '#3b82f6',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        fill: true,
-                        tension: 0.4,
-                        pointBackgroundColor: '#3b82f6',
-                        pointBorderColor: '#ffffff',
-                        pointBorderWidth: 2,
-                        pointRadius: 6
-                    },
-                    {
-                        label: 'Completados',
-                        data: actividadData.map(item => item.completados),
-                        borderColor: '#10b981',
-                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                        fill: true,
-                        tension: 0.4,
-                        pointBackgroundColor: '#10b981',
-                        pointBorderColor: '#ffffff',
-                        pointBorderWidth: 2,
-                        pointRadius: 6
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            padding: 20,
-                            usePointStyle: true,
-                            font: {
-                                size: 12,
-                                weight: 500
-                            }
+                        },
+                        tooltip: {
+                            backgroundColor: '#1e293b',
+                            titleColor: '#f8fafc',
+                            bodyColor: '#f8fafc',
+                            cornerRadius: 8,
+                            padding: 12
                         }
                     },
-                    tooltip: {
-                        backgroundColor: '#1e293b',
-                        titleColor: '#f8fafc',
-                        bodyColor: '#f8fafc',
-                        cornerRadius: 8,
-                        padding: 12
-                    }
-                },
-                scales: {
-                    x: {
-                        ticks: {
-                            color: '#64748b',
-                            font: {
-                                size: 12
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#64748b',
+                                font: {
+                                    size: 12
+                                }
+                            },
+                            grid: {
+                                color: '#e2e8f0',
+                                drawBorder: false
                             }
                         },
-                        grid: {
-                            color: '#e2e8f0',
-                            drawBorder: false
+                        y: {
+                            ticks: {
+                                color: '#64748b',
+                                font: {
+                                    size: 12,
+                                    weight: 500
+                                }
+                            },
+                            grid: {
+                                display: false
+                            }
                         }
                     },
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            color: '#64748b',
-                            font: {
-                                size: 12
+                    animation: {
+                        duration: 1500,
+                        easing: 'easeOutCubic'
+                    }
+                }
+            });
+        }
+
+        // 3. Gráfico de Actividad Mensual (Líneas)
+        const actividadCtx = document.getElementById('actividadChart');
+        if (actividadCtx) {
+            // Sample data for monthly activity
+            const actividadData = chartData.actividadMensual || [
+                { mes: 'Ene', inscripciones: 15, completados: 12 },
+                { mes: 'Feb', inscripciones: 22, completados: 18 },
+                { mes: 'Mar', inscripciones: 28, completados: 25 },
+                { mes: 'Abr', inscripciones: 35, completados: 30 },
+                { mes: 'May', inscripciones: 42, completados: 38 },
+                { mes: 'Jun', inscripciones: 38, completados: 35 }
+            ];
+
+            new Chart(actividadCtx, {
+                type: 'line',
+                data: {
+                    labels: actividadData.map(item => item.mes),
+                    datasets: [
+                        {
+                            label: 'Inscripciones',
+                            data: actividadData.map(item => item.inscripciones),
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#3b82f6',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 6
+                        },
+                        {
+                            label: 'Completados',
+                            data: actividadData.map(item => item.completados),
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#10b981',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true,
+                                font: {
+                                    size: 12,
+                                    weight: 500
+                                }
                             }
                         },
-                        grid: {
-                            color: '#e2e8f0',
-                            drawBorder: false
+                        tooltip: {
+                            backgroundColor: '#1e293b',
+                            titleColor: '#f8fafc',
+                            bodyColor: '#f8fafc',
+                            cornerRadius: 8,
+                            padding: 12
                         }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: '#64748b',
+                                font: {
+                                    size: 12
+                                }
+                            },
+                            grid: {
+                                color: '#e2e8f0',
+                                drawBorder: false
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#64748b',
+                                font: {
+                                    size: 12
+                                }
+                            },
+                            grid: {
+                                color: '#e2e8f0',
+                                drawBorder: false
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 1500,
+                        easing: 'easeOutCubic'
                     }
-                },
-                animation: {
-                    duration: 1500,
-                    easing: 'easeOutCubic'
                 }
-            }
-        });
+            });
+        }
     }
 
     // ================= KPI CARDS ANIMATION =================

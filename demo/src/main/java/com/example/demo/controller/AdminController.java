@@ -749,7 +749,7 @@ public class AdminController {
                 case "FORMACION":
                     oferta = crearFormacion(nombre, descripcion, cupos, costoInscripcion, fechaInicio, fechaFin, modalidad,
                                           planFormacion, docentesFormacion, 
-                                          costoCuota, costoMora, nrCuotas, diaVencimiento); // ✅ Usar los mismos parámetros que Curso
+                                          costoCuotaFormacion, costoMoraFormacion, nrCuotasFormacion, diaVencimientoFormacion);
                     break;
                 case "CHARLA":
                     oferta = crearCharla(nombre, descripcion, cupos, costoInscripcion, fechaInicio, fechaFin, modalidad,
@@ -844,7 +844,10 @@ public class AdminController {
         // Campos específicos del curso
         curso.setTemario(temario);
         if (costoCuota != null) curso.setCostoCuota(costoCuota);
-        if (costoMora != null) curso.setCostoMora(costoMora);
+        if (costoMora != null) {
+            curso.setCostoMora(costoMora);
+            curso.setRecargoMora(costoMora);
+        }
         if (nrCuotas != null) curso.setNrCuotas(nrCuotas);
         if (diaVencimiento != null) curso.setDiaVencimiento(diaVencimiento);
         
@@ -870,6 +873,9 @@ public class AdminController {
         // ✅ Asegurar que los valores no sean null
         formacion.setCostoCuota(costoCuota != null ? costoCuota : 0.0);
         formacion.setCostoMora(costoMora != null ? costoMora : 0.0);
+        if (costoMora != null) {
+            formacion.setRecargoMora(costoMora);
+        }
         formacion.setNrCuotas(nrCuotas != null ? nrCuotas : 0);
         formacion.setDiaVencimiento(diaVencimiento != null ? diaVencimiento : 0);
         
@@ -1134,7 +1140,10 @@ public class AdminController {
                     if (ofertaExistente instanceof Curso) {
                         Curso curso = (Curso) ofertaExistente;
                         if (costoCuota != null) curso.setCostoCuota(costoCuota);
-                        if (costoMora != null) curso.setCostoMora(costoMora);
+                        if (costoMora != null) {
+                            curso.setCostoMora(costoMora);
+                            curso.setRecargoMora(costoMora);
+                        }
                         if (nrCuotas != null) curso.setNrCuotas(nrCuotas);
                         if (diaVencimiento != null) curso.setDiaVencimiento(diaVencimiento);
                     }
@@ -1144,7 +1153,10 @@ public class AdminController {
                     if (ofertaExistente instanceof Formacion) {
                         Formacion formacion = (Formacion) ofertaExistente;
                         if (costoCuotaFormacion != null) formacion.setCostoCuota(costoCuotaFormacion);
-                        if (costoMoraFormacion != null) formacion.setCostoMora(costoMoraFormacion);
+                        if (costoMoraFormacion != null) {
+                            formacion.setCostoMora(costoMoraFormacion);
+                            formacion.setRecargoMora(costoMoraFormacion);
+                        }
                         if (nrCuotasFormacion != null) formacion.setNrCuotas(nrCuotasFormacion);
                         if (diaVencimientoFormacion != null) formacion.setDiaVencimiento(diaVencimientoFormacion);
                     }
@@ -1718,6 +1730,9 @@ public class AdminController {
             @RequestParam(value = "logo", required = false) MultipartFile logo) {
         
         try {
+            System.out.println("=== GUARDANDO CONFIGURACIÓN ===");
+            System.out.println("Parámetros recibidos: " + params.keySet());
+            
             Map<String, Object> response = new HashMap<>();
             
             // Validar campos requeridos
@@ -1729,8 +1744,9 @@ public class AdminController {
             
             // Obtener instituto actual
             Instituto instituto = institutoService.obtenerInstituto();
+            System.out.println("Instituto actual ID: " + instituto.getIdInstituto());
             
-            // Actualizar campos
+            // Actualizar campos básicos
             instituto.setNombreInstituto(params.get("nombreInstituto"));
             instituto.setDescripcion(params.get("descripcion"));
             instituto.setMision(params.get("mision"));
@@ -1745,33 +1761,108 @@ public class AdminController {
             instituto.setCuentaBancaria(params.get("cuentaBancaria"));
             instituto.setPoliticaPagos(params.get("politicaPagos"));
             
-            // Configuraciones automáticas
+            // Configuraciones automáticas - Los checkboxes solo envían valor si están marcados
             instituto.setPermisoBajaAutomatica("on".equals(params.get("permisoBajaAutomatica")));
-            if (params.get("minimoAlumnoBaja") != null && !params.get("minimoAlumnoBaja").isEmpty()) {
-                instituto.setMinimoAlumnoBaja(Integer.parseInt(params.get("minimoAlumnoBaja")));
+            System.out.println("Baja automática: " + instituto.getPermisoBajaAutomatica());
+            
+            if (params.get("minimoAlumnoBaja") != null && !params.get("minimoAlumnoBaja").trim().isEmpty()) {
+                try {
+                    instituto.setMinimoAlumnoBaja(Integer.parseInt(params.get("minimoAlumnoBaja").trim()));
+                } catch (NumberFormatException e) {
+                    System.out.println("Error parseando minimoAlumnoBaja: " + params.get("minimoAlumnoBaja"));
+                }
             }
-            if (params.get("inactividadBaja") != null && !params.get("inactividadBaja").isEmpty()) {
-                instituto.setInactividadBaja(Integer.parseInt(params.get("inactividadBaja")));
+            if (params.get("inactividadBaja") != null && !params.get("inactividadBaja").trim().isEmpty()) {
+                try {
+                    instituto.setInactividadBaja(Integer.parseInt(params.get("inactividadBaja").trim()));
+                } catch (NumberFormatException e) {
+                    System.out.println("Error parseando inactividadBaja: " + params.get("inactividadBaja"));
+                }
             }
+            
+            // Configuración de bloqueos por mora
+            System.out.println("=== BLOQUEOS POR MORA ===");
+            if (params.get("diasMoraBloqueoExamen") != null && !params.get("diasMoraBloqueoExamen").trim().isEmpty()) {
+                try {
+                    int dias = Integer.parseInt(params.get("diasMoraBloqueoExamen").trim());
+                    instituto.setDiasMoraBloqueoExamen(dias);
+                    System.out.println("Días mora examen: " + dias);
+                } catch (NumberFormatException e) {
+                    System.out.println("Error parseando diasMoraBloqueoExamen: " + params.get("diasMoraBloqueoExamen"));
+                }
+            } else {
+                instituto.setDiasMoraBloqueoExamen(null);
+                System.out.println("Días mora examen: null (campo vacío)");
+            }
+            
+            if (params.get("diasMoraBloqueoMaterial") != null && !params.get("diasMoraBloqueoMaterial").trim().isEmpty()) {
+                try {
+                    int dias = Integer.parseInt(params.get("diasMoraBloqueoMaterial").trim());
+                    instituto.setDiasMoraBloqueoMaterial(dias);
+                    System.out.println("Días mora material: " + dias);
+                } catch (NumberFormatException e) {
+                    System.out.println("Error parseando diasMoraBloqueoMaterial: " + params.get("diasMoraBloqueoMaterial"));
+                }
+            } else {
+                instituto.setDiasMoraBloqueoMaterial(null);
+                System.out.println("Días mora material: null (campo vacío)");
+            }
+            
+            if (params.get("diasMoraBloqueoActividad") != null && !params.get("diasMoraBloqueoActividad").trim().isEmpty()) {
+                try {
+                    int dias = Integer.parseInt(params.get("diasMoraBloqueoActividad").trim());
+                    instituto.setDiasMoraBloqueoActividad(dias);
+                    System.out.println("Días mora actividad: " + dias);
+                } catch (NumberFormatException e) {
+                    System.out.println("Error parseando diasMoraBloqueoActividad: " + params.get("diasMoraBloqueoActividad"));
+                }
+            } else {
+                instituto.setDiasMoraBloqueoActividad(null);
+                System.out.println("Días mora actividad: null (campo vacío)");
+            }
+
+            if (params.get("diasMoraBloqueoAula") != null && !params.get("diasMoraBloqueoAula").trim().isEmpty()) {
+                try {
+                    int dias = Integer.parseInt(params.get("diasMoraBloqueoAula").trim());
+                    instituto.setDiasMoraBloqueoAula(dias);
+                    System.out.println("Días mora aula: " + dias);
+                } catch (NumberFormatException e) {
+                    System.out.println("Error parseando diasMoraBloqueoAula: " + params.get("diasMoraBloqueoAula"));
+                }
+            } else {
+                instituto.setDiasMoraBloqueoAula(null);
+                System.out.println("Días mora aula: null (campo vacío)");
+            }
+
             instituto.setHabilitarIA("on".equals(params.get("habilitarIA")));
             instituto.setReportesAutomaticos("on".equals(params.get("reportesAutomaticos")));
             
+            System.out.println("Habilitar IA: " + instituto.getHabilitarIA());
+            System.out.println("Reportes automáticos: " + instituto.getReportesAutomaticos());
+            
             // Guardar colores institucionales
-            List<String> colores = List.of(
+            List<String> colores = new ArrayList<>(List.of(
                 params.get("colorPrimario") != null ? params.get("colorPrimario") : "#1f2937",
                 params.get("colorSecundario") != null ? params.get("colorSecundario") : "#f8fafc",
                 params.get("colorTexto") != null ? params.get("colorTexto") : "#374151"
-            );
+            ));
             instituto.setColores(colores);
+            System.out.println("Colores: " + colores);
             
             // Procesar logo si se subió
             if (logo != null && !logo.isEmpty()) {
                 String logoPath = guardarLogo(logo);
                 instituto.setLogoPath(logoPath);
+                System.out.println("Logo guardado: " + logoPath);
             }
             
             // Guardar instituto
-            institutoService.guardarInstituto(instituto);
+            Instituto institutoGuardado = institutoService.guardarInstituto(instituto);
+            System.out.println("=== INSTITUTO GUARDADO EXITOSAMENTE ===");
+            System.out.println("ID: " + institutoGuardado.getIdInstituto());
+            System.out.println("Días mora examen guardado: " + institutoGuardado.getDiasMoraBloqueoExamen());
+            System.out.println("Días mora material guardado: " + institutoGuardado.getDiasMoraBloqueoMaterial());
+            System.out.println("Días mora actividad guardado: " + institutoGuardado.getDiasMoraBloqueoActividad());
             
             response.put("success", true);
             response.put("message", "Configuración guardada exitosamente");
@@ -1779,6 +1870,9 @@ public class AdminController {
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
+            System.err.println("❌ ERROR AL GUARDAR CONFIGURACIÓN: " + e.getMessage());
+            e.printStackTrace();
+            
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", "Error al guardar la configuración: " + e.getMessage());

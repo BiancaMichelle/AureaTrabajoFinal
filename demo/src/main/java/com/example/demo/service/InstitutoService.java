@@ -45,6 +45,7 @@ public class InstitutoService {
         instituto.setPermisoBajaAutomatica(true);
         instituto.setMinimoAlumnoBaja(5);
         instituto.setInactividadBaja(30);
+        instituto.setDiasMoraBloqueoAula(null);
         instituto.setHabilitarIA(true);
         instituto.setReportesAutomaticos(false);
         instituto.setCertificacionesAvales("Contamos con el respaldo de instituciones reconocidas a nivel nacional e internacional");

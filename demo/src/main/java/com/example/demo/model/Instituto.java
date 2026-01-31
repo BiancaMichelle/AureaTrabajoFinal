@@ -51,6 +51,12 @@ public class Instituto {
     
     @Column(length = 1000)
     private String politicaPagos;
+
+    // Configuración de bloqueos por mora (días de tolerancia)
+    private Integer diasMoraBloqueoExamen;
+    private Integer diasMoraBloqueoMaterial;
+    private Integer diasMoraBloqueoActividad;
+    private Integer diasMoraBloqueoAula;
     
     // Configuraciones del sistema
     private Boolean habilitarIA;

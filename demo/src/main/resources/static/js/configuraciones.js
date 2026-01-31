@@ -1,10 +1,12 @@
 // =================   CONFIGURACIONES INSTITUCIONALES JS   =================
 
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Inicializando configuraciones...');
     initializeConfiguraciones();
 });
 
 function initializeConfiguraciones() {
+    console.log('⚙️ Configurando componentes...');
     setupColorInputs();
     setupFileUpload();
     setupAutomaticConfigToggle();
@@ -12,6 +14,16 @@ function initializeConfiguraciones() {
     setupFormSubmission();
     setupColorPreview();
     loadSavedConfiguration();
+    ensureDefaultCurrency();
+    console.log('✅ Configuraciones inicializadas correctamente');
+}
+
+function ensureDefaultCurrency() {
+    const monedaSelect = document.getElementById('moneda');
+    if (monedaSelect && !monedaSelect.value) {
+        monedaSelect.value = 'ARS';
+        console.log('ℹ️ Moneda no definida, seteando valor por defecto: ARS');
+    }
 }
 
 // =================   COLORES INSTITUCIONALES   =================
@@ -51,17 +63,27 @@ function updateColorPreview() {
     const colorTexto = document.getElementById('colorTexto').value;
     
     const previewCard = document.getElementById('color-preview');
+    
+    // Si no existe el elemento de previsualización, salir
+    if (!previewCard) return;
+
     const previewHeader = previewCard.querySelector('.preview-header');
     const previewContent = previewCard.querySelector('.preview-content');
     const previewButton = previewCard.querySelector('.preview-button');
     
     // Aplicar colores a la vista previa
-    previewHeader.style.backgroundColor = colorPrimario;
-    previewHeader.style.color = '#ffffff';
-    previewContent.style.backgroundColor = colorSecundario;
-    previewContent.style.color = colorTexto;
-    previewButton.style.backgroundColor = colorPrimario;
-    previewButton.style.color = '#ffffff';
+    if (previewHeader) {
+        previewHeader.style.backgroundColor = colorPrimario;
+        previewHeader.style.color = '#ffffff';
+    }
+    if (previewContent) {
+        previewContent.style.backgroundColor = colorSecundario;
+        previewContent.style.color = colorTexto;
+    }
+    if (previewButton) {
+        previewButton.style.backgroundColor = colorPrimario;
+        previewButton.style.color = '#ffffff';
+    }
 }
 
 function setupColorPreview() {
@@ -72,9 +94,11 @@ function setupColorPreview() {
     const nombreInstituto = document.getElementById('nombreInstituto');
     const previewTitle = document.querySelector('.preview-header h5');
     
-    nombreInstituto.addEventListener('input', function() {
-        previewTitle.textContent = this.value || 'Instituto Aurea';
-    });
+    if (nombreInstituto && previewTitle) {
+        nombreInstituto.addEventListener('input', function() {
+            previewTitle.textContent = this.value || 'Instituto Aurea';
+        });
+    }
 }
 
 // =================   UPLOAD DE LOGO   =================
@@ -225,31 +249,80 @@ function isValidUrl(url) {
 
 // =================   ENVÍO DEL FORMULARIO   =================
 function setupFormSubmission() {
+    console.log('📝 Configurando envío de formulario...');
     const form = document.getElementById('config-form');
     
-    form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
+    if (!form) {
+        console.error('❌ No se encontró el formulario config-form');
+        return;
+    }
+    
+    console.log('✅ Formulario encontrado:', form);
+
+    // Función única para disparar guardado
+    const triggerSave = () => {
+        console.log('📤 Intentando guardar configuración...');
+
         // Validar formulario completo
         if (!validateForm()) {
+            console.log('❌ Validación fallida');
             showNotification('Por favor corrija los errores en el formulario', 'error');
             return;
         }
-        
-        // Mostrar loading
+
+        console.log('✅ Validación exitosa, enviando...');
+        // Mostrar loading y enviar
         showLoadingState(true);
-        
-        // Enviar formulario
         submitConfiguration();
+    };
+
+    form.addEventListener('submit', function(e) {
+        console.log('📤 Evento submit disparado');
+        e.preventDefault();
+        triggerSave();
     });
+
+    // Conectar botón del header si existe
+    const headerSaveBtn = document.getElementById('btn-save-config');
+    if (headerSaveBtn) {
+        console.log('✅ Botón del header encontrado, conectando...');
+        headerSaveBtn.addEventListener('click', function(e) {
+            console.log('🖱️ Click en botón del header');
+            e.preventDefault();
+            e.stopPropagation();
+            triggerSave();
+        });
+    } else {
+        console.warn('⚠️ No se encontró el botón btn-save-config');
+    }
+    
+    // Botón de submit del formulario
+    const submitBtn = document.querySelector('.btn-submit');
+    if (submitBtn) {
+        console.log('✅ Botón submit encontrado');
+        submitBtn.addEventListener('click', function(e) {
+            console.log('🖱️ Click en botón submit');
+            // Aunque sea type="submit", forzamos el flujo para evitar bloqueos
+            e.preventDefault();
+            e.stopPropagation();
+            triggerSave();
+        });
+    } else {
+        console.warn('⚠️ No se encontró el botón .btn-submit');
+    }
     
     // Botón de restablecer
     const resetButton = document.getElementById('btn-reset-config');
-    resetButton.addEventListener('click', function() {
-        if (confirm('¿Está seguro de que desea restablecer la configuración? Se perderán todos los cambios no guardados.')) {
-            resetConfiguration();
-        }
-    });
+    if (resetButton) {
+        console.log('✅ Botón de restablecer encontrado');
+        resetButton.addEventListener('click', function() {
+            if (confirm('¿Está seguro de que desea restablecer la configuración? Se perderán todos los cambios no guardados.')) {
+                resetConfiguration();
+            }
+        });
+    } else {
+        console.warn('⚠️ No se encontró el botón btn-reset-config');
+    }
 }
 
 function validateForm() {
@@ -261,6 +334,7 @@ function validateForm() {
         const event = { target: field };
         if (!validateField(event)) {
             isValid = false;
+            console.warn('⚠️ Campo requerido incompleto:', field.name || field.id, 'valor:', field.value);
         }
     });
     
@@ -271,13 +345,23 @@ function submitConfiguration() {
     const form = document.getElementById('config-form');
     const formData = new FormData(form);
     
+    // Log para debugging
+    console.log('📤 Enviando configuración...');
+    for (let [key, value] of formData.entries()) {
+        console.log(`  ${key}: ${value}`);
+    }
+    
     // Enviar al servidor
     fetch('/admin/configuracion/guardar', {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('📡 Respuesta recibida:', response.status);
+        return response.json();
+    })
     .then(data => {
+        console.log('📊 Datos de respuesta:', data);
         showLoadingState(false);
         if (data.success) {
             showNotification('Configuración guardada exitosamente', 'success');
@@ -289,7 +373,7 @@ function submitConfiguration() {
     })
     .catch(error => {
         showLoadingState(false);
-        console.error('Error:', error);
+        console.error('❌ Error:', error);
         showNotification('Error de conexión al servidor', 'error');
         updateSaveStatus('error');
     });
@@ -345,19 +429,70 @@ function updateSaveStatus(status) {
 }
 
 function showLoadingState(loading) {
-    const submitButton = document.querySelector('.btn-submit');
-    const buttonText = submitButton.querySelector('span') || submitButton;
-    const buttonIcon = submitButton.querySelector('i');
+    // Seleccionar ambos botones: el del formulario y el del header
+    const buttons = [
+        document.querySelector('.btn-submit'),
+        document.getElementById('btn-save-config')
+    ].filter(btn => btn !== null);
+
+    buttons.forEach(btn => {
+        const buttonIcon = btn.querySelector('i');
+        
+        if (loading) {
+            btn.disabled = true;
+            
+            // Guardar icono original
+            if (buttonIcon && !btn.dataset.originalIcon) {
+                btn.dataset.originalIcon = buttonIcon.className;
+            }
+            
+            // Cambiar a spinner
+            if (buttonIcon) {
+                buttonIcon.className = 'fas fa-spinner fa-spin';
+            }
+            
+            // Cambiar texto (buscando nodo de texto)
+            let textNode = null;
+            for (let i = 0; i < btn.childNodes.length; i++) {
+                if (btn.childNodes[i].nodeType === Node.TEXT_NODE && btn.childNodes[i].textContent.trim().length > 0) {
+                    textNode = btn.childNodes[i];
+                    break;
+                }
+            }
+            
+            if (textNode) {
+                if (!btn.dataset.originalText) {
+                    btn.dataset.originalText = textNode.textContent;
+                }
+                textNode.textContent = ' Guardando...';
+            }
+            
+        } else {
+            btn.disabled = false;
+            
+            // Restaurar icono
+            if (buttonIcon && btn.dataset.originalIcon) {
+                buttonIcon.className = btn.dataset.originalIcon;
+            }
+            
+            // Restaurar texto
+            if (btn.dataset.originalText) {
+                let textNode = null;
+                for (let i = 0; i < btn.childNodes.length; i++) {
+                    if (btn.childNodes[i].nodeType === Node.TEXT_NODE && btn.childNodes[i].textContent.trim().length > 0) {
+                        textNode = btn.childNodes[i];
+                        break;
+                    }
+                }
+                if (textNode) {
+                    textNode.textContent = btn.dataset.originalText;
+                }
+            }
+        }
+    });
     
     if (loading) {
-        submitButton.disabled = true;
-        buttonIcon.className = 'fas fa-spinner fa-spin';
-        buttonText.textContent = 'Guardando...';
         updateSaveStatus('saving');
-    } else {
-        submitButton.disabled = false;
-        buttonIcon.className = 'fas fa-save';
-        buttonText.textContent = 'Guardar Configuración';
     }
 }
 

@@ -468,10 +468,10 @@ public class MercadoPagoService {
 
             LocalDate fechaVencimientoSiguiente = calcularFechaVencimientoParaCuota(diaVencimiento, fechaReferencia, siguienteNumero);
 
-            // Solo generar si ya pasó la fecha de vencimiento de la siguiente cuota
+            // Solo generar si ya pasó la fecha de vencimiento de la cuota ANTERIOR
             LocalDate hoy = LocalDate.now();
-            if (fechaVencimientoSiguiente.isAfter(hoy)) {
-                log.info("⏳ Aún no es momento de generar la cuota {} (vence {})", siguienteNumero, fechaVencimientoSiguiente);
+            if (ultimaCuota.getFechaVencimiento() != null && !hoy.isAfter(ultimaCuota.getFechaVencimiento())) {
+                log.info("⏳ Aún no ha vencido la cuota anterior {}, no se genera la siguiente", ultimoNumeroCuota);
                 return;
             }
 

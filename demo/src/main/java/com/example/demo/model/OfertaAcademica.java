@@ -57,6 +57,9 @@ public class OfertaAcademica {
     @NotNull(message = "El costo de inscripción no puede estar vacío")
     private Double costoInscripcion;
     
+    @Min(0)
+    private Double recargoMora;
+    
 
     @OneToMany(mappedBy = "ofertaAcademica", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Horario> horarios = new ArrayList<>();
@@ -376,7 +379,7 @@ public class OfertaAcademica {
     public void modificarDatosBasicos(String nombre, String descripcion, String duracion,
                                     LocalDate fechaInicio, LocalDate fechaFin, 
                                     Modalidad modalidad, Integer cupos, Boolean visibilidad,
-                                    Double costoInscripcion, Boolean certificado) {
+                                    Double costoInscripcion, Double recargoMora, Boolean certificado) {
         if (nombre != null && !nombre.trim().isEmpty()) {
             this.nombre = nombre.trim();
         }
@@ -413,6 +416,10 @@ public class OfertaAcademica {
         
         if (costoInscripcion != null && costoInscripcion >= 0) {
             this.costoInscripcion = costoInscripcion;
+        }
+
+        if (recargoMora != null && recargoMora >= 0) {
+            this.recargoMora = recargoMora;
         }
         
         if (certificado != null) {
