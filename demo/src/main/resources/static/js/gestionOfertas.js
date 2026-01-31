@@ -557,6 +557,9 @@ document.addEventListener('DOMContentLoaded', function () {
         const rows = table.querySelectorAll('tbody tr');
         let visibleCount = 0;
 
+        // Función para normalizar texto (ignorar tildes y mayúsculas)
+        const normalize = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+
         rows.forEach(row => {
             const cells = row.querySelectorAll('td');
             if (cells.length === 0) return;
@@ -564,6 +567,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const nombre = cells[1].textContent.toLowerCase();
             const tipo = cells[2].textContent.trim();
             const modalidad = cells[3].textContent.trim();
+            const estado = cells[8].textContent.trim(); // Ajustado índice si es necesario, verificar estructura
             const costo = parseFloat(cells[6].textContent.replace(/[^0-9.]/g, '')) || 0;
             
             let visible = true;
@@ -572,10 +576,13 @@ document.addEventListener('DOMContentLoaded', function () {
             if (filters.search && !nombre.includes(filters.search)) {
                 visible = false;
             }
-            if (filters.tipo && !tipo.includes(filters.tipo)) {
+            if (filters.tipo && normalize(tipo) !== filters.tipo) {
                 visible = false;
             }
-            if (filters.modalidad && !modalidad.includes(filters.modalidad)) {
+            if (filters.modalidad && normalize(modalidad) !== filters.modalidad) {
+                visible = false;
+            }
+            if (filters.estado && normalize(estado) !== filters.estado) {
                 visible = false;
             }
             if (costo < filters.costoMin || costo > filters.costoMax) {

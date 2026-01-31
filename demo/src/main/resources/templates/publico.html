@@ -101,18 +101,6 @@
         <!-- Sección Ofertas Académicas -->
         <section class="py-5" id="ofertas">
             <div class="container">
-                
-                <!-- Alertas -->
-                <div th:if="${success}" class="alert alert-success alert-dismissible fade show mb-4" role="alert">
-                    <i class="fas fa-check-circle me-2"></i>
-                    <span th:text="${success}">Mensaje de éxito</span>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-                <div th:if="${error}" class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
-                    <i class="fas fa-exclamation-circle me-2"></i>
-                    <span th:text="${error}">Mensaje de error</span>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
 
                 <div class="row justify-content-center">
                     <div class="col-lg-8 text-center mb-5">
@@ -388,8 +376,11 @@
                             const dataModalidad = oferta.getAttribute('data-modalidad') || '';
                             const dataCategoria = oferta.getAttribute('data-categoria') || '';
 
+                            // Normalizar para ignorar mayúsculas/minúsculas y acentos
+                            const normalize = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+                            
                             const coincideNombre = dataNombre.includes(nombre);
-                            const coincideTipo = tipo === '' || dataTipo === tipo;
+                            const coincideTipo = tipo === '' || normalize(dataTipo) === tipo;
                             const coincideModalidad = modalidad === '' || dataModalidad === modalidad;
                             const coincideCategoria = categoria === '' || dataCategoria === categoria;
 

@@ -299,15 +299,18 @@ public class OfertaAcademicaService {
      * Se ejecuta cada 10 minutos (600000 ms)
      */
     @Scheduled(fixedRate = 600000)
-    @Transactional
     public void verificarOfertasFinalizadas() {
         List<OfertaAcademica> todas = obtenerTodas();
         int actualizadas = 0;
         
         for (OfertaAcademica oferta : todas) {
-            if (oferta.actualizarEstadoSiFinalizada()) {
-                guardar(oferta);
-                actualizadas++;
+            try {
+                if (oferta.actualizarEstadoSiFinalizada()) {
+                    guardar(oferta);
+                    actualizadas++;
+                }
+            } catch (Exception e) {
+                System.err.println("Error al actualizar estado de la oferta ID: " + oferta.getIdOferta() + " (" + oferta.getNombre() + "): " + e.getMessage());
             }
         }
         

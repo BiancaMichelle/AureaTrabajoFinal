@@ -61,7 +61,7 @@ public class EstadisticasService {
             
             metricas.put("ofertasActivas", ofertasActivas);
             metricas.put("ofertasInactivas", ofertasInactivas);
-            metricas.put("totalOfertas", ofertasActivas + ofertasInactivas);
+            metricas.put("totalOfertas", ofertaRepository.count());
             metricas.put("usuariosPorRol", usuariosPorRol);
             metricas.put("ofertasPorTipo", obtenerOfertasPorTipo());
             metricas.put("totalInscripciones", totalInscripciones);
