@@ -96,6 +96,7 @@ public class AulaController {
             List<Map<String, Object>> clasesCalculadas = new ArrayList<>();
             List<Clase> clasesReales = claseRepository.findByModuloCursoIdOferta(id);
             Map<LocalDate, Clase> mapaClases = new HashMap<>();
+            Set<LocalDate> fechasAgregadas = new HashSet<>();
             
             if (clasesReales != null) {
                 for (Clase c : clasesReales) {
@@ -163,20 +164,49 @@ public class AulaController {
                             dto.put("display", fecha.format(dtf) + " (" + diaSemana + ")");
                         }
                         clasesCalculadas.add(dto);
+                        fechasAgregadas.add(fecha);
                     }
                 }
-            } else {
-             // Fallback: Si no hay horario, mostrar solo las reales
-             for(Clase c : clasesReales) {
-                 if(c.getInicio() != null) {
-                     Map<String, Object> dto = new HashMap<>();
-                     dto.put("fechaIso", c.getInicio().toLocalDate().toString());
-                     dto.put("id", c.getIdClase());
-                     dto.put("titulo", c.getTitulo() + " (" + c.getInicio().format(dtf) + ")");
-                     dto.put("display", c.getInicio().format(dtf) + " - " + c.getTitulo());
-                     clasesCalculadas.add(dto);
+            } 
+            
+            // AGREGAR CLASES EXTRA (Fuera de horario programado)
+            if (clasesReales != null) {
+                 for(Clase c : clasesReales) {
+                     if(c.getInicio() != null) {
+                         LocalDate fechaClase = c.getInicio().toLocalDate();
+                         if (!fechasAgregadas.contains(fechaClase)) {
+                             // Es una clase extra fuera del horario estándar
+                             Map<String, Object> dto = new HashMap<>();
+                             dto.put("fechaIso", fechaClase.toString());
+                             dto.put("id", c.getIdClase());
+                             
+                             String diaSemana = switch(fechaClase.getDayOfWeek()) {
+                                case MONDAY -> "Lunes";
+                                case TUESDAY -> "Martes";
+                                case WEDNESDAY -> "Miércoles";
+                                case THURSDAY -> "Jueves";
+                                case FRIDAY -> "Viernes";
+                                case SATURDAY -> "Sábado";
+                                case SUNDAY -> "Domingo";
+                            };
+                             
+                             dto.put("titulo", c.getTitulo() + " (" + fechaClase.format(dtf) + ")");
+                             dto.put("display", fechaClase.format(dtf) + " (" + diaSemana + ") - " + c.getTitulo() + " (Extra)");
+                             clasesCalculadas.add(dto);
+                             fechasAgregadas.add(fechaClase);
+                         }
+                     }
                  }
-             }
+            }
+            
+            // Si no hubo horarios y se agregaron solo reales arriba, esto ya cubre el fallback anterior.
+            // (El bloque `fallback` original se vuelve redundante o necesita ajuste. 
+            //  Pero como mantengo la estructura if/else del original para minimizar cambios drásticos, revisaré el else).
+            
+            if (diasValidos.isEmpty() && clasesCalculadas.isEmpty()) {
+                 // Fallback original: Si no hay horario, mostrar solo las reales
+                 // Pero mi bloque 'AGREGAR CLASES EXTRA' ya lo hace si clasesCalculadas estaba vacío.
+                 // Entonces el else original se puede quitar o dejar vacío.
             }
             
             // Ordenar por fecha descendente (más reciente primero)

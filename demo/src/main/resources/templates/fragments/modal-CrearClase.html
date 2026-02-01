@@ -64,6 +64,11 @@
                         <label class="block text-sm font-medium text-gray-700">Cantidad de preguntas</label>
                         <input type="number" name="cantidadPreguntas" min="1" max="10" value="3"
                                class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2">
+                               
+                        <label class="block text-sm font-medium text-gray-700 mt-3">Intervalo entre preguntas (minutos)</label>
+                        <input type="number" name="tiempoPreguntas" min="1" value="5"
+                               class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2">
+                        <p class="text-xs text-gray-500 mt-1">Tiempo desde el inicio de clase para la primera pregunta y entre preguntas sucesivas.</p>
                     </div>
                 </div>
 
@@ -175,6 +180,10 @@
             document.getElementById('cantidadPreguntasContainer').classList.add('hidden');
             document.getElementById('publicarResumenContainer').classList.add('hidden');
 
+            // Resetear inputs específicos
+            const tiempoInput = form.querySelector('input[name="tiempoPreguntas"]');
+            if (tiempoInput) tiempoInput.value = 5;
+
             // Establecer moduloId
             document.getElementById('moduloIdInput').value = moduloId;
             modal.classList.remove('hidden');
@@ -229,6 +238,8 @@
             if(data.preguntasAleatorias) {
                 preguntasContainer.classList.remove('hidden');
                 form.querySelector('input[name="cantidadPreguntas"]').value = data.cantidadPreguntas;
+                const tiempoInput = form.querySelector('input[name="tiempoPreguntas"]');
+                if (tiempoInput) tiempoInput.value = data.tiempoPreguntas || 5;
             } else {
                 preguntasContainer.classList.add('hidden');
             }
@@ -274,9 +285,9 @@
             const container = document.getElementById('cantidadPreguntasContainer');
             container.classList.toggle('hidden', !this.checked);
             const cantidadInput = document.querySelector('input[name="cantidadPreguntas"]');
-            if (cantidadInput) {
-                cantidadInput.required = this.checked;
-            }
+            const tiempoInput = document.querySelector('input[name="tiempoPreguntas"]');
+            if (cantidadInput) cantidadInput.required = this.checked;
+            if (tiempoInput) tiempoInput.required = this.checked;
         });
         
         // Mostrar/ocultar opción de publicación automática de resumen (CU-27)
@@ -311,10 +322,19 @@
             }
             const preguntasCheck = document.getElementById('preguntasAleatorias');
             const cantidadInput = document.querySelector('input[name="cantidadPreguntas"]');
-            if (preguntasCheck?.checked && (!cantidadInput.value || cantidadInput.value < 1)) {
-                e.preventDefault();
-                alert('Por favor, especifica la cantidad de preguntas (mínimo 1)');
-                return;
+            const tiempoInput = document.querySelector('input[name="tiempoPreguntas"]');
+            
+            if (preguntasCheck?.checked) {
+                if (!cantidadInput.value || cantidadInput.value < 1) {
+                    e.preventDefault();
+                    alert('Por favor, especifica la cantidad de preguntas (mínimo 1)');
+                    return;
+                }
+                if (!tiempoInput.value || tiempoInput.value < 1) {
+                    e.preventDefault();
+                    alert('Por favor, especifica el intervalo de tiempo (mínimo 1 minuto)');
+                    return;
+                }
             }
             
             // INTERCEPCIÓN AJAX PARA CREAR Y EDITAR

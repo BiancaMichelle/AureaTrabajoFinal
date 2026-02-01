@@ -105,12 +105,18 @@ public class AsistenciaService {
             if (fechaEfectiva.isAfter(hoy)) {
                 throw new IllegalArgumentException("No se puede registrar asistencia en fechas futuras");
             }
-            if (oferta.getFechaInicio() != null && fechaEfectiva.isBefore(oferta.getFechaInicio())) {
-                throw new IllegalArgumentException("No se puede registrar asistencia antes del inicio de la oferta");
+            
+            // Validación de fechas de oferta (Solo si NO es una clase específica agendada)
+            // Si es una clase agendada (claseSeleccionada != null), confiamos en la fecha de la clase
+            if (claseSeleccionada == null) {
+                if (oferta.getFechaInicio() != null && fechaEfectiva.isBefore(oferta.getFechaInicio())) {
+                    throw new IllegalArgumentException("No se puede registrar asistencia antes del inicio de la oferta");
+                }
+                if (oferta.getFechaFin() != null && fechaEfectiva.isAfter(oferta.getFechaFin())) {
+                    throw new IllegalArgumentException("No se puede registrar asistencia después de la fecha de fin de la oferta");
+                }
             }
-            if (oferta.getFechaFin() != null && fechaEfectiva.isAfter(oferta.getFechaFin())) {
-                throw new IllegalArgumentException("No se puede registrar asistencia después de la fecha de fin de la oferta");
-            }
+
             if (fechaInscripcion != null && fechaEfectiva.isBefore(fechaInscripcion)) {
                 throw new IllegalArgumentException("No se puede registrar asistencia antes de la fecha de inscripción del alumno");
             }

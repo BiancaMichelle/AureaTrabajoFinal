@@ -1,6 +1,7 @@
 package com.example.demo.controller;
 
 import java.security.Principal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +18,15 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
+
+// OpenPDF imports
+import com.lowagie.text.Document;
+import com.lowagie.text.Paragraph;
+import com.lowagie.text.Font;
+import com.lowagie.text.FontFactory;
+import com.lowagie.text.pdf.PdfWriter;
+import java.io.ByteArrayOutputStream;
+import java.awt.Color;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -57,6 +67,7 @@ public class ClaseController {
     private final CuotaRepository cuotaRepository;
     private final InstitutoService institutoService;
     private final PasswordEncoder passwordEncoder;
+    private final com.example.demo.service.AsistenciaEnVivoService asistenciaEnVivoService;
 
     public ClaseController(ClaseService claseService,
             JitsiClaseService jitsiClaseService,
@@ -70,7 +81,8 @@ public class ClaseController {
             com.example.demo.repository.InscripcionRepository inscripcionRepository,
             CuotaRepository cuotaRepository,
             InstitutoService institutoService,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            com.example.demo.service.AsistenciaEnVivoService asistenciaEnVivoService) {
         this.claseService = claseService;
         this.jitsiClaseService = jitsiClaseService;
         this.moduloRepository = moduloRepository;
@@ -84,6 +96,7 @@ public class ClaseController {
         this.cuotaRepository = cuotaRepository;
         this.institutoService = institutoService;
         this.passwordEncoder = passwordEncoder;
+        this.asistenciaEnVivoService = asistenciaEnVivoService;
     }
 
     @PostMapping("/crear")
@@ -466,17 +479,22 @@ public class ClaseController {
 
             System.out.println("🎯 Generando resumen de clase: " + clase.getTitulo());
 
-            // Paso 4: Generar resumen con IA
-            String resumenHtml = chatServiceSimple.generarResumenClase(transcripcion);
+            // Paso 4: Generar resumen con IA (ahora devuelve texto plano estructurado)
+            String resumenTexto = chatServiceSimple.generarResumenClase(transcripcion);
 
             // Paso 5: Verificar si debe publicarse automáticamente
             boolean publicarAutomaticamente = Boolean.TRUE.equals(clase.getPublicarResumenAutomaticamente());
             
             // Paso 6: Crear Material (siempre se crea, pero la visibilidad depende de la configuración)
             com.example.demo.model.Material material = new com.example.demo.model.Material();
-            material.setTitulo("Resumen IA: " + clase.getTitulo());
+            // Formatear fecha y hora para el título
+            String fechaHoraClase = clase.getInicio() != null 
+                ? clase.getInicio().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                : LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+            
+            material.setTitulo("Resumen de la clase " + fechaHoraClase);
             material.setDescripcion("Resumen generado automáticamente por IA para la clase del " + 
-                                   LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+                                   (clase.getInicio() != null ? clase.getInicio().toLocalDate() : LocalDate.now()));
             material.setFechaCreacion(LocalDateTime.now());
             material.setVisibilidad(publicarAutomaticamente); // Secuencia Alternativa Paso 5
             material.setModulo(clase.getModulo());
@@ -488,11 +506,43 @@ public class ClaseController {
             
             material = materialRepository.save(material);
 
-            // Crear Archivo HTML con el resumen
+            // Generar PDF usando OpenPDF
+            ByteArrayOutputStream pdfOut = new ByteArrayOutputStream();
+            Document document = new Document();
+            try {
+                PdfWriter.getInstance(document, pdfOut);
+                document.open();
+
+                // Título
+                Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18, Color.BLACK);
+                Paragraph title = new Paragraph("Resumen de la clase " + fechaHoraClase, titleFont);
+                title.setAlignment(com.lowagie.text.Element.ALIGN_CENTER);
+                title.setSpacingAfter(20);
+                document.add(title);
+
+                // Contenido
+                Font bodyFont = FontFactory.getFont(FontFactory.HELVETICA, 12, Color.BLACK);
+                String[] paragraphs = resumenTexto.split("\\n");
+                for (String para : paragraphs) {
+                    if (!para.trim().isEmpty()) {
+                        Paragraph p = new Paragraph(para.trim(), bodyFont);
+                        p.setSpacingAfter(10);
+                        document.add(p);
+                    }
+                }
+            } catch (Exception e) {
+                // Fallback si falla PDF: guardar texto plano
+                pdfOut.reset();
+                pdfOut.write(resumenTexto.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            } finally {
+                if(document.isOpen()) document.close();
+            }
+
+            // Crear Archivo PDF con el resumen
             com.example.demo.model.Archivo archivo = new com.example.demo.model.Archivo();
-            archivo.setNombre("resumen-" + claseId + ".html");
-            archivo.setTipoMime("text/html");
-            archivo.setContenido(resumenHtml.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            archivo.setNombre("resumen-" + claseId + ".pdf");
+            archivo.setTipoMime("application/pdf");
+            archivo.setContenido(pdfOut.toByteArray());
             archivo.setTamano((long) archivo.getContenido().length);
             archivo.setFechaSubida(LocalDateTime.now());
             archivo.setMaterial(material);
@@ -502,6 +552,15 @@ public class ClaseController {
             System.out.println("✅ Resumen generado y guardado");
             System.out.println("   - Material ID: " + material.getIdActividad());
             System.out.println("   - Visible para alumnos: " + publicarAutomaticamente);
+
+            // Consolidar asistencia de la clase (calcular presentes/ausentes)
+            try {
+                asistenciaEnVivoService.consolidarAsistenciaClase(claseId);
+                System.out.println("✅ Asistencia consolidada para clase: " + claseId);
+            } catch (Exception e) {
+                System.err.println("❌ Error al consolidar asistencia: " + e.getMessage());
+                // No detenemos el flujo, ya que el resumen es lo principal aquí
+            }
 
             // Paso 7: Notificar (Postcondición CU-27)
             notificarResumenGenerado(clase, material, publicarAutomaticamente);

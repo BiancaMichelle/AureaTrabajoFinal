@@ -693,16 +693,14 @@ public class ChatServiceSimple {
 
     public String generarResumenClase(String transcripcion) {
         try {
-            String systemPrompt = "Eres un asistente experto en educación. Tu tarea es generar un resumen formal, estructurado y visualmente atractivo de una clase virtual a partir de su transcripción. " +
-                    "El resumen debe estar en formato HTML limpio (sin etiquetas <html>, <head>, <body>), utilizando estilos en línea (inline CSS) para dar formato. " +
-                    "Usa una paleta de colores profesional (azules, grises, blancos). " +
-                    "Estructura el resumen con: " +
-                    "1. Un título <h1> centrado y con color distintivo. " +
-                    "2. Una sección de 'Introducción' o 'Contexto'. " +
-                    "3. Una lista de 'Temas Principales' (<ul> o <ol>). " +
-                    "4. 'Puntos Clave' destacados. " +
-                    "5. 'Conclusiones' o 'Cierre'. " +
-                    "Asegúrate de que el HTML sea válido y se vea bien en un contenedor div.";
+            String systemPrompt = "Eres un redactor académico experto. Tu tarea es generar un resumen coherente, fluido y bien estructurado de una clase virtual a partir de su transcripción. " +
+                    "El texto debe tener sentido completo, conectando las ideas de manera lógica. " +
+                    "Formato de salida: TEXTO PLANO (sin Markdown complejo, sin HTML). " +
+                    "Estructura requerida: " +
+                    "1. Introducción: Contexto general de la clase. " +
+                    "2. Desarrollo: Los temas principales explicados en profundidad y con cohesión. " +
+                    "3. Conclusiones: Cierre sintetizando lo aprendido. " +
+                    "IMPORTANTE: Redacta en tercera persona, usa un tono formal y educativo. Céntrate en el contenido académico. Evita frases como 'En esta transcripción' o 'El profesor dijo'.";
 
             List<Map<String, Object>> messages = new ArrayList<>();
             Map<String, Object> systemMessage = new HashMap<>();

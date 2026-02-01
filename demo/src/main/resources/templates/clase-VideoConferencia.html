@@ -213,7 +213,7 @@
             <div id="classEndedMessage"
                 class="hidden bg-white border border-gray-200 text-gray-700 px-6 py-12 rounded-xl text-center mb-6">
                 <i class="fas fa-check-circle text-5xl mb-5 text-green-500"></i>
-                <h2 class="text-2xl font-semibold mb-2 text-gray-800">La clase ha terminado</h2>
+                <h2 id="endMessageTitle" class="text-2xl font-semibold mb-2 text-gray-800">La clase ha terminado</h2>
                 <p class="mb-6 text-gray-600">Gracias por participar.</p>
 
                 <!-- Status del Resumen IA -->
@@ -328,6 +328,7 @@
                 const api = new JitsiMeetExternalAPI(domain, options);
 
                 let hasJoined = false;
+                let forcedExit = false;
 
                 // Ocultar mensaje de carga cuando se carga la API
                 api.addEventListener('videoConferenceJoined', () => {
@@ -344,6 +345,14 @@
                         iniciarTranscripcion();
                     }
                 });
+                
+                // Detectar expulsión o fin remoto
+                api.addEventListener('participantKickedOut', (event) => {
+                     if (event.kicked && event.kicked.local) {
+                         console.log("⚠️ Usuario fue expulsado o la clase terminó para todos");
+                         forcedExit = true;
+                     }
+                });
 
                 // Detectar cuando se termina la llamada
                 api.addEventListener('videoConferenceLeft', () => {
@@ -358,6 +367,7 @@
 
                 api.addEventListener('readyToClose', () => {
                     console.log("🔴 Evento: readyToClose");
+                    forcedExit = true; // Asumimos fin global si el evento es readyToClose
                     if (hasJoined) {
                         mostrarMensajeFinClase();
                         if (isTeacher && transcripcionHabilitada) {
@@ -370,9 +380,23 @@
                     const container = document.getElementById('jitsi-container');
                     const message = document.getElementById('classEndedMessage');
                     const btnDescargar = document.getElementById('btnDescargarTranscripcion');
+                    const title = document.getElementById('endMessageTitle'); // Elemento del título
 
                     if (container) container.style.display = 'none';
                     if (message) message.classList.remove('hidden');
+                    
+                    // Lógica del mensaje de salida
+                    if (title) {
+                        if (isTeacher) {
+                             title.textContent = "La clase ha terminado";
+                        } else {
+                            if (forcedExit) {
+                                title.textContent = "La clase ha terminado"; // Docente cortó
+                            } else {
+                                title.textContent = "Has abandonado la clase"; // Alumno salió voluntariamente
+                            }
+                        }
+                    }
 
                     // Mostrar botón de descarga si hay transcripción y es docente
                     if (isTeacher && transcripcionHabilitada) {
@@ -500,7 +524,7 @@
                 fetch(`/clase/finalizar-con-resumen/${claseId}`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'text/plain',
+                        'Content-Type': 'text/plain; charset=utf-8',
                         [csrfHeader]: csrfToken
                     },
                     body: fullTranscript
