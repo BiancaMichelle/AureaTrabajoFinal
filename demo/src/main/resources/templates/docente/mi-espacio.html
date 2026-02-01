@@ -127,10 +127,12 @@
         }
 
         .calendar-day {
-            aspect-ratio: 1;
+            min-height: 100px;
+            height: auto;
             display: flex;
-            align-items: center;
-            justify-content: center;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: flex-start;
             border-radius: 12px;
             cursor: pointer;
             font-size: 0.95rem;
@@ -138,6 +140,8 @@
             position: relative;
             color: #2d3748;
             background: #f7fafc;
+            padding: 8px;
+            overflow: hidden;
         }
 
         .calendar-day:hover {
@@ -337,11 +341,11 @@
 
             <div class="stat-card">
                 <div class="stat-icon orange">
-                    <i class="fas fa-clipboard-list"></i>
+                    <i class="fas fa-check-double"></i>
                 </div>
                 <div class="stat-content">
-                    <h4>Entregas Pendientes</h4>
-                    <p th:text="${entregasPendientes}">0</p>
+                    <h4>Correcciones Pendientes</h4>
+                    <p th:text="${correccionesPendientes}">0</p>
                 </div>
             </div>
         </div>
@@ -499,6 +503,8 @@
                 // Contenedor número
                 const dayNum = document.createElement('div');
                 dayNum.textContent = i;
+                dayNum.style.fontWeight = 'bold';
+                dayNum.style.marginBottom = '4px';
                 day.appendChild(dayNum);
                 
                 if (i === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
@@ -508,17 +514,21 @@
                 const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
                 
                 if (eventsMap[dateStr]) {
-                    // Mostrar indicadores o los eventos mismos
                     day.classList.add('has-event');
                     
-                    // Renderizar pequeños indicadores o títulos truncados
-                    eventsMap[dateStr].forEach(evt => {
+                    const dayEvents = eventsMap[dateStr];
+                    // LIMITAR A 3 o 4 EVENTOS PARA EVITAR QUE EL CALENDARIO SE AGRANDE DEMASIADO
+                    dayEvents.slice(0, 3).forEach(evt => {
                         const evtDiv = document.createElement('div');
-                        evtDiv.className = evt.className || 'calendar-event'; 
-                        // evt.className viene del controller como 'calendar-event exam' o 'calendar-event assignment'
-                        // Pero 'calendar-event' ya tiene estilo base? Depende del CSS.
-                        // Asumamos que queremos mostrar el título pequeño
-                        evtDiv.textContent = evt.title;
+                        
+                        // Limpiar titulo
+                        let title = evt.title;
+                        if(title.startsWith("Clase: ")) title = title.substring(7);
+                        if(title.startsWith("Examen: ")) title = "Ex: " + title.substring(8);
+                        if(title.startsWith("Entrega: ")) title = "Ent: " + title.substring(9);
+
+                        evtDiv.textContent = title;
+                        evtDiv.title = evt.title; // Tooltip completo
                         evtDiv.style.fontSize = '0.7rem';
                         evtDiv.style.whiteSpace = 'nowrap';
                         evtDiv.style.overflow = 'hidden';
@@ -527,16 +537,16 @@
                         evtDiv.style.padding = '1px 3px';
                         evtDiv.style.borderRadius = '3px';
                         
-                        // Colores simples basados en clase si no están en CSS
-                        if(evt.className && evt.className.includes('exam')) {
+                        // Colores basados en className
+                        if(evt.className && evt.className.includes('event-examen')) {
                              evtDiv.style.backgroundColor = '#fed7d7'; // rojizo
                              evtDiv.style.color = '#c53030';
-                        } else if (evt.className && evt.className.includes('assignment')) {
+                        } else if (evt.className && evt.className.includes('event-entrega')) {
                              evtDiv.style.backgroundColor = '#feebc8'; // naranja
                              evtDiv.style.color = '#c05621';
-                        } else if (evt.className && evt.className.includes('class-session')) {
+                        } else if (evt.className && evt.className.includes('event-clase')) {
                              evtDiv.style.backgroundColor = '#c6f6d5'; // verde claro
-                             evtDiv.style.color = '#22543d'; // verde oscuro
+                             evtDiv.style.color = '#22543d'; 
                         } else {
                              evtDiv.style.backgroundColor = '#bee3f8'; // azul
                              evtDiv.style.color = '#2b6cb0';
@@ -544,11 +554,19 @@
 
                         day.appendChild(evtDiv);
                     });
+
+                    if(dayEvents.length > 3) {
+                        const moreDiv = document.createElement('div');
+                        moreDiv.textContent = `+ ${dayEvents.length - 3} más`;
+                        moreDiv.style.fontSize = '0.7rem';
+                        moreDiv.style.color = '#718096';
+                        moreDiv.style.textAlign = 'center';
+                        day.appendChild(moreDiv);
+                    }
                 }
                 
                 day.addEventListener('click', () => {
-                    // Podría abrir un modal con detalles
-                    console.log(`Día seleccionado: ${dateStr}`, eventsMap[dateStr]);
+                   // Opcional: Mostrar modal con detalles completos
                 });
                 
                 calendarDays.appendChild(day);

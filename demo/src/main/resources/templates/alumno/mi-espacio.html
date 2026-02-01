@@ -499,59 +499,78 @@
                     </div>
                 </div>
 
-                <!-- Próximas Actividades -->
+                <!-- Próximas Actividades / Tareas -->
                 <div class="panel">
                     <div class="panel-header">
-                        <i class="fas fa-bell"></i>
-                        <h3>Próximas Actividades</h3>
+                        <i class="fas fa-tasks"></i>
+                        <h3>Mis Tareas</h3>
                     </div>
-                    <div class="activity-list">
-                        <div th:if="${#lists.isEmpty(proximasEntregas) and #lists.isEmpty(proximosExamenes)}" class="empty-state">
-                            <p>No hay actividades próximas.</p>
+                    <div class="activity-list" style="max-height: 400px; overflow-y: auto;">
+                        <div th:if="${#lists.isEmpty(listaTareas)}" class="empty-state">
+                            <p>No hay tareas asignadas.</p>
                         </div>
-                        <div th:each="entrega : ${proximasEntregas}" class="activity-item">
-                            <div class="activity-icon green">
-                                <i class="fas fa-file-alt"></i>
+                        <div th:each="item : ${listaTareas}" class="activity-item" 
+                             th:with="tarea=${item['tarea']}, estado=${item['estado']}, entregada=${item['entregada']}, calificacion=${item['calificacion']}">
+                            
+                            <!-- Icono según estado -->
+                            <div class="activity-icon"
+                                 th:classappend="${estado == 'COMPLETADA' ? 'green' : (estado == 'ATRASADA' ? 'red' : 'blue')}">
+                                <i class="fas" th:classappend="${estado == 'COMPLETADA' ? 'fa-check' : (estado == 'ATRASADA' ? 'fa-exclamation' : 'fa-clock')}"></i>
                             </div>
+                            
                             <div class="activity-details">
-                                <p><strong th:text="${entrega.titulo}">Nombre de la Tarea</strong></p>
-                                <span th:text="${'Curso: ' + entrega.curso}">Nombre del Curso</span>
+                                <p><strong th:text="${tarea.titulo}">Nombre de la Tarea</strong></p>
+                                <span th:if="${tarea.modulo != null and tarea.modulo.curso != null}" 
+                                      th:text="${tarea.modulo.curso.nombre}">Curso</span>
+                                
+                                <div class="mt-1 flex gap-2">
+                                     <span th:if="${estado == 'COMPLETADA'}" class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">Entregada</span>
+                                     <span th:if="${estado == 'ATRASADA'}" class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">Atrasada</span>
+                                     <span th:if="${estado == 'PENDIENTE'}" class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Pendiente</span>
+                                     
+                                     <span th:if="${calificacion != null}" class="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded" 
+                                           th:text="'Nota: ' + ${calificacion}">Nota: 10</span>
+                                </div>
                             </div>
-                            <div class="activity-time">
-                                <span th:text="${#temporals.format(entrega.fecha, 'dd/MM/yyyy')}">25/05/2024</span>
-                            </div>
-                        </div>
-                        <div th:each="examen : ${proximosExamenes}" class="activity-item">
-                            <div class="activity-icon red">
-                                <i class="fas fa-pencil-alt"></i>
-                            </div>
-                            <div class="activity-details">
-                                <p><strong th:text="${examen.titulo}">Nombre del Examen</strong></p>
-                                <span th:text="${'Curso: ' + examen.curso.nombre}">Nombre del Curso</span>
-                            </div>
-                            <div class="activity-time">
-                                <span th:text="${#temporals.format(examen.fechaHoraInicio, 'dd/MM/yyyy')}">28/05/2024</span>
+                            
+                            <div class="activity-time flex flex-col items-end">
+                                <span th:if="${tarea.limiteEntrega != null}" 
+                                      th:text="${#temporals.format(tarea.limiteEntrega, 'dd/MM/yyyy')}">25/05</span>
+                                <a th:if="${tarea.modulo != null && tarea.modulo.curso != null}" 
+                                   th:href="@{/alumno/aula/{id}(id=${tarea.modulo.curso.idOferta})}" 
+                                   class="text-xs text-blue-600 hover:underline mt-1">Ir al curso</a>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Tareas Pendientes -->
+                <!-- Próximos Exámenes -->
                 <div class="panel">
                     <div class="panel-header">
-                        <i class="fas fa-exclamation-circle"></i>
-                        <h3>Tareas Pendientes</h3>
+                        <i class="fas fa-pencil-alt"></i>
+                        <h3>Próximos Exámenes</h3>
                     </div>
-                    <div class="task-list">
-                        <div th:if="${#lists.isEmpty(tareasPendientes)}" class="empty-state">
-                            <p>¡Buen trabajo! No tienes tareas pendientes.</p>
+                    <div class="activity-list">
+                        <div th:if="${#lists.isEmpty(proximosExamenes)}" class="empty-state">
+                            <p>No hay exámenes próximos.</p>
                         </div>
-                        <div th:each="tarea : ${tareasPendientes}" class="task-item">
-                            <div class="task-info">
-                                <p><strong th:text="${tarea.titulo}">Nombre de la Tarea</strong></p>
-                                <span th:text="${'Vence: ' + #temporals.format(tarea.fechaFin, 'dd/MM/yyyy')}">Vence: 05/06/2024</span>
+                        <div th:each="examen : ${proximosExamenes}" class="activity-item">
+                            <div class="activity-icon red">
+                                <i class="fas fa-file-signature"></i>
                             </div>
-                            <a th:href="@{/aula/clase/{id}(id=${tarea.modulo.curso.id})}" class="btn-task">Ir a la Tarea</a>
+                            <div class="activity-details">
+                                <p><strong th:text="${examen.titulo}">Nombre del Examen</strong></p>
+                                <span th:if="${examen.modulo != null and examen.modulo.curso != null}" 
+                                      th:text="${examen.modulo.curso.nombre}">Nombre del Curso</span>
+                                <span th:if="${examen.modulo == null}" class="text-xs text-gray-400">Sin curso asignado</span>
+                            </div>
+                            <div class="activity-time flex flex-col items-end">
+                                <span th:if="${examen.fechaApertura != null}"
+                                      th:text="${#temporals.format(examen.fechaApertura, 'dd/MM/yyyy HH:mm')}">Fecha</span>
+                                <a th:if="${examen.modulo != null && examen.modulo.curso != null}"
+                                   th:href="@{/alumno/aula/{id}(id=${examen.modulo.curso.idOferta})}"
+                                   class="text-xs text-blue-600 hover:underline mt-1">Ir al curso</a>
+                            </div>
                         </div>
                     </div>
                 </div>

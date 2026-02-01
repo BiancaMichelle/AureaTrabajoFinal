@@ -8,9 +8,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import com.example.demo.model.Curso;
+import com.example.demo.model.OfertaAcademica;
 import com.example.demo.model.Tarea;
-import com.example.demo.model.Usuario;
 
 @Repository
 public interface TareaRepository extends JpaRepository<Tarea, Long> {
@@ -24,5 +23,5 @@ public interface TareaRepository extends JpaRepository<Tarea, Long> {
     @Query("SELECT t FROM Tarea t JOIN t.modulo m WHERE m.curso.idOferta = :cursoId")
     List<Tarea> findByCursoId(@Param("cursoId") Long cursoId);
 
-    List<Tarea> findByModuloCursoIn(List<Curso> cursos);
+    List<Tarea> findByModuloCursoIn(List<OfertaAcademica> ofertas);
 }

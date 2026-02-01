@@ -36,6 +36,7 @@ public class DocenteController {
     private final TareaRepository tareaRepository;
     private final EntregaRepository entregaRepository;
     private final ClaseRepository claseRepository;
+    private final IntentoRepository intentoRepository;
     private final ObjectMapper objectMapper;
 
     public DocenteController(CursoRepository cursoRepository,
@@ -48,6 +49,7 @@ public class DocenteController {
                            TareaRepository tareaRepository,
                            EntregaRepository entregaRepository,
                            ClaseRepository claseRepository,
+                           IntentoRepository intentoRepository,
                            ObjectMapper objectMapper) {
         this.cursoRepository = cursoRepository;
         this.formacionRepository = formacionRepository;
@@ -59,6 +61,7 @@ public class DocenteController {
         this.tareaRepository = tareaRepository;
         this.entregaRepository = entregaRepository;
         this.claseRepository = claseRepository;
+        this.intentoRepository = intentoRepository;
         this.objectMapper = objectMapper;
     }
 
@@ -92,79 +95,104 @@ public class DocenteController {
                 totalAlumnos += inscripcionRepository.countByOfertaAndEstadoInscripcionTrue(oferta);
             }
 
-            // 3. Contar Entregas Pendientes (sin calificar)
-            // Esto requiere buscar tareas de estos cursos y luego entregas sin nota
+            // 3. Contar Correcciones Pendientes (Entregas sin nota + Exámenes por corregir)
             List<Tarea> tareasCursos = new ArrayList<>();
-            // Solo para cursos por ahora, si formaciones tienen tareas seria similar
-            if (!cursosDocente.isEmpty()) {
-                tareasCursos.addAll(tareaRepository.findByModuloCursoIn(cursosDocente));
+            List<Examen> examenesCursos = new ArrayList<>();
+            
+            if (!todasOfertasActivas.isEmpty()) {
+                tareasCursos.addAll(tareaRepository.findByModuloCursoIn(todasOfertasActivas));
+                examenesCursos.addAll(examenRepository.findByModulo_CursoIn(todasOfertasActivas));
             }
-            // TODO: Agregar soporte para Tareas de Formaciones si aplica
 
-            long entregasPendientes = 0;
+            long entregasSinCalificar = 0;
             if (!tareasCursos.isEmpty()) {
-                // Buscamos entregas de esas tareas que tengan calificacion null
-                 // Lo hacemos en memoria o con query si existiera
-                List<Entrega> entregasDeTareas = entregaRepository.findByTareaIn(tareasCursos); // Necesitaria este metodo
-                 entregasPendientes = entregasDeTareas.stream()
+                List<Entrega> entregasDeTareas = entregaRepository.findByTareaIn(tareasCursos);
+                 entregasSinCalificar = entregasDeTareas.stream()
                      .filter(e -> e.getCalificacion() == null)
                      .count();
             }
+            
+            long examenesPorCorregir = 0;
+            if(!examenesCursos.isEmpty()){
+                List<Long> examenIds = examenesCursos.stream()
+                    .map(Examen::getIdActividad)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+                
+                if (!examenIds.isEmpty()) {
+                    List<Intento> intentosPendientes = intentoRepository.findByExamenIdsAndEstado(examenIds, com.example.demo.enums.EstadoIntento.PENDIENTE_CORRECCION);
+                    examenesPorCorregir = intentosPendientes.size();
+                }
+            }
+            
+            long correccionesPendientes = entregasSinCalificar + examenesPorCorregir;
 
             // 4. Eventos Calendario (Exámenes y Entregas próximas)
             LocalDateTime ahora = LocalDateTime.now();
             List<Map<String, String>> events = new ArrayList<>();
 
-            // Exámenes próximos (30 días)
-            List<Examen> proximosExamenes = new ArrayList<>();
-            if (!cursosDocente.isEmpty()) {
-                 proximosExamenes = examenRepository.findByModulo_CursoInAndFechaAperturaBetween(
-                    cursosDocente, ahora, ahora.plusDays(30));
-            }
+            LocalDateTime fechaInicioCal = ahora.minusMonths(6);
+            LocalDateTime fechaFinCal = ahora.plusMonths(12);
 
-            proximosExamenes.forEach(ex -> {
+            // 1. Exámenes Calendario (Range)
+            // Filtramos en memoria de la lista completa para evitar mas queries
+            List<Examen> examenesCalendario = examenesCursos.stream()
+                .filter(ex -> ex.getFechaApertura() != null && 
+                              ex.getFechaApertura().isAfter(fechaInicioCal) && 
+                              ex.getFechaApertura().isBefore(fechaFinCal))
+                .collect(Collectors.toList());
+            
+            examenesCalendario.forEach(ex -> {
                 Map<String, String> event = new HashMap<>();
-                event.put("title", "Examen: " + ex.getTitulo() + " (" + ex.getModulo().getCurso().getNombre() + ")");
+                event.put("title", "Examen: " + ex.getTitulo());
                 event.put("start", ex.getFechaApertura().toLocalDate().toString());
-                event.put("type", "examen"); // Rojo en front
+                event.put("className", "event-examen"); 
                 events.add(event);
             });
-
-            // Tareas próximas (30 días)
-            List<Tarea> proximasTareas = tareasCursos.stream()
-                .filter(t -> t.getLimiteEntrega() != null 
-                        && t.getLimiteEntrega().isAfter(ahora)
-                        && t.getLimiteEntrega().isBefore(ahora.plusDays(30)))
+            
+            // Exámenes Panel (Future)
+            List<Examen> proximosExamenes = examenesCalendario.stream()
+                .filter(e -> e.getFechaApertura().isAfter(ahora))
+                .sorted(Comparator.comparing(Examen::getFechaApertura))
+                .limit(5)
                 .collect(Collectors.toList());
 
-            proximasTareas.forEach(t -> {
-                 Map<String, String> event = new HashMap<>();
-                 event.put("title", "Entrega: " + t.getTitulo() + " (" + t.getModulo().getCurso().getNombre() + ")");
-                 event.put("start", t.getLimiteEntrega().toLocalDate().toString());
-                 event.put("type", "entrega"); // Azul o urgente
-                 events.add(event);
-            });
+            // 2. Tareas Calendario
+            tareasCursos.stream()
+                .filter(t -> t.getLimiteEntrega() != null 
+                        && t.getLimiteEntrega().isAfter(fechaInicioCal)
+                        && t.getLimiteEntrega().isBefore(fechaFinCal))
+                .forEach(t -> {
+                     Map<String, String> event = new HashMap<>();
+                     event.put("title", "Entrega: " + t.getTitulo());
+                     event.put("start", t.getLimiteEntrega().toLocalDate().toString());
+                     event.put("className", "event-entrega");
+                     events.add(event);
+                });
+            
+            // Tareas Panel (Future)
+            List<Tarea> proximasTareas = tareasCursos.stream()
+                .filter(t -> t.getLimiteEntrega() != null && t.getLimiteEntrega().isAfter(ahora))
+                .sorted(Comparator.comparing(Tarea::getLimiteEntrega))
+                .limit(5)
+                .collect(Collectors.toList());
 
-            // Clases Próximas
-            List<Clase> proximasClases = claseRepository.findByDocente_DniAndInicioAfterOrderByInicioAsc(docente.getDni(), ahora);
-            // Limitamos a 5 para el panel pero el calendario puede tener más o todas
-            List<Clase> proximasClasesPanel = proximasClases.stream().limit(5).collect(Collectors.toList());
-
-            proximasClases.forEach(c -> {
+            // 3. Clases Calendario
+            List<Clase> clasesCalendario = claseRepository.findByDocente_DniAndInicioBetweenOrderByInicioAsc(docente.getDni(), fechaInicioCal, fechaFinCal);
+            clasesCalendario.forEach(c -> {
                 Map<String, String> event = new HashMap<>();
-                // Intentar obtener nombre curso de forma segura
-                String nombreCurso = "Clase";
-                if(c.getModulo() != null && c.getModulo().getCurso() != null) {
-                    nombreCurso = c.getModulo().getCurso().getNombre();
-                } else if(c.getCurso() != null) {
-                    nombreCurso = c.getCurso().getNombre();
-                }
-                
+                String nombreCurso = c.getModulo() != null ? c.getModulo().getCurso().getNombre() : (c.getCurso() != null ? c.getCurso().getNombre() : "Clase");
                 event.put("title", "Clase: " + c.getTitulo() + " (" + nombreCurso + ")");
                 event.put("start", c.getInicio().toLocalDate().toString());
-                event.put("className", "calendar-event class-session"); // Verde?
+                event.put("className", "event-clase");
                 events.add(event);
             });
+            
+            // Clases Panel (Future)
+            List<Clase> proximasClasesPanel = clasesCalendario.stream()
+                 .filter(c -> c.getInicio().isAfter(ahora))
+                 .limit(5)
+                 .collect(Collectors.toList());
 
 
             model.addAttribute("docente", docente);
@@ -173,7 +201,7 @@ public class DocenteController {
             // Datos Estadísticos
             model.addAttribute("cursosActivos", totalcursosActivos);
             model.addAttribute("totalAlumnos", totalAlumnos);
-            model.addAttribute("entregasPendientes", entregasPendientes);
+            model.addAttribute("correccionesPendientes", correccionesPendientes);
 
             // Datos Calendario
             model.addAttribute("eventsJson", objectMapper.writeValueAsString(events));
