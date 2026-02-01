@@ -35,6 +35,36 @@ public class OfertaAcademicaService {
     @Autowired
     private SeminarioRepository seminarioRepository;
 
+    /**
+     * Valida reglas de negocio complejas antes de guardar
+     */
+    public void validarReglasNegocio(OfertaAcademica oferta) {
+        // 1. Validar fechas
+        if (oferta.getFechaInicio() != null && oferta.getFechaFin() != null) {
+            if (oferta.getFechaInicio().isAfter(oferta.getFechaFin())) {
+                throw new IllegalArgumentException("La fecha de inicio no puede ser posterior a la fecha de fin.");
+            }
+        }
+
+        // 2. Validar docentes/disertantes según tipo
+        if (oferta instanceof Curso) {
+            Curso curso = (Curso) oferta;
+            if (curso.getDocentes() == null || curso.getDocentes().isEmpty()) {
+                throw new IllegalArgumentException("El curso debe tener al menos un docente asignado.");
+            }
+        } else if (oferta instanceof Charla) {
+            Charla charla = (Charla) oferta;
+            if (charla.getDisertantes() == null || charla.getDisertantes().isEmpty()) {
+                throw new IllegalArgumentException("La charla debe tener al menos un disertante.");
+            }
+        }
+
+        // 3. Validar horarios (si aplica)
+        // if (oferta.getHorarios() == null || oferta.getHorarios().isEmpty()) {
+        //     throw new IllegalArgumentException("La oferta debe tener horarios definidos.");
+        // }
+    }
+
     public List<OfertaAcademica> obtenerTodas() {
         List<OfertaAcademica> todasLasOfertas = new ArrayList<>();
         todasLasOfertas.addAll(cursoRepository.findAll());
@@ -44,6 +74,7 @@ public class OfertaAcademicaService {
         return todasLasOfertas;
     }
     public OfertaAcademica guardar(OfertaAcademica oferta) {
+        validarReglasNegocio(oferta);
         if (oferta instanceof Curso) {
             return cursoRepository.save((Curso) oferta);
         } else if (oferta instanceof Formacion) {

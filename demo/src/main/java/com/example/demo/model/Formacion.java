@@ -5,6 +5,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import com.example.demo.enums.EstadoOferta;
+import com.example.demo.enums.Modalidad;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.ManyToMany;
 import jakarta.validation.constraints.NotBlank;
@@ -34,6 +37,19 @@ public class Formacion extends OfertaAcademica {
     private Integer nrCuotas;
     @NotNull(message = "El día de vencimiento no puede estar vacío")
     private Integer diaVencimiento; // Día del mes límite para pago sin mora
+
+    // Constructor para DataSeeder
+    public Formacion(String nombre, String descripcion, String plan, Modalidad modalidad, Double costo, 
+                     LocalDate inicio, LocalDate fin, Integer cupos, Integer duracionMeses, 
+                     Double costoMora, Integer diaVencimiento, List<Docente> docentes) {
+        super(nombre, descripcion, modalidad, costo, inicio, fin, cupos, duracionMeses, true, EstadoOferta.ACTIVA);
+        this.plan = plan;
+        this.docentes = docentes;
+        this.nrCuotas = duracionMeses;
+        this.costoCuota = duracionMeses > 0 ? costo / duracionMeses : costo;
+        this.costoMora = costoMora;
+        this.diaVencimiento = diaVencimiento;
+    }
 
     /**
      * Información de docentes
@@ -258,6 +274,7 @@ public class Formacion extends OfertaAcademica {
         detalle.setVisibilidad(this.getVisibilidad());
         detalle.setLugar(this.getLugar());
         detalle.setEnlace(this.getEnlace());
+        detalle.setImagenUrl(this.getImagenUrl());
         
         // Información específica de formación
         detalle.setPlan(this.plan);
@@ -371,6 +388,40 @@ public class Formacion extends OfertaAcademica {
         public void setMatricula(String matricula) { this.matricula = matricula; }
     }
     
+    @Override
+    public void actualizarDatos(java.util.Map<String, Object> datos) {
+        super.actualizarDatos(datos);
+        
+        if (datos.containsKey("plan")) {
+            this.setPlan((String) datos.get("plan"));
+        }
+        if (datos.containsKey("costoCuota")) {
+            Double val = convertirDouble(datos.get("costoCuota"));
+            if (val != null) this.setCostoCuota(val);
+        }
+        if (datos.containsKey("costoMora")) {
+            Double val = convertirDouble(datos.get("costoMora"));
+            if (val != null) {
+                this.setCostoMora(val);
+                this.setRecargoMora(val);
+            }
+        }
+        if (datos.containsKey("nrCuotas")) {
+            Integer val = convertirEntero(datos.get("nrCuotas"));
+            if (val != null) this.setNrCuotas(val);
+        }
+        if (datos.containsKey("diaVencimiento")) {
+            Integer val = convertirEntero(datos.get("diaVencimiento"));
+            if (val != null) this.setDiaVencimiento(val);
+        }
+        if (datos.containsKey("docentes")) {
+             Object obj = datos.get("docentes");
+             if (obj instanceof java.util.List) {
+                 this.setDocentes(new ArrayList<>((java.util.List<Docente>) obj));
+             }
+        }
+    }
+
     /**
      * DTO simple para horarios (evita referencia circular)
      */
@@ -395,6 +446,10 @@ public class Formacion extends OfertaAcademica {
         public void setHoraFin(String horaFin) { this.horaFin = horaFin; }
     }
     
+    
+    // actualizarDatos duplicado eliminado
+
+
     /**
      * Clase interna para encapsular los detalles de la formación
      */
@@ -413,6 +468,7 @@ public class Formacion extends OfertaAcademica {
         private Boolean visibilidad;
         private String lugar;
         private String enlace;
+        private String imagenUrl;
         
         // Específicos de formación
         private String plan;
@@ -471,6 +527,9 @@ public class Formacion extends OfertaAcademica {
 
         public String getEnlace() { return enlace; }
         public void setEnlace(String enlace) { this.enlace = enlace; }
+
+        public String getImagenUrl() { return imagenUrl; }
+        public void setImagenUrl(String imagenUrl) { this.imagenUrl = imagenUrl; }
         
         public String getPlan() { return plan; }
         public void setPlan(String plan) { this.plan = plan; }

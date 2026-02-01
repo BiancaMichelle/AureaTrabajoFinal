@@ -171,7 +171,9 @@ public class ChatServiceSimple {
     private boolean validarPermisoGuardado(com.example.demo.model.Usuario usuario) {
         if (usuario == null) return false;
         return usuario.getRoles().stream()
-                .anyMatch(r -> "ALUMNO".equalsIgnoreCase(r.getNombre()) || "DOCENTE".equalsIgnoreCase(r.getNombre()));
+                .anyMatch(r -> "ALUMNO".equalsIgnoreCase(r.getNombre()) || 
+                               "DOCENTE".equalsIgnoreCase(r.getNombre()) || 
+                               "ADMIN".equalsIgnoreCase(r.getNombre()));
     }
     
     private String sanearMensaje(String mensaje) {
@@ -228,8 +230,11 @@ public class ChatServiceSimple {
             "IMPORTANTE: SOLO responde con información que tengas explícitamente en el contexto a continuación. " +
             "Si no sabes algo o no está en el contexto, di 'Lo siento, no tengo información sobre eso'. " +
             "NO inventes cursos, fechas ni datos. NO alucines. NO des información de relleno.\n\n" +
+            "REGLAS DE INTERACCIÓN:\n" +
+            "1. Si el usuario saluda, responde amablemente el saludo siempre.\n" +
+            "2. MUY IMPORTANTE: Los alumnos NO eligen las fechas. Las ofertas académicas tienen fechas de inicio y fin FIJAS definidas por la institución. Si el usuario habla de elegir fechas, corrígelo amablemente.\n\n" +
             "REGLAS PEDAGÓGICAS (CRÍTICO):\n" +
-            "1. NO resuelvas tareas ni exámenes directamente. Si el alumno pide la respuesta, diles amablemente que no puedes hacer su tarea.\n" +
+            "1. NO resuelvas tareas ni exámenes directamente. Si el alumno pide la respuesta, diles amablemente que no puedes hacer su tarea, o solo puedes guiarlo para que sepa como empezar.\n" +
             "2. Proporciona explicaciones conceptuales, guías de estudio, bibliografía recomendada o ejemplos similares.\n" +
             "3. Fomenta el aprendizaje y el pensamiento crítico.\n\n" +
             "INFORMACIÓN PÚBLICA DE LA PLATAFORMA:\n" + contextoOfertas + "\n\n";
@@ -239,7 +244,7 @@ public class ChatServiceSimple {
                             "NOTA: Tienes acceso a la información de cuotas pendientes y tareas próximas listadas arriba. Úsala para responder preguntas del usuario sobre su estado.\n" +
                             "Sin embargo, NO tienes acceso a detalles históricos de calificaciones pasadas ni a contraseñas. Si preguntan por notas antiguas, remítelos a su panel de alumno.\n";
         } else {
-            systemPrompt += "NOTA: El usuario es ANÓNIMO. Solo puedes responder sobre información pública de ofertas académicas. " +
+            systemPrompt += "NOTA: El usuario es ANÓNIMO. Puedes saludar y conversar, pero solo puedes dar información técnica sobre ofertas académicas públicas. " +
                             "Si pregunta por su situación personal, materiales internos o clases, indícale que debe iniciar sesión.\n";
         }
         

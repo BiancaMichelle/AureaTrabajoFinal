@@ -170,7 +170,9 @@
                                           th:text="${oferta.categorias != null and not #lists.isEmpty(oferta.categorias)} ? ${oferta.categorias[0].nombre} : 'General'">Categoría</span>
                                     <span class="badge bg-warning text-dark" th:text="${oferta.tipoOferta}">TIPO</span>
                                 </div>
-                                <h5 class="card-title mb-0 mt-2" th:text="${oferta.nombre}">Título de la Oferta</h5>
+                                <h5 class="card-title mb-0 mt-2">
+                                    <a th:href="@{/publico/oferta/{id}(id=${oferta.idOferta})}" class="text-white text-decoration-none" th:text="${oferta.nombre}">Título de la Oferta</a>
+                                </h5>
                             </div>
                             <div class="card-body">
                                 <p class="card-text" th:text="${oferta.descripcion}">
@@ -233,7 +235,13 @@
                                     </span>
                                     
                                     <!-- Botones de Acción -->
-                                    <div th:if="${#authorization.expression('isAuthenticated()')}">
+                                    <div>
+                                        <!-- Botón Ver Detalle (para todos) -->
+                                        <a th:href="@{/publico/oferta/{id}(id=${oferta.idOferta})}" class="btn btn-outline-secondary btn-sm me-1" style="color: var(--dark-blue); border-color: var(--dark-blue);">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+
+                                        <span th:if="${#authorization.expression('isAuthenticated()')}" th:remove="tag">
                                         
                                         <!-- Caso: Ya es Docente del curso -->
                                         <a th:if="${idsDocente != null and #sets.contains(idsDocente, oferta.idOferta)}"
@@ -252,7 +260,7 @@
                                         <!-- Caso: No inscrito y No docente (Mostrar Inscripción) -->
                                         <th:block th:if="${(idsInscritos == null or !#sets.contains(idsInscritos, oferta.idOferta)) and (idsDocente == null or !#sets.contains(idsDocente, oferta.idOferta))}">
                                             <form th:action="@{/alumno/inscribirse/{id}(id=${oferta.idOferta})}" 
-                                                  method="post" class="d-inline">
+                                                  method="post" class="d-inline" target="_blank">
                                                 <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                                                 <button type="submit" class="btn btn-primary btn-sm">
                                                     <i class="fas fa-user-plus me-1"></i>
@@ -260,12 +268,13 @@
                                                 </button>
                                             </form>
                                         </th:block>
-                                    </div>
-                                    <div th:unless="${#authorization.expression('isAuthenticated()')}">
+                                    </span>
+                                    <span th:unless="${#authorization.expression('isAuthenticated()')}" th:remove="tag">
                                         <a th:href="@{/login}" class="btn btn-outline-primary btn-sm">
                                             <i class="fas fa-sign-in-alt me-1"></i>
                                             Iniciar sesión
                                         </a>
+                                    </span>
                                     </div>
                                 </div>
                             </div>
@@ -324,7 +333,7 @@
                                         <p class="card-text small text-muted text-truncate" th:text="${rec.descripcion}">Desc</p>
                                     </div>
                                     <div class="card-footer bg-transparent border-0 p-3 pt-0">
-                                        <form th:action="@{/inscribirse/{id}(id=${rec.idOferta})}" method="post">
+                                        <form th:action="@{/inscribirse/{id}(id=${rec.idOferta})}" method="post" target="_blank">
                                             <button type="submit" class="btn btn-outline-primary btn-sm w-100">Ver e Inscribirse</button>
                                         </form>
                                     </div>

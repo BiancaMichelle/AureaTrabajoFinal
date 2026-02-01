@@ -309,6 +309,7 @@
                             <form th:if="${cuota.inscripcion != null and cuotasPendientesPorInscripcion != null and cuotasPendientesPorInscripcion.get(cuota.inscripcion.idInscripcion) != null and cuotasPendientesPorInscripcion.get(cuota.inscripcion.idInscripcion).idCuota == cuota.idCuota}"
                                   th:action="@{'/alumno/mis-pagos/cuotas/' + ${cuota.idCuota} + '/pagar'}" 
                                   method="post"
+                                  target="_blank"
                                   style="display: inline;">
                                 <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                                 <button class="btn-pagar" type="submit">
@@ -318,8 +319,8 @@
                             <!-- Para cuotas ya pagadas, mostrar comprobante -->
                             <a th:if="${cuota.estado.name() == 'PAGADA' and cuota.pago != null}" 
                                class="btn-ver"
-                               th:href="@{'/pago-resultado'(payment_id=${cuota.pago.paymentId}, external_reference=${cuota.pago.externalReference})}">
-                                <i class="fas fa-receipt"></i> Comprobante
+                               th:href="@{'/alumno/mis-pagos/comprobante/' + ${cuota.pago.idPago}}">
+                                <i class="fas fa-file-pdf"></i> Comprobante
                             </a>
                             <span th:if="${cuota.estado.name() == 'PAGADA' and cuota.pago == null}" style="color: #48bb78;">
                                 <i class="fas fa-check-circle"></i> Completado
@@ -350,9 +351,15 @@
                         </td>
                         <td>
                             <a class="btn-ver"
+                               th:if="${pago.estadoPago.name() == 'COMPLETADO'}"
+                               th:href="@{'/alumno/mis-pagos/comprobante/' + ${pago.idPago}}">
+                                <i class="fas fa-file-pdf"></i> Comprobante
+                            </a>
+                            <a class="btn-ver"
+                               th:if="${pago.estadoPago.name() != 'COMPLETADO'}"
                                th:href="@{'/pago-resultado'(payment_id=${pago.paymentId}, external_reference=${pago.externalReference})}">
-                                <i class="fas fa-receipt"></i>
-                                <span th:text="${pago.estadoPago.name() == 'COMPLETADO' ? 'Comprobante' : 'Detalle'}">Comprobante</span>
+                                <i class="fas fa-search"></i>
+                                <span>Detalle</span>
                             </a>
                         </td>
                     </tr>

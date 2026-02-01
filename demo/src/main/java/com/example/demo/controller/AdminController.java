@@ -543,6 +543,7 @@ public class AdminController {
         map.put("duracionTexto", oferta.getDuracionTexto() != null ? oferta.getDuracionTexto() : "");
         map.put("lugar", oferta.getLugar() != null ? oferta.getLugar() : "");
         map.put("enlace", oferta.getEnlace() != null ? oferta.getEnlace() : "");
+        map.put("imagenUrl", oferta.getImagenUrl() != null ? oferta.getImagenUrl() : "");
         
         // Validaciones defensivas para métodos que pueden fallar
         try {
@@ -607,6 +608,20 @@ public class AdminController {
             detalle = mapearOfertaAResponse(oferta);
         }
         
+        // Agregar horarios si existen
+        if (oferta.getHorarios() != null && !oferta.getHorarios().isEmpty()) {
+            List<Map<String, Object>> horariosList = new ArrayList<>();
+            for (com.example.demo.model.Horario h : oferta.getHorarios()) {
+                Map<String, Object> hMap = new HashMap<>();
+                hMap.put("dia", h.getDia() != null ? h.getDia().toString() : "-");
+                hMap.put("horaInicio", h.getHoraInicio() != null ? h.getHoraInicio().toString() : "-");
+                hMap.put("horaFin", h.getHoraFin() != null ? h.getHoraFin().toString() : "-");
+                horariosList.add(hMap);
+            }
+            detalle.put("horarios", horariosList);
+            System.out.println("✅ Horarios agregados al detalle: " + horariosList.size());
+        }
+
         return detalle;
     }
 
@@ -949,19 +964,30 @@ public class AdminController {
                 System.out.println("Certificado establecido por defecto: false");
             }
             
-            // Manejar imagen si existe (por ahora comentado hasta implementar el servicio)
-            /*
+            // Manejar imagen
             if (imagen != null && !imagen.isEmpty()) {
                 try {
-                    String rutaImagen = imagenService.guardarImagen(imagen, "ofertas");
-                    oferta.setImagenPresentacion(rutaImagen);
+                    String rutaRelativa = guardarImagenOferta(imagen);
+                    oferta.setImagenUrl(rutaRelativa);
                 } catch (Exception e) {
-                    // Log error pero continuar sin imagen
                     System.err.println("Error al guardar imagen: " + e.getMessage());
+                    // Fallback a imagen por defecto
+                    oferta.setImagenUrl("/img/predeterminado.jpg");
                 }
+            } else {
+                // Si no se carga imagen nueva Y no tiene imagen previa (es create o no edit), usar default.
+                // Nota: para editar, normalmente se valida si imagen es null para mantener la anterior.
+                // Aquí, como es registrarOferta (POST), es creación nueva (o sobreescritura si lógica lo permite).
+                // Revisar si es edición -> El método registrarOferta parece ser solo para CREAR o registrar nueva.
+                // Para editar suele haber otro método 'actualizarOferta'.
+                oferta.setImagenUrl("/img/predeterminado.jpg");
             }
-            */
             
+            // Asociar horarios si se proporcionaron (ANTES DE GUARDAR)
+            if (horarios != null && !horarios.trim().isEmpty()) {
+                asociarHorarios(oferta, horarios);
+            }
+
             // Guardar en la base de datos
             OfertaAcademica nuevaOferta = ofertaAcademicaRepository.save(oferta);
             
@@ -975,11 +1001,6 @@ public class AdminController {
                     }
                     System.out.println("   ✅ Relación docente-formación guardada");
                 }
-            }
-            
-            // Asociar horarios si se proporcionaron
-            if (horarios != null && !horarios.trim().isEmpty()) {
-                asociarHorarios(nuevaOferta, horarios);
             }
             
             Map<String, Object> response = new HashMap<>();
@@ -1357,118 +1378,108 @@ public class AdminController {
                 }
             }
             
-            // Validar que el tipo de oferta coincida
-            if (!ofertaExistente.getTipoOferta().equals(tipoOferta)) {
+            // Validar que el tipo de oferta coincida (Comparación robusta por instancia)
+            boolean tipoCoincide = false;
+            String tipoOfertaUpper = tipoOferta.toUpperCase();
+            
+            switch (tipoOfertaUpper) {
+                case "CURSO":
+                    tipoCoincide = ofertaExistente instanceof Curso;
+                    break;
+                case "FORMACION":
+                    tipoCoincide = ofertaExistente instanceof Formacion;
+                    break;
+                case "CHARLA":
+                    tipoCoincide = ofertaExistente instanceof Charla;
+                    break;
+                case "SEMINARIO":
+                    tipoCoincide = ofertaExistente instanceof Seminario;
+                    break;
+                default:
+                    tipoCoincide = false;
+            }
+            
+            if (!tipoCoincide) {
                 Map<String, Object> errorResponse = new HashMap<>();
                 errorResponse.put("success", false);
-                errorResponse.put("message", "No se puede cambiar el tipo de oferta existente");
+                errorResponse.put("message", "No se puede cambiar el tipo de oferta existente (" + ofertaExistente.getTipoOferta() + " vs " + tipoOferta + ")");
                 return ResponseEntity.badRequest().body(errorResponse);
             }
             
             // Llamar al servicio apropiado según el tipo de oferta
             OfertaAcademica ofertaModificada = null;
-            String tipoOfertaUpper = tipoOferta.toUpperCase();
-            
-            // Actualizar los campos básicos de la oferta existente
-            ofertaExistente.setNombre(nombre);
-            ofertaExistente.setDescripcion(descripcion);
-            ofertaExistente.setFechaInicio(fechaInicioDate);
-            ofertaExistente.setFechaFin(fechaFinDate);
-            ofertaExistente.setLugar(lugar);
-            ofertaExistente.setEnlace(enlace);
-            
-            if (cupos != null) {
-                ofertaExistente.setCupos(cupos);
+
+            // Lógica de Imagen (Previa a la actualización del modelo)
+            String nuevaImagenUrl = null;
+            if (imagen != null && !imagen.isEmpty()) {
+                try {
+                    nuevaImagenUrl = guardarImagenOferta(imagen);
+                    System.out.println("✅ Imagen actualizada: " + nuevaImagenUrl);
+                } catch (Exception e) {
+                    System.err.println("❌ Error al actualizar imagen: " + e.getMessage());
+                }
             }
             
-            if (modalidad != null && !modalidad.isEmpty()) {
-                ofertaExistente.setModalidad(Modalidad.valueOf(modalidad.toUpperCase()));
-            }
+            // Preparar mapa de datos para delegar la actualización al modelo (Refactorización)
+            Map<String, Object> datosActualizar = new HashMap<>();
             
-            if (otorgaCertificado != null) {
-                ofertaExistente.setCertificado(Boolean.parseBoolean(otorgaCertificado));
-            }
+            // Datos comunes
+            if (nombre != null) datosActualizar.put("nombre", nombre);
+            if (descripcion != null) datosActualizar.put("descripcion", descripcion);
+            datosActualizar.put("fechaInicio", fechaInicio); // Ya validados no nulos como String o LocalDate
+            datosActualizar.put("fechaFin", fechaFin);
             
-            // Actualizar campos específicos según el tipo de oferta
-            switch (tipoOfertaUpper) {
-                case "CURSO":
-                    if (ofertaExistente instanceof Curso) {
-                        Curso curso = (Curso) ofertaExistente;
-                        if (temario != null) curso.setTemario(temario);
-                        if (costoCuota != null) curso.setCostoCuota(costoCuota);
-                        if (costoMora != null) {
-                            curso.setCostoMora(costoMora);
-                            curso.setRecargoMora(costoMora);
-                        }
-                        if (nrCuotas != null) curso.setNrCuotas(nrCuotas);
-                        if (diaVencimiento != null) curso.setDiaVencimiento(diaVencimiento);
-                        
-                        if (docentesCurso != null && !docentesCurso.trim().isEmpty()) {
-                            List<Docente> docentes = obtenerDocentesPorIds(docentesCurso);
-                            curso.setDocentes(docentes);
-                        }
-                    }
-                    break;
-                    
-                case "FORMACION":
-                    if (ofertaExistente instanceof Formacion) {
-                        Formacion formacion = (Formacion) ofertaExistente;
-                        if (planFormacion != null) formacion.setPlan(planFormacion);
-                        if (costoCuotaFormacion != null) formacion.setCostoCuota(costoCuotaFormacion);
-                        if (costoMoraFormacion != null) {
-                            formacion.setCostoMora(costoMoraFormacion);
-                            formacion.setRecargoMora(costoMoraFormacion);
-                        }
-                        if (nrCuotasFormacion != null) formacion.setNrCuotas(nrCuotasFormacion);
-                        if (diaVencimientoFormacion != null) formacion.setDiaVencimiento(diaVencimientoFormacion);
-                        
-                        // Nota: La actualización de docentes para Formación requiere lógica compleja 
-                        // debido a la relación ManyToMany mapeada por Docente. 
-                        // Se omite por brevedad en este fix rápido, pero debería implementarse.
-                    }
-                    break;
-                    
-                case "CHARLA":
-                    if (ofertaExistente instanceof Charla) {
-                        Charla charla = (Charla) ofertaExistente;
-                        if (costoInscripcion != null) charla.setCostoInscripcion(costoInscripcion);
-                        if (duracionEstimada != null) charla.setDuracionEstimada(duracionEstimada);
-                        if (publicoObjetivoCharla != null) charla.setPublicoObjetivo(publicoObjetivoCharla);
-                        
-                        if (disertantesCharla != null && !disertantesCharla.trim().isEmpty()) {
-                            List<String> disertantes = new ArrayList<>();
-                            for (String d : disertantesCharla.split(",")) {
-                                if (!d.trim().isEmpty()) disertantes.add(d.trim());
-                            }
-                            charla.setDisertantes(disertantes);
-                        }
-                    }
-                    break;
-                    
-                case "SEMINARIO":
-                    if (ofertaExistente instanceof Seminario) {
-                        Seminario seminario = (Seminario) ofertaExistente;
-                        if (costoInscripcion != null) seminario.setCostoInscripcion(costoInscripcion);
-                        if (duracionMinutos != null) seminario.setDuracionMinutos(duracionMinutos);
-                        if (publicoObjetivoSeminario != null) seminario.setPublicoObjetivo(publicoObjetivoSeminario);
-                        
-                        if (disertantesSeminario != null && !disertantesSeminario.trim().isEmpty()) {
-                            List<String> disertantes = new ArrayList<>();
-                            for (String d : disertantesSeminario.split(",")) {
-                                if (!d.trim().isEmpty()) disertantes.add(d.trim());
-                            }
-                            seminario.setDisertantes(disertantes);
-                        }
-                    }
-                    break;
-                    
-                default:
-                    Map<String, Object> errorResponse = new HashMap<>();
-                    errorResponse.put("success", false);
-                    errorResponse.put("message", "Tipo de oferta no válido: " + tipoOferta);
-                    return ResponseEntity.badRequest().body(errorResponse);
-            }
+            // Lugar y Enlace pueden ser seteados a vacío, así que los pasamos directo
+            datosActualizar.put("lugar", lugar);
+            datosActualizar.put("enlace", enlace);
             
+            if (cupos != null) datosActualizar.put("cupos", cupos);
+            if (modalidad != null) datosActualizar.put("modalidad", modalidad);
+            if (otorgaCertificado != null) datosActualizar.put("certificado", otorgaCertificado);
+            if (costoInscripcion != null) datosActualizar.put("costoInscripcion", costoInscripcion);
+            
+            if (nuevaImagenUrl != null) {
+                datosActualizar.put("imagenUrl", nuevaImagenUrl);
+            }
+
+            // Datos específicos por tipo
+            if ("CURSO".equals(tipoOfertaUpper)) {
+                if (temario != null) datosActualizar.put("temario", temario);
+                if (costoCuota != null) datosActualizar.put("costoCuota", costoCuota);
+                if (costoMora != null) datosActualizar.put("costoMora", costoMora);
+                if (nrCuotas != null) datosActualizar.put("nrCuotas", nrCuotas);
+                if (diaVencimiento != null) datosActualizar.put("diaVencimiento", diaVencimiento);
+                
+                if (docentesCurso != null && !docentesCurso.trim().isEmpty()) {
+                    datosActualizar.put("docentes", obtenerDocentesPorIds(docentesCurso));
+                }
+                
+            } else if ("FORMACION".equals(tipoOfertaUpper)) {
+                if (planFormacion != null) datosActualizar.put("plan", planFormacion);
+                if (costoCuotaFormacion != null) datosActualizar.put("costoCuota", costoCuotaFormacion);
+                if (costoMoraFormacion != null) datosActualizar.put("costoMora", costoMoraFormacion);
+                if (nrCuotasFormacion != null) datosActualizar.put("nrCuotas", nrCuotasFormacion);
+                if (diaVencimientoFormacion != null) datosActualizar.put("diaVencimiento", diaVencimientoFormacion);
+                
+                // Si hubiera lógica de docentes para formación
+                 if (docentesFormacion != null && !docentesFormacion.trim().isEmpty()) {
+                     // datosActualizar.put("docentes", obtenerDocentesPorIds(docentesFormacion));
+                 }
+                 
+            } else if ("CHARLA".equals(tipoOfertaUpper)) {
+                if (duracionEstimada != null) datosActualizar.put("duracionEstimada", duracionEstimada);
+                if (publicoObjetivoCharla != null) datosActualizar.put("publicoObjetivo", publicoObjetivoCharla);
+                if (disertantesCharla != null) datosActualizar.put("disertantes", disertantesCharla);
+                
+            } else if ("SEMINARIO".equals(tipoOfertaUpper)) {
+                if (duracionMinutos != null) datosActualizar.put("duracionMinutos", duracionMinutos);
+                if (publicoObjetivoSeminario != null) datosActualizar.put("publicoObjetivo", publicoObjetivoSeminario);
+                if (disertantesSeminario != null) datosActualizar.put("disertantes", disertantesSeminario);
+            }
+
+            // Ejecutar actualización en el modelo
+            ofertaExistente.actualizarDatos(datosActualizar);
+
             // Guardar la oferta modificada
             ofertaModificada = ofertaAcademicaRepository.save(ofertaExistente);
             
@@ -1489,12 +1500,12 @@ public class AdminController {
             }
             
         } catch (Exception e) {
-            System.err.println("❌ Error al modificar oferta: " + e.getMessage());
+            System.err.println("❌ Error al modificar oferta: " + e.toString());
             e.printStackTrace();
             
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("success", false);
-            errorResponse.put("message", "Error al modificar oferta: " + e.getMessage());
+            errorResponse.put("message", "Error al modificar oferta: " + e.toString()); // Usamos toString para ver el tipo de excepción si mensaje es null
             return ResponseEntity.badRequest().body(errorResponse);
         }
     }
@@ -2352,6 +2363,25 @@ public class AdminController {
         
         return "/img/logos/" + nombreArchivo;
     }
+
+    private String guardarImagenOferta(MultipartFile imagen) throws IOException {
+        // Crear directorio si no existe
+        Path directorioOfertas = Paths.get("src/main/resources/static/img/ofertas");
+        if (!Files.exists(directorioOfertas)) {
+            Files.createDirectories(directorioOfertas);
+        }
+        
+        // Generar nombre único
+        String nombreOriginal = imagen.getOriginalFilename();
+        String extension = nombreOriginal != null ? nombreOriginal.substring(nombreOriginal.lastIndexOf(".")) : ".jpg";
+        String nombreArchivo = "oferta_" + UUID.randomUUID().toString() + extension;
+        
+        // Guardar archivo
+        Path rutaArchivo = directorioOfertas.resolve(nombreArchivo);
+        Files.copy(imagen.getInputStream(), rutaArchivo, StandardCopyOption.REPLACE_EXISTING);
+        
+        return "/img/ofertas/" + nombreArchivo;
+    }
     
     // ================= MÉTODOS AUXILIARES PARA OFERTAS =================
     
@@ -2473,19 +2503,18 @@ public class AdminController {
                 }
                 
                 // Asociar oferta
-                horario.setOfertaAcademica(oferta);
+                oferta.addHorario(horario);
                 
                 // Debug: mostrar estado antes de guardar
-                System.out.println("    🔍 ESTADO ANTES DE GUARDAR:");
+                System.out.println("    🔍 ESTADO (Agregado a lista):");
                 System.out.println("       - Día: " + horario.getDia());
                 System.out.println("       - Hora inicio: " + horario.getHoraInicio());
                 System.out.println("       - Hora fin: " + horario.getHoraFin());
                 System.out.println("       - Docente: " + (horario.getDocente() != null ? horario.getDocente().getNombre() : "null"));
                 System.out.println("       - Oferta: " + (horario.getOfertaAcademica() != null ? horario.getOfertaAcademica().getNombre() : "null"));
                 
-                // Guardar horario
-                Horario horarioGuardado = horarioRepository.save(horario);
-                System.out.println("    ✅ Horario guardado con ID: " + horarioGuardado.getIdHorario());
+                // No guardamos individualmente, dejamos que CascadeType.ALL lo haga al guardar la oferta
+                System.out.println("    ✅ Horario agregado a la lista de la oferta para persistencia en cascada.");
             }
             
         } catch (Exception e) {

@@ -41,6 +41,31 @@ public class PagoResultadoController {
             mercadoPagoService.procesarNotificacionPago(payment_id);
         }
 
+        // REDIRECCIÓN INTELIGENTE AL AULA
+        try {
+            java.util.Optional<Pago> pagoOpt = java.util.Optional.empty();
+
+            if (payment_id != null) {
+                pagoOpt = pagoRepository.findByPaymentId(payment_id);
+            }
+
+            if (pagoOpt.isEmpty() && external_reference != null) {
+                pagoOpt = pagoRepository.findByExternalReference(external_reference);
+            }
+
+            if (pagoOpt.isPresent()) {
+                Pago pago = pagoOpt.get();
+                // Si es un curso/oferta, redirigir directo al aula
+                if (pago.getOferta() != null) {
+                    Long ofertaId = pago.getOferta().getIdOferta();
+                    log.info("🎓 Redirigiendo al aula de la oferta ID: {}", ofertaId);
+                    return "redirect:/alumno/aula/" + ofertaId;
+                }
+            }
+        } catch (Exception e) {
+            log.error("⚠️ Error intentando redirigir al aula, usando fallback", e);
+        }
+
         return "redirect:/alumno/mis-ofertas";
     }
 

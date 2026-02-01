@@ -930,6 +930,19 @@ document.addEventListener('DOMContentLoaded', function () {
         if (document.getElementById('lugar')) document.getElementById('lugar').value = oferta.lugar || '';
         if (document.getElementById('enlace')) document.getElementById('enlace').value = oferta.enlace || '';
         
+        // Imagen
+        const imagePreview = document.getElementById('image-preview');
+        const uploadPlaceholder = document.querySelector('.upload-placeholder');
+        if (oferta.imagenUrl) {
+            imagePreview.src = oferta.imagenUrl;
+            imagePreview.style.display = 'block';
+            if (uploadPlaceholder) uploadPlaceholder.style.display = 'none';
+        } else {
+            imagePreview.style.display = 'none';
+            imagePreview.src = '';
+            if (uploadPlaceholder) uploadPlaceholder.style.display = 'flex';
+        }
+        
         // Certificado
         const chkCertificado = document.getElementById('otorgaCertificado');
         if (chkCertificado) {

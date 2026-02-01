@@ -32,6 +32,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.example.demo.DTOMP.ReferenceRequest;
 import com.example.demo.DTOMP.ResponseDTO;
+import com.mercadopago.exceptions.MPApiException;
+import com.mercadopago.exceptions.MPException;
 import com.example.demo.enums.EstadoCuota;
 import com.example.demo.enums.EstadoIntento;
 import com.example.demo.enums.EstadoOferta;
@@ -62,6 +64,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.io.ByteArrayInputStream;
 
 @Controller
 @RequestMapping("/alumno")
@@ -662,7 +666,55 @@ public class AlumnoController {
                 return "redirect:/publico";
             }
 
-            // ✅ CREAR INSCRIPCIÓN DIRECTA usando Usuario
+            // ✅ VERIFICAR SI LA OFERTA TIENE COSTO (Integración MercadoPago)
+            if (oferta.getCostoInscripcion() != null && oferta.getCostoInscripcion() > 0) {
+                System.out.println("💵 Oferta con costo: $" + oferta.getCostoInscripcion() + ", redirigiendo a MercadoPago");
+                
+                try {
+                    // Crear el request para MercadoPago
+                    ReferenceRequest.ItemDTO item = new ReferenceRequest.ItemDTO(
+                            oferta.getIdOferta().toString(),
+                            oferta.getNombre(),
+                            BigDecimal.valueOf(oferta.getCostoInscripcion()),
+                            1);
+    
+                    List<ReferenceRequest.ItemDTO> items = new ArrayList<>();
+                    items.add(item);
+                    
+                    // Crear el objeto PayerDTO
+                    ReferenceRequest.PayerDTO payer = new ReferenceRequest.PayerDTO(
+                            usuario.getNombre() + " " + usuario.getApellido(),
+                            usuario.getCorreo());
+    
+                    // Crear el objeto BackUrlsDTO
+                    ReferenceRequest.BackUrlsDTO backUrls = new ReferenceRequest.BackUrlsDTO(
+                            baseUrl + "/pago/success",
+                            baseUrl + "/pago/failure",
+                            baseUrl + "/pago/pending");
+    
+                    // Crear el objeto ReferenceRequest
+                    ReferenceRequest request = new ReferenceRequest(
+                            usuario.getId(),
+                            BigDecimal.valueOf(oferta.getCostoInscripcion()),
+                            payer,
+                            backUrls,
+                            items);
+    
+                    // Crear preferencia con el usuario y oferta
+                    ResponseDTO response = mercadoPagoService.createPreference(request, usuario, oferta);
+    
+                    System.out.println("✅ Preferencia creada: " + response.preferenceId());
+                    return "redirect:" + response.redirectUrl();
+                    
+                } catch (Exception e) {
+                    System.err.println("❌ Error con MercadoPago: " + e.getMessage());
+                    e.printStackTrace();
+                    redirectAttributes.addFlashAttribute("error", "Error al iniciar el pago con MercadoPago.");
+                    return "redirect:/publico";
+                }
+            }
+
+            // ✅ OFERTA GRATUITA: CREAR INSCRIPCIÓN DIRECTA usando Usuario
             Inscripciones nuevaInscripcion = new Inscripciones();
             nuevaInscripcion.setAlumno(usuario); // ✅ Ahora acepta Usuario
             nuevaInscripcion.setOferta(oferta);
@@ -841,6 +893,15 @@ public class AlumnoController {
 
             OfertaAcademica oferta = inscripcion.getOferta();
             System.out.println("📚 Oferta encontrada: " + oferta.getNombre() + ", tipo: " + oferta.getClass().getSimpleName());
+
+            // ✅ Verificación de Pago de Inscripción (Bloquear si existe un pago asociado NO completado)
+            if (inscripcion.getPagoInscripcion() != null) {
+                if (inscripcion.getPagoInscripcion().getEstadoPago() != EstadoPago.COMPLETADO) {
+                    System.out.println("❌ Pago de inscripción NO completado/aprobado. Estado: " + inscripcion.getPagoInscripcion().getEstadoPago());
+                    model.addAttribute("error", "El pago de la inscripción no se ha completado. Por favor verifica su estado.");
+                    return "misOfertasAcademicas";
+                }
+            }
 
             // Verificar bloqueo por mora en aula
             Instituto instituto = institutoService.obtenerInstituto();
@@ -1052,6 +1113,5 @@ public class AlumnoController {
     public String redirigirPerfilActualizar() {
         return "redirect:/perfil";
     }
-
-
 }
+

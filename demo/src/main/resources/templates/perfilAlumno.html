@@ -59,11 +59,8 @@
                 <aside class="w-full md:w-1/4 lg:w-1/5 p-6 border-b md:border-b-0 md:border-r border-gray-200">
                     <div class="flex flex-col items-center text-center">
                         <!-- Foto de perfil -->
-                        <div th:if="${usuario.foto}" class="w-28 h-28 rounded-full bg-slate-800 mb-4 flex-shrink-0 overflow-hidden">
-                            <img th:src="${usuario.foto}" alt="Foto de perfil" class="w-full h-full object-cover">
-                        </div>
-                        <div th:unless="${usuario.foto}" class="w-28 h-28 rounded-full bg-slate-800 mb-4 flex-shrink-0 flex items-center justify-center text-white text-2xl font-bold">
-                            <span th:text="${usuario.nombre.substring(0,1) + usuario.apellido.substring(0,1)}"></span>
+                        <div class="w-28 h-28 rounded-full bg-slate-800 mb-4 flex-shrink-0 overflow-hidden">
+                            <img th:src="${usuario.foto != null and !usuario.foto.isEmpty() ? usuario.foto : '/img/perfil-de-usuario.jpg'}" alt="Foto de perfil" class="w-full h-full object-cover">
                         </div>
                         <h2 class="text-xl font-bold text-gray-900" th:text="${usuario.nombre + ' ' + usuario.apellido}">Nombre Apellido</h2>
                         <p class="text-sm text-gray-500 mt-1" th:text="${usuario.dni}">DNI</p>

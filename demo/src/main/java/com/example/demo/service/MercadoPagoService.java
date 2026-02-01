@@ -92,8 +92,8 @@ public class MercadoPagoService {
             log.error("Error en crear la preferencia de pago", e);
             throw new RuntimeException("Error al crear preferencia de pago: " + e.getMessage());
         } catch (MPApiException e) {
-            log.error("Error en crear el pago", e);
-            throw new RuntimeException("Error en la API de MercadoPago: " + e.getMessage());
+            log.error("Error en crear el pago. Status: {}, Content: {}", e.getStatusCode(), e.getApiResponse().getContent(), e);
+            throw new RuntimeException("Error en la API de MercadoPago: " + e.getApiResponse().getContent());
         }
     }
 
@@ -137,8 +137,8 @@ public class MercadoPagoService {
             log.error("Error en crear la preferencia de pago para cuota", e);
             throw new RuntimeException("Error al crear preferencia de cuota: " + e.getMessage());
         } catch (MPApiException e) {
-            log.error("Error en crear el pago de cuota", e);
-            throw new RuntimeException("Error en la API de MercadoPago al crear cuota: " + e.getMessage());
+            log.error("Error en crear el pago de cuota. Status: {}, Content: {}", e.getStatusCode(), e.getApiResponse().getContent(), e);
+            throw new RuntimeException("Error en la API de MercadoPago al crear cuota: " + e.getApiResponse().getContent());
         } catch (Exception e) {
             log.error("Error inesperado al crear preferencia de cuota", e);
             throw new RuntimeException("Error al crear preferencia de cuota: " + e.getMessage(), e);

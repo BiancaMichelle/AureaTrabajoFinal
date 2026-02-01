@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/adminBase :: layout(~{::title}, ~{::main})}">
+<head>
+    <title>Reportes - Aurea</title>
+    <style>
+        .report-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 2rem;
+            max-width: 800px;
+            margin: 2rem auto;
+        }
+        .form-section {
+            margin-bottom: 1.5rem;
+        }
+        .form-label {
+            font-weight: 600;
+            color: #374151;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        .btn-download {
+            background-color: #007bff;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            width: 100%;
+            transition: background-color 0.2s;
+        }
+        .btn-download:hover {
+            background-color: #0056b3;
+        }
+        .format-selector {
+            display: flex;
+            gap: 1rem;
+        }
+        .format-option {
+            flex: 1;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .format-option:hover {
+            border-color: #007bff;
+        }
+        .format-option input[type="radio"] {
+            display: none;
+        }
+        .format-option input[type="radio"]:checked + label {
+            color: #007bff;
+            font-weight: bold;
+        }
+        .format-option.selected {
+            border-color: #007bff;
+            background-color: #f0f7ff;
+        }
+    </style>
+</head>
+<body>
+<main class="main-content">
+    <header class="main-header">
+        <h1><i class="fas fa-file-alt"></i> Generación de Reportes</h1>
+    </header>
+
+    <div class="report-card">
+        <h2 style="border-bottom: 2px solid #f3f4f6; padding-bottom: 1rem; margin-bottom: 1.5rem;">
+            <i class="fas fa-filter"></i> Configurar Reporte
+        </h2>
+
+        <form action="/admin/reportes/ofertas/descargar" method="get" id="mainReportForm">
+            
+            <!-- Formato -->
+            <div class="form-section">
+                <label class="form-label">Formato de Salida</label>
+                <div class="format-selector">
+                    <div class="format-option selected" onclick="selectFormat(this)">
+                        <input type="radio" name="formato" value="pdf" id="fmt-pdf" checked>
+                        <label for="fmt-pdf">
+                            <i class="fas fa-file-pdf fa-2x" style="color: #dc3545; display: block; margin-bottom: 0.5rem;"></i>
+                            PDF
+                        </label>
+                    </div>
+                    <div class="format-option" onclick="selectFormat(this)">
+                        <input type="radio" name="formato" value="excel" id="fmt-excel">
+                        <label for="fmt-excel">
+                            <i class="fas fa-file-excel fa-2x" style="color: #198754; display: block; margin-bottom: 0.5rem;"></i>
+                            Excel
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filtros -->
+            <div class="form-section">
+                <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label for="nombre" class="form-label">Filtrar por Nombre</label>
+                        <input type="text" id="nombre" name="nombre" class="form-control" placeholder="Nombre de la oferta...">
+                    </div>
+                    <div>
+                        <label for="estado" class="form-label">Estado</label>
+                        <select id="estado" name="estado" class="form-control">
+                            <option value="">Todos los estados</option>
+                            <option value="ACTIVA">Activa</option>
+                            <option value="BORRADOR">Borrador</option>
+                            <option value="FINALIZADA">Finalizada</option>
+                            <option value="CANCELADA">Cancelada</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <label class="form-label">Rango de Fechas (Inicio)</label>
+                <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <small style="color: #6b7280; display: block; margin-bottom: 0.25rem;">Desde:</small>
+                        <input type="date" name="fechaInicio" class="form-control">
+                    </div>
+                    <div>
+                        <small style="color: #6b7280; display: block; margin-bottom: 0.25rem;">Hasta:</small>
+                        <input type="date" name="fechaFin" class="form-control">
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-download">
+                <i class="fas fa-download"></i> Descargar Reporte
+            </button>
+        </form>
+    </div>
+
+    <script>
+        function selectFormat(element) {
+            // Remover selected de todos
+            document.querySelectorAll('.format-option').forEach(el => el.classList.remove('selected'));
+            // Agregar al actual
+            element.classList.add('selected');
+            // Marcar radio
+            const radio = element.querySelector('input[type="radio"]');
+            if(radio) radio.checked = true;
+        }
+    </script>
+</main>
+</body>
+</html>

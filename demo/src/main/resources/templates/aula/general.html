@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/base}">
+<head>
+    <title th:text="${oferta.nombre} + ' - Aula Virtual'">Aula Virtual</title>
+</head>
+<body>
+    <div layout:fragment="content" class="container py-5">
+        <div class="row mb-4">
+            <div class="col-12">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a th:href="@{/mi-espacio}">Mi Espacio</a></li>
+                        <li class="breadcrumb-item active" aria-current="page" th:text="${oferta.nombre}">Oferta</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-8">
+                <!-- Header -->
+                <div class="card shadow-sm mb-4 border-0">
+                    <div class="card-body p-4">
+                        <span class="badge bg-primary mb-2" th:text="${oferta.tipoOferta}">TIPO</span>
+                        <h1 class="display-5 fw-bold mb-3" th:text="${oferta.nombre}">Título de la Oferta</h1>
+                        <p class="lead text-muted" th:text="${oferta.descripcion}">Descripción...</p>
+                        
+                        <div class="d-flex align-items-center mt-3 text-muted">
+                            <div class="me-4">
+                                <i class="fas fa-calendar me-2"></i>
+                                <span th:text="${#temporals.format(oferta.fechaInicio, 'dd/MM/yyyy')}">Fecha</span>
+                            </div>
+                            <div th:if="${oferta.modalidad}" class="me-4">
+                                <i class="fas fa-video me-2" th:if="${oferta.modalidad.name() == 'VIRTUAL'}"></i>
+                                <i class="fas fa-building me-2" th:if="${oferta.modalidad.name() == 'PRESENCIAL'}"></i>
+                                <i class="fas fa-users me-2" th:if="${oferta.modalidad.name() == 'HIBRIDA'}"></i>
+                                <span th:text="${oferta.modalidad}">Modalidad</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Access Content -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-white py-3">
+                        <h5 class="mb-0"><i class="fas fa-door-open me-2 text-primary"></i>Acceso al Evento</h5>
+                    </div>
+                    <div class="card-body p-4 text-center">
+                        <div th:if="${oferta.modalidad.name() == 'VIRTUAL' or oferta.modalidad.name() == 'HIBRIDA'}">
+                            <h4 class="mb-3">Enlace de Conexión</h4>
+                            <p class="mb-4 text-muted">El evento se realizará a través de videoconferencia.</p>
+                            
+                            <div th:if="${oferta.enlace != null and !oferta.enlace.isEmpty()}">
+                                <a th:href="${oferta.enlace}" target="_blank" class="btn btn-primary btn-lg px-5">
+                                    <i class="fas fa-video me-2"></i> Unirse a la Reunión
+                                </a>
+                                <p class="mt-3 small text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    El enlace se abrirá en una nueva pestaña.
+                                </p>
+                            </div>
+                            <div th:unless="${oferta.enlace != null and !oferta.enlace.isEmpty()}" class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                El enlace de conexión aún no ha sido configurado por el administrador.
+                            </div>
+                        </div>
+
+                        <div th:if="${oferta.modalidad.name() == 'PRESENCIAL' or oferta.modalidad.name() == 'HIBRIDA'}" class="mt-4">
+                             <h4 class="mb-3">Ubicación</h4>
+                             <p class="lead" th:text="${oferta.lugar ?: 'Lugar a confirmar'}">Dirección</p>
+                             <div th:if="${oferta.lugar != null}" class="mt-3">
+                                 <a th:href="'https://www.google.com/maps/search/?api=1&query=' + ${oferta.lugar}" target="_blank" class="btn btn-outline-secondary">
+                                     <i class="fas fa-map-marker-alt me-2"></i> Ver en Mapa
+                                 </a>
+                             </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+             <div class="col-lg-4">
+                <!-- Info Card -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-white">
+                        <h6 class="mb-0">Información Importante</h6>
+                    </div>
+                    <div class="card-body">
+                         <ul class="list-unstyled mb-0">
+                            <li class="mb-3 d-flex">
+                                <i class="fas fa-clock text-warning mt-1 me-3"></i>
+                                <div>
+                                    <strong>Horario:</strong>
+                                    <div th:if="${not #lists.isEmpty(oferta.horarios)}">
+                                        <div th:each="h : ${oferta.horarios}">
+                                            <span th:text="${h.dia} + ' ' + ${h.horaInicio} + ' - ' + ${h.horaFin}">Lun 10:00 - 12:00</span>
+                                        </div>
+                                    </div>
+                                    <span th:if="${#lists.isEmpty(oferta.horarios)}">A confirmar</span>
+                                </div>
+                            </li>
+                            <li class="mb-3 d-flex" th:if="${oferta.certificado}">
+                                <i class="fas fa-certificate text-success mt-1 me-3"></i>
+                                <div>
+                                    <strong>Certificación:</strong><br>
+                                    Este evento otorga certificado de participación.
+                                </div>
+                            </li>
+                         </ul>
+                    </div>
+                </div>
+             </div>
+        </div>
+    </div>
+</body>
+</html>

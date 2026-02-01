@@ -26,10 +26,14 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -49,6 +53,7 @@ public class OfertaAcademica {
     private Long idOferta;
     @NotBlank(message = "El nombre no puede estar vacío")
     private String nombre;
+
     @NotBlank(message = "La descripción no puede estar vacía")
     private String descripcion;
     private String duracion;
@@ -61,9 +66,13 @@ public class OfertaAcademica {
     private Double recargoMora;
     
 
+    @NotEmpty(message = "Los horarios no pueden estar vacíos")
     @OneToMany(mappedBy = "ofertaAcademica", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Horario> horarios = new ArrayList<>();
 
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "aula_id")
+    private Aula aula;
     
     @Enumerated(EnumType.STRING)
     private Modalidad modalidad;
@@ -84,6 +93,28 @@ public class OfertaAcademica {
     private Integer cupos;
     private Boolean visibilidad;
     private Boolean permiteInscripcionTardia = false;
+
+    // URL de la imagen de presentación
+    private String imagenUrl;
+
+    // Constructor personalizado para subclases
+    public OfertaAcademica(String nombre, String descripcion, Modalidad modalidad, Double costoInscripcion, 
+                           LocalDate fechaInicio, LocalDate fechaFin, Integer cupos, Integer duracionMeses, 
+                           Boolean certificado, EstadoOferta estado) {
+        this.nombre = nombre;
+        this.descripcion = descripcion;
+        this.modalidad = modalidad;
+        this.costoInscripcion = costoInscripcion;
+        this.fechaInicio = fechaInicio;
+        this.fechaFin = fechaFin;
+        this.cupos = cupos;
+        this.duracionMeses = duracionMeses;
+        this.certificado = certificado;
+        this.estado = estado;
+        this.visibilidad = true; // Default
+        this.permiteInscripcionTardia = false;
+        this.aula = new Aula();
+    }
     
     @ManyToMany(fetch = FetchType.EAGER) // Cambié a EAGER para facilitar
     @JoinTable(
@@ -99,6 +130,35 @@ public class OfertaAcademica {
     
     @OneToMany(mappedBy = "oferta", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private List<Inscripciones> inscripciones;
+
+    @PrePersist
+    @PreUpdate
+    public void validarOferta() {
+        if (fechaInicio != null && fechaFin != null && fechaInicio.isAfter(fechaFin)) {
+            throw new IllegalStateException("La fecha de inicio no puede ser posterior a la fecha de fin.");
+        }
+        
+        // Validación de horarios (opcional: descomentar si se quiere forzar al menos uno)
+        // if (this.horarios == null || this.horarios.isEmpty()) {
+        //     throw new IllegalStateException("La oferta debe tener al menos un horario asignado.");
+        // }
+    }
+
+    // Helper methods para gestionar la relación bidireccional con Horario
+    public void addHorario(Horario horario) {
+        if (this.horarios == null) {
+            this.horarios = new ArrayList<>();
+        }
+        this.horarios.add(horario);
+        horario.setOfertaAcademica(this);
+    }
+
+    public void removeHorario(Horario horario) {
+        if (this.horarios != null) {
+            this.horarios.remove(horario);
+            horario.setOfertaAcademica(null);
+        }
+    }
 
         public Boolean getEstaActiva() {
         // Consideramos activa si está en curso o planificada (ACTIVA)
@@ -519,6 +579,88 @@ public class OfertaAcademica {
         }
         
         return errores;
+    }
+
+    /**
+     * Actualiza los datos comunes de la oferta desde un mapa de datos.
+     * Este método implementa la lógica de modificación delegada al modelo.
+     */
+    public void actualizarDatos(java.util.Map<String, Object> datos) {
+        if (datos.containsKey("nombre")) {
+            this.setNombre((String) datos.get("nombre"));
+        }
+        if (datos.containsKey("descripcion")) {
+            this.setDescripcion((String) datos.get("descripcion"));
+        }
+        if (datos.containsKey("cupos")) {
+            this.setCupos(convertirEntero(datos.get("cupos")));
+        }
+        if (datos.containsKey("costoInscripcion")) {
+            this.setCostoInscripcion(convertirDouble(datos.get("costoInscripcion")));
+        }
+        if (datos.containsKey("fechaInicio")) {
+            this.setFechaInicio(convertirFecha(datos.get("fechaInicio")));
+        }
+        if (datos.containsKey("fechaFin")) {
+            this.setFechaFin(convertirFecha(datos.get("fechaFin")));
+        }
+        if (datos.containsKey("modalidad")) {
+             String modStr = (String) datos.get("modalidad");
+             if (modStr != null && !modStr.isEmpty()) {
+                 try {
+                     this.setModalidad(Modalidad.valueOf(modStr.toUpperCase()));
+                 } catch (IllegalArgumentException e) {
+                     // Ignorar valor inválido
+                 }
+             }
+        }
+        if (datos.containsKey("certificado")) {
+             Object cert = datos.get("certificado");
+             if (cert instanceof String) {
+                 this.setCertificado(Boolean.parseBoolean((String)cert) || "on".equals(cert) || "true".equalsIgnoreCase((String)cert));
+             } else if (cert instanceof Boolean) {
+                 this.setCertificado((Boolean) cert);
+             }
+        }
+        if (datos.containsKey("lugar")) {
+            this.setLugar((String) datos.get("lugar"));
+        }
+        if (datos.containsKey("enlace")) {
+            this.setEnlace((String) datos.get("enlace"));
+        }
+        if (datos.containsKey("imagenUrl") && datos.get("imagenUrl") != null) {
+            this.setImagenUrl((String) datos.get("imagenUrl"));
+        }
+    }
+
+    // Helper methods for safe conversion
+    protected Integer convertirEntero(Object valor) {
+        if (valor == null) return null;
+        if (valor instanceof Integer) return (Integer) valor;
+        if (valor instanceof String && !((String)valor).isEmpty()) {
+            try { return Integer.parseInt((String) valor); } catch(NumberFormatException e) { return null; }
+        }
+        return null;
+    }
+
+    protected Double convertirDouble(Object valor) {
+        if (valor == null) return null;
+        if (valor instanceof Double) return (Double) valor;
+        if (valor instanceof Integer) return ((Integer) valor).doubleValue();
+        if (valor instanceof String && !((String)valor).isEmpty()) {
+            try { return Double.parseDouble((String) valor); } catch(NumberFormatException e) { return null; }
+        }
+        return null;
+    }
+
+    protected LocalDate convertirFecha(Object valor) {
+        if (valor == null) return null;
+        if (valor instanceof LocalDate) return (LocalDate) valor;
+        if (valor instanceof java.sql.Date) return ((java.sql.Date) valor).toLocalDate();
+        if (valor instanceof String && !((String)valor).isEmpty()) {
+            try { return LocalDate.parse((String) valor); } catch(Exception e) { return null; }
+        }
+        return null;
     }
 
 }

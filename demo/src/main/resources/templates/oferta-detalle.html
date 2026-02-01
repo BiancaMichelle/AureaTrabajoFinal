@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+
+<head>
+    <title th:text="${oferta.nombre + ' | Aurea'}">Detalle de Oferta | Aurea</title>
+    <style>
+        /* Udemy-inspired styles */
+        .course-header {
+            background-color: #1c1d1f;
+            color: #fff;
+            padding: 32px 0;
+            position: relative;
+        }
+        
+        .breadcrumb-custom .breadcrumb-item a {
+            color: #cec0fc;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .breadcrumb-custom .breadcrumb-item.active {
+            color: #fff;
+        }
+
+        .breadcrumb-custom .breadcrumb-item + .breadcrumb-item::before {
+            color: #cec0fc;
+        }
+
+        .course-title {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            font-family: 'Open Sans', sans-serif; /* Fallback */
+        }
+
+        .course-subtitle {
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+            line-height: 1.4;
+        }
+
+        .course-meta {
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+        
+        .course-meta i {
+            margin-right: 0.5rem;
+            color: #f69c55; /* Orange accent */
+        }
+        
+        .course-meta span {
+            margin-right: 1.5rem;
+        }
+
+        .course-main-content {
+            padding: 32px 0;
+        }
+
+        /* Sidebar Sticky */
+        .course-sidebar-container {
+            position: relative;
+            z-index: 10;
+        }
+
+        .course-sidebar {
+            background: #fff;
+            border: 1px solid #d1d7dc;
+            box-shadow: 0 2px 4px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.08);
+            padding: 2px; /* For border effect */
+            position: sticky;
+            top: 20px;
+        }
+
+        /* Moves the sidebar up to overlap the header on large screens */
+        @media (min-width: 992px) {
+            .course-sidebar {
+                margin-top: -200px;
+                width: 340px;
+                margin-left: auto;
+            }
+        }
+
+        .sidebar-content {
+            padding: 24px;
+        }
+
+        .course-price {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #333;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .course-price-monthly {
+            font-size: 0.9rem;
+            color: #6a6f73;
+            font-weight: 400;
+            margin-left: 10px;
+        }
+
+        .btn-enroll {
+            width: 100%;
+            height: 48px;
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 12px;
+            border-radius: 0; /* Square look roughly */
+        }
+        
+        .guarantee-text {
+            font-size: 0.8rem;
+            text-align: center;
+            color: #6a6f73;
+            margin-top: 12px;
+        }
+
+        .sidebar-list {
+            list-style: none;
+            padding: 0;
+            margin-top: 24px;
+        }
+        
+        .sidebar-list li {
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: #333;
+        }
+        
+        .sidebar-list li i {
+            width: 20px;
+            text-align: center;
+            margin-right: 12px;
+            color: #333;
+        }
+
+        /* Main Content Areas */
+        .what-you-learn {
+            border: 1px solid #d1d7dc;
+            padding: 24px;
+            margin-bottom: 32px;
+            background-color: #fcfcfc;
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: #2d2f31;
+        }
+
+        .description-text {
+            font-size: 1rem;
+            line-height: 1.6;
+            color: #2d2f31;
+            white-space: pre-line; /* Respect newlines in description */
+        }
+
+        .instructor-card {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+            align-items: center;
+        }
+        
+        .instructor-img {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .instructor-info h4 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin: 0;
+            color: #1c1d1f;
+        }
+        
+        .instructor-info p {
+            margin: 0;
+            color: #6a6f73;
+            font-size: 0.9rem;
+        }
+        
+        /* Badges */
+        .badge-best-seller {
+            background-color: #eceb98;
+            color: #3d3c0a;
+            font-weight: 700;
+            font-size: 0.8rem;
+            padding: 4px 8px;
+            border-radius: 0;
+            display: inline-block;
+            margin-bottom: 12px;
+        }
+        
+    </style>
+</head>
+
+<body>
+    <div layout:fragment="content">
+        
+        <!-- Header Section (Dark) -->
+        <div class="course-header">
+            <div class="container">
+                <div class="row">
+                    <div class="col-lg-8">
+                        <!-- Breadcrumb -->
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb breadcrumb-custom">
+                                <li class="breadcrumb-item"><a th:href="@{/publico}">Inicio</a></li>
+                                <li class="breadcrumb-item"><a th:href="@{/publico#ofertas}">Ofertas</a></li>
+                                <li class="breadcrumb-item active" aria-current="page" th:text="${oferta.modalidad}">Modalidad</li>
+                            </ol>
+                        </nav>
+                        
+                        <!-- Title & Subtitle -->
+                        <h1 class="course-title" th:text="${oferta.nombre}">Nombre de la Oferta</h1>
+                        
+                        <div class="course-subtitle">
+                             <span th:text="${#strings.abbreviate(oferta.descripcion, 150)}">Breve descripción...</span>
+                        </div>
+                        
+                        <!-- Badges/Meta -->
+                        <div class="mb-3">
+                            <span class="badge bg-warning text-dark me-2" th:if="${oferta.cupos != null and oferta.cupos < 5}">¡Últimos Cupos!</span>
+                            <span class="badge bg-info text-dark" th:if="${oferta.categorias != null}" th:each="cat : ${oferta.categorias}" th:text="${cat.nombre}">Categoria</span>
+                        </div>
+
+                        <div class="course-meta">
+                            <span><i class="fas fa-calendar"></i> Inicio: <strong th:text="${oferta.fechaInicio != null ? #temporals.format(oferta.fechaInicio, 'dd MMM yyyy') : 'Fecha a confirmar'}">01 Ene 2025</strong></span>
+                            <span><i class="fas fa-globe"></i> <span th:text="${oferta.modalidad}">Online</span></span>
+                            <span><i class="fas fa-clock"></i> <span th:text="${oferta.duracionMeses != null ? oferta.duracionMeses + ' Meses' : 'Duración a confirmar'}">3 Meses</span></span>
+                        </div>
+                        
+                        <div class="course-meta" style="font-size: 0.85rem; color: #cec0fc;">
+                            <i class="fas fa-certificate"></i> <span th:text="${oferta.certificado ? 'Certificado de finalización' : 'Sin certificado'}">Certificado</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content & Sidebar Container -->
+        <div class="container mb-5">
+            <div class="row">
+                
+                <!-- Center Content (Left on Desktop) -->
+                <div class="col-lg-8 course-main-content">
+                    
+                    <!-- What you'll learn box -->
+                    <div class="what-you-learn">
+                        <h3 class="h4 fw-bold mb-3">Lo que aprenderás</h3>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <ul class="list-unstyled">
+                                    <li class="mb-2"><i class="fas fa-check text-secondary me-2"></i>Dominar los fundamentos de <span th:text="${oferta.nombre}">este curso</span>.</li>
+                                    <li class="mb-2"><i class="fas fa-check text-secondary me-2"></i>Proyectos prácticos y ejercicios.</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="list-unstyled">
+                                    <li class="mb-2"><i class="fas fa-check text-secondary me-2"></i>Acceso a recursos exclusivos.</li>
+                                    <li class="mb-2"><i class="fas fa-check text-secondary me-2"></i>Mejora tu perfil profesional.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="mb-5">
+                        <h3 class="section-title">Descripción</h3>
+                        <div class="description-text" th:text="${oferta.descripcion}">
+                            Descripción completa aquí...
+                        </div>
+                    </div>
+
+                    <!-- Syllabus (If Course/Training) -->
+                    <div class="mb-5" th:if="${oferta instanceof T(com.example.demo.model.Curso) or oferta instanceof T(com.example.demo.model.Formacion)}" th:with="hasTemario=${oferta['temario'] != null}">
+                         <div th:if="${hasTemario}">
+                             <h3 class="section-title">Contenido del curso</h3>
+                             <div class="card p-3 bg-light">
+                                 <p class="mb-0" th:text="${oferta['temario']}">Temario del curso...</p>
+                             </div>
+                         </div>
+                    </div>
+                    
+                    <!-- Teachers / Instructors -->
+                    <div class="mb-5">
+                        <h3 class="section-title">Instructores</h3>
+                        <!-- If it's a Curso or Formacion -->
+                        <div th:if="${oferta instanceof T(com.example.demo.model.Curso) or oferta instanceof T(com.example.demo.model.Formacion)}" th:with="docentes=${oferta.docentes}">
+                            <div th:if="${docentes != null and !docentes.isEmpty()}">
+                                <div th:each="docente : ${docentes}" class="instructor-card">
+                                    <div class="d-flex align-items-center">
+                                        <div class="bg-light rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 64px; height: 64px;">
+                                            <i class="fas fa-user-tie fa-2x text-secondary"></i>
+                                        </div>
+                                        <div class="instructor-info">
+                                            <h4 th:text="${docente.nombre + ' ' + docente.apellido}">Nombre Docente</h4>
+                                            <p class="text-primary mb-0">Docente</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                             <div th:if="${docentes == null or docentes.isEmpty()}">
+                                <p class="text-muted">Docentes por confirmar.</p>
+                            </div>
+                        </div>
+
+                        <!-- If it's a Charla or Seminario (Disertantes are Strings) -->
+                        <div th:if="${oferta instanceof T(com.example.demo.model.Charla) or oferta instanceof T(com.example.demo.model.Seminario)}" 
+                             th:with="disertantes=${oferta instanceof T(com.example.demo.model.Charla) ? oferta.disertantes : oferta.disertantes}">
+                            
+                             <div th:if="${disertantes != null and !disertantes.isEmpty()}">
+                                <h4 class="h6 text-muted mb-3">Disertantes:</h4>
+                                <div th:each="disertante : ${disertantes}" class="instructor-card border-bottom pb-2">
+                                     <div class="d-flex align-items-center">
+                                        <div class="bg-light rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                                            <i class="fas fa-microphone-alt fa-lg text-secondary"></i>
+                                        </div>
+                                        <div class="instructor-info">
+                                            <h4 th:text="${disertante}">Nombre Disertante</h4>
+                                            <p class="small text-muted mb-0">Expositor invitado</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                             <div th:if="${disertantes == null or disertantes.isEmpty()}">
+                                <p class="text-muted">Disertantes por confirmar.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Sidebar (Right) -->
+                <div class="col-lg-4 course-sidebar-container">
+                    <div class="course-sidebar">
+                        <!-- Preview Image/Video Area -->
+                         <div class="ratio ratio-16x9 bg-secondary mb-3">
+                            <img th:src="@{${oferta.imagenUrl != null ? oferta.imagenUrl : '/img/predeterminado.jpg'}}" class="img-fluid" style="object-fit: cover;" alt="Oferta">
+                        </div>
+                        
+                        <div class="sidebar-content">
+                            <div class="course-price">
+                                <span th:if="${oferta.costoInscripcion != null and oferta.costoInscripcion > 0}" th:text="'$' + ${#numbers.formatDecimal(oferta.costoInscripcion, 0, 'COMMA', 2, 'POINT')}">$XX.XX</span>
+                                <span th:if="${oferta.costoInscripcion == null or oferta.costoInscripcion == 0}" class="text-success">Gratis</span>
+                                
+                                <th:block th:if="${oferta.tipoOferta == 'Curso' or oferta.tipoOferta == 'Formación'}">
+                                    <span th:if="${oferta.costoCuota != null and oferta.costoCuota > 0}" class="course-price-monthly">
+                                        + $<span th:text="${#numbers.formatDecimal(oferta.costoCuota, 0, 'COMMA', 0, 'POINT')}"></span>/mes
+                                    </span>
+                                </th:block>
+                            </div>
+
+                            <!-- Logic from public.html for buttons -->
+                             <div th:if="${#authorization.expression('isAuthenticated()')}">
+                                <!-- Docente -->
+                                <a th:if="${idsDocente != null and #sets.contains(idsDocente, oferta.idOferta)}"
+                                   th:href="@{/docente/aula/{id}(id=${oferta.idOferta})}"
+                                   class="btn btn-success btn-enroll">
+                                    Ir al Aula (Docente)
+                                </a>
+                                
+                                <!-- Alumno Inscrito -->
+                                <a th:if="${idsInscritos != null and #sets.contains(idsInscritos, oferta.idOferta)}"
+                                   th:href="@{/alumno/aula/{id}(id=${oferta.idOferta})}"
+                                   class="btn btn-info text-white btn-enroll">
+                                    Ir al Aula
+                                </a>
+
+                                <!-- No inscrito -->
+                                <th:block th:if="${(idsInscritos == null or !#sets.contains(idsInscritos, oferta.idOferta)) and (idsDocente == null or !#sets.contains(idsDocente, oferta.idOferta))}">
+                                    <form th:action="@{/alumno/inscribirse/{id}(id=${oferta.idOferta})}" method="post">
+                                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                        <button type="submit" class="btn btn-primary btn-enroll">
+                                            Inscribirse ahora
+                                        </button>
+                                    </form>
+                                </th:block>
+                            </div>
+                            
+                            <div th:unless="${#authorization.expression('isAuthenticated()')}">
+                                <a th:href="@{/login}" class="btn btn-primary btn-enroll">
+                                    Inscribirse ahora
+                                </a>
+                                <div class="text-center mt-2">
+                                     <small>¿Ya tienes cuenta? <a th:href="@{/login}">Iniciar sesión</a></small>
+                                </div>
+                            </div>
+                            
+                            <div th:if="${oferta.horarios != null and !oferta.horarios.isEmpty()}" class="mt-4">
+                                <h5 class="fw-bold mb-2">Horarios de cursada:</h5>
+                                <ul class="sidebar-list">
+                                    <li th:each="horario : ${oferta.horarios}">
+                                        <i class="far fa-clock"></i>
+                                        <strong th:text="${horario.dia}">DIA</strong>: 
+                                        <span th:text="${horario.horaInicio}">00:00:00</span> - 
+                                        <span th:text="${horario.horaFin}">00:00:00</span>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <h5 class="fw-bold mt-4 mb-2">Este curso incluye:</h5>
+                            <ul class="sidebar-list">
+                                <li><i class="fas fa-video"></i> Clases en vivo y grabadas</li>
+                                <li><i class="fas fa-file-download"></i> Recursos descargables</li>
+                                <li><i class="fas fa-mobile-alt"></i> Acceso en dispositivos móviles</li>
+                                <li th:if="${oferta.certificado}"><i class="fas fa-trophy"></i> Certificado de finalización</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>

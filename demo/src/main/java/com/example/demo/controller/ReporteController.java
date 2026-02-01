@@ -33,6 +33,11 @@ public class ReporteController {
     @Autowired
     private AuditLogService auditLogService;
 
+    @GetMapping
+    public String verPaginaReportes() {
+        return "admin/reportes";
+    }
+
     @GetMapping("/ofertas/descargar")
     public ResponseEntity<InputStreamResource> descargarReporte(
             @RequestParam(required = false) String formato, // pdf o excel

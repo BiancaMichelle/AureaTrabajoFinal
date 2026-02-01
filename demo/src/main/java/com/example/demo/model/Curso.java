@@ -7,6 +7,9 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.example.demo.enums.EstadoOferta;
+import com.example.demo.enums.Modalidad;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -18,6 +21,9 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 
 @Entity
 @Getter
@@ -35,6 +41,27 @@ public class Curso extends OfertaAcademica {
         inverseJoinColumns = @JoinColumn(name = "docente_id")
     )
     private List<Docente> docentes;
+
+    // Construtor para DataSeeder
+    public Curso(String nombre, String descripcion, Modalidad modalidad, Double costo, Boolean certificado, 
+                 LocalDate inicio, LocalDate fin, Integer cupos, Integer duracionMeses, 
+                 Double costoMora, Integer diaVencimiento, List<Docente> docentes) {
+        super(nombre, descripcion, modalidad, costo, inicio, fin, cupos, duracionMeses, certificado, EstadoOferta.ACTIVA);
+        this.docentes = docentes;
+        this.nrCuotas = duracionMeses; // Por defecto cuotas = duración
+        this.costoCuota = duracionMeses > 0 ? costo / duracionMeses : costo;
+        this.costoMora = costoMora;
+        this.diaVencimiento = diaVencimiento;
+    }
+
+    @PrePersist
+    @PreUpdate
+    public void validarCurso() {
+        super.validarOferta();
+        if (docentes == null || docentes.isEmpty()) {
+            throw new IllegalStateException("El curso debe tener al menos un docente asignado.");
+        }
+    }
     
     @ManyToMany
     @JoinTable(
@@ -294,6 +321,7 @@ public class Curso extends OfertaAcademica {
         detalle.setVisibilidad(this.getVisibilidad());
         detalle.setLugar(this.getLugar());
         detalle.setEnlace(this.getEnlace());
+        detalle.setImagenUrl(this.getImagenUrl());
         
         // Información específica de curso
         detalle.setTemario(this.temario);
@@ -435,6 +463,35 @@ public class Curso extends OfertaAcademica {
         public void setHoraFin(String horaFin) { this.horaFin = horaFin; }
     }
     
+    @Override
+    public void actualizarDatos(java.util.Map<String, Object> datos) {
+        super.actualizarDatos(datos);
+        
+        if (datos.containsKey("temario")) {
+            this.setTemario((String) datos.get("temario"));
+        }
+        if (datos.containsKey("costoCuota")) {
+            this.setCostoCuota(convertirDouble(datos.get("costoCuota")));
+        }
+        if (datos.containsKey("costoMora")) {
+            Double val = convertirDouble(datos.get("costoMora"));
+            this.setCostoMora(val);
+            if (val != null) this.setRecargoMora(val); 
+        }
+        if (datos.containsKey("nrCuotas")) {
+            this.setNrCuotas(convertirEntero(datos.get("nrCuotas")));
+        }
+        if (datos.containsKey("diaVencimiento")) {
+            this.setDiaVencimiento(convertirEntero(datos.get("diaVencimiento")));
+        }
+        if (datos.containsKey("docentes")) {
+            Object obj = datos.get("docentes");
+            if (obj instanceof List) {
+                this.setDocentes(new ArrayList<>((List<Docente>) obj));
+            }
+        }
+    }
+
     public static class CursoDetalle {
         private Long id;
         private String nombre;
@@ -450,6 +507,7 @@ public class Curso extends OfertaAcademica {
         private Boolean visibilidad;
         private String lugar;
         private String enlace;
+        private String imagenUrl;
         
         // Específicos de curso
         private String temario;
@@ -509,6 +567,9 @@ public class Curso extends OfertaAcademica {
 
         public String getEnlace() { return enlace; }
         public void setEnlace(String enlace) { this.enlace = enlace; }
+
+        public String getImagenUrl() { return imagenUrl; }
+        public void setImagenUrl(String imagenUrl) { this.imagenUrl = imagenUrl; }
         
         public String getTemario() { return temario; }
         public void setTemario(String temario) { this.temario = temario; }

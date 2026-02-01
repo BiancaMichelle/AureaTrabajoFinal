@@ -4,6 +4,9 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.example.demo.enums.EstadoOferta;
+import com.example.demo.enums.Modalidad;
+
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.validation.constraints.NotEmpty;
@@ -11,6 +14,9 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 
 @Entity
 @Getter
@@ -26,6 +32,25 @@ public class Charla extends OfertaAcademica {
     private List<String> disertantes;
     
     private String publicoObjetivo;
+
+    // Construtor para DataSeeder
+    public Charla(String nombre, String descripcion, String publico, Modalidad modalidad, 
+                  LocalDate inicio, String enlace, List<String> disertantes) {
+        super(nombre, descripcion, modalidad, 0.0, inicio, inicio, 100, 1, false, EstadoOferta.ACTIVA);
+        this.setEnlace(enlace);
+        this.publicoObjetivo = publico;
+        this.disertantes = disertantes;
+        this.duracionEstimada = 60;
+    }
+
+    @PrePersist
+    @PreUpdate
+    public void validarCharla() {
+        super.validarOferta();
+        if (disertantes == null || disertantes.isEmpty()) {
+            throw new IllegalStateException("La charla debe tener al menos un disertante.");
+        }
+    }
 
     /**
      * Duración estimada formateada
@@ -264,6 +289,7 @@ public class Charla extends OfertaAcademica {
         detalle.setCostoInscripcion(this.getCostoInscripcion());
         detalle.setCertificado(this.getCertificado() != null ? this.getCertificado().toString() : "");
         detalle.setVisibilidad(this.getVisibilidad());
+        detalle.setImagenUrl(this.getImagenUrl());
         
         // Información específica de charla
         detalle.setLugar(this.getLugar());
@@ -314,6 +340,26 @@ public class Charla extends OfertaAcademica {
         public void setNombre(String nombre) { this.nombre = nombre; }
     }
     
+    @Override
+    public void actualizarDatos(java.util.Map<String, Object> datos) {
+        super.actualizarDatos(datos);
+        
+        if (datos.containsKey("duracionEstimada")) {
+            this.setDuracionEstimada(convertirEntero(datos.get("duracionEstimada")));
+        }
+        if (datos.containsKey("publicoObjetivo")) {
+            this.setPublicoObjetivo((String) datos.get("publicoObjetivo"));
+        }
+        if (datos.containsKey("disertantes")) {
+             Object obj = datos.get("disertantes");
+             if (obj instanceof List) {
+                 this.setDisertantes(new ArrayList<>((List<String>) obj));
+             } else if (obj instanceof String && !((String)obj).trim().isEmpty()) {
+                 this.setDisertantes(new ArrayList<>(java.util.Arrays.asList(((String)obj).split(","))));
+             }
+        }
+    }
+
     /**
      * Clase interna para encapsular los detalles de la charla
      */
@@ -330,6 +376,7 @@ public class Charla extends OfertaAcademica {
         private Double costoInscripcion;
         private String certificado;
         private Boolean visibilidad;
+        private String imagenUrl;
         
         // Específicos de charla
         private String lugar;
@@ -380,6 +427,9 @@ public class Charla extends OfertaAcademica {
         
         public Boolean getVisibilidad() { return visibilidad; }
         public void setVisibilidad(Boolean visibilidad) { this.visibilidad = visibilidad; }
+
+        public String getImagenUrl() { return imagenUrl; }
+        public void setImagenUrl(String imagenUrl) { this.imagenUrl = imagenUrl; }
         
         public String getLugar() { return lugar; }
         public void setLugar(String lugar) { this.lugar = lugar; }

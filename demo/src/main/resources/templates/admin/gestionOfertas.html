@@ -937,6 +937,20 @@
                     </div>
                 </div>
 
+                <!-- Horarios -->
+                <div class="oferta-detalle-section">
+                    <div class="section-header">
+                        <h4><i class="fas fa-clock"></i> Horarios</h4>
+                    </div>
+                    <div class="oferta-info-grid">
+                        <div class="info-item full-width">
+                            <div id="detalle-horarios-container" class="horarios-list" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;">
+                                <span class="text-muted">Sin horarios definidos</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Certificación -->
                 <div id="seccion-certificacion" class="oferta-detalle-section" style="display: none;">
                     <div class="section-header">
@@ -2876,6 +2890,25 @@
             } else {
                 console.error('❌ Elemento detalle-capacidad-max no encontrado');
             }
+
+            // Horarios
+            const horariosContainer = document.getElementById('detalle-horarios-container');
+            if (horariosContainer) {
+                if (oferta.horarios && oferta.horarios.length > 0) {
+                    horariosContainer.innerHTML = oferta.horarios.map(h => {
+                         // Formatear hora (cortar segundos si existen)
+                         const inicio = h.horaInicio ? h.horaInicio.toString().substring(0, 5) : '??:??';
+                         const fin = h.horaFin ? h.horaFin.toString().substring(0, 5) : '??:??';
+                         return `<span class="badge" style="background-color: #6c757d; color: white; padding: 0.5em 0.8em; border-radius: 20px; font-weight: normal; font-size: 0.9em; display: inline-flex; align-items: center; gap: 0.4rem;">
+                                    <i class="fas fa-calendar-day"></i> ${h.dia} 
+                                    <i class="fas fa-clock" style="margin-left: 0.3rem;"></i> ${inicio} - ${fin}
+                                 </span>`;
+                    }).join('');
+                    console.log('✅ Horarios asignados:', oferta.horarios.length);
+                } else {
+                    horariosContainer.innerHTML = '<span class="text-muted">Sin horarios definidos</span>';
+                }
+            }
             
             // Categorías
             const categoriasContainer = document.getElementById('detalle-categorias');
@@ -3774,6 +3807,30 @@
                     document.getElementById('costoInscripcion').value = oferta.costoInscripcion || '';
                 }
                 
+                // Imagen de presentación
+                const imagePreview = document.getElementById('image-preview');
+                if (imagePreview) {
+                    if (oferta.imagenUrl) {
+                        // Asegurar que la ruta sea correcta si viene relativa
+                        const src = oferta.imagenUrl.startsWith('http') || oferta.imagenUrl.startsWith('/') 
+                                  ? oferta.imagenUrl 
+                                  : '/' + oferta.imagenUrl;
+                        imagePreview.src = src;
+                        imagePreview.style.display = 'block';
+                    } else {
+                        imagePreview.style.display = 'none';
+                        imagePreview.src = '';
+                    }
+                }
+                
+                // Ubicación y Enlace para todos los tipos
+                if (document.getElementById('lugar')) {
+                    document.getElementById('lugar').value = oferta.lugar || '';
+                }
+                if (document.getElementById('enlace')) {
+                    document.getElementById('enlace').value = oferta.enlace || '';
+                }
+
                 // Mostrar campos específicos según el tipo
                 const tipoOferta = oferta.tipo || oferta.tipoOferta;
                 mostrarCamposEspecificos(tipoOferta);
@@ -3882,12 +3939,6 @@
                         
                     } else if (tipoOferta === 'CHARLA') {
                         console.log('🎤 Cargando datos de CHARLA');
-                        if (document.getElementById('lugar')) {
-                            document.getElementById('lugar').value = oferta.lugar || '';
-                        }
-                        if (document.getElementById('enlace')) {
-                            document.getElementById('enlace').value = oferta.enlace || '';
-                        }
                         if (document.getElementById('duracionEstimada')) {
                             document.getElementById('duracionEstimada').value = oferta.duracionEstimada || '';
                         }
@@ -3904,12 +3955,6 @@
                         
                     } else if (tipoOferta === 'SEMINARIO') {
                         console.log('🏛️ Cargando datos de SEMINARIO');
-                        if (document.getElementById('lugar')) {
-                            document.getElementById('lugar').value = oferta.lugar || '';
-                        }
-                        if (document.getElementById('enlace')) {
-                            document.getElementById('enlace').value = oferta.enlace || '';
-                        }
                         if (document.getElementById('duracionMinutos')) {
                             document.getElementById('duracionMinutos').value = oferta.duracionMinutos || '';
                         }

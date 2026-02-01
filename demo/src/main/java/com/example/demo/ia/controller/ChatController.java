@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Controller
 @RequestMapping("/ia")
@@ -57,7 +58,7 @@ public class ChatController {
             response.put("success", true);
             response.put("response", chatMessage.getAiResponse());
             response.put("sessionId", sessionId);
-            response.put("messageId", chatMessage.getId().toString());
+            response.put("messageId", chatMessage.getId() != null ? chatMessage.getId().toString() : UUID.randomUUID().toString());
             response.put("responseTime", chatMessage.getResponseTimeMs());
             response.put("timestamp", System.currentTimeMillis());
             
