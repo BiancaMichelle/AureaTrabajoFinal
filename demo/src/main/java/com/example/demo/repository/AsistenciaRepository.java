@@ -15,4 +15,10 @@ public interface AsistenciaRepository extends JpaRepository<Asistencia, UUID> {
     List<Asistencia> findByOfertaIdOfertaAndAlumnoDni(Long ofertaId, String alumnoDni);
     Optional<Asistencia> findByOfertaIdOfertaAndAlumnoDniAndFecha(Long ofertaId, String alumnoDni, LocalDate fecha);
     Optional<Asistencia> findByOfertaIdOfertaAndAlumnoDniAndClaseIdClase(Long ofertaId, String alumnoDni, UUID idClase);
+    
+    List<Asistencia> findByOfertaIdOfertaAndClaseIdClase(Long ofertaId, UUID claseId);
+    
+    List<Asistencia> findByOfertaIdOfertaAndFecha(Long ofertaId, LocalDate fecha);
+    
+    List<Asistencia> findByOfertaIdOferta(Long ofertaId);
 }

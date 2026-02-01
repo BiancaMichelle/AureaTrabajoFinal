@@ -47,4 +47,25 @@ public class Asistencia {
     @ManyToOne
     @JoinColumn(name = "oferta_id")
     private OfertaAcademica oferta;
+
+    // Métodos helper para establecer estado
+    public void marcarPresente() {
+        this.estado = EstadoAsistencia.PRESENTE;
+    }
+
+    public void marcarTarde() {
+        this.estado = EstadoAsistencia.TARDANZA;
+    }
+
+    public void marcarAusente() {
+        this.estado = EstadoAsistencia.AUSENTE;
+    }
+
+    public void marcarJustificado() {
+        this.estado = EstadoAsistencia.JUSTIFICADO;
+    }
+
+    public boolean isPresente() {
+        return EstadoAsistencia.PRESENTE.equals(this.estado);
+    }
 }

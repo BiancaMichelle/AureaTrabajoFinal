@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aula Virtual - Asistencia</title>
+    <!-- CSRF Token -->
+    <meta name="_csrf" th:content="${_csrf.token}" />
+    <meta name="_csrf_header" th:content="${_csrf.headerName}" />
+
     <!-- Tailwind CSS -->
     <th:block th:if="${@environment.getProperty('app.useTailwindCdn','true') == 'true'}">
         <script src="https://cdn.tailwindcss.com"></script>
@@ -71,32 +75,37 @@
                     </svg>
                 </div>
                 
-                <!-- Pestañas -->
-                <!-- Link para Docentes/Admin -->
+                <!-- 1. Contenido -->
                 <a sec:authorize="hasAnyAuthority('DOCENTE', 'ADMIN')" 
                    th:href="@{/docente/aula/{id}(id=${oferta.idOferta})}" 
                    class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
                     Contenido
                 </a>
-                
-                <!-- Link para Alumnos -->
                 <a sec:authorize="hasAuthority('ALUMNO') and !hasAnyAuthority('DOCENTE', 'ADMIN')" 
                    th:href="@{/alumno/aula/{id}(id=${oferta.idOferta})}" 
                    class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
                     Contenido
                 </a>
-                <a href="#" class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
-                    Descripción
-                </a>
-                <a href="#" class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
-                    Anuncios
-                </a>
-                <a href="#" class="py-3 px-1 border-b-2 border-white text-white font-semibold text-sm nav-tab-active">
+                
+                <!-- 2. Participantes (Solo Docente/Admin) - ACTIVE -->
+                <a sec:authorize="hasAnyAuthority('DOCENTE', 'ADMIN')"
+                   href="#" 
+                   class="py-3 px-1 border-b-2 border-white text-white font-semibold text-sm nav-tab-active">
                     Participantes
                 </a>
+
+                <!-- 3. Asistencia -->
+                <a th:href="@{/aula/oferta/{id}/asistencia(id=${oferta.idOferta})}" 
+                   class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
+                    Asistencia
+                </a>
+
+                <!-- 4. Calificaciones -->
                 <a href="#" class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
                     Calificaciones
                 </a>
+
+                <!-- 5. Calendario -->
                 <a href="#" class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
                     Calendario
                 </a>
@@ -224,6 +233,87 @@
                 <button id="close-modal-footer" class="bg-gray-800 text-white px-6 py-2 rounded-lg font-medium shadow-lg shadow-gray-200 hover:bg-gray-900 transition-all">
                     Cerrar
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Calificaciones (Placeholder) -->
+    <div id="grades-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden modal-enter">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden modal-content-enter transform transition-all">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h3 class="font-semibold text-gray-800">Calificaciones del Alumno</h3>
+                <button onclick="document.getElementById('grades-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fas fa-times-circle text-2xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div id="grades-user-info" class="flex items-center mb-6"></div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50 border-b border-gray-100">
+                                <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Actividad</th>
+                                <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Fecha</th>
+                                <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-center">Nota</th>
+                                <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="grades-table-body" class="text-sm">
+                            <tr class="border-b border-gray-50 hover:bg-gray-50">
+                                <td class="px-4 py-3">Examen Parcial 1</td>
+                                <td class="px-4 py-3">15/05/2026</td>
+                                <td class="px-4 py-3 text-center font-bold text-gray-800">18/20</td>
+                                <td class="px-4 py-3"><span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs">Aprobado</span></td>
+                            </tr>
+                             <tr class="border-b border-gray-50 hover:bg-gray-50">
+                                <td class="px-4 py-3">Tarea Práctica 1</td>
+                                <td class="px-4 py-3">22/05/2026</td>
+                                <td class="px-4 py-3 text-center font-bold text-gray-800">16/20</td>
+                                <td class="px-4 py-3"><span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs">Aprobado</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Perfil (Placeholder) -->
+    <div id="profile-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden modal-enter">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden modal-content-enter transform transition-all">
+            <div class="bg-gradient-to-r from-blue-500 to-indigo-600 p-6 text-white text-center">
+                <div id="profile-avatar" class="w-20 h-20 rounded-full bg-white text-blue-600 flex items-center justify-center text-3xl font-bold mx-auto mb-3 shadow-lg border-4 border-white/30">
+                    A
+                </div>
+                <h3 id="profile-name" class="font-bold text-xl">Nombre Alumno</h3>
+                <p id="profile-email" class="text-blue-100 text-sm">email@ejemplo.com</p>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="text-center p-3 bg-gray-50 rounded-lg">
+                        <span class="block text-2xl font-bold text-gray-800">95%</span>
+                        <span class="text-xs text-gray-500 uppercase">Asistencia</span>
+                    </div>
+                     <div class="text-center p-3 bg-gray-50 rounded-lg">
+                        <span class="block text-2xl font-bold text-gray-800">17.5</span>
+                        <span class="text-xs text-gray-500 uppercase">Promedio</span>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <div class="flex items-center gap-3 text-sm text-gray-600">
+                        <i class="fas fa-phone w-5 text-center text-gray-400"></i>
+                        <span>+51 987 654 321</span>
+                    </div>
+                     <div class="flex items-center gap-3 text-sm text-gray-600">
+                        <i class="fas fa-map-marker-alt w-5 text-center text-gray-400"></i>
+                        <span>Lima, Perú</span>
+                    </div>
+                </div>
+                <div class="mt-6">
+                    <button onclick="document.getElementById('profile-modal').classList.add('hidden')" class="w-full bg-gray-100 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                        Cerrar
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -371,18 +461,61 @@
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-right">
                         <div class="flex justify-end gap-2">
-                            <button onclick="openModal('${user.dni}')" class="text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5">
-                                <i class="far fa-calendar-check"></i>
-                                Asistencia
+                            <button onclick="openModal('${user.dni}')" class="text-blue-600 bg-blue-50 hover:bg-blue-100 p-2 rounded-md transition-colors" title="Asistencia">
+                                <i class="far fa-calendar-check text-lg"></i>
                             </button>
-                            <button class="text-gray-400 hover:text-gray-600 p-1.5 hover:bg-gray-100 rounded-md transition-colors">
-                                <i class="fas fa-ellipsis-v"></i>
+                            <button onclick="openGrades('${user.dni}')" class="text-green-600 bg-green-50 hover:bg-green-100 p-2 rounded-md transition-colors" title="Calificaciones">
+                                <i class="fas fa-star-half-alt text-lg"></i>
+                            </button>
+                            <button onclick="openProfile('${user.dni}')" class="text-gray-600 bg-gray-50 hover:bg-gray-100 p-2 rounded-md transition-colors" title="Ver Perfil">
+                                <i class="far fa-id-card text-lg"></i>
                             </button>
                         </div>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
+        }
+        
+        function openGrades(userDni) {
+            const user = users.find(u => u.dni === userDni);
+            if (!user) return;
+            
+            const list = document.getElementById('grades-user-info');
+            if(list) {
+                list.innerHTML = `
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${user.color} mr-3">
+                        ${user.avatar}
+                    </div>
+                    <div>
+                         <h4 class="font-bold text-gray-900">${user.name}</h4>
+                         <p class="text-xs text-gray-500">Historial Académico</p>
+                    </div>
+                `;
+            }
+            document.getElementById('grades-modal').classList.remove('hidden');
+        }
+
+        function openProfile(userDni) {
+            const user = users.find(u => u.dni === userDni);
+            if (!user) return;
+            
+            const nameEl = document.getElementById('profile-name');
+            const emailEl = document.getElementById('profile-email');
+            const avatarEl = document.getElementById('profile-avatar');
+
+            if(nameEl) nameEl.innerText = user.name;
+            if(emailEl) emailEl.innerText = user.email || 'usuario@ejemplo.com';
+            
+            if(avatarEl) {
+                avatarEl.innerText = user.avatar || user.name.charAt(0);
+                // Reset classes
+                avatarEl.className = `w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold mx-auto mb-3 shadow-lg border-4 border-white/30 text-white ${user.color.replace('bg-', 'bg-')}`; 
+                // Note: user.color is likely 'bg-red-100 text-red-600'. We want the bg color. 
+                // But for simplicity let's stick to a default or try to parse
+            }
+            
+            document.getElementById('profile-modal').classList.remove('hidden');
         }
 
         // --- LÓGICA DEL MODAL ---
@@ -435,6 +568,20 @@
         const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
         const daysOfWeek = ["DOMINGO", "LUNES", "MARTES", "MIERCOLES", "JUEVES", "VIERNES", "SABADO"];
 
+        function parseLocalDate(dateStr) {
+            if (!dateStr) return null;
+            if (Array.isArray(dateStr)) {
+                return new Date(dateStr[0], dateStr[1] - 1, dateStr[2]);
+            }
+            if (typeof dateStr === 'string' && dateStr.includes('-')) {
+                const parts = dateStr.split('-');
+                if (parts.length === 3) {
+                     return new Date(parts[0], parts[1] - 1, parts[2]);
+                }
+            }
+            return new Date(dateStr);
+        }
+
         function findInitialDate() {
             const today = new Date();
             
@@ -448,14 +595,18 @@
 
             const start = new Date(calendarData.fechaInicio);
             const end = new Date(calendarData.fechaFin);
+            // Considerar fecha de inscripción del usuario seleccionado, si existe
+            const enrollment = selectedUser ? parseLocalDate(selectedUser.fechaInscripcion) : null;
             // Ajustar horas para comparar solo fechas
             start.setHours(0,0,0,0);
             end.setHours(0,0,0,0);
             today.setHours(0,0,0,0);
+            if (enrollment) enrollment.setHours(0,0,0,0);
 
             // Si hoy es antes del inicio, buscar desde el inicio
-            if (today < start) {
-                return findNextClassDay(start);
+            const effectiveStart = enrollment && enrollment > start ? enrollment : start;
+            if (today < effectiveStart) {
+                return findNextClassDay(effectiveStart);
             }
 
             // Si hoy es después del fin, devolver el último día de clase (o fin)
@@ -487,13 +638,26 @@
             
             const start = new Date(calendarData.fechaInicio);
             const end = new Date(calendarData.fechaFin);
+            const today = new Date();
+            // Considerar fecha de inscripción del usuario seleccionado
+            const enrollment = selectedUser ? parseLocalDate(selectedUser.fechaInscripcion) : null;
+            
             // Ajustar zona horaria para comparación de fechas
             start.setHours(0,0,0,0);
             end.setHours(0,0,0,0);
+            today.setHours(0,0,0,0);
+            if (enrollment) enrollment.setHours(0,0,0,0);
+            
             const check = new Date(date);
             check.setHours(0,0,0,0);
 
+            // Rango de oferta
             if (check < start || check > end) return false;
+            // No permitir antes de la inscripción del alumno
+            if (enrollment && check < enrollment) return false;
+            
+            // VALIDACIÓN: No permitir fechas futuras ("si no hay una clase todavía")
+            if (check > today) return false;
 
             const dateKey = formatDateKey(check);
             if (classesByDate && classesByDate[dateKey] && classesByDate[dateKey].length > 0) {
@@ -532,11 +696,10 @@
                 const date = new Date(year, month, day);
                 const dateStr = formatDateKey(date);
                 const isSelected = formatDateKey(currentDate) === dateStr;
-                const classesForDate = getClassesForDate(dateStr);
-                const isClass = classesForDate.length > 0 || isClassDay(date);
-                
-                // Verificar asistencia existente
                 const recordMap = userRecords[dateStr];
+                
+                // Usar isClassDay para determinar si es seleccionable (incluye reglas de inscription)
+                const isClass = isClassDay(date);
 
                 const btn = document.createElement('button');
                 
@@ -742,16 +905,26 @@
                 attendanceRecords[selectedUser.dni][dateKey] = {};
             }
 
-            // Guardar estado localmente
-            attendanceRecords[selectedUser.dni][dateKey][effectiveClassKey] = status;
+            // Deshabilitar botones mientras se hace la petición
+            const btnIds = ['btn-present','btn-late','btn-absent'];
+            const disabledBtns = btnIds.map(id => document.getElementById(id)).filter(Boolean);
+            disabledBtns.forEach(b => { b.disabled = true; b.classList.add('opacity-60','cursor-not-allowed'); });
+
+            // Mostrar feedback de guardado
+            const feedback = document.getElementById('feedback-msg');
+            feedback.innerText = 'Guardando...';
+            feedback.classList.remove('hidden');
 
             // Guardar en servidor
             try {
+                const csrfToken = document.querySelector('meta[name="_csrf"]').content;
+                const csrfHeader = document.querySelector('meta[name="_csrf_header"]').content;
+                
                 const response = await fetch('/aula/api/asistencia/registrar', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        // 'X-CSRF-TOKEN': csrfToken // Si usas CSRF
+                        [csrfHeader]: csrfToken
                     },
                     body: JSON.stringify({
                         ofertaId: ofertaId,
@@ -762,24 +935,42 @@
                     })
                 });
                 
-                if (!response.ok) throw new Error('Error saving attendance');
+                if (!response.ok) {
+                    let msg = 'Error al guardar la asistencia';
+                    try {
+                        const err = await response.json();
+                        if (err && err.message) msg = err.message;
+                    } catch {}
+                    throw new Error(msg);
+                }
+
+                // Confirmado por el servidor: guardar estado localmente y actualizar UI
+                attendanceRecords[selectedUser.dni][dateKey][effectiveClassKey] = status;
 
                 // Actualizar UI
                 updateStatusUI();
                 renderCalendar(); // Para mostrar el punto de color en el calendario
 
                 // Mostrar feedback
-                const feedback = document.getElementById('feedback-msg');
                 feedback.innerText = `Asistencia registrada: ${status === 'present' ? 'Presente' : status === 'late' ? 'Tardanza' : 'Ausente'}`;
                 feedback.classList.remove('hidden');
             } catch (error) {
                 console.error('Error saving attendance:', error);
-                alert('Error al guardar la asistencia');
+                alert(error.message || 'Error al guardar la asistencia');
+                // Ocultar feedback si falló
+                feedback.classList.add('hidden');
+            } finally {
+                // Rehabilitar botones
+                disabledBtns.forEach(b => { b.disabled = false; b.classList.remove('opacity-60','cursor-not-allowed'); });
             }
         }
 
         function formatDateKey(date) {
-            return date.toISOString().split('T')[0];
+            // Construye YYYY-MM-DD usando hora local para evitar desfasajes por UTC
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
         }
 
     </script>

@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional; // Import Transactional
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -32,17 +33,20 @@ public class AulaController {
     private final UsuarioRepository usuarioRepository;
     private final AsistenciaService asistenciaService;
     private final ClaseRepository claseRepository;
+    private final HorarioRepository horarioRepository;
 
     public AulaController(OfertaAcademicaRepository ofertaRepository,
                           InscripcionRepository inscripcionRepository,
                           UsuarioRepository usuarioRepository,
                           AsistenciaService asistenciaService,
-                          ClaseRepository claseRepository) {
+                          ClaseRepository claseRepository,
+                          HorarioRepository horarioRepository) {
         this.ofertaRepository = ofertaRepository;
         this.inscripcionRepository = inscripcionRepository;
         this.usuarioRepository = usuarioRepository;
         this.asistenciaService = asistenciaService;
         this.claseRepository = claseRepository;
+        this.horarioRepository = horarioRepository;
     }
 
     @GetMapping("/oferta/{id}/participantes")
@@ -66,6 +70,176 @@ public class AulaController {
         return "aula/participantes";
     }
 
+    @GetMapping("/oferta/{id}/asistencia")
+    @Transactional(readOnly = true)
+    public String verAsistencia(@PathVariable Long id, Model model, Authentication auth) {
+        Long ofertaIdSeguro = Objects.requireNonNull(id, "El id de la oferta es requerido");
+        OfertaAcademica oferta = ofertaRepository.findById(ofertaIdSeguro)
+                .orElseThrow(() -> new RuntimeException("Oferta no encontrada"));
+        
+        String currentUserDni = auth.getName();
+        Usuario currentUser = usuarioRepository.findByDni(currentUserDni)
+                .or(() -> usuarioRepository.findByCorreo(currentUserDni))
+                .orElseThrow(() -> new RuntimeException("Usuario actual no encontrado"));
+
+        model.addAttribute("oferta", oferta);
+        model.addAttribute("currentUser", currentUser);
+        
+        // Use repo method
+        List<AsistenciaRepository> asistenciaRepositoryList; // Dummy to avoid unused import error if I don't import it? No, repo is injected.
+        
+        boolean isDocenteOrAdmin = currentUser.getRoles().stream()
+                .anyMatch(r -> r.getNombre().equalsIgnoreCase("DOCENTE") || r.getNombre().equalsIgnoreCase("ADMIN"));
+        
+        if (isDocenteOrAdmin) {
+            // Generar lista de clases calculadas (Reales + Teóricas según horario)
+            List<Map<String, Object>> clasesCalculadas = new ArrayList<>();
+            List<Clase> clasesReales = claseRepository.findByModuloCursoIdOferta(id);
+            Map<LocalDate, Clase> mapaClases = new HashMap<>();
+            
+            if (clasesReales != null) {
+                for (Clase c : clasesReales) {
+                    if (c.getInicio() != null) {
+                        mapaClases.put(c.getInicio().toLocalDate(), c);
+                    }
+                }
+            }
+            
+            // Obtener días válidos desde Horarios
+            Set<java.time.DayOfWeek> diasValidos = new HashSet<>();
+            if (oferta.getHorarios() != null) {
+                for (Horario h : oferta.getHorarios()) {
+                    if (h.getDia() != null) {
+                        switch (h.getDia()) {
+                            case LUNES -> diasValidos.add(java.time.DayOfWeek.MONDAY);
+                            case MARTES -> diasValidos.add(java.time.DayOfWeek.TUESDAY);
+                            case MIERCOLES -> diasValidos.add(java.time.DayOfWeek.WEDNESDAY);
+                            case JUEVES -> diasValidos.add(java.time.DayOfWeek.THURSDAY);
+                            case VIERNES -> diasValidos.add(java.time.DayOfWeek.FRIDAY);
+                            case SABADO -> diasValidos.add(java.time.DayOfWeek.SATURDAY);
+                            case DOMINGO -> diasValidos.add(java.time.DayOfWeek.SUNDAY);
+                        }
+                    }
+                }
+            }
+            
+            // Iterar desde Inicio hasta Hoy (o Fin)
+            LocalDate inicio = oferta.getFechaInicio();
+            LocalDate fin = LocalDate.now();
+            if (oferta.getFechaFin() != null && fin.isAfter(oferta.getFechaFin())) {
+                fin = oferta.getFechaFin();
+            } else if (oferta.getEstado() == com.example.demo.enums.EstadoOferta.FINALIZADA && oferta.getFechaFin() != null) {
+                 fin = oferta.getFechaFin();
+            }
+            
+            DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            
+            // Si no hay horarios definidos, mostramos solo las clases reales o nada
+            if (!diasValidos.isEmpty() && inicio != null) {
+                for (LocalDate fecha = inicio; !fecha.isAfter(fin); fecha = fecha.plusDays(1)) {
+                    if (diasValidos.contains(fecha.getDayOfWeek())) {
+                        Map<String, Object> dto = new HashMap<>();
+                        dto.put("fechaIso", fecha.toString()); // yyyy-MM-dd
+                        
+                        // Formato amigable: "01/02/2026 - Lunes"
+                        String diaSemana = switch(fecha.getDayOfWeek()) {
+                            case MONDAY -> "Lunes";
+                            case TUESDAY -> "Martes";
+                            case WEDNESDAY -> "Miércoles";
+                            case THURSDAY -> "Jueves";
+                            case FRIDAY -> "Viernes";
+                            case SATURDAY -> "Sábado";
+                            case SUNDAY -> "Domingo";
+                        };
+                        
+                        if (mapaClases.containsKey(fecha)) {
+                            Clase c = mapaClases.get(fecha);
+                            dto.put("id", c.getIdClase());
+                            dto.put("titulo", c.getTitulo() + " (" + fecha.format(dtf) + ")");
+                            dto.put("display", fecha.format(dtf) + " (" + diaSemana + ") - " + c.getTitulo());
+                        } else {
+                            dto.put("id", "");
+                            dto.put("titulo", "Clase del " + fecha.format(dtf));
+                            dto.put("display", fecha.format(dtf) + " (" + diaSemana + ")");
+                        }
+                        clasesCalculadas.add(dto);
+                    }
+                }
+            } else {
+             // Fallback: Si no hay horario, mostrar solo las reales
+             for(Clase c : clasesReales) {
+                 if(c.getInicio() != null) {
+                     Map<String, Object> dto = new HashMap<>();
+                     dto.put("fechaIso", c.getInicio().toLocalDate().toString());
+                     dto.put("id", c.getIdClase());
+                     dto.put("titulo", c.getTitulo() + " (" + c.getInicio().format(dtf) + ")");
+                     dto.put("display", c.getInicio().format(dtf) + " - " + c.getTitulo());
+                     clasesCalculadas.add(dto);
+                 }
+             }
+            }
+            
+            // Ordenar por fecha descendente (más reciente primero)
+            clasesCalculadas.sort((a, b) -> ((String)b.get("fechaIso")).compareTo((String)a.get("fechaIso")));
+            
+            model.addAttribute("clasesCalculadas", clasesCalculadas);
+            // model.addAttribute("clases", clases); // Ya no lo usamos directamente en el select
+            
+            List<Inscripciones> inscripciones = inscripcionRepository.findByOfertaIdOferta(id);
+            
+            // Construir mapa de fechas de inscripción (DNI -> Fecha Inscripción)
+            Map<String, String> mapInscripcion = new HashMap<>();
+            
+            List<Usuario> alumnos = inscripciones.stream()
+                    .filter(i -> i.getEstadoInscripcion() != null && i.getEstadoInscripcion()) // Solo inscripciones activas
+                    .peek(i -> {
+                        if (i.getAlumno() != null && i.getFechaInscripcion() != null) {
+                            mapInscripcion.put(i.getAlumno().getDni(), i.getFechaInscripcion().toString());
+                        }
+                    })
+                    .map(Inscripciones::getAlumno)
+                    .filter(u -> {
+                        return u.getRoles().stream().noneMatch(r -> r.getNombre().equalsIgnoreCase("DOCENTE") || r.getNombre().equalsIgnoreCase("ADMIN"));
+                    })
+                    .distinct() // Evitar duplicados por si acaso
+                    .collect(Collectors.toList());
+            alumnos.sort(Comparator.comparing(Usuario::getApellido).thenComparing(Usuario::getNombre));
+            
+            model.addAttribute("alumnos", alumnos);
+            model.addAttribute("mapInscripcion", mapInscripcion);
+            model.addAttribute("estados", EstadoAsistencia.values());
+            
+            // Cargar todas las asistencias existentes para esta oferta
+            // Para pintar la tabla sin N+1 requests
+            Map<String, String> asistenciaMap = new HashMap<>(); // Key: fechaIso_dni -> Estado
+            List<Asistencia> allAsistencias = asistenciaService.getAsistenciaRepository().findByOfertaIdOferta(id);
+            for(Asistencia a : allAsistencias) {
+                if(a.getFecha() != null && a.getAlumno() != null) {
+                     String key = a.getFecha().toString() + "_" + a.getAlumno().getDni();
+                     asistenciaMap.put(key, a.getEstado().name());
+                }
+            }
+            model.addAttribute("asistenciaMap", asistenciaMap);
+            
+        } else {
+            List<Asistencia> misAsistencias = asistenciaService.getAsistenciasPorAlumnoYOferta(id, currentUser.getDni());
+            if(misAsistencias == null) misAsistencias = new ArrayList<>();
+            misAsistencias.sort(Comparator.comparing(Asistencia::getFecha).reversed());
+            
+            model.addAttribute("misAsistencias", misAsistencias);
+            
+            long total = misAsistencias.size();
+            long presentes = misAsistencias.stream().filter(a -> a.getEstado() == EstadoAsistencia.PRESENTE).count();
+            double porcentaje = total > 0 ? (double) presentes / total * 100 : 0;
+            
+            model.addAttribute("statsTotal", total);
+            model.addAttribute("statsPresentes", presentes);
+            model.addAttribute("statsPorcentaje", Math.round(porcentaje));
+        }
+
+        return "aula/asistencia";
+    }
+
     // API Endpoints for the frontend logic
 
     @GetMapping("/api/oferta/{id}/usuarios")
@@ -75,22 +249,19 @@ public class AulaController {
         Usuario currentUser = usuarioRepository.findByDni(currentUserDni)
              .or(() -> usuarioRepository.findByCorreo(currentUserDni))
              .orElse(null);
-             
-        List<Inscripciones> inscripciones = inscripcionRepository.findByOfertaIdOferta(id);
         
+        List<Inscripciones> inscripciones = inscripcionRepository.findByOfertaIdOferta(id);
+
+        // Construir salida incluyendo la fecha de inscripción del alumno
         return inscripciones.stream()
-                .map(Inscripciones::getAlumno)
-                .filter(u -> {
-                    // Filter out the current user
-                    if (currentUser != null && u.getDni().equals(currentUser.getDni())) return false;
-                    
-                    // Filter out teachers and admins
+                .filter(i -> i.getEstadoInscripcion() != null && i.getEstadoInscripcion())
+                .map(i -> {
+                    Usuario u = i.getAlumno();
+                    // Filtrar usuario actual y roles no alumno
+                    if (currentUser != null && u.getDni().equals(currentUser.getDni())) return null;
                     boolean isTeacherOrAdmin = u.getRoles().stream()
-                        .anyMatch(r -> r.getNombre().equalsIgnoreCase("DOCENTE") || 
-                                       r.getNombre().equalsIgnoreCase("ADMIN"));
-                    return !isTeacherOrAdmin;
-                })
-                .map(u -> {
+                        .anyMatch(r -> r.getNombre().equalsIgnoreCase("DOCENTE") || r.getNombre().equalsIgnoreCase("ADMIN"));
+                    if (isTeacherOrAdmin) return null;
                     Map<String, Object> map = new HashMap<>();
                     map.put("id", u.getId());
                     map.put("dni", u.getDni());
@@ -100,9 +271,14 @@ public class AulaController {
                     map.put("role", role);
                     map.put("avatar", (u.getNombre().substring(0, 1) + u.getApellido().substring(0, 1)).toUpperCase());
                     map.put("color", "bg-blue-100 text-blue-600");
+                    map.put("fechaInscripcion", i.getFechaInscripcion());
                     return map;
                 })
-                .collect(Collectors.toList());
+                .filter(Objects::nonNull)
+                // Evitar duplicados por DNI
+                .collect(Collectors.collectingAndThen(
+                        Collectors.toMap(m -> m.get("dni"), m -> m, (a,b) -> a, LinkedHashMap::new),
+                        map -> new ArrayList<>(map.values())));
     }
 
     @GetMapping("/api/oferta/{id}/calendario")
@@ -165,52 +341,74 @@ public class AulaController {
         return records;
     }
 
+    @GetMapping("/api/oferta/{id}/asistencia/fecha/{fecha}")
+    @ResponseBody
+    public List<Map<String, Object>> getAsistenciaPorFecha(@PathVariable Long id, @PathVariable String fecha) {
+        LocalDate fechaParsed = LocalDate.parse(fecha);
+        List<Asistencia> asistencias = asistenciaService.getAsistenciasPorFecha(id, fechaParsed);
+        
+        return asistencias.stream().map(a -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("dni", a.getAlumno().getDni()); // Changed from id to dni to match UI
+            map.put("estado", a.getEstado().name());
+            return map;
+        }).collect(Collectors.toList());
+    }
+
     @PostMapping("/api/asistencia/registrar")
     @ResponseBody
+    @Transactional // Ensure lazy collections (horarios) are initialized
     public ResponseEntity<?> registrarAsistencia(@RequestBody Map<String, Object> payload, Principal principal) {
         try {
             // Validar autenticación
             if (principal == null) {
                 return ResponseEntity.status(401).body(Map.of("success", false, "message", "No autenticado"));
             }
-            Usuario usuarioLogueado = usuarioRepository.findByCorreo(principal.getName()).orElseThrow();
+            
+            // Fix: Look up by DNI or Email to support both login types
+            String currentUserKey = principal.getName();
+            Usuario usuarioLogueado = usuarioRepository.findByDni(currentUserKey)
+                 .or(() -> usuarioRepository.findByCorreo(currentUserKey))
+                 .orElseThrow(() -> new RuntimeException("Usuario actual no encontrado"));
 
             Long ofertaId = Long.valueOf(payload.get("ofertaId").toString());
             String dni = payload.get("dni").toString();
 
-            // Validar autorización (Docente del curso o Admin)
-            OfertaAcademica oferta = ofertaRepository.findById(ofertaId)
-                    .orElseThrow(() -> new IllegalArgumentException("Oferta no encontrada"));
-            
+            // Validar autorización (Solo Docente del curso)
+            // Usamos el repositorio directamente para evitar problemas de Lazy Loading y Proxies de Hibernate
+            // Check based on roles
+            boolean isDocente = usuarioLogueado.getRoles().stream()
+                .anyMatch(r -> "DOCENTE".equalsIgnoreCase(r.getNombre()) || "ROLE_DOCENTE".equalsIgnoreCase(r.getNombre()));
+
             boolean esDocenteDeLaOferta = false;
-            // Verificar si el usuario es el docente asignado a la oferta
-            if (usuarioLogueado instanceof Docente) {
-                if (oferta.getHorarios() != null) {
-                    esDocenteDeLaOferta = oferta.getHorarios().stream()
-                        .anyMatch(h -> h.getDocente() != null && h.getDocente().getId().equals(usuarioLogueado.getId()));
+        
+            if (isDocente) {
+                // 1. Check if connected via Horario
+                esDocenteDeLaOferta = horarioRepository.existsByOfertaAcademica_IdOfertaAndDocente_Id(ofertaId, usuarioLogueado.getId());
+                
+                // 2. If not found in Horario, check direct relationship (Curso/Formacion)
+                if (!esDocenteDeLaOferta) {
+                    OfertaAcademica ofertaCheck = ofertaRepository.findById(ofertaId).orElse(null);
+                    if (ofertaCheck instanceof Curso) {
+                         esDocenteDeLaOferta = ((Curso) ofertaCheck).getDocentes().stream()
+                             .anyMatch(d -> d.getId().equals(usuarioLogueado.getId()));
+                    } else if (ofertaCheck instanceof Formacion) {
+                         esDocenteDeLaOferta = ((Formacion) ofertaCheck).getDocentes().stream()
+                             .anyMatch(d -> d.getId().equals(usuarioLogueado.getId()));
+                    }
                 }
             }
             
-            // Verificar rol ADMIN
-            boolean esAdmin = usuarioLogueado.getRoles().stream()
-                    .anyMatch(r -> "ADMIN".equalsIgnoreCase(r.getNombre()));
-
-            if (!esDocenteDeLaOferta && !esAdmin) {
-                return ResponseEntity.status(403).body(Map.of("success", false, "message", "No autorizado para modificar asistencia en esta oferta"));
+            // REQUERIMIENTO: Solo el docente de la oferta puede modificar la asistencia. Admin NO.
+            if (!esDocenteDeLaOferta) {
+               // DEBUG: Imprimir por qué falló si es necesario, o devolver más info temporalmente si sigue fallando
+               // return ResponseEntity.status(403).body(Map.of("success", false, "message", "User " + usuarioLogueado.getId() + " is not teacher for offer " + ofertaId));
+                return ResponseEntity.status(403).body(Map.of("success", false, "message", "No autorizado para modificar asistencia en esta oferta (Solo el docente a cargo)"));
             }
 
-            // Validar inscripción activa del alumno
-            Usuario alumno = usuarioRepository.findByDni(dni)
-                .orElseThrow(() -> new IllegalArgumentException("Alumno no encontrado"));
-                
-            Inscripciones inscripcion = inscripcionRepository.findByAlumnoAndOferta(alumno, oferta)
-                .orElseThrow(() -> new IllegalArgumentException("El alumno no está inscrito en esta oferta"));
-
-            if (!Boolean.TRUE.equals(inscripcion.getEstadoInscripcion())) {
-                 return ResponseEntity.badRequest().body(Map.of("success", false, "message", "La inscripción del alumno no está activa"));
-            }
-
+            // Parse de parámetros y delegación en servicio (el servicio valida con el modelo)
             LocalDate fecha = LocalDate.parse(payload.get("fecha").toString());
+
             String estadoStr = payload.get("estado").toString();
             UUID claseId = null;
             if (payload.containsKey("claseId") && payload.get("claseId") != null) {
@@ -220,15 +418,24 @@ public class AulaController {
                 }
             }
             
-            EstadoAsistencia estado = EstadoAsistencia.AUSENTE;
-            if ("present".equals(estadoStr)) estado = EstadoAsistencia.PRESENTE;
-            else if ("late".equals(estadoStr)) estado = EstadoAsistencia.TARDANZA;
+            // Use Enum directly
+            EstadoAsistencia estado;
+            try {
+                estado = EstadoAsistencia.valueOf(estadoStr);
+            } catch (IllegalArgumentException e) {
+                 // Fallback or error? Let's try to map common lowercase values 
+                 if ("present".equalsIgnoreCase(estadoStr)) estado = EstadoAsistencia.PRESENTE;
+                 else if ("late".equalsIgnoreCase(estadoStr)) estado = EstadoAsistencia.TARDANZA;
+                 else if ("absent".equalsIgnoreCase(estadoStr)) estado = EstadoAsistencia.AUSENTE;
+                 else throw new IllegalArgumentException("Estado desconocido: " + estadoStr);
+            }
             
             asistenciaService.registrarAsistencia(ofertaId, dni, fecha, estado, claseId);
             
             return ResponseEntity.ok().body(Map.of("success", true));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage() != null ? e.getMessage() : "Error desconocido"));
         }
     }
 }

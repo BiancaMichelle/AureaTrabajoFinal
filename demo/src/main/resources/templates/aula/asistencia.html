@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" layout:decorate="~{layout/base}">
+<head>
+    <title>Asistencia - Aula Virtual</title>
+    <!-- CSRF Token -->
+    <meta name="_csrf" th:content="${_csrf.token}" />
+    <meta name="_csrf_header" th:content="${_csrf.headerName}" />
+    
+    <th:block th:if="${@environment.getProperty('app.useTailwindCdn','true') == 'true'}">
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        colors: {
+                            customGrayLight: '#f8f9fa',
+                            customGrayDark: '#343a40',
+                            customGrayText: '#212529',
+                            customBlue: '#007bff',
+                            customGreen: '#28a745',
+                        }
+                    }
+                }
+            }
+        </script>
+    </th:block>
+    <style>
+        /* Estilos específicos para la navegación (Copied from aula.html) */
+        .nav-tab-active {
+            border-bottom-color: white;
+            color: white;
+            font-weight: 600;
+        }
+        .nav-tab-inactive {
+            border-bottom-width: 2px;
+            border-color: transparent;
+            color: #f3f4f6;
+        }
+        .nav-tab-inactive:hover {
+            border-color: #d1d5db; /* gray-300 */
+            color: white;
+        }
+    </style>
+</head>
+
+<body class="bg-customGrayLight font-sans text-customGrayText" layout:fragment="content">
+
+    <!-- Header del Aula (Matched with aula.html) -->
+    <header class="bg-customGrayDark text-white p-4 py-8 shadow-md relative z-10 w-full">
+        <div class="max-w-7xl mx-auto flex justify-between items-center relative gap-4">
+            <div>
+                 <h1 class="text-3xl font-bold tracking-wider" th:text="${oferta.nombre}">Nombre Oferta</h1>
+                 <p class="text-gray-300 text-sm mt-1" th:text="${oferta.descripcion}">Descripción</p>
+            </div>
+            <!-- No edit button for attendance page -->
+        </div>
+    </header>
+
+    <!-- Barra de Navegación (Matched with aula.html) -->
+    <nav class="bg-customGreen border-b border-gray-200 shadow-sm relative z-10 mb-8 w-full sticky top-0">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center space-x-6">
+                <!-- Ícono de búsqueda -->
+                <div class="py-3 px-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+                
+                <!-- 1. Contenido -->
+                <a sec:authorize="hasAnyAuthority('DOCENTE', 'ADMIN')" 
+                   th:href="@{/docente/aula/{id}(id=${oferta.idOferta})}" 
+                   class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
+                    Contenido
+                </a>
+                <a sec:authorize="hasAuthority('ALUMNO') and !hasAnyAuthority('DOCENTE', 'ADMIN')" 
+                   th:href="@{/alumno/aula/{id}(id=${oferta.idOferta})}" 
+                   class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
+                    Contenido
+                </a>
+                
+                <!-- 2. Participantes (Solo Docente/Admin) -->
+                <a sec:authorize="hasAnyAuthority('DOCENTE', 'ADMIN')"
+                   th:href="@{/aula/oferta/{id}/participantes(id=${oferta.idOferta})}" 
+                   class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
+                    Participantes
+                </a>
+
+                <!-- 3. Asistencia (ACTIVO) -->
+                <a href="#" class="py-3 px-1 border-b-2 border-white text-white font-semibold text-sm nav-tab-active">
+                    Asistencia
+                </a>
+
+                <!-- 4. Calificaciones -->
+                <a href="#" class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
+                    Calificaciones
+                </a>
+
+                <!-- 5. Calendario -->
+                <a href="#" class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
+                    Calendario
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Contenido Principal -->
+    <main class="max-w-7xl mx-auto p-4 sm:px-6 lg:px-8">
+        
+        <!-- ========================= VISTA DOCENTE ========================= -->
+        <div sec:authorize="hasAnyAuthority('DOCENTE', 'ADMIN')" class="space-y-6">
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex flex-col mb-6">
+                    <h2 class="text-xl font-bold text-gray-800 border-l-4 border-customGreen pl-3 mb-2">Control de Asistencia General</h2>
+                    <p class="text-gray-500 text-sm">Registro de asistencia para todas las clases programadas de esta oferta.</p>
+                </div>
+
+                <div th:if="${#lists.isEmpty(clasesCalculadas)}" class="w-full text-center p-4 mb-4 bg-yellow-50 text-yellow-700 rounded border border-yellow-200">
+                     <i class="fas fa-exclamation-triangle mr-1"></i> No hay clases registradas en el calendario para esta oferta.
+                </div>
+
+                <div th:if="${not #lists.isEmpty(clasesCalculadas)}" class="overflow-x-auto border rounded-lg max-h-[800px]">
+                    <table class="min-w-full divide-y divide-gray-200 relative">
+                        <thead class="bg-gray-50 sticky top-0 z-10 shadow-sm">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider bg-gray-50 border-b w-48">Fecha Clase</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider bg-gray-50 border-b w-64">Alumno</th>
+                                <th scope="col" class="px-6 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider bg-gray-50 border-b w-80">Asistencia</th>
+                                <th scope="col" class="px-6 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider bg-gray-50 border-b">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                             <!-- Iterar por Fechas -->
+                             <th:block th:each="clase : ${clasesCalculadas}">
+                                 
+                                 <!-- Fila Separadora de Fecha -->
+                                 <tr class="bg-blue-50/50">
+                                     <td colspan="4" class="px-6 py-2 text-sm font-bold text-customBlue border-y sticky top-10 z-0">
+                                         <i class="far fa-calendar-alt mr-2"></i> <span th:text="${clase.display}">Fecha Clase</span>
+                                     </td>
+                                 </tr>
+
+                                 <!-- Iterar Alumnos -->
+                                 <tr th:each="alumno : ${alumnos}" class="hover:bg-gray-50 transition-colors">
+                                     <!-- Fecha (oculta visualmente pero presente en estructura si se quiere, aquí la omitimos o ponemos vacía para limpieza, usamos el header de grupo) -->
+                                     <td class="px-6 py-3 whitespace-nowrap text-xs text-gray-400 pl-8">
+                                         <span th:text="${clase.fechaIso}"></span>
+                                     </td>
+                                     
+                                     <!-- Columna Alumno -->
+                                     <td class="px-6 py-3 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <div class="flex-shrink-0 h-8 w-8">
+                                                <div class="h-8 w-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold shadow-sm">
+                                                    <span th:text="${#strings.substring(alumno.nombre,0,1) + #strings.substring(alumno.apellido,0,1)}">JD</span>
+                                                </div>
+                                            </div>
+                                            <div class="ml-3">
+                                                <div class="text-sm font-medium text-gray-900" th:text="${alumno.nombre + ' ' + alumno.apellido}">Juan Perez</div>
+                                                <div class="text-xs text-gray-500" th:text="${alumno.dni}">12345678</div>
+                                            </div>
+                                        </div>
+                                     </td>
+
+                                     <!-- Columna Botones -->
+                                     <td class="px-6 py-3 whitespace-nowrap text-center">
+                                         <!-- Key para el mapa de asistencia: fecha + dni -->
+                                         <!-- Check enrollment date -->
+                                         <th:block th:with="
+                                            enrollDate=${mapInscripcion.get(alumno.dni)},
+                                            classDate=${clase.fechaIso},
+                                            isEnrolled=${enrollDate != null and classDate >= enrollDate},
+                                            mapParams=${classDate + '_' + alumno.dni},
+                                            savedStatus=${asistenciaMap.get(mapParams)}
+                                         ">
+                                            
+                                            <div th:if="${isEnrolled}" class="inline-flex bg-gray-100 p-1 rounded-lg scale-90 origin-center">
+                                                <!-- Presente -->
+                                                <label class="cursor-pointer">
+                                                    <input type="radio" 
+                                                           th:name="${'asistencia_' + classDate + '_' + alumno.dni}" 
+                                                           value="PRESENTE" 
+                                                           class="sr-only peer asistencia-radio-bulk"
+                                                           th:data-dni="${alumno.dni}"
+                                                           th:data-fecha="${classDate}"
+                                                           th:data-clase-id="${clase.id}"
+                                                           th:checked="${savedStatus == 'PRESENTE'}">
+                                                    <span class="px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 
+                                                        text-gray-600 hover:bg-gray-200 peer-checked:bg-green-100 peer-checked:text-green-700 peer-checked:shadow-sm">
+                                                        P
+                                                    </span>
+                                                </label>
+                                                
+                                                <!-- Tarde -->
+                                                <label class="cursor-pointer ml-1">
+                                                    <input type="radio" 
+                                                           th:name="${'asistencia_' + classDate + '_' + alumno.dni}" 
+                                                           value="TARDANZA" 
+                                                           class="sr-only peer asistencia-radio-bulk"
+                                                           th:data-dni="${alumno.dni}"
+                                                           th:data-fecha="${classDate}"
+                                                           th:data-clase-id="${clase.id}"
+                                                           th:checked="${savedStatus == 'TARDANZA'}">
+                                                    <span class="px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 
+                                                        text-gray-600 hover:bg-gray-200 peer-checked:bg-yellow-100 peer-checked:text-yellow-700 peer-checked:shadow-sm">
+                                                        T
+                                                    </span>
+                                                </label>
+
+                                                <!-- Ausente -->
+                                                <label class="cursor-pointer ml-1">
+                                                    <input type="radio" 
+                                                           th:name="${'asistencia_' + classDate + '_' + alumno.dni}" 
+                                                           value="AUSENTE" 
+                                                           class="sr-only peer asistencia-radio-bulk"
+                                                           th:data-dni="${alumno.dni}"
+                                                           th:data-fecha="${classDate}"
+                                                           th:data-clase-id="${clase.id}"
+                                                           th:checked="${savedStatus == 'AUSENTE'}">
+                                                    <span class="px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 
+                                                        text-gray-600 hover:bg-gray-200 peer-checked:bg-red-100 peer-checked:text-red-700 peer-checked:shadow-sm">
+                                                        A
+                                                    </span>
+                                                </label>
+                                            </div>
+
+                                            <div th:unless="${isEnrolled}" class="text-xs text-gray-400 italic bg-gray-50 py-1 px-2 rounded border border-gray-100 inline-block">
+                                                No inscrito aún
+                                            </div>
+
+                                         </th:block>
+                                     </td>
+
+                                     <!-- Columna Estado -->
+                                     <td class="px-6 py-3 whitespace-nowrap text-center">
+                                         <span th:id="${'status-' + clase.fechaIso + '-' + alumno.dni}" class="text-xs font-medium text-gray-400">
+                                            <th:block th:if="${asistenciaMap.get(clase.fechaIso + '_' + alumno.dni) != null}">
+                                                <i class="fas fa-check text-green-500"></i> Guardado
+                                            </th:block>
+                                            <th:block th:unless="${asistenciaMap.get(clase.fechaIso + '_' + alumno.dni) != null}">
+                                                <i class="far fa-circle"></i>
+                                            </th:block>
+                                         </span>
+                                     </td>
+                                 </tr>
+                             </th:block>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <script th:inline="javascript">
+                document.addEventListener('DOMContentLoaded', function() {
+                    /*<![CDATA[*/
+                    const ofertaId = /*[[${oferta.idOferta}]]*/ 0;
+                    /*]]>*/
+
+                    // Bulk Event Delegation for better performance with many rows
+                    document.querySelector('table').addEventListener('change', async function(e) {
+                         if (e.target.classList.contains('asistencia-radio-bulk')) {
+                             const radio = e.target;
+                             const dni = radio.getAttribute('data-dni');
+                             const fecha = radio.getAttribute('data-fecha');
+                             const claseId = radio.getAttribute('data-clase-id');
+                             const estado = radio.value;
+                             
+                             const statusSpan = document.getElementById(`status-${fecha}-${dni}`);
+                             
+                             // UI Update: Spinner
+                             if(statusSpan) {
+                                 statusSpan.innerHTML = '<i class="fas fa-spinner fa-spin text-blue-500"></i> ...';
+                             }
+                             
+                             const payload = {
+                               ofertaId: ofertaId,
+                               dni: dni,
+                               fecha: fecha,
+                               claseId: claseId || null,
+                               estado: estado
+                             };
+                             
+                             try {
+                               const response = await fetch('/aula/api/asistencia/registrar', {
+                                   method: 'POST',
+                                   headers: {
+                                       'Content-Type': 'application/json',
+                                       'X-CSRF-TOKEN': document.querySelector('meta[name="_csrf"]').content
+                                   },
+                                   body: JSON.stringify(payload)
+                               });
+                               
+                               const data = await response.json();
+                               
+                               if(data.success) {
+                                   if(statusSpan) {
+                                       statusSpan.innerHTML = '<i class="fas fa-check text-green-500"></i> Guardado';
+                                       statusSpan.className = "text-xs font-medium text-green-600";
+                                   }
+                               } else {
+                                   if(statusSpan) {
+                                       statusSpan.innerHTML = '<i class="fas fa-exclamation-circle text-red-500"></i> Error';
+                                       statusSpan.className = "text-xs font-medium text-red-600";
+                                   }
+                                   console.error(data.message);
+                               }
+                           } catch (e) {
+                               console.error(e);
+                               if(statusSpan) statusSpan.innerHTML = '<i class="fas fa-exclamation-circle text-red-500"></i> Red';
+                           }
+                         }
+                    });
+                });
+            </script>
+        </div>
+
+        <!-- ========================= VISTA ALUMNO ========================= -->
+        <div sec:authorize="hasAuthority('ALUMNO') and !hasAnyAuthority('DOCENTE', 'ADMIN')" class="space-y-6">
+            <!-- Stats Card -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 flex items-center">
+                    <div class="p-4 bg-blue-50 rounded-full text-blue-600 mr-5">
+                        <i class="fas fa-calendar-check text-2xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500 uppercase tracking-wide">Total Clases</p>
+                        <p class="text-3xl font-bold text-gray-800" th:text="${statsTotal}">0</p>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 flex items-center">
+                    <div class="p-4 bg-green-50 rounded-full text-green-600 mr-5">
+                        <i class="fas fa-check-circle text-2xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500 uppercase tracking-wide">Asistencias</p>
+                        <p class="text-3xl font-bold text-gray-800" th:text="${statsPresentes}">0</p>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 flex items-center">
+                    <div class="p-4 bg-purple-50 rounded-full text-purple-600 mr-5">
+                        <i class="fas fa-percent text-2xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500 uppercase tracking-wide">Porcentaje</p>
+                        <p class="text-3xl font-bold text-gray-800"><span th:text="${statsPorcentaje}">0</span>%</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla de Historial -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                    <h3 class="font-bold text-gray-800 text-lg">Historial de Asistencia</h3>
+                </div>
+                 <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Clase</th>
+                                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Hora Registro</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <tr th:each="asistencia : ${misAsistencias}" class="hover:bg-gray-50">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" 
+                                    th:text="${#temporals.format(asistencia.fecha, 'dd/MM/yyyy')}">01/01/2026</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                    <span th:if="${asistencia.clase != null}" th:text="${asistencia.clase.titulo}" class="font-medium">Clase 1</span>
+                                    <span th:unless="${asistencia.clase != null}" class="italic text-gray-400">Sin asignar</span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-center">
+                                    <span th:if="${asistencia.estado.name() == 'PRESENTE'}" 
+                                          class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 border border-green-200">
+                                        Presente
+                                    </span>
+                                    <span th:if="${asistencia.estado.name() == 'TARDANZA'}" 
+                                          class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200">
+                                        Tarde
+                                    </span>
+                                    <span th:if="${asistencia.estado.name() == 'AUSENTE'}" 
+                                          class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800 border border-red-200">
+                                        Ausente
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500 font-mono" 
+                                    th:text="${asistencia.hora != null ? #temporals.format(asistencia.hora, 'HH:mm') : '-'}">10:00</td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(misAsistencias)}">
+                                <td colspan="4" class="px-6 py-12 text-center text-gray-500">
+                                    <i class="fas fa-clipboard-list text-4xl mb-3 text-gray-300"></i>
+                                    <p>No tienes registros de asistencia aún.</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+</body>
+</html>

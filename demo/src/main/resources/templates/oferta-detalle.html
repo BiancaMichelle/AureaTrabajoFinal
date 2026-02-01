@@ -280,12 +280,10 @@
                     </div>
 
                     <!-- Syllabus (If Course/Training) -->
-                    <div class="mb-5" th:if="${oferta instanceof T(com.example.demo.model.Curso) or oferta instanceof T(com.example.demo.model.Formacion)}" th:with="hasTemario=${oferta['temario'] != null}">
-                         <div th:if="${hasTemario}">
-                             <h3 class="section-title">Contenido del curso</h3>
-                             <div class="card p-3 bg-light">
-                                 <p class="mb-0" th:text="${oferta['temario']}">Temario del curso...</p>
-                             </div>
+                    <div class="mb-5" th:with="temario=${(oferta instanceof T(com.example.demo.model.Curso) ? oferta.temario : (oferta instanceof T(com.example.demo.model.Formacion) ? oferta.plan : null))}" th:if="${temario != null}">
+                         <h3 class="section-title">Contenido del curso</h3>
+                         <div class="card p-3 bg-light">
+                             <p class="mb-0" th:text="${temario}">Temario del curso...</p>
                          </div>
                     </div>
                     

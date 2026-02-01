@@ -705,25 +705,92 @@
         </div>
     </div>
 
+    <!-- Header del Aula -->
+    <header class="bg-customGrayDark text-white p-4 py-8 shadow-md relative z-10">
+        <div class="max-w-7xl mx-auto flex justify-between items-center relative gap-4">
+            <div>
+                 <h1 class="text-3xl font-bold tracking-wider" th:text="${curso.nombre}">IMAGEN DEL CURSO</h1>
+                 <p class="text-gray-300 text-sm mt-1" th:text="${curso.descripcion}">Descripción</p>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <!-- Info Fechas y Horarios -->
+                <div class="hidden md:flex flex-col bg-gray-800/60 backdrop-blur-sm px-4 py-2 rounded-lg border border-gray-600 text-xs shadow-sm">
+                    <div class="flex items-center gap-2 mb-1" title="Vigencia del Cursado">
+                        <i class="fas fa-calendar-alt text-green-400"></i>
+                        <span class="font-mono text-gray-200">
+                            <span th:text="${#temporals.format(curso.fechaInicio, 'dd/MM/yyyy')}">01/01</span> 
+                            <span class="mx-1 text-gray-500">➜</span> 
+                            <span th:text="${#temporals.format(curso.fechaFin, 'dd/MM/yyyy')}">31/12</span>
+                        </span>
+                    </div>
+                    <div th:if="${not #lists.isEmpty(curso.horarios)}" class="flex items-start gap-2 border-t border-gray-700 pt-1 mt-1">
+                        <i class="fas fa-clock text-blue-400 mt-0.5"></i>
+                        <div class="flex flex-col gap-0.5">
+                            <span th:each="h : ${curso.horarios}" class="font-mono text-gray-300">
+                                <span th:text="${#strings.substring(h.dia, 0, 3)}">LUN</span>
+                                <span th:text="|${#strings.substring(h.horaInicio, 0, 5)} - ${#strings.substring(h.horaFin, 0, 5)}|">09:00 - 11:00</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div th:if="${puedeModificar}" class="flex-shrink-0">
+                    <button id="modifyCourseButton" class="bg-blue-600/80 hover:bg-blue-600 text-white px-4 py-2 rounded-md shadow transition-colors text-sm font-medium flex items-center border border-blue-500/50">
+                        <i class="fas fa-edit me-2"></i> Activar Edición
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Barra de Navegación -->
+    <nav class="bg-customGreen border-b border-gray-200 shadow-sm relative z-10 mb-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center space-x-6">
+                <!-- Ícono de búsqueda -->
+                <div class="py-3 px-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+                
+                <!-- 1. Contenido (Activo) -->
+                <a href="#" class="py-3 px-1 border-b-2 border-white text-white font-semibold text-sm nav-tab-active">
+                    Contenido
+                </a>
+                
+                <!-- 2. Participantes (Solo Docente/Admin) -->
+                <a sec:authorize="hasAnyAuthority('DOCENTE', 'ADMIN')"
+                   th:href="@{/aula/oferta/{id}/participantes(id=${curso.idOferta})}" 
+                   class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
+                    Participantes
+                </a>
+
+                <!-- 3. Asistencia -->
+                <a th:href="@{/aula/oferta/{id}/asistencia(id=${curso.idOferta})}" 
+                   class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
+                    Asistencia
+                </a>
+
+                <!-- 4. Calificaciones -->
+                <a th:href="@{/aula/oferta/{id}/participantes(id=${curso.idOferta})}" 
+                   class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
+                    Calificaciones
+                </a>
+
+                <!-- 5. Calendario -->
+                <a href="#" class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
+                    Calendario
+                </a>
+            </div>
+        </div>
+    </nav>
+
     <!-- Contenido principal -->
     <div id="main-container" class="relative min-h-screen pb-12">
 
-        <!-- Breadcrumbs -->
-        <div class="breadcrumb-container">
-            <div class="max-w-7xl mx-auto">
-                <nav aria-label="breadcrumb">
-                    <ol class="flex items-center space-x-2 text-sm text-gray-600">
-                        <li class="breadcrumb-item"><a th:href="@{/}" class="hover:text-blue-600">Inicio</a></li>
-                        <li class="breadcrumb-item">
-                            <a th:if="${docente != null}" th:href="@{/docente/mis-ofertas}" class="hover:text-blue-600">Mis Cursos</a>
-                            <a th:if="${alumno != null}" th:href="@{/alumno/mis-ofertas}" class="hover:text-blue-600">Mis Cursos</a>
-                            <a th:if="${docente == null and alumno == null}" th:href="@{/}" class="hover:text-blue-600">Mis Cursos</a>
-                        </li>
-                        <li class="breadcrumb-item font-semibold text-gray-800" aria-current="page" th:text="${curso.nombre}">Curso Actual</li>
-                    </ol>
-                </nav>
-            </div>
-        </div>
+        <!-- Breadcrumbs REMOVED -->
 
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -731,20 +798,9 @@
                 <!-- Columna Principal (Contenido) -->
                 <div class="lg:col-span-3">
                     
-                    <!-- Cabecera del Curso -->
-                    <div class="course-header-card">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <h1 class="text-3xl font-bold text-gray-800 mb-2" th:text="${curso.nombre}">Nombre del Curso</h1>
-                                <p class="text-gray-600" th:text="${curso.descripcion}">Descripción del curso...</p>
-                            </div>
-                            <div th:if="${puedeModificar}">
-                                <button id="modifyCourseButton" class="bg-customBlue text-white px-4 py-2 rounded-md shadow hover:bg-blue-700 transition-colors text-sm font-medium flex items-center">
-                                    <i class="fas fa-edit me-2"></i> Activar Edición
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                    <!-- Old Course Header Removed -->
+
+                    <!-- Navegación de Gestión (Docente) - Removed as integrated in Top Nav -->
 
                     <div id="editModeHint" role="status" aria-hidden="true" aria-live="polite"
                         class="hidden items-center gap-3 mb-6 px-4 py-3 rounded-md border border-dashed border-blue-400 bg-blue-50 text-blue-700 text-sm uppercase tracking-wide">
@@ -792,7 +848,32 @@
                             </div>
 
                             <div class="module-content">
-                                <p class="text-gray-600 mb-6 text-sm" th:if="${modulo.descripcion}" th:text="${modulo.descripcion}"></p>
+                                <!-- Metadata Módulo (Top) -->
+                                <div class="bg-blue-50/50 rounded-lg p-4 mb-6 border border-blue-100"
+                                     th:if="${(modulo.descripcion != null and !modulo.descripcion.isEmpty()) or (modulo.objetivos != null and !modulo.objetivos.isEmpty()) or (modulo.fechaInicioModulo != null)}">
+                                    
+                                    <div th:if="${modulo.descripcion != null and !modulo.descripcion.isEmpty()}" class="mb-3">
+                                        <h6 class="text-xs font-bold text-gray-700 uppercase mb-1 flex items-center gap-2">
+                                            <i class="fas fa-info-circle text-blue-500"></i> Descripción
+                                        </h6>
+                                        <p class="text-gray-600 text-sm leading-relaxed" th:text="${modulo.descripcion}"></p>
+                                    </div>
+                                    
+                                    <div th:if="${modulo.objetivos != null and !modulo.objetivos.isEmpty()}" class="mb-3">
+                                        <h6 class="text-xs font-bold text-gray-700 uppercase mb-1 flex items-center gap-2">
+                                            <i class="fas fa-bullseye text-blue-500"></i> Objetivos
+                                        </h6>
+                                        <div class="text-gray-600 text-sm leading-relaxed" th:utext="${modulo.objetivos}"></div>
+                                    </div>
+
+                                    <div th:if="${modulo.fechaInicioModulo != null}" class="flex items-center gap-2 text-xs text-gray-500 pt-2 border-t border-blue-100 mt-2">
+                                        <i class="far fa-calendar-alt text-blue-500"></i>
+                                        <span class="font-medium">Vigencia:</span>
+                                        <span th:text="${#temporals.format(modulo.fechaInicioModulo, 'dd/MM/yyyy')}"></span>
+                                        <span th:if="${modulo.fechaFinModulo != null}" class="mx-1">-</span>
+                                        <span th:if="${modulo.fechaFinModulo != null}" th:text="${#temporals.format(modulo.fechaFinModulo, 'dd/MM/yyyy')}"></span>
+                                    </div>
+                                </div>
 
                                 <!-- Clases -->
                                 <div th:if="${not #lists.isEmpty(modulo.clases)}" class="mb-6">
@@ -846,26 +927,42 @@
                                         <div th:each="actividad : ${modulo.actividades}"
                                             th:if="${actividad instanceof T(com.example.demo.model.Material) ? actividad.carpeta == null : true}"
                                             class="activity-item editable-block"
+                                            th:classappend="${actividad instanceof T(com.example.demo.model.Carpeta) ? 'flex-wrap' : ''}"
                                             th:data-actividad-id="${actividad.idActividad}"
                                             th:data-actividad-titulo="${actividad.titulo}"
                                             th:data-actividad-descripcion="${actividad.descripcion}">
                                             
                                             <!-- Icono Dinámico -->
                                             <div class="activity-icon-container"
+                                                th:if="${!(actividad instanceof T(com.example.demo.model.Recurso) and actividad.tipo.name() == 'TEXTO')}"
                                                 th:classappend="${actividad instanceof T(com.example.demo.model.Examen) ? 'quiz' : 
                                                                  (actividad instanceof T(com.example.demo.model.Tarea) ? 'assignment' : 
-                                                                 (actividad instanceof T(com.example.demo.model.Carpeta) ? 'folder' : 'pdf'))}">
+                                                                 (actividad instanceof T(com.example.demo.model.Carpeta) ? 'folder' : 
+                                                                 (actividad instanceof T(com.example.demo.model.Recurso) and actividad.tipo.name() == 'ENLACE' ? 'generic' : 'pdf')))}">
                                                 <i class="fas"
                                                    th:classappend="${actividad instanceof T(com.example.demo.model.Examen) ? 'fa-clipboard-check' : 
                                                                     (actividad instanceof T(com.example.demo.model.Tarea) ? 'fa-tasks' : 
-                                                                    (actividad instanceof T(com.example.demo.model.Carpeta) ? 'fa-folder' : 'fa-file-alt'))}"></i>
+                                                                    (actividad instanceof T(com.example.demo.model.Carpeta) ? 'fa-folder' : 
+                                                                    (actividad instanceof T(com.example.demo.model.Recurso) and actividad.tipo.name() == 'ENLACE' ? 'fa-link' : 'fa-file-alt')))}"></i>
                                             </div>
 
                                             <div class="flex-1 activity-details">
                                                 <div class="flex justify-between items-start">
-                                                    <div>
-                                                        <h5 th:text="${actividad.titulo}">Título Actividad</h5>
-                                                        <p th:text="${actividad.descripcion}">Descripción</p>
+                                                    <div class="w-full">
+                                                        <th:block th:unless="${actividad instanceof T(com.example.demo.model.Recurso) and actividad.tipo.name() == 'TEXTO'}">
+                                                            <h5 th:if="${!(actividad instanceof T(com.example.demo.model.Recurso) and actividad.tipo.name() == 'ENLACE')}" th:text="${actividad.titulo}">Título Actividad</h5>
+                                                            <h5 th:if="${actividad instanceof T(com.example.demo.model.Recurso) and actividad.tipo.name() == 'ENLACE'}">
+                                                                <a th:href="${actividad.url}" target="_blank" class="text-blue-600 hover:underline">
+                                                                    <i class="fas fa-external-link-alt text-xs me-1"></i> <span th:text="${actividad.titulo}">Link</span>
+                                                                </a>
+                                                            </h5>
+                                                            <p th:text="${actividad.descripcion}">Descripción</p>
+                                                        </th:block>
+
+                                                        <div th:if="${actividad instanceof T(com.example.demo.model.Recurso) and actividad.tipo.name() == 'TEXTO'}" class="mb-2">
+                                                            <h5 th:if="${actividad.titulo != null and !actividad.titulo.isEmpty()}" th:text="${actividad.titulo}" class="font-bold mb-2"></h5>
+                                                            <div th:utext="${actividad.contenidoTexto}" class="text-gray-700"></div>
+                                                        </div>
                                                         
                                                         <!-- Detalles específicos -->
                                                         <div th:if="${actividad instanceof T(com.example.demo.model.Material)}" class="mt-1">
@@ -927,9 +1024,9 @@
                                                         
                                                         <button th:if="${actividad instanceof T(com.example.demo.model.Carpeta)}"
                                                             th:attr="data-carpeta-id=${actividad.idActividad}"
-                                                            onclick="abrirCarpeta(this)"
-                                                            class="btn btn-sm btn-light text-yellow-600">
-                                                            <i class="fas fa-folder-open"></i>
+                                                            onclick="toggleCarpetaInline(this)"
+                                                            class="btn btn-sm btn-light text-yellow-600 toggle-folder-btn">
+                                                            <i class="fas fa-folder"></i>
                                                         </button>
                                                     </div>
                                                 </div>
@@ -944,6 +1041,15 @@
                                             <div class="edit-controls ml-3">
                                                 <button type="button" class="edit-icon text-blue-600" data-edit-type="actividad" th:data-actividad-id="${actividad.idActividad}"><i class="fas fa-pen"></i></button>
                                                 <button type="button" class="delete-icon text-red-500" data-delete-type="actividad" th:data-actividad-id="${actividad.idActividad}" th:data-actividad-nombre="${actividad.titulo}"><i class="fas fa-trash"></i></button>
+                                            </div>
+
+                                            <!-- Contenedor desplegable para Carpeta -->
+                                            <div th:if="${actividad instanceof T(com.example.demo.model.Carpeta)}"
+                                                 th:id="'carpeta-content-' + ${actividad.idActividad}"
+                                                 class="w-full hidden mt-3 pl-4 border-l-4 border-yellow-100 bg-gray-50/50 rounded-r-lg">
+                                                <div class="py-4 text-center text-gray-500 text-sm">
+                                                    <i class="fas fa-spinner fa-spin me-2"></i>Cargando contenido...
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -1120,6 +1226,7 @@
         const csrfHeaderMeta = document.querySelector('meta[name="_csrf_header"]');
         const csrfToken = csrfTokenMeta ? csrfTokenMeta.getAttribute('content') : '';
         const csrfHeader = csrfHeaderMeta ? csrfHeaderMeta.getAttribute('content') : '';
+        const csrfParameterName = '_csrf'; // Default default parameter name for Spring Security
         let isEditModeEnabled = false;
         const modifyCourseDefaultMarkup = modifyCourseButton ? modifyCourseButton.innerHTML : '';
 
@@ -1884,7 +1991,29 @@
                                 </div>
                             </button>
                             
-                            <!-- Opción 3: Crear Carpeta -->
+                            <!-- Opción 3: Crear Recurso (Enlace) -->
+                            <button class="tipo-actividad-btn group p-4 border-2 border-gray-200 rounded-lg hover:border-green-400 hover:bg-green-50 transition-all duration-200"
+                                    data-tipo="enlace" data-modulo-id="${moduloId}">
+                                <div class="flex flex-col items-center text-center">
+                                    <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-2 group-hover:bg-green-200 transition-colors">
+                                        <i class="fas fa-link text-2xl text-green-600"></i>
+                                    </div>
+                                    <h4 class="font-semibold text-sm text-gray-800">Enlace</h4>
+                                </div>
+                            </button>
+
+                            <!-- Opción 4: Crear Sección Texto -->
+                            <button class="tipo-actividad-btn group p-4 border-2 border-gray-200 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all duration-200"
+                                    data-tipo="texto" data-modulo-id="${moduloId}">
+                                <div class="flex flex-col items-center text-center">
+                                    <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-2 group-hover:bg-gray-200 transition-colors">
+                                        <i class="fas fa-align-left text-2xl text-gray-600"></i>
+                                    </div>
+                                    <h4 class="font-semibold text-sm text-gray-800">Sección Texto</h4>
+                                </div>
+                            </button>
+
+                            <!-- Opción 5: Crear Carpeta -->
                             <button class="tipo-actividad-btn group p-4 border-2 border-gray-200 rounded-lg hover:border-yellow-400 hover:bg-yellow-50 transition-all duration-200"
                                     data-tipo="carpeta" data-modulo-id="${moduloId}">
                                 <div class="flex flex-col items-center text-center">
@@ -1953,6 +2082,12 @@
                 case 'material':
                     formularioHTML = crearFormularioMaterial(moduloId, moduloNombre);
                     break;
+                case 'enlace':
+                    formularioHTML = crearFormularioRecurso(moduloId, moduloNombre, 'ENLACE');
+                    break;
+                case 'texto':
+                    formularioHTML = crearFormularioRecurso(moduloId, moduloNombre, 'TEXTO');
+                    break;
             }
 
             document.body.insertAdjacentHTML('beforeend', formularioHTML);
@@ -1997,6 +2132,98 @@
             } catch (error) {
                 console.error('Error:', error);
                 alert('Error al crear carpeta');
+            }
+        }
+
+        // ========================================
+        // FORMULARIO DE RECURSO (ENLACE / TEXTO)
+        // ========================================
+        function crearFormularioRecurso(moduloId, moduloNombre, tipo) {
+            const esEnlace = tipo === 'ENLACE';
+            const tituloModal = esEnlace ? 'Agregar Enlace' : 'Agregar Sección de Texto';
+            const iconModal = esEnlace ? 'fa-link' : 'fa-align-left';
+            
+            return `
+                <div id="recursoModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                    <div class="bg-white rounded-lg shadow-xl w-full max-w-lg overflow-hidden animate-fade-in-up">
+                        <div class="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
+                            <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                                <i class="fas ${iconModal} text-blue-600"></i> ${tituloModal}
+                            </h3>
+                            <button type="button" onclick="document.getElementById('recursoModal').remove()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+                        
+                        <form id="recursoForm" action="/recurso/crear" method="post" class="p-6">
+                            <input type="hidden" name="${csrfParameterName}" value="${csrfToken}" />
+                            <input type="hidden" name="moduloId" value="${moduloId}" />
+                            <input type="hidden" name="tipo" value="${tipo}" />
+                            
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Título *</label>
+                                <input type="text" name="titulo" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" placeholder="Título del recurso">
+                            </div>
+                            
+                            ${esEnlace ? `
+                                <div class="mb-4">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">URL (Enlace) *</label>
+                                    <input type="url" name="url" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" placeholder="https://ejemplo.com">
+                                </div>
+                                <div class="mb-4">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                                    <textarea name="descripcion" rows="2" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"></textarea>
+                                </div>
+                            ` : `
+                                <div class="mb-4">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Contenido *</label>
+                                    <textarea name="contenido" rows="6" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" placeholder="Escribe aquí el contenido..."></textarea>
+                                    <p class="text-xs text-gray-500 mt-1">Soporta HTML básico.</p>
+                                </div>
+                            `}
+                            
+                            <div class="flex justify-end gap-3 pt-4 border-t">
+                                <button type="button" onclick="document.getElementById('recursoModal').remove()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                                    Cancelar
+                                </button>
+                                <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 shadow-sm">
+                                    Guardar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+        
+        async function guardarRecurso(form) {
+            const formData = new FormData(form);
+            const btnSubmit = form.querySelector('button[type="submit"]');
+            const originalText = btnSubmit.innerHTML;
+            
+            btnSubmit.disabled = true;
+            btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                    btnSubmit.disabled = false;
+                    btnSubmit.innerHTML = originalText;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Ocurrió un error al guardar el recurso');
+                btnSubmit.disabled = false;
+                btnSubmit.innerHTML = originalText;
             }
         }
 
@@ -3578,6 +3805,10 @@
 
         // Event delegation para manejar los submit de los formularios dinámicos
         document.addEventListener('submit', async function (e) {
+            if (e.target.id === 'recursoForm') {
+                e.preventDefault();
+                await guardarRecurso(e.target);
+            }
             if (e.target.id === 'formTarea') {
                 e.preventDefault();
                 
@@ -3800,6 +4031,122 @@
         // ========================================
         // GESTIÓN DE CARPETAS Y ARCHIVOS
         // ========================================
+        window.toggleCarpetaInline = function(button) {
+            const carpetaId = button.getAttribute('data-carpeta-id');
+            const container = document.getElementById('carpeta-content-' + carpetaId);
+            const icon = button.querySelector('i');
+            
+            if (container.classList.contains('hidden')) {
+                // Abrir
+                container.classList.remove('hidden');
+                icon.classList.remove('fa-folder');
+                icon.classList.add('fa-folder-open');
+                
+                // Cargar contenido si no se ha cargado (verificado por el spinner)
+                if (container.querySelector('.fa-spinner')) {
+                    cargarContenidoCarpetaInline(carpetaId, container);
+                }
+            } else {
+                // Cerrar
+                container.classList.add('hidden');
+                icon.classList.remove('fa-folder-open');
+                icon.classList.add('fa-folder');
+            }
+        };
+
+        function cargarContenidoCarpetaInline(carpetaId, container) {
+            fetch(`/carpeta/${carpetaId}/contenido`)
+                .then(response => response.json())
+                .then(data => {
+                    let html = '<div class="space-y-3 py-3 pr-3">';
+                    
+                    if (PUEDE_MODIFICAR) {
+                         html += `
+                            <div class="flex justify-end mb-2">
+                                <button onclick="abrirFormularioMaterialEnCarpeta(${carpetaId}, 'Carpeta')" 
+                                        class="text-xs bg-green-50 text-green-600 hover:bg-green-100 px-2 py-1 rounded border border-green-200">
+                                    <i class="fas fa-plus me-1"></i>Agregar Material
+                                </button>
+                            </div>
+                        `;
+                    }
+
+                    // 1. Mostrar Materiales (Texto enriquecido + Archivos)
+                    if (data.materiales && data.materiales.length > 0) {
+                        html += '<div class="space-y-3">';
+                        data.materiales.forEach(mat => {
+                            html += `
+                                <div class="bg-white p-3 rounded shadow-sm border border-gray-100">
+                                    <h5 class="font-bold text-gray-800 text-sm mb-1">
+                                        <i class="fas fa-book-reader text-blue-500 me-2"></i>${escapeHtml(mat.titulo)}
+                                    </h5>
+                                    ${mat.descripcion ? `<p class="text-sm text-gray-600 mb-2">${escapeHtml(mat.descripcion)}</p>` : ''}
+                                    
+                                    ${mat.archivos && mat.archivos.length > 0 ? `
+                                        <div class="mt-2 space-y-1 pl-2 border-l-2 border-blue-100">
+                                            ${mat.archivos.map(arch => `
+                                                <div class="flex items-center text-xs text-gray-500 hover:text-blue-600">
+                                                    <i class="fas fa-paperclip me-2"></i>
+                                                    <span>${escapeHtml(arch.nombre)}</span>
+                                                    <a href="/carpeta/archivo/${arch.id}/descargar" class="ml-auto p-1 hover:bg-gray-100 rounded" target="_blank">
+                                                        <i class="fas fa-download"></i>
+                                                    </a>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            `;
+                        });
+                        html += '</div>';
+                    }
+
+                    // 2. Mostrar Archivos Directos (Lista simple)
+                    if (data.archivos && data.archivos.length > 0) {
+                         // Separador si hay ambos
+                        if (data.materiales && data.materiales.length > 0) {
+                             html += '<hr class="my-3 border-gray-200">';
+                        }
+                        
+                        html += '<h6 class="text-xs font-bold text-gray-400 uppercase mb-2">Archivos Sueltos</h6>';
+                        html += '<div class="grid grid-cols-1 gap-2">';
+                        data.archivos.forEach(arch => {
+                            html += `
+                                <div class="flex items-center p-2 bg-white rounded border border-gray-200 hover:shadow-sm transition-shadow">
+                                    <div class="w-8 h-8 rounded bg-gray-100 flex items-center justify-center text-gray-500 me-3">
+                                        <i class="fas fa-file"></i>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="text-sm font-medium text-gray-800 truncate" title="${escapeHtml(arch.nombre)}">${escapeHtml(arch.nombre)}</div>
+                                        <div class="text-xs text-gray-400">${formatearTamano(arch.tamano)}</div>
+                                    </div>
+                                    <a href="/carpeta/archivo/${arch.id}/descargar" class="p-2 text-gray-400 hover:text-blue-600" title="Descargar" target="_blank">
+                                        <i class="fas fa-download"></i>
+                                    </a>
+                                    ${PUEDE_MODIFICAR ? `
+                                        <button onclick="eliminarArchivo(${arch.id}, ${carpetaId})" class="p-2 text-gray-400 hover:text-red-500" title="Eliminar">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            `;
+                        });
+                        html += '</div>';
+                    }
+                    
+                    if ((!data.materiales || data.materiales.length === 0) && (!data.archivos || data.archivos.length === 0)) {
+                        html += `<div class="text-center text-gray-400 text-sm italic py-2">Carpeta vacía</div>`;
+                    }
+
+                    html += '</div>';
+                    container.innerHTML = html;
+                })
+                .catch(err => {
+                    console.error(err);
+                    container.innerHTML = '<div class="text-red-500 text-sm text-center">Error al cargar contenido</div>';
+                });
+        }
+
         window.abrirCarpeta = function(button) {
             const carpetaId = button.getAttribute('data-carpeta-id');
             const carpetaNombre = button.getAttribute('data-carpeta-nombre');

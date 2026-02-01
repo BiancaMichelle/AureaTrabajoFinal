@@ -258,4 +258,48 @@ public class CarpetaController {
 
         return ResponseEntity.ok(materialesInfo);
     }
+
+    @GetMapping("/{carpetaId}/contenido")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> obtenerContenido(@PathVariable Long carpetaId) {
+        Carpeta carpeta = carpetaRepository.findById(carpetaId).orElse(null);
+        if (carpeta == null) return ResponseEntity.notFound().build();
+        
+        // 1. Archivos directos
+        List<Map<String, Object>> archivosDirectos = carpeta.getArchivos().stream().map(archivo -> {
+            Map<String, Object> info = new HashMap<>();
+            info.put("id", archivo.getIdArchivo());
+            info.put("nombre", archivo.getNombre());
+            info.put("tipoMime", archivo.getTipoMime());
+            info.put("tamano", archivo.getTamano());
+            info.put("tipo", "ARCHIVO");
+            return info;
+        }).toList();
+
+        // 2. Materiales (con sus archivos)
+        List<Map<String, Object>> materiales = carpeta.getMateriales().stream().map(material -> {
+            Map<String, Object> info = new HashMap<>();
+            info.put("id", material.getIdActividad());
+            info.put("titulo", material.getTitulo());
+            info.put("descripcion", material.getDescripcion());
+            info.put("tipo", "MATERIAL");
+            
+            List<Map<String, Object>> archs = material.getArchivos().stream().map(archivo -> {
+                Map<String, Object> aInfo = new HashMap<>();
+                aInfo.put("id", archivo.getIdArchivo());
+                aInfo.put("nombre", archivo.getNombre());
+                return aInfo;
+            }).toList();
+            
+            info.put("archivos", archs);
+            return info;
+        }).toList();
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("archivos", archivosDirectos);
+        response.put("materiales", materiales);
+        
+        return ResponseEntity.ok(response);
+    }
 }
+

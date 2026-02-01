@@ -22,6 +22,7 @@ import com.example.demo.model.Curso;
 import com.example.demo.model.Docente;
 import com.example.demo.model.Formacion;
 import com.example.demo.model.Horario;
+import com.example.demo.model.Inscripciones;
 import com.example.demo.model.Instituto;
 import com.example.demo.model.OfertaAcademica;
 import com.example.demo.model.Rol;
@@ -58,6 +59,7 @@ public class DataSeeder implements CommandLineRunner {
     private final CharlaRepository charlaRepository;
     private final SeminarioRepository seminarioRepository;
     private final FormacionRepository formacionRepository;
+    private final com.example.demo.repository.OfertaAcademicaRepository ofertaAcademicaRepository;
  
     public DataSeeder(RolRepository roleRepository,
             UsuarioRepository usuarioRepository,
@@ -71,7 +73,8 @@ public class DataSeeder implements CommandLineRunner {
             InstitutoRepository institutoRepository,
             CharlaRepository charlaRepository,
             SeminarioRepository seminarioRepository,
-            FormacionRepository formacionRepository) {
+            FormacionRepository formacionRepository,
+            com.example.demo.repository.OfertaAcademicaRepository ofertaAcademicaRepository) {
         this.roleRepository = roleRepository;
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
@@ -85,6 +88,7 @@ public class DataSeeder implements CommandLineRunner {
         this.charlaRepository = charlaRepository;
         this.seminarioRepository = seminarioRepository;
         this.formacionRepository = formacionRepository;
+        this.ofertaAcademicaRepository = ofertaAcademicaRepository;
     }
 
     @Override
@@ -94,6 +98,42 @@ public class DataSeeder implements CommandLineRunner {
         crearInstitutoDefault();
         seedMasUsuarios();
         seedOfertas();
+        repararHorariosHuerfanos();
+    }
+
+    // Método para corregir ofertas existentes con horarios sin docente
+    private void repararHorariosHuerfanos() {
+        System.out.println("SEED: Verificando integridad de horarios...");
+        List<OfertaAcademica> ofertas = new ArrayList<>();
+        ofertas.addAll(cursoRepository.findAll());
+        ofertas.addAll(formacionRepository.findAll());
+        
+        int fixedCount = 0;
+        for (OfertaAcademica oferta : ofertas) {
+             boolean isDirty = false;
+             if (oferta.getHorarios() != null) {
+                 for (Horario h : oferta.getHorarios()) {
+                     if (h.getDocente() == null) {
+                        List<Docente> docentes = null;
+                        if (oferta instanceof Curso) docentes = ((Curso)oferta).getDocentes();
+                        else if (oferta instanceof Formacion) docentes = ((Formacion)oferta).getDocentes();
+                        
+                        if (docentes != null && !docentes.isEmpty()) {
+                            Docente d = docentes.get(0); // Asignar al primer docente
+                            h.setDocente(d);
+                            // Ensure bi-directional consistency if needed, though JPA handles via save
+                            isDirty = true;
+                        }
+                     }
+                 }
+             }
+             if (isDirty) {
+                 if (oferta instanceof Curso) cursoRepository.save((Curso)oferta);
+                 else if (oferta instanceof Formacion) formacionRepository.save((Formacion)oferta);
+                 fixedCount++;
+             }
+        }
+        if (fixedCount > 0) System.out.println("✅ Se repararon horarios en " + fixedCount + " ofertas.");
     }
 
     private void seedMasUsuarios() {
@@ -130,13 +170,13 @@ public class DataSeeder implements CommandLineRunner {
         // --- 3 CURSOS ---
         crearCursoSiNoExiste(new Curso(
             "Java Spring Avanzado", "Dominando Spring Boot 3", Modalidad.VIRTUAL, 15000.0, true, 
-            LocalDate.now().plusDays(10), LocalDate.now().plusMonths(3), 30, 3, 500.0, 10,
+            LocalDate.now().minusDays(30), LocalDate.now().plusMonths(3), 30, 3, 500.0, 10,
             Arrays.asList(docentes.get(0), docentes.get(1))
         ));
 
         crearCursoSiNoExiste(new Curso(
             "Introducción a Python", "Fundamentos de programación en Python", Modalidad.VIRTUAL, 12000.0, true, 
-            LocalDate.now().plusDays(10), LocalDate.now().plusMonths(3), 30, 3, 500.0, 10,
+            LocalDate.now().minusDays(15), LocalDate.now().plusMonths(3), 30, 3, 500.0, 10,
             Arrays.asList(docentes.get(rand.nextInt(docentes.size())))
         ));
 
@@ -191,54 +231,237 @@ public class DataSeeder implements CommandLineRunner {
             Arrays.asList("Seth Godin")
         ));
         
+        // --- Nuevo: Crear 2 Formaciones en curso con docente 12345678 y alumno 44444444 ---
+        Docente docenteRoberto = docenteRepository.findAll().stream()
+                .filter(d -> "12345678".equals(d.getDni()))
+                .findFirst().orElse(null);
+        // Fetch alumno directly via AlumnoRepository to avoid casting issues
+        Alumno alumnoCarlos = alumnoRepository.findByDni("44444444").orElse(null);
+
+        if (docenteRoberto == null) {
+            System.err.println("SEED WARN: Docente 12345678 no encontrado. No se crean formaciones en curso.");
+        } else {
+            LocalDate inicio = LocalDate.now().minusMonths(1);
+            LocalDate fin = LocalDate.now().plusMonths(3);
+
+            // Nombres y parámetros
+            String name1 = "Formación en Curso A";
+            String name2 = "Formación en Curso B";
+
+            // Helper: find existing exact (case-insensitive) using OfertaAcademicaRepository to avoid Optional import issues
+            java.util.Optional<Formacion> optF1 = ofertaAcademicaRepository.findByNombreIgnoreCase(name1)
+                    .filter(o -> o instanceof Formacion)
+                    .map(o -> (Formacion) o);
+            java.util.Optional<Formacion> optF2 = ofertaAcademicaRepository.findByNombreIgnoreCase(name2)
+                    .filter(o -> o instanceof Formacion)
+                    .map(o -> (Formacion) o);
+
+            Formacion f1 = optF1.orElse(null);
+            if (f1 == null) {
+                f1 = new Formacion(
+                    name1,
+                    "Formación en curso A",
+                    "Especialización A",
+                    Modalidad.VIRTUAL,
+                    15000.0,
+                    inicio,
+                    fin,
+                    20,
+                    4,
+                    500.0,
+                    5,
+                    Arrays.asList(docenteRoberto)
+                );
+                f1.setEstado(EstadoOferta.ENCURSO);
+                // horarios L-V 09:00 - 10:30
+                for (Dias d : Arrays.asList(Dias.LUNES, Dias.MARTES, Dias.MIERCOLES, Dias.JUEVES, Dias.VIERNES)) {
+                    Horario h = new Horario();
+                    h.setDia(d);
+                    h.setHoraInicio(Time.valueOf("09:00:00"));
+                    h.setHoraFin(Time.valueOf("10:30:00"));
+                    h.setDocente(docenteRoberto);
+                    f1.addHorario(h);
+                }
+                formacionRepository.save(f1);
+                System.out.println("✅ Formacion en curso creada: " + f1.getNombre());
+            } else {
+                System.out.println("ℹ️ Formacion ya existe: " + f1.getNombre());
+            }
+
+            // Ensure docente association and horarios for f1
+            if (docenteRoberto != null) {
+                if (f1.getDocentes() == null) f1.setDocentes(new ArrayList<>());
+                boolean hasDoc = f1.getDocentes().stream().anyMatch(d -> d.getId().equals(docenteRoberto.getId()));
+                if (!hasDoc) {
+                    f1.getDocentes().add(docenteRoberto);
+                    formacionRepository.save(f1);
+                    System.out.println("✅ Docente 12345678 asociado a la formación: " + f1.getNombre());
+                }
+                // Ensure horario entries exist for weekdays
+                if (f1.getHorarios() == null || f1.getHorarios().isEmpty()) {
+                    for (Dias d : Arrays.asList(Dias.LUNES, Dias.MARTES, Dias.MIERCOLES, Dias.JUEVES, Dias.VIERNES)) {
+                        Horario h = new Horario();
+                        h.setDia(d);
+                        h.setHoraInicio(Time.valueOf("09:00:00"));
+                        h.setHoraFin(Time.valueOf("10:30:00"));
+                        h.setDocente(docenteRoberto);
+                        f1.addHorario(h);
+                    }
+                    formacionRepository.save(f1);
+                    System.out.println("✅ Horarios agregados para: " + f1.getNombre());
+                }
+
+                // Ensure docente has this formacion in its list
+                if (docenteRoberto.getFormaciones() == null) docenteRoberto.setFormaciones(new ArrayList<>());
+                final String f1Nombre = f1.getNombre();
+                boolean alreadyLinked1 = docenteRoberto.getFormaciones().stream()
+                    .anyMatch(ff -> ff.getNombre().equalsIgnoreCase(f1Nombre));
+                if (!alreadyLinked1) {
+                    docenteRoberto.getFormaciones().add(f1);
+                    docenteRepository.save(docenteRoberto);
+                    System.out.println("✅ Docente 12345678 asociado a la formación (lado docente): " + f1.getNombre());
+                }
+            }
+
+            Formacion f2 = optF2.orElse(null);
+            if (f2 == null) {
+                f2 = new Formacion(
+                    name2,
+                    "Formación en curso B",
+                    "Especialización B",
+                    Modalidad.VIRTUAL,
+                    14000.0,
+                    inicio,
+                    fin,
+                    20,
+                    4,
+                    500.0,
+                    5,
+                    Arrays.asList(docenteRoberto)
+                );
+                f2.setEstado(EstadoOferta.ENCURSO);
+                for (Dias d : Arrays.asList(Dias.LUNES, Dias.MARTES, Dias.MIERCOLES, Dias.JUEVES, Dias.VIERNES)) {
+                    Horario h = new Horario();
+                    h.setDia(d);
+                    h.setHoraInicio(Time.valueOf("09:00:00"));
+                    h.setHoraFin(Time.valueOf("10:30:00"));
+                    h.setDocente(docenteRoberto);
+                    f2.addHorario(h);
+                }
+                formacionRepository.save(f2);
+                System.out.println("✅ Formacion en curso creada: " + f2.getNombre());
+            } else {
+                System.out.println("ℹ️ Formacion ya existe: " + f2.getNombre());
+            }
+
+            // Ensure docente association and horarios for f2
+            if (docenteRoberto != null) {
+                if (f2.getDocentes() == null) f2.setDocentes(new ArrayList<>());
+                boolean hasDoc2 = f2.getDocentes().stream().anyMatch(d -> d.getId().equals(docenteRoberto.getId()));
+                if (!hasDoc2) {
+                    f2.getDocentes().add(docenteRoberto);
+                    formacionRepository.save(f2);
+                    System.out.println("✅ Docente 12345678 asociado a la formación: " + f2.getNombre());
+                }
+                if (f2.getHorarios() == null || f2.getHorarios().isEmpty()) {
+                    for (Dias d : Arrays.asList(Dias.LUNES, Dias.MARTES, Dias.MIERCOLES, Dias.JUEVES, Dias.VIERNES)) {
+                        Horario h = new Horario();
+                        h.setDia(d);
+                        h.setHoraInicio(Time.valueOf("09:00:00"));
+                        h.setHoraFin(Time.valueOf("10:30:00"));
+                        h.setDocente(docenteRoberto);
+                        f2.addHorario(h);
+                    }
+                    formacionRepository.save(f2);
+                    System.out.println("✅ Horarios agregados para: " + f2.getNombre());
+                }
+
+                final String f2Nombre = f2.getNombre();
+                boolean alreadyLinked2 = docenteRoberto.getFormaciones().stream()
+                    .anyMatch(ff -> ff.getNombre().equalsIgnoreCase(f2Nombre));
+                if (!alreadyLinked2) {
+                    docenteRoberto.getFormaciones().add(f2);
+                    docenteRepository.save(docenteRoberto);
+                    System.out.println("✅ Docente 12345678 asociado a la formación (lado docente): " + f2.getNombre());
+                }
+            }
+
+            // Inscribir alumno 44444444 en ambas formaciones
+            if (alumnoCarlos != null) {
+                // Evitar lambdas que capturan variables no-final: usar chequeo explícito
+                if (inscripcionRepository.findByAlumnoAndOferta(alumnoCarlos, f1).isEmpty()) {
+                    Inscripciones ins1 = new Inscripciones();
+                    ins1.setAlumno(alumnoCarlos);
+                    ins1.setOferta(f1);
+                    ins1.setFechaInscripcion(LocalDate.now().minusDays(5));
+                    ins1.setEstadoInscripcion(true);
+                    inscripcionRepository.save(ins1);
+                }
+
+                if (inscripcionRepository.findByAlumnoAndOferta(alumnoCarlos, f2).isEmpty()) {
+                    Inscripciones ins2 = new Inscripciones();
+                    ins2.setAlumno(alumnoCarlos);
+                    ins2.setOferta(f2);
+                    ins2.setFechaInscripcion(LocalDate.now().minusDays(5));
+                    ins2.setEstadoInscripcion(true);
+                    inscripcionRepository.save(ins2);
+                }
+
+                System.out.println("✅ Inscrito alumno 44444444 en las formaciones creadas (o ya existente).");
+            } else {
+                System.err.println("SEED WARN: Alumno 44444444 no encontrado. Omisión de inscripciones.");
+            }
+        }
+        
         System.out.println("SEED: Proceso de ofertas finalizado.");
     }
 
     private void crearCursoSiNoExiste(Curso curso) {
         boolean existe = cursoRepository.findAll().stream()
                 .anyMatch(c -> c.getNombre().equalsIgnoreCase(curso.getNombre()));
-        if (!existe) {
+        // Use model-level validation to check duplicates
+        java.util.List<String> errores = curso.validarDuplicado(ofertaAcademicaRepository);
+        if (errores.isEmpty()) {
             asegurarHorarios(curso);
             cursoRepository.save(curso);
             System.out.println("✅ Curso creado: " + curso.getNombre());
         } else {
-            System.out.println("ℹ️ Curso ya existe: " + curso.getNombre());
+            System.out.println("ℹ️ Curso no creado (duplicado): " + curso.getNombre() + " - " + errores);
         }
     }
 
     private void crearFormacionSiNoExiste(Formacion formacion) {
         boolean existe = formacionRepository.findAll().stream()
                 .anyMatch(f -> f.getNombre().equalsIgnoreCase(formacion.getNombre()));
-        if (!existe) {
+        java.util.List<String> errores = formacion.validarDuplicado(ofertaAcademicaRepository);
+        if (errores.isEmpty()) {
             asegurarHorarios(formacion);
             formacionRepository.save(formacion);
             System.out.println("✅ Formación creada: " + formacion.getNombre());
         } else {
-            System.out.println("ℹ️ Formación ya existe: " + formacion.getNombre());
+            System.out.println("ℹ️ Formación no creada (duplicado): " + formacion.getNombre() + " - " + errores);
         }
     }
 
     private void crearCharlaSiNoExiste(Charla charla) {
-        boolean existe = charlaRepository.findAll().stream()
-                .anyMatch(c -> c.getNombre().equalsIgnoreCase(charla.getNombre()));
-        if (!existe) {
+        java.util.List<String> errores = charla.validarDuplicado(ofertaAcademicaRepository);
+        if (errores.isEmpty()) {
             asegurarHorarios(charla);
             charlaRepository.save(charla);
             System.out.println("✅ Charla creada: " + charla.getNombre());
         } else {
-            System.out.println("ℹ️ Charla ya existe: " + charla.getNombre());
+            System.out.println("ℹ️ Charla no creada (duplicado): " + charla.getNombre() + " - " + errores);
         }
     }
 
     private void crearSeminarioSiNoExiste(Seminario seminario) {
-        boolean existe = seminarioRepository.findAll().stream()
-                .anyMatch(s -> s.getNombre().equalsIgnoreCase(seminario.getNombre()));
-        if (!existe) {
+        java.util.List<String> errores = seminario.validarDuplicado(ofertaAcademicaRepository);
+        if (errores.isEmpty()) {
             asegurarHorarios(seminario);
             seminarioRepository.save(seminario);
             System.out.println("✅ Seminario creado: " + seminario.getNombre());
         } else {
-            System.out.println("ℹ️ Seminario ya existe: " + seminario.getNombre());
+            System.out.println("ℹ️ Seminario no creado (duplicado): " + seminario.getNombre() + " - " + errores);
         }
     }
 
@@ -402,13 +625,32 @@ public class DataSeeder implements CommandLineRunner {
 
     private void asegurarHorarios(OfertaAcademica oferta) {
         if (oferta.getHorarios() == null || oferta.getHorarios().isEmpty()) {
-            Horario h = new Horario();
-            h.setDia(Dias.LUNES);
-            h.setHoraInicio(Time.valueOf("09:00:00"));
-            h.setHoraFin(Time.valueOf("11:00:00"));
-            // h.setOfertaAcademica(oferta); // Gestionado por addHorario
-            
-            oferta.addHorario(h);
+            List<Docente> docentes = new ArrayList<>();
+            if (oferta instanceof Curso) {
+                docentes = ((Curso) oferta).getDocentes();
+            } else if (oferta instanceof Formacion) {
+                docentes = ((Formacion) oferta).getDocentes();
+            }
+
+            if (docentes != null && !docentes.isEmpty()) {
+                for (Docente docente : docentes) {
+                    Horario h = new Horario();
+                    h.setDia(Dias.LUNES);
+                    h.setHoraInicio(Time.valueOf("09:00:00"));
+                    h.setHoraFin(Time.valueOf("11:00:00"));
+                    
+                    docente.addHorario(h);
+                    oferta.addHorario(h);
+                }
+            } else {
+                Horario h = new Horario();
+                h.setDia(Dias.LUNES);
+                h.setHoraInicio(Time.valueOf("09:00:00"));
+                h.setHoraFin(Time.valueOf("11:00:00"));
+                // h.setOfertaAcademica(oferta); // Gestionado por addHorario
+                
+                oferta.addHorario(h);
+            }
         }
     }
 }

@@ -23,7 +23,7 @@ public class Docente extends Usuario{
     private Integer añosExperiencia;
     
     @OneToMany(mappedBy = "docente")
-    private List<Horario> horario;
+    private List<Horario> horario = new ArrayList<>();
     
     @ManyToMany
     @JoinTable(
@@ -35,4 +35,12 @@ public class Docente extends Usuario{
     
     @OneToMany(mappedBy = "docente")
     private List<Clase> clases;
+
+    public void addHorario(Horario h) {
+        if (this.horario == null) {
+            this.horario = new ArrayList<>();
+        }
+        this.horario.add(h);
+        h.setDocente(this);
+    }
 }

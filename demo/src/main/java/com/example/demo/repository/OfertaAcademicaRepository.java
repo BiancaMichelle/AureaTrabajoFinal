@@ -17,4 +17,7 @@ public interface OfertaAcademicaRepository extends JpaRepository<OfertaAcademica
     // Buscar ofertas por estado
     List<OfertaAcademica> findByEstado(EstadoOferta estado);
     List<OfertaAcademica> findByEstadoIn(Collection<EstadoOferta> estados);
+
+    // Buscar por nombre exacto (case-insensitive)
+    java.util.Optional<OfertaAcademica> findByNombreIgnoreCase(String nombre);
 }

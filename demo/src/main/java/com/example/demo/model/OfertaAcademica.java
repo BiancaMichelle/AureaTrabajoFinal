@@ -160,6 +160,25 @@ public class OfertaAcademica {
         }
     }
 
+    /**
+     * Valida si el nombre de la oferta está duplicado en la base de datos.
+     * Devuelve una lista de errores (vacía si no hay conflicto).
+     */
+    public java.util.List<String> validarDuplicado(com.example.demo.repository.OfertaAcademicaRepository ofertaRepo) {
+        java.util.List<String> errores = new java.util.ArrayList<>();
+        if (this.nombre == null || this.nombre.trim().isEmpty()) return errores;
+
+        java.util.Optional<OfertaAcademica> existente = ofertaRepo.findByNombreIgnoreCase(this.nombre.trim());
+        if (existente.isPresent()) {
+            OfertaAcademica otra = existente.get();
+            // Si es la misma entidad (actualización), no consideramos duplicado
+            if (this.idOferta == null || !this.idOferta.equals(otra.getIdOferta())) {
+                errores.add("Ya existe una oferta con el mismo nombre: '" + this.nombre + "'");
+            }
+        }
+        return errores;
+    }
+
         public Boolean getEstaActiva() {
         // Consideramos activa si está en curso o planificada (ACTIVA)
         // y tiene cupos disponibles (opcional, según lógica de negocio)
@@ -481,6 +500,55 @@ public class OfertaAcademica {
         }
         
         return cambiado;
+    }
+
+    /**
+     * Indica si la fecha está dentro del rango de la oferta (inicio/fin) y no es futura.
+     */
+    public boolean estaDentroDeRango(LocalDate fecha) {
+        if (fecha == null) return false;
+        LocalDate hoy = LocalDate.now();
+        if (fecha.isAfter(hoy)) return false; // no permitir futuras
+        if (this.fechaInicio != null && fecha.isBefore(this.fechaInicio)) return false;
+        if (this.fechaFin != null && fecha.isAfter(this.fechaFin)) return false;
+        return true;
+    }
+
+    /**
+     * Indica si el día corresponde a alguno de los horarios programados (por día de semana).
+     * Si no hay horarios definidos, devuelve false para exigir definición explícita.
+     */
+    public boolean esDiaDeClase(LocalDate fecha) {
+        if (fecha == null) return false;
+        if (this.horarios == null || this.horarios.isEmpty()) return false;
+        java.time.DayOfWeek dow = fecha.getDayOfWeek();
+        for (Horario h : this.horarios) {
+            if (h != null && h.getDia() != null) {
+                switch (h.getDia()) {
+                    case LUNES: if (dow == java.time.DayOfWeek.MONDAY) return true; break;
+                    case MARTES: if (dow == java.time.DayOfWeek.TUESDAY) return true; break;
+                    case MIERCOLES: if (dow == java.time.DayOfWeek.WEDNESDAY) return true; break;
+                    case JUEVES: if (dow == java.time.DayOfWeek.THURSDAY) return true; break;
+                    case VIERNES: if (dow == java.time.DayOfWeek.FRIDAY) return true; break;
+                    case SABADO: if (dow == java.time.DayOfWeek.SATURDAY) return true; break;
+                    case DOMINGO: if (dow == java.time.DayOfWeek.SUNDAY) return true; break;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Valida en el modelo si el alumno puede registrar asistencia en una fecha dada.
+     * Reglas:
+     * - Fecha dentro del rango de la oferta y no futura.
+     * - Fecha no anterior a la fecha de inscripción del alumno.
+     * - Fecha corresponde a un día de clase según horarios.
+     */
+    public boolean puedeRegistrarAsistencia(LocalDate fecha, LocalDate fechaInscripcionAlumno) {
+        if (!estaDentroDeRango(fecha)) return false;
+        if (fechaInscripcionAlumno != null && fecha.isBefore(fechaInscripcionAlumno)) return false;
+        return esDiaDeClase(fecha);
     }
 
     /**

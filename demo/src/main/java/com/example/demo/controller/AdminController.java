@@ -988,6 +988,15 @@ public class AdminController {
                 asociarHorarios(oferta, horarios);
             }
 
+            // Validación de duplicados usando lógica del modelo
+            java.util.List<String> erroresDuplicado = oferta.validarDuplicado(ofertaAcademicaRepository);
+            if (!erroresDuplicado.isEmpty()) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("success", false);
+                errorResponse.put("message", String.join("; ", erroresDuplicado));
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+
             // Guardar en la base de datos
             OfertaAcademica nuevaOferta = ofertaAcademicaRepository.save(oferta);
             
