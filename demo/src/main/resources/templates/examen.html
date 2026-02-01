@@ -348,7 +348,8 @@
                     if (index < partes.length - 1) {
                         const input = document.createElement('input');
                         input.type = 'text';
-                        input.className = 'autocompletado-input';
+                        // Reemplazamos la clase con estilos Tailwind directos y agregamos fondo para mayor visibilidad
+                        input.className = 'inline-block w-48 border-b-2 border-gray-400 focus:border-blue-500 outline-none mx-2 px-1 text-lg font-medium bg-gray-50';
                         input.dataset.index = index;
                         input.value = respuestasGuardadas[index] || '';
                         

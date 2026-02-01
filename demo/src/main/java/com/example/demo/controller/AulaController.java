@@ -34,19 +34,31 @@ public class AulaController {
     private final AsistenciaService asistenciaService;
     private final ClaseRepository claseRepository;
     private final HorarioRepository horarioRepository;
+    private final TareaRepository tareaRepository;
+    private final ExamenRepository examenRepository;
+    private final IntentoRepository intentoRepository;
+    private final EntregaRepository entregaRepository;
 
     public AulaController(OfertaAcademicaRepository ofertaRepository,
                           InscripcionRepository inscripcionRepository,
                           UsuarioRepository usuarioRepository,
                           AsistenciaService asistenciaService,
                           ClaseRepository claseRepository,
-                          HorarioRepository horarioRepository) {
+                          HorarioRepository horarioRepository,
+                          TareaRepository tareaRepository,
+                          ExamenRepository examenRepository,
+                          IntentoRepository intentoRepository,
+                          EntregaRepository entregaRepository) {
         this.ofertaRepository = ofertaRepository;
         this.inscripcionRepository = inscripcionRepository;
         this.usuarioRepository = usuarioRepository;
         this.asistenciaService = asistenciaService;
         this.claseRepository = claseRepository;
         this.horarioRepository = horarioRepository;
+        this.tareaRepository = tareaRepository;
+        this.examenRepository = examenRepository;
+        this.intentoRepository = intentoRepository;
+        this.entregaRepository = entregaRepository;
     }
 
     @GetMapping("/oferta/{id}/participantes")
@@ -268,6 +280,91 @@ public class AulaController {
         }
 
         return "aula/asistencia";
+    }
+
+    @GetMapping("/oferta/{id}/calificaciones")
+    public String verCalificaciones(@PathVariable Long id, Model model, Authentication auth) {
+        Long ofertaIdSeguro = Objects.requireNonNull(id, "El id de la oferta es requerido");
+        OfertaAcademica oferta = ofertaRepository.findById(ofertaIdSeguro)
+                .orElseThrow(() -> new RuntimeException("Oferta no encontrada"));
+        
+        String currentUserDni = auth.getName();
+        Usuario currentUser = usuarioRepository.findByDni(currentUserDni)
+                .or(() -> usuarioRepository.findByCorreo(currentUserDni))
+                .orElseThrow(() -> new RuntimeException("Usuario actual no encontrado"));
+
+        model.addAttribute("oferta", oferta);
+        model.addAttribute("currentUser", currentUser);
+        
+        boolean isDocenteOrAdmin = currentUser.getRoles().stream()
+                .anyMatch(r -> r.getNombre().equalsIgnoreCase("DOCENTE") || r.getNombre().equalsIgnoreCase("ADMIN"));
+        model.addAttribute("isDocenteOrAdmin", isDocenteOrAdmin);
+
+        // Alumnos
+        List<Inscripciones> inscripciones = inscripcionRepository.findByOfertaIdOferta(id);
+        List<Usuario> alumnos = inscripciones.stream()
+                .filter(i -> i.getEstadoInscripcion() != null && i.getEstadoInscripcion())
+                .map(Inscripciones::getAlumno)
+                .filter(u -> u.getRoles().stream().noneMatch(r -> r.getNombre().equalsIgnoreCase("DOCENTE") || r.getNombre().equalsIgnoreCase("ADMIN")))
+                .distinct()
+                .sorted(Comparator.comparing(Usuario::getApellido).thenComparing(Usuario::getNombre))
+                .collect(Collectors.toList());
+        model.addAttribute("alumnos", alumnos);
+
+        // Actividades
+        List<Tarea> tareas = tareaRepository.findByCursoId(id);
+        List<Examen> examenes = examenRepository.findByModulo_Curso_IdOferta(id);
+        
+        model.addAttribute("tareas", tareas);
+        model.addAttribute("examenes", examenes);
+
+        // Notas Mapeadas: Map<UUID_Alumno, Map<ID_Actividad, Nota>>
+        Map<UUID, Map<Long, Double>> notasTareas = new HashMap<>(); 
+        Map<UUID, Map<Long, Float>> notasExamenes = new HashMap<>(); 
+
+        for(Tarea t : tareas) {
+             List<Entrega> entregas = entregaRepository.findByTarea(t); 
+             for(Entrega e : entregas) {
+                 if(e.getEstudiante() != null && e.getCalificacion() != null) {
+                      notasTareas.computeIfAbsent(e.getEstudiante().getId(), k -> new HashMap<>())
+                                 .put(t.getIdActividad(), e.getCalificacion());
+                 }
+             }
+        }
+        
+        for(Examen e : examenes) {
+             List<Intento> intentos = intentoRepository.findByExamen_IdActividad(e.getIdActividad());
+             for(Intento i : intentos) {
+                 if((i.getEstado().name().equals("FINALIZADO") || i.getEstado().name().equals("CALIFICADO")) && i.getCalificacion() != null) {
+                      notasExamenes.computeIfAbsent(i.getAlumno().getId(), k -> new HashMap<>())
+                                   .merge(e.getIdActividad(), i.getCalificacion(), Math::max);
+                 }
+             }
+        }
+        
+        model.addAttribute("notasTareas", notasTareas);
+        model.addAttribute("notasExamenes", notasExamenes);
+
+        // Sección Corrección (Solo Docente)
+        if(isDocenteOrAdmin) {
+            List<Map<String, Object>> correccionExamenes = new ArrayList<>();
+            for(Examen e : examenes) {
+                // Requiere EstadoIntento importado o usar string/value
+                long pendientes = intentoRepository.countByExamen_IdActividadAndEstado(e.getIdActividad(), com.example.demo.enums.EstadoIntento.PENDIENTE_CORRECCION);
+                long totalIntentos = intentoRepository.findByExamen_IdActividad(e.getIdActividad()).size();
+                long finalizados = intentoRepository.countByExamen_IdActividadAndEstado(e.getIdActividad(), com.example.demo.enums.EstadoIntento.FINALIZADO);
+
+                Map<String, Object> dato = new HashMap<>();
+                dato.put("examen", e);
+                dato.put("pendientes", pendientes);
+                dato.put("finalizados", finalizados);
+                dato.put("total", totalIntentos);
+                correccionExamenes.add(dato);
+            }
+            model.addAttribute("correccionExamenes", correccionExamenes);
+        }
+
+        return "aula/calificaciones";
     }
 
     // API Endpoints for the frontend logic

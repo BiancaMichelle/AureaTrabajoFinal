@@ -442,12 +442,12 @@ public class ExamenController {
         return "docente/examen-intentos";
     }
 
-    @GetMapping("/{examenId}/intentos/{intentoId}")
+    @GetMapping("/{examenId}/intentos/{intentoId}/fragment-correccion")
     @PreAuthorize("hasAnyAuthority('DOCENTE','ADMIN')")
-    public String verDetalleIntento(@PathVariable Long examenId,
-                                    @PathVariable UUID intentoId,
-                                    Authentication authentication,
-                                    Model model) {
+    public String obtenerFragmentCorreccion(@PathVariable Long examenId,
+                                            @PathVariable UUID intentoId,
+                                            Authentication authentication,
+                                            Model model) {
         Examen examen = examenRepository.findById(examenId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Examen no encontrado"));
 
@@ -467,20 +467,70 @@ public class ExamenController {
                 Map<String, Object> detalle = new HashMap<>();
                 detalle.put("pregunta", respuesta.getPregunta());
                 detalle.put("respuestaTexto", formatearRespuestaUsuario(respuesta.getRespuestaUsuario()));
+                detalle.put("respuestaLista", obtenerRespuestaComoLista(respuesta.getRespuestaUsuario()));
                 detalle.put("puntaje", respuesta.getPuntajeObtenido());
                 detalle.put("esCorrecta", respuesta.getEsCorrecta());
                 detalle.put("requiereRevision", respuesta.getRequiereRevisionManual());
                 respuestasDetalle.add(detalle);
             }
         }
+        
+        // Ordenar por orden de pregunta si es necesario (asumimos orden de inserción o UUID por ahora)
 
         model.addAttribute("examen", examen);
         model.addAttribute("intento", intento);
-        model.addAttribute("modulo", examen.getModulo());
-        model.addAttribute("curso", examen.getModulo() != null ? examen.getModulo().getCurso() : null);
         model.addAttribute("respuestas", respuestasDetalle);
 
-        return "docente/examen-intento-detalle";
+        return "docente/fragments/examen-correccion-panel :: panel-correccion";
+    }
+
+    @PostMapping("/intentos/{intentoId}/calificar")
+    @PreAuthorize("hasAnyAuthority('DOCENTE','ADMIN')")
+    public String calificarIntento(@PathVariable UUID intentoId,
+                                   @RequestParam Map<String, String> allParams,
+                                   Authentication authentication,
+                                   RedirectAttributes redirectAttributes) {
+        
+        Intento intento = intentoRepository.findById(intentoId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Intento no encontrado"));
+                
+        float puntajeTotal = 0;
+        
+        if (intento.getRespuestas() != null) {
+            for (RespuestaIntento respuesta : intento.getRespuestas()) {
+                String paramName = "puntaje_" + respuesta.getPregunta().getIdPregunta();
+                if (allParams.containsKey(paramName)) {
+                    try {
+                        float puntaje = Float.parseFloat(allParams.get(paramName));
+                        // Validar que no exceda el puntaje de la pregunta
+                        if (puntaje > respuesta.getPregunta().getPuntaje()) {
+                            puntaje = respuesta.getPregunta().getPuntaje();
+                        }
+                        if (puntaje < 0) {
+                            puntaje = 0;
+                        }
+                        
+                        respuesta.setPuntajeObtenido(puntaje);
+                        // Se considera correcta si obtuvo el puntaje máximo, o parcial. 
+                        // Para simplificar: >= puntaje máximo es FULL correct.
+                        respuesta.setEsCorrecta(puntaje >= respuesta.getPregunta().getPuntaje());
+                        respuesta.setRequiereRevisionManual(false);
+                        
+                        puntajeTotal += puntaje;
+                    } catch (NumberFormatException e) {
+                        // Ignorar valores no numéricos
+                    }
+                }
+            }
+        }
+        
+        intento.setCalificacion(puntajeTotal);
+        intento.setEstado(com.example.demo.enums.EstadoIntento.FINALIZADO);
+        intentoRepository.save(intento);
+        
+        redirectAttributes.addFlashAttribute("mensaje", "Calificación guardada correctamente");
+        
+        return "redirect:/examen/" + intento.getExamen().getIdActividad() + "/intentos";
     }
 
     @GetMapping("/detalle/{id}")
@@ -617,6 +667,27 @@ public class ExamenController {
                     .anyMatch(d -> d.getId().equals(docente.getId()));
         }
         return false;
+    }
+
+    private List<String> obtenerRespuestaComoLista(String respuestaUsuario) {
+        if (respuestaUsuario == null || respuestaUsuario.isBlank()) {
+            return Collections.emptyList();
+        }
+        try {
+            JsonNode node = objectMapper.readTree(respuestaUsuario.trim());
+            if (node.isArray()) {
+                List<String> valores = new ArrayList<>();
+                node.forEach(n -> valores.add(n.isTextual() ? n.asText() : n.toString()));
+                return valores;
+            }
+            // Si es un simple JSON String (ej: "Respuesta")
+            if (node.isTextual()) {
+                return Collections.singletonList(node.asText());
+            }
+        } catch (Exception ignored) {
+            // No es JSON válido, retornar como único elemento
+        }
+        return Collections.singletonList(respuestaUsuario.trim());
     }
 
     private String formatearRespuestaUsuario(String respuestaUsuario) {

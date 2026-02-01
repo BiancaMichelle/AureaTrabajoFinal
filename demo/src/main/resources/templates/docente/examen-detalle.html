@@ -20,11 +20,68 @@
             }
         }
     </script>
+    <style>
+        .nav-tab-active { border-bottom-color: white; color: white; font-weight: 600; }
+        .nav-tab-inactive { border-bottom-width: 2px; border-color: transparent; color: #f3f4f6; }
+        .nav-tab-inactive:hover { border-color: #d1d5db; color: white; }
+    </style>
 </head>
 <body>
-    <div layout:fragment="content" class="min-h-screen bg-gray-50 py-8">
-        <div class="container mx-auto px-4 max-w-5xl">
+    <div layout:fragment="content" class="min-h-screen bg-gray-50">
+
+        <!-- Header del Aula -->
+        <header class="bg-customGrayDark text-white p-4 py-8 shadow-md relative z-10 w-full" th:if="${examen.modulo != null and examen.modulo.curso != null}">
+            <div class="max-w-7xl mx-auto flex justify-between items-center relative gap-4">
+                <div>
+                    <h1 class="text-3xl font-bold tracking-wider" th:text="${examen.modulo.curso.nombre}">Nombre Oferta</h1>
+                    <p class="text-gray-300 text-sm mt-1" th:text="${examen.modulo.curso.descripcion}">Descripción</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Barra de Navegación -->
+        <nav class="bg-customGreen border-b border-gray-200 shadow-sm relative z-10 mb-8 w-full sticky top-0" th:if="${examen.modulo != null and examen.modulo.curso != null}">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center space-x-6">
+                    <div class="py-3 px-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                    
+                    <a sec:authorize="hasAnyAuthority('DOCENTE', 'ADMIN')" th:href="@{/docente/aula/{id}(id=${examen.modulo.curso.idOferta})}" class="py-3 px-1 border-b-2 border-white text-white font-semibold text-sm nav-tab-active">Contenido</a>
+                    <a sec:authorize="hasAuthority('ALUMNO') and !hasAnyAuthority('DOCENTE', 'ADMIN')" th:href="@{/alumno/aula/{id}(id=${examen.modulo.curso.idOferta})}" class="py-3 px-1 border-b-2 border-white text-white font-semibold text-sm nav-tab-active">Contenido</a>
+                    
+                    <a sec:authorize="hasAnyAuthority('DOCENTE', 'ADMIN')" th:href="@{/aula/oferta/{id}/participantes(id=${examen.modulo.curso.idOferta})}" class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">Participantes</a>
+
+                    <a th:href="@{/aula/oferta/{id}/asistencia(id=${examen.modulo.curso.idOferta})}" class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">Asistencia</a>
+
+                    <a th:href="@{/aula/oferta/{id}/calificaciones(id=${examen.modulo.curso.idOferta})}" class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">Calificaciones</a>
+
+                    <a href="#" class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">Calendario</a>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container mx-auto px-4 max-w-5xl py-8">
             
+            <!-- Breadcrumb Navigation (Igual que Aula) -->
+            <div class="mb-8">
+                <nav class="flex text-sm text-slate-500 mb-1">
+                    <a th:if="${examen.modulo != null and examen.modulo.curso != null}" 
+                       th:href="@{/alumno/aula/{id}(id=${examen.modulo.curso.idOferta})}" 
+                       class="hover:text-blue-600 cursor-pointer transition-colors">
+                        <span th:text="${examen.modulo.curso.nombre}">Curso</span>
+                    </a>
+                    <span th:if="${examen.modulo != null}" class="mx-2">/</span>
+                    <span th:if="${examen.modulo != null}" 
+                          class="hover:text-blue-600 cursor-pointer transition-colors" 
+                          th:text="${examen.modulo.nombre}">Módulo</span>
+                    <span class="mx-2">/</span>
+                    <span class="text-slate-800 font-medium">Gestión Examen</span>
+                </nav>
+            </div>
+
             <!-- Header Section -->
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                 <div>
@@ -544,7 +601,7 @@
                 console.error('Error:', error);
                 alert('Error al guardar los cambios');
             });
-        });
+        }
     </script>
     </div>
 </body>

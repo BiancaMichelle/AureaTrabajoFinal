@@ -226,9 +226,9 @@
                                     <div class="space-y-2">
                                         <div th:each="opcion : ${respuesta['pregunta'].opciones}" 
                                              class="flex items-center gap-2 text-sm px-3 py-2 rounded-lg border"
-                                             th:classappend="${#strings.contains(respuesta['respuestaTexto'], opcion.descripcion) ? 'bg-primary-50 border-primary-300 text-primary-900 font-medium' : 'bg-slate-50 border-slate-200 text-slate-600'}">
+                                             th:classappend="${#lists.contains(respuesta['respuestaLista'], opcion.descripcion) ? 'bg-primary-50 border-primary-300 text-primary-900 font-medium' : 'bg-slate-50 border-slate-200 text-slate-600'}">
                                             <i class="fas text-xs" 
-                                               th:classappend="${#strings.contains(respuesta['respuestaTexto'], opcion.descripcion) ? 'fa-check-circle text-primary-600' : 'fa-circle text-slate-300'}"></i>
+                                               th:classappend="${#lists.contains(respuesta['respuestaLista'], opcion.descripcion) ? 'fa-check-circle text-primary-600' : 'fa-circle text-slate-300'}"></i>
                                             <span th:text="${opcion.descripcion}">Opción</span>
                                             <span th:if="${opcion.esCorrecta}" class="ml-auto inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-emerald-100 text-emerald-700">
                                                 <i class="fas fa-check text-[8px] mr-0.5"></i> CORRECTA
