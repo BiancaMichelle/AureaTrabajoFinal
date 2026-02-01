@@ -6,10 +6,12 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.demo.enums.EstadoExamen;
+import com.example.demo.event.ActivityCreatedEvent;
 import com.example.demo.model.Examen;
 import com.example.demo.model.Modulo;
 import com.example.demo.model.Pool;
@@ -27,6 +29,9 @@ public class ExamenService {
 
     @Autowired
     private ModuloRepository moduloRepository;
+
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
 
     @Autowired
     private PoolRepository poolRepository;
@@ -121,6 +126,14 @@ public class ExamenService {
             examenGuardado.setPoolPreguntas(pools);
             examenRepository.save(examenGuardado);
         }
+
+        eventPublisher.publishEvent(new ActivityCreatedEvent(
+                modulo.getCurso().getIdOferta(),
+                examenGuardado.getIdActividad(),
+                "EXAMEN",
+                examenGuardado.getFechaCierre(),
+                examenGuardado.getTitulo()
+        ));
 
         return examenGuardado;
     }

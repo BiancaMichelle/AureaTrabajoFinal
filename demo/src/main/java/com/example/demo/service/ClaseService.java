@@ -6,9 +6,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.demo.event.ActivityCreatedEvent;
 import com.example.demo.model.Clase;
 import com.example.demo.model.Docente;
 import com.example.demo.model.Modulo;
@@ -26,17 +28,20 @@ public class ClaseService {
     private final DocenteRepository docenteRepository;
     private final UsuarioRepository usuarioRepository;
     private final JitsiClaseService jitsiClaseService; // Cambiar esto
+    private final ApplicationEventPublisher eventPublisher;
 
     public ClaseService(ClaseRepository claseRepository,
             ModuloRepository moduloRepository,
             DocenteRepository docenteRepository,
             UsuarioRepository usuarioRepository,
-            JitsiClaseService jitsiClaseService) { // Cambiar esto
+            JitsiClaseService jitsiClaseService,
+            ApplicationEventPublisher eventPublisher) { // Cambiar esto
         this.claseRepository = claseRepository;
         this.moduloRepository = moduloRepository;
         this.docenteRepository = docenteRepository;
         this.usuarioRepository = usuarioRepository;
         this.jitsiClaseService = jitsiClaseService; // Cambiar esto
+        this.eventPublisher = eventPublisher;
     }
 
     public Optional<Clase> findById(UUID claseId) {
@@ -106,6 +111,15 @@ public class ClaseService {
             Clase savedClase = claseRepository.save(clase);
             claseRepository.flush(); // Forzar persistencia para detectar errores SQL
             System.out.println("💾 Clase guardada exitosamente en BD. ID: " + savedClase.getIdClase());
+            
+            eventPublisher.publishEvent(new ActivityCreatedEvent(
+                modulo.getCurso().getIdOferta(),
+                savedClase.getIdClase(),
+                "CLASE",
+                savedClase.getInicio(), // Using FechaInicio as Deadline/Important Date
+                savedClase.getTitulo()
+            ));
+
             return savedClase;
         } catch (Exception e) {
             System.err.println("❌ CRITICAL ERROR saving Clase to DB: " + e.getMessage());

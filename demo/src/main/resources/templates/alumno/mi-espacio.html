@@ -534,8 +534,8 @@
                             </div>
                             
                             <div class="activity-time flex flex-col items-end">
-                                <span th:if="${tarea.limiteEntrega != null}" 
-                                      th:text="${#temporals.format(tarea.limiteEntrega, 'dd/MM/yyyy')}">25/05</span>
+                                <span th:if="${item['fecha'] != null}" 
+                                      th:text="${#temporals.format(item['fecha'], 'dd/MM/yyyy')}">25/05</span>
                                 <a th:if="${tarea.modulo != null && tarea.modulo.curso != null}" 
                                    th:href="@{/alumno/aula/{id}(id=${tarea.modulo.curso.idOferta})}" 
                                    class="text-xs text-blue-600 hover:underline mt-1">Ir al curso</a>

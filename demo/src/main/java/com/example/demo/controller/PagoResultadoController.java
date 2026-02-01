@@ -31,7 +31,14 @@ public class PagoResultadoController {
             @RequestParam(required = false) String collection_status,
             @RequestParam(required = false) String external_reference,
             @RequestParam(required = false) Long payment_id,
+            @RequestParam(required = false) Long collection_id,
             Model model) {
+        
+        // MercadoPago a veces envía 'collection_id' en lugar de 'payment_id'
+        if (payment_id == null && collection_id != null) {
+            payment_id = collection_id;
+        }
+
         log.info("✅ Pago exitoso recibido - Status: {}, Ref: {}, PaymentID: {}", collection_status, external_reference,
                 payment_id);
 

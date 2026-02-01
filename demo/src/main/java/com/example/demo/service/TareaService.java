@@ -4,9 +4,11 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.demo.event.ActivityCreatedEvent;
 import com.example.demo.enums.EstadoOferta;
 import com.example.demo.model.Auditable;
 import com.example.demo.model.Modulo;
@@ -23,6 +25,9 @@ public class TareaService {
 
     @Autowired
     private ModuloRepository moduloRepository;
+
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
 
     /**
      * Crea una nueva tarea siguiendo el flujo del CU-30.
@@ -108,12 +113,17 @@ public class TareaService {
 
     /**
      * Notifica a los alumnos sobre la disponibilidad de una nueva tarea.
-     * (Stub para integración futura con sistema de notificaciones)
      */
     private void notificarAlumnosNuevaTarea(Tarea tarea, Modulo modulo) {
-        // TODO: Implementar notificación real cuando el sistema de notificaciones esté disponible
-        System.out.println("📧 [NOTIFICACIÓN] Nueva tarea disponible: '" + tarea.getTitulo() + 
-                         "' en el módulo '" + modulo.getNombre() + 
-                         "'. Fecha límite: " + tarea.getLimiteEntrega());
+        if (eventPublisher != null) {
+             eventPublisher.publishEvent(new ActivityCreatedEvent(
+                modulo.getCurso().getIdOferta(),
+                tarea.getIdActividad(),
+                "TAREA",
+                tarea.getLimiteEntrega(),
+                tarea.getTitulo()
+            ));
+        }
+        System.out.println("📧 [NOTIFICACIÓN] Evento de tarea publicado: '" + tarea.getTitulo() + "'");
     }
 }

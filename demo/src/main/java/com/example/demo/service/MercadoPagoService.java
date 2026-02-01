@@ -161,6 +161,7 @@ public class MercadoPagoService {
      * Procesa la notificación de pago de MercadoPago
      * Consulta el estado del pago y actualiza la base de datos
      */
+    @org.springframework.transaction.annotation.Transactional
     public void procesarNotificacionPago(Long paymentId) {
         try {
             log.info("💳 Procesando pago con ID: {}", paymentId);
@@ -239,6 +240,7 @@ public class MercadoPagoService {
     /**
      * Procesa un pago aprobado: actualiza el estado y crea la inscripción
      */
+    @org.springframework.transaction.annotation.Transactional
     private void procesarPagoAprobado(Pago pago, Payment payment) {
         try {
             log.info("✅ Procesando pago aprobado - ID: {}", payment.getId());
@@ -333,6 +335,7 @@ public class MercadoPagoService {
         }
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public void generarCuotasParaInscripcion(Inscripciones inscripcion) {
         try {
             if (inscripcion == null || inscripcion.getIdInscripcion() == null) {

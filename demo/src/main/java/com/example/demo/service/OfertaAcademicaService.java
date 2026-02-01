@@ -330,6 +330,7 @@ public class OfertaAcademicaService {
      * Se ejecuta cada 10 minutos (600000 ms)
      */
     @Scheduled(fixedRate = 600000)
+    @Transactional
     public void verificarOfertasFinalizadas() {
         List<OfertaAcademica> todas = obtenerTodas();
         int actualizadas = 0;
