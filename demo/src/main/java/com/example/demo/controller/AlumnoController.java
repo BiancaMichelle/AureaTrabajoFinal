@@ -18,6 +18,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -29,6 +30,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.example.demo.DTOMP.ReferenceRequest;
@@ -39,6 +41,7 @@ import com.example.demo.enums.EstadoOferta;
 import com.example.demo.enums.EstadoPago;
 import com.example.demo.enums.TipoGenero;
 import com.example.demo.model.Alumno;
+import com.example.demo.model.Auditable;
 import com.example.demo.model.Curso;
 import com.example.demo.model.Cuota;
 import com.example.demo.model.Examen;
@@ -1247,6 +1250,7 @@ public class AlumnoController {
     }
 
     // Endpoint para IA - Análisis Personal del Alumno
+    @Auditable(action = "ANALISIS_PERSONAL_IA", entity = "IA")
     @GetMapping("/ia/analisis-personal")
     public ResponseEntity<String> analizarRendimientoPersonal(Principal principal) {
         if (principal == null) return ResponseEntity.status(401).body("No autorizado");
@@ -1258,6 +1262,7 @@ public class AlumnoController {
         return ResponseEntity.ok(reporteHtml);
     }
     
+    @Auditable(action = "SOLICITUD_TUTORIA_IA", entity = "IA")
     @PostMapping("/ia/solicitar-tutoria")
     public ResponseEntity<String> solicitarTutoria(@RequestParam Long ofertaId, Principal principal) {
         if (principal == null) return ResponseEntity.status(401).body("No autorizado");
@@ -1271,6 +1276,43 @@ public class AlumnoController {
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Error al procesar solicitud.");
         }
+    }
+
+    @GetMapping("/ia/ofertas")
+    @ResponseBody
+    public ResponseEntity<List<Map<String,Object>>> obtenerOfertasParaIA(Principal principal) {
+        if (principal == null) return ResponseEntity.status(401).build();
+
+        List<OfertaAcademica> ofertas = ofertaAcademicaRepository.findByEstadoIn(
+                Arrays.asList(EstadoOferta.ACTIVA, EstadoOferta.ENCURSO));
+
+        List<Map<String,Object>> resultado = ofertas.stream().map(oferta -> {
+            Map<String,Object> m = new HashMap<>();
+            m.put("id", oferta.getIdOferta());
+            m.put("nombre", oferta.getNombre());
+            m.put("descripcion", oferta.getDescripcion());
+            m.put("tipo", oferta.getTipo());
+            m.put("costoInscripcion", oferta.getCostoInscripcion());
+            m.put("recargoMora", oferta.getRecargoMora());
+            m.put("fechaInicio", oferta.getFechaInicio());
+            m.put("fechaFin", oferta.getFechaFin());
+            m.put("cupos", oferta.getCupos());
+            m.put("visibilidad", oferta.getVisibilidad());
+            // Campos específicos de subclases
+            if (oferta instanceof Curso) {
+                Curso c = (Curso) oferta;
+                m.put("costoCuota", c.getCostoCuota());
+                m.put("nrCuotas", c.getNrCuotas());
+                m.put("diaVencimiento", c.getDiaVencimiento());
+            } else if (oferta instanceof Formacion) {
+                Formacion f = (Formacion) oferta;
+                m.put("costoCuota", f.getCostoCuota());
+                m.put("nrCuotas", f.getNrCuotas());
+            }
+            return m;
+        }).collect(Collectors.toList());
+
+        return ResponseEntity.ok(resultado);
     }
 }
 

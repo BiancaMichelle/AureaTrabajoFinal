@@ -12,6 +12,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import com.example.demo.model.OfertaAcademica;
+import com.example.demo.model.Auditable;
 import com.example.demo.model.Usuario;
 import com.example.demo.model.CustomUsuarioDetails;
 import com.example.demo.model.AuditLog;
@@ -160,6 +161,7 @@ public class ReporteController {
     }
 
     @GetMapping("/ofertas/descargar")
+    @Auditable(action = "EXPORTAR_REPORTE", entity = "OfertaAcademica")
     public ResponseEntity<InputStreamResource> descargarReporte(
             @RequestParam(required = false) String formato, // pdf o excel
             @RequestParam(required = false) String nombre,

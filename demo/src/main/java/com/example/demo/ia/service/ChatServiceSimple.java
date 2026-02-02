@@ -15,6 +15,7 @@ import org.springframework.web.client.ResourceAccessException;
 import com.example.demo.repository.*;
 import com.example.demo.model.*;
 import com.example.demo.enums.EstadoCuota;
+import com.example.demo.enums.EstadoOferta;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -60,6 +61,11 @@ public class ChatServiceSimple {
     @Autowired
     private com.example.demo.repository.IntentoRepository intentoRepository;
 
+    @Autowired
+    private com.example.demo.repository.DocenteRepository docenteRepository;
+
+    @Autowired
+    private com.example.demo.repository.FormacionRepository formacionRepository;
     
     private final ObjectMapper objectMapper = new ObjectMapper();
     
@@ -71,13 +77,51 @@ public class ChatServiceSimple {
     private static final List<String> PALABRAS_PROHIBIDAS = Arrays.asList(
         "idiota", "estupido", "imbecil", "mierda", "basura", "inutil", 
         "tonto", "tarado", "maldito", "puta", "carajo", "verga", "pendejo",
-        "zorra", "cabron", "chinga", "coño", "gilipollas"
+        "zorra", "cabron", "chinga", "coño", "gilipollas", "bobo"
     );
     
     // Regex para PII
     private static final String DNI_REGEX = "\\b\\d{7,8}\\b";
     private static final String EMAIL_REGEX = "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b";
     private static final String CARD_REGEX = "\\b(?:\\d[ -]*?){13,16}\\b";
+
+    // --- DEFENSA POR CAPAS: Definición de Intenciones Críticas ---
+    private enum CriticalIntent {
+        PAGO,
+        INSCRIPCION,
+        DATOS_PERSONALES,
+        PROBLEMA_TECNICO,
+        NONE
+    }
+
+    private static final Map<CriticalIntent, List<String>> CRITICAL_KEYWORDS = Map.of(
+        CriticalIntent.PAGO, List.of(
+            "pagar", "cobro", "tarjeta", "precio", "descuento", "factura", "comprar", "costo", "dinero", "abonar"
+        ),
+        CriticalIntent.INSCRIPCION, List.of(
+            "inscribir", "matricular", "anotar", "registro", "registrarse", "cupo", "vacante"
+        ),
+        CriticalIntent.DATOS_PERSONALES, List.of(
+            "contraseña", "password", "clave", "dni", "telefono", "mail", "correo", "direccion", "cambiar mis datos"
+        ),
+        CriticalIntent.PROBLEMA_TECNICO, List.of(
+            "error", "bug", "falla", "no funciona", "roto", "caido", "lento", "sistema"
+        )
+    );
+
+    // --- Respuestas Estáticas Seguras ---
+    private static final String RESP_PAGO =
+        "Para temas de pagos, costos o inscripciones, por favor dirígete a la sección 'Mis Ofertas' o contacta a administración. Yo solo puedo responder dudas sobre el contenido educativo.";
+    
+    private static final String RESP_INSCRIPCION =
+        "La gestión de inscripciones se realiza desde tu panel de usuario en la sección de ofertas. ¿Te ayudo con información sobre el contenido del curso?";
+
+    private static final String RESP_DATOS =
+        "Por seguridad, no puedo gestionar datos personales ni contraseñas. Por favor, visita tu perfil de usuario para realizar esos cambios.";
+
+    private static final String RESP_TECNICO =
+        "Parece que tienes un problema técnico. Te sugiero contactar a soporte a través del formulario de contacto oficial.";
+
 
     public ChatMessage procesarMensaje(String userMessage, String userDni, String sessionId) {
         // Saneamiento de PII antes de procesar
@@ -126,6 +170,38 @@ public class ChatServiceSimple {
         
         // Crear mensaje del usuario (guardamos el saneado por seguridad)
         ChatMessage chatMessage = new ChatMessage(userDni, sessionId, mensajeSaneado);
+
+        // ------------------------------------------------------------
+        // CAPA 1: PRE-FILTRO CRÍTICO (DEFENSA POR CAPAS)
+        // ------------------------------------------------------------
+        Optional<String> criticalResponse = prefilterCriticalIntent(mensajeSaneado);
+        if (criticalResponse.isPresent()) {
+            chatMessage.setAiResponse(criticalResponse.get());
+            chatMessage.setResponseTimeMs(5L);
+            chatMessage.setMessageType(ChatMessage.MessageType.SOPORTE_TECNICO);
+            
+            if (!"ANONIMO".equals(userDni) && validarPermisoGuardado(usuario)) {
+                return chatMessageRepository.save(chatMessage);
+            } else {
+                return chatMessage;
+            }
+        }
+
+        // ------------------------------------------------------------
+        // NUEVA LÓGICA: RESPUESTAS PREDEFINIDAS
+        // ------------------------------------------------------------
+        String respuestaPredefinida = obtenerRespuestaPredefinida(mensajeSaneado, userDni);
+        if (respuestaPredefinida != null) {
+            chatMessage.setAiResponse(respuestaPredefinida);
+            chatMessage.setResponseTimeMs(10L); // Tiempo simulado muy rápido
+            chatMessage.setMessageType(determinarTipoMensaje(userMessage));
+            
+            if (!"ANONIMO".equals(userDni) && validarPermisoGuardado(usuario)) {
+                return chatMessageRepository.save(chatMessage);
+            } else {
+                return chatMessage;
+            }
+        }
         
         try {
             long startTime = System.currentTimeMillis();
@@ -135,8 +211,12 @@ public class ChatServiceSimple {
             System.out.println("📚 Historial construido con " + messages.size() + " mensajes");
             
             // Generar respuesta de IA usando el patrón de chat de Ollama
-            String aiResponse = generarRespuestaConChat(messages);
-            System.out.println("✅ Respuesta generada: " + (aiResponse != null ? aiResponse.substring(0, Math.min(100, aiResponse.length())) + "..." : "null"));
+            String rawResponse = generarRespuestaConChat(messages);
+            
+            // CAPA 2: POST-FILTRO (Sanitización)
+            String aiResponse = postFilterIaResponse(rawResponse);
+
+            System.out.println("✅ Respuesta generada (filtrada): " + (aiResponse != null ? aiResponse.substring(0, Math.min(100, aiResponse.length())) + "..." : "null"));
             
             long endTime = System.currentTimeMillis();
             
@@ -174,6 +254,99 @@ public class ChatServiceSimple {
                 .anyMatch(r -> "ALUMNO".equalsIgnoreCase(r.getNombre()) || 
                                "DOCENTE".equalsIgnoreCase(r.getNombre()) || 
                                "ADMIN".equalsIgnoreCase(r.getNombre()));
+    }
+
+    /**
+     * CAPA 1: PRE-FILTRO CRÍTICO
+     * Detecta intenciones críticas (Pagos, PII, Inscripciones) antes de ejecutar cualquier lógica de IA.
+     * Implementa el patrón "Defense in Depth".
+     */
+    private Optional<String> prefilterCriticalIntent(String message) {
+        if (message == null) return Optional.empty();
+        String lowerMsg = message.toLowerCase();
+
+        // 1. Verificación rápida de palabras clave críticas
+        for (Map.Entry<CriticalIntent, List<String>> entry : CRITICAL_KEYWORDS.entrySet()) {
+            for (String keyword : entry.getValue()) {
+                // Buscamos coincidencia
+                if (lowerMsg.contains(keyword)) {
+                    // Lógica adicional para evitar falsos positivos si fuera necesaria
+                    return Optional.of(getSafeResponse(entry.getKey()));
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
+    private String getSafeResponse(CriticalIntent intent) {
+        switch (intent) {
+            case PAGO: return RESP_PAGO;
+            case INSCRIPCION: return RESP_INSCRIPCION;
+            case DATOS_PERSONALES: return RESP_DATOS;
+            case PROBLEMA_TECNICO: return RESP_TECNICO;
+            default: return "Para esa consulta, por favor contacta a administración.";
+        }
+    }
+
+    /**
+     * CAPA 2: POST-FILTRO
+     * Sanitiza la respuesta de la IA para asegurar que no se colaron alucinaciones peligrosas.
+     */
+    private String postFilterIaResponse(String aiResponse) {
+        if (aiResponse == null) return null;
+        
+        // Reglas de seguridad post-generación
+        String filtered = aiResponse;
+        
+        // 1. Eliminar promesas de acción o confirmaciones falsas
+        if (filtered.toLowerCase().contains("he inscrito") || filtered.toLowerCase().contains("te inscribí") || filtered.toLowerCase().contains("registrado correctamente")) {
+            filtered += "\n\n(NOTA DE SEGURIDAD: Soy una IA informativa. Por favor verifica tu inscripción oficial en el sistema.)";
+        }
+        
+        // 2. Advertencia si menciona precios sospechosos (opcional)
+        // if (filtered.contains("$") && !filtered.contains("lista")) ...
+
+        return filtered;
+    }
+
+    /**
+     * Lógica simple para respuestas predefinidas y evitar consumo de tokens en casos triviales.
+     */
+    private String obtenerRespuestaPredefinida(String mensaje, String userDni) {
+        if (mensaje == null) return null;
+        String m = mensaje.toLowerCase().trim();
+
+        // 1. Saludos comunes
+        List<String> saludos = Arrays.asList("hola", "buen dia", "buenos dias", "buenas tardes", "buenas noches", "que tal", "hello", "hi");
+        // Verificar igualdad exacta o si el mensaje es muy corto y contiene el saludo
+        boolean esSaludo = saludos.contains(m);
+        if (!esSaludo) {
+            // "hola, como estas?"
+            for (String s : saludos) {
+                if (m.startsWith(s) && m.length() < s.length() + 20) {
+                   esSaludo = true;
+                   break; 
+                }
+            }
+        }
+
+        if (esSaludo) {
+            return "¡Hola! Soy el asistente virtual de Aurea. ¿En qué puedo ayudarte hoy?\n\n" +
+                   "Puedo informarte sobre:\n" +
+                   "• Ofertas académicas disponibles\n" +
+                   "• Fechas de exámenes\n" +
+                   "• Estado de tus cuentas (si iniciaste sesión)";
+        }
+
+        // 2. Solicitud explícita de recomendaciones generales
+        // "que me recomiendas", "que puedo estudiar", "cuales son las ofertas", "ofertas disponibles"
+        if (m.contains("recomienda") || m.contains("estudiar") || m.contains("ofertas disponibles") || m.contains("que hay para mi")) {
+            String ofertas = obtenerContextoOfertas(userDni);
+            return "Basado en nuestro sistema, estas son las ofertas académicas disponibles actualmente:\n\n" + 
+                   ofertas + "\n\n¿Te gustaría saber más detalles sobre alguna de ellas?";
+        }
+
+        return null; // Si no hay match, devolver null para que procese la IA
     }
     
     private String sanearMensaje(String mensaje) {
@@ -218,7 +391,9 @@ public class ChatServiceSimple {
         List<Map<String, Object>> messages = new ArrayList<>();
         
         // Obtener información de ofertas académicas activas para el contexto (PÚBLICO)
-        String contextoOfertas = obtenerContextoOfertas();
+        String contextoOfertas = obtenerContextoOfertas(userDni);
+
+        System.out.println("=== CONTEXTO DE OFERTAS ENVIADO A LA IA ===\n" + contextoOfertas);
         
         // Contexto específico del usuario (PRIVADO - solo si autenticado)
         String contextoUsuario = "";
@@ -226,18 +401,28 @@ public class ChatServiceSimple {
             contextoUsuario = obtenerContextoUsuario(userDni);
         }
         
-        String systemPrompt = "Eres un asistente académico inteligente para una plataforma educativa llamada Aurea. " +
-            "IMPORTANTE: SOLO responde con información que tengas explícitamente en el contexto a continuación. " +
-            "Si no sabes algo o no está en el contexto, di 'Lo siento, no tengo información sobre eso'. " +
-            "NO inventes cursos, fechas ni datos. NO alucines. NO des información de relleno.\n\n" +
-            "REGLAS DE INTERACCIÓN:\n" +
-            "1. Si el usuario saluda, responde amablemente el saludo siempre.\n" +
-            "2. MUY IMPORTANTE: Los alumnos NO eligen las fechas. Las ofertas académicas tienen fechas de inicio y fin FIJAS definidas por la institución. Si el usuario habla de elegir fechas, corrígelo amablemente.\n\n" +
-            "REGLAS PEDAGÓGICAS (CRÍTICO):\n" +
-            "1. NO resuelvas tareas ni exámenes directamente. Si el alumno pide la respuesta, diles amablemente que no puedes hacer su tarea, o solo puedes guiarlo para que sepa como empezar.\n" +
-            "2. Proporciona explicaciones conceptuales, guías de estudio, bibliografía recomendada o ejemplos similares.\n" +
-            "3. Fomenta el aprendizaje y el pensamiento crítico.\n\n" +
-            "INFORMACIÓN PÚBLICA DE LA PLATAFORMA:\n" + contextoOfertas + "\n\n";
+        String systemPrompt = "Eres el asistente virtual oficial de Aurea.\n\n" +
+            "=== LISTA DE OFERTAS ACADÉMICAS VERIFICADAS (LA ÚNICA VERDAD) ===\n" +
+            contextoOfertas + "\n" +
+            "===============================================================\n\n" +
+            "REGLAS CRÍTICAS DE CLASIFICACIÓN (LEER ATENTAMENTE):\n" +
+            "1. ¡MIRA EL TIPO DE LEGAJO ANTES DE RESPONDER!\n" +
+            "2. [FORMACIÓN] = Larga duración, Carrera.\n" +
+            "3. [CURSO] = Curso de meses, pago cuotas.\n" +
+            "4. [TALLER] / [SEMINARIO] / [CHARLA] / [WEBINAR] = Eventos cortos, usualmente de 1 día.\n\n" +
+            "CASOS DE USO ESPECÍFICOS:\n" +
+            "--> Usuario dice 'Busco charlas' o 'Quiero escuchar una conferencia':\n" +
+            "    RESPONDE: 'Aquí tienes las charlas y webinars disponibles:' y lista SOLO los del LISTADO 4.\n" +
+            "    ¡PROHIBIDO LISTAR CURSOS EN ESTE CASO!\n\n" +
+            "--> Usuario dice 'Quiero hacer un curso' o 'Aprender a programar':\n" +
+            "    RESPONDE: 'Estos son los cursos disponibles:' y lista SOLO los del LISTADO 2.\n\n" +
+            "--> Usuario dice 'Carreras' o 'Formación completa':\n" +
+            "    RESPONDE: 'Tenemos estas formaciones:' y lista SOLO los del LISTADO 1.\n\n" +
+            "REGLAS GENERALES:\n" +
+            "- ¡NO INVENTES! Si no hay ofertas en la lista solicitada, di 'No hay ofertas de ese tipo disponibles'.\n" +
+            "- No confirmes inscripciones, no tienes acceso a la DB de pagos.\n" +
+            "- Sé amable y breve.\n";
+
 
         if (!contextoUsuario.isEmpty()) {
             systemPrompt += "INFORMACIÓN DEL USUARIO (PRIVADO - NO COMPARTIR CON TERCEROS):\n" + contextoUsuario + "\n" +
@@ -321,6 +506,18 @@ public class ChatServiceSimple {
 
                 // 2. Resumen de Cursos y Alumnos
                 List<Curso> misCursos = cursoRepository.findByDocentesId(docente.getId());
+                // Agregar lógica para formaciones y prohibiciones
+                List<Formacion> misFormaciones = formacionRepository.findByDocentesId(docente.getId());
+                List<String> ofertasProhibidas = new ArrayList<>();
+                if (misCursos != null) misCursos.forEach(c -> ofertasProhibidas.add(c.getNombre()));
+                if (misFormaciones != null) misFormaciones.forEach(f -> ofertasProhibidas.add(f.getNombre()));
+                
+                if (!ofertasProhibidas.isEmpty()) {
+                    sb.append("⚠️ AVISO IMPORTANTE: Eres docente en estas ofertas: ")
+                      .append(String.join(", ", ofertasProhibidas))
+                      .append(". NO te recomiendes inscribirte en ellas, ya que eres docente designado.\n\n");
+                }
+
                 if(misCursos != null && !misCursos.isEmpty()){
                     sb.append("📊 ESTADÍSTICAS DE TUS CURSOS:\n");
                     for(Curso c : misCursos){
@@ -427,16 +624,11 @@ public class ChatServiceSimple {
         }
     }
     
-    private String obtenerContextoOfertas() {
+    private String obtenerContextoOfertas(String userDni) {
         try {
             // Buscamos ofertas ACTIVAS y EN CURSO
-            List<com.example.demo.enums.EstadoOferta> estadosVisibles = Arrays.asList(
-                com.example.demo.enums.EstadoOferta.ACTIVA,
-                com.example.demo.enums.EstadoOferta.ENCURSO
-            );
-            
-            List<com.example.demo.model.OfertaAcademica> ofertas = ofertaAcademicaRepository.findByEstadoIn(estadosVisibles);
-            
+            List<OfertaAcademica> ofertas = obtenerOfertasSinDocente(userDni);
+
             if (ofertas.isEmpty()) {
                 return "No hay información de ofertas académicas disponible en este momento.";
             }
@@ -445,47 +637,117 @@ public class ChatServiceSimple {
             Set<String> categorias = new HashSet<>();
             StringBuilder sb = new StringBuilder("=== CATÁLOGO DE OFERTAS ACADÉMICAS ===\n");
             
-            // Agrupar por estado para mejor organización
-            List<com.example.demo.model.OfertaAcademica> proximas = new ArrayList<>();
-            List<com.example.demo.model.OfertaAcademica> enCurso = new ArrayList<>();
+            // 4 BUCKETS SEPARADOS
+            StringBuilder sbFormaciones = new StringBuilder(); // 1
+            StringBuilder sbCursos = new StringBuilder();      // 2
+            StringBuilder sbTalleres = new StringBuilder();    // 3 (Talleres y Seminarios)
+            StringBuilder sbCharlas = new StringBuilder();     // 4 (Charlas y Webinars)
             
+            boolean hayFormaciones = false;
+            boolean hayCursos = false;
+            boolean hayTalleres = false;
+            boolean hayCharlas = false;
+
             for (com.example.demo.model.OfertaAcademica o : ofertas) {
                 // Recolectar categorías
                 o.getCategorias().forEach(c -> categorias.add(c.getNombre()));
                 
+                // 1. Determinar STATUS
+                String estadoStr = "PRÓXIMAMENTE";
                 if (o.getEstado() == com.example.demo.enums.EstadoOferta.ENCURSO || 
                    (o.getFechaInicio() != null && !o.getFechaInicio().isAfter(hoy))) {
-                    enCurso.add(o);
+                    estadoStr = "EN CURSO / DISPONIBLE";
+                } else if (o.getFechaInicio() != null) {
+                    estadoStr = "INICIA: " + o.getFechaInicio().toString();
+                }
+
+                // 2. Determinar TIPO EXACTO
+                String tipo = (o instanceof com.example.demo.model.Formacion) ? "FORMACIÓN" : "CURSO";
+                String tituloUpper = o.getNombre() != null ? o.getNombre().toUpperCase() : "";
+
+                if(o.getCategorias() != null) {
+                    for(Categoria cat : o.getCategorias()) {
+                         String catName = cat.getNombre().trim().toUpperCase();
+                         if(catName.contains("CHARLA")) { tipo = "CHARLA"; }
+                         else if(catName.contains("SEMINARIO")) { tipo = "SEMINARIO"; }
+                         else if(catName.contains("TALLER")) { tipo = "SEMINARIO"; }
+                         else if(catName.contains("VIDEO")) { tipo = "CHARLA"; }
+                         else if(catName.contains("WEBINAR")) { tipo = "CHARLA "; }
+                    }
+                }
+                // Refuerzo con el Título
+                if(tituloUpper.contains("CHARLA")) { tipo = "CHARLA"; }
+                else if(tituloUpper.contains("TALLER")) { tipo = "SEMINARIO"; }
+                else if(tituloUpper.contains("SEMINARIO")) { tipo = "SEMINARIO"; }
+                else if(tituloUpper.contains("WEBINAR")) { tipo = "CHARLA"; }
+
+                // 3. Construir la línea de detalle
+                StringBuilder item = new StringBuilder();
+                item.append("• [").append(tipo).append("] ").append(o.getNombre())
+                    .append(" (Estado: ").append(estadoStr).append(")");
+
+                // Precios
+                if (o.getCostoInscripcion() == null || o.getCostoInscripcion() == 0.0) {
+                    item.append(" | INSCRIPCIÓN: GRATIS ($0)");
                 } else {
-                    proximas.add(o);
+                    item.append(" | INSCRIPCIÓN: $").append(String.format("%.0f", o.getCostoInscripcion()));
+                }
+
+                if (o instanceof com.example.demo.model.Curso) {
+                    com.example.demo.model.Curso c = (com.example.demo.model.Curso) o;
+                    if (c.getCostoCuota() != null && c.getCostoCuota() > 0) {
+                        item.append(" | CUOTA MENSUAL: $").append(String.format("%.0f", c.getCostoCuota()))
+                            .append(" (x").append(c.getNrCuotas()).append(" cuotas)");
+                    }
+                } else if (o instanceof com.example.demo.model.Formacion) {
+                    com.example.demo.model.Formacion f = (com.example.demo.model.Formacion) o;
+                    if (f.getCostoCuota() != null && f.getCostoCuota() > 0) {
+                        item.append(" | CUOTA MENSUAL: $").append(String.format("%.0f", f.getCostoCuota()))
+                            .append(" (x").append(f.getNrCuotas()).append(" cuotas)");
+                    }
+                }
+
+                item.append(" | Info: ").append(o.getDescripcion()).append("\n");
+
+                // 4. Asignar al bucket correcto
+                if (tipo.equals("FORMACIÓN")) {
+                    sbFormaciones.append(item); hayFormaciones = true;
+                } else if (tipo.equals("CHARLA") || tipo.equals("WEBINAR") || tipo.equals("VIDEO CONFERENCIA")) {
+                    sbCharlas.append(item); hayCharlas = true;
+                } else if (tipo.equals("TALLER") || tipo.equals("SEMINARIO")) {
+                    sbTalleres.append(item); hayTalleres = true;
+                } else {
+                    sbCursos.append(item); hayCursos = true;
                 }
             }
             
-            if (!proximas.isEmpty()) {
-                sb.append("\n-- PRÓXIMOS INICIOS --\n");
-                for (com.example.demo.model.OfertaAcademica oferta : proximas) {
-                    sb.append("• ").append(oferta.getNombre())
-                      .append(" (Inicia: ").append(oferta.getFechaInicio()).append(")")
-                      .append(" - $").append(oferta.getCostoInscripcion())
-                      .append(" - ").append(oferta.getDescripcion())
-                      .append("\n");
-                }
+            // 5. Ensamblar respuesta final SEPARADA
+            if (hayFormaciones) {
+                sb.append("\n=== LISTADO 1: FORMACIONES Y CARRERAS ===\n");
+                sb.append(sbFormaciones);
+            }
+
+            if (hayCursos) {
+                sb.append("\n=== LISTADO 2: CURSOS REGULARES ===\n");
+                sb.append(sbCursos);
+            }
+
+            if (hayTalleres) {
+                sb.append("\n=== LISTADO 3: TALLERES Y SEMINARIOS ===\n");
+                sb.append(sbTalleres);
             }
             
-            if (!enCurso.isEmpty()) {
-                sb.append("\n-- EN CURSO / DISPONIBLES --\n");
-                for (com.example.demo.model.OfertaAcademica oferta : enCurso) {
-                    sb.append("• ").append(oferta.getNombre())
-                      .append(" (Estado: ").append(oferta.getEstado()).append(")")
-                       .append(" - ").append(oferta.getDescripcion())
-                      .append("\n");
-                }
+            if (hayCharlas) {
+                sb.append("\n=== LISTADO 4: CHARLAS Y CONFERENCIAS ===\n");
+                sb.append(sbCharlas);
             }
             
-            sb.append("\n=== INSTRUCCIONES DE RECOMENDACIÓN ===\n")
-              .append("1. Tienes acceso a TODA la lista de ofertas anterior (Próximas y En Curso).\n")
-              .append("2. Si faltan detalles de una oferta específica, indícalo, pero usa la descripción provista.\n")
-              .append("3. Categorías disponibles: ").append(String.join(", ", categorias)).append(".\n");
+            sb.append("\n=== GUÍA DE RESPUESTA PARA LA IA ===\n")
+              .append("1. USA ESTA CLASIFICACIÓN RIGUROSAMENTE.\n")
+              .append("2. Si preguntan por 'Carreras' o 'Formaciones', usa el LISTADO 1.\n")
+              .append("3. Si preguntan por 'Cursos', usa el LISTADO 2.\n")
+              .append("4. Si preguntan por 'Seminarios' o 'Talleres', usa el LISTADO 3.\n")
+              .append("5. Si preguntan por 'Charlas', usa el LISTADO 4.\n");
             
             return sb.toString();
         } catch (Exception e) {
@@ -719,4 +981,34 @@ public class ChatServiceSimple {
             return "<p>Error al generar el resumen: " + e.getMessage() + "</p>";
         }
     }
+
+    /**
+ * Obtiene todas las ofertas académicas activas y en curso,
+ * excluyendo aquellas en las que el usuario es docente.
+ */
+private List<OfertaAcademica> obtenerOfertasSinDocente(String userDni) {
+    Usuario usuario = usuarioRepository.findByDni(userDni).orElse(null);
+    if (usuario == null || !(usuario instanceof Docente)) {
+        // Si no es docente, retorna todas las ofertas activas/en curso
+        return ofertaAcademicaRepository.findByEstadoIn(
+            Arrays.asList(EstadoOferta.ACTIVA, EstadoOferta.ENCURSO)
+        );
+    }
+    Docente docente = (Docente) usuario;
+    // Ofertas donde el docente está asignado
+    List<Curso> cursosDocente = cursoRepository.findByDocentesId(docente.getId());
+    List<Formacion> formacionesDocente = formacionRepository.findByDocentesId(docente.getId());
+    Set<Long> idsExcluidos = new HashSet<>();
+    cursosDocente.forEach(c -> idsExcluidos.add(c.getIdOferta()));
+    formacionesDocente.forEach(f -> idsExcluidos.add(f.getIdOferta()));
+
+    // Todas las ofertas activas/en curso
+    List<OfertaAcademica> todas = ofertaAcademicaRepository.findByEstadoIn(
+        Arrays.asList(EstadoOferta.ACTIVA, EstadoOferta.ENCURSO)
+    );
+    // Filtrar las que no están en idsExcluidos
+    return todas.stream()
+        .filter(o -> !idsExcluidos.contains(o.getIdOferta()))
+        .toList();
+}
 }
