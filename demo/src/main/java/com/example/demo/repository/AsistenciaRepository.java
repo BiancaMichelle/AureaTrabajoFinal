@@ -16,6 +16,9 @@ public interface AsistenciaRepository extends JpaRepository<Asistencia, UUID> {
     Optional<Asistencia> findByOfertaIdOfertaAndAlumnoDniAndFecha(Long ofertaId, String alumnoDni, LocalDate fecha);
     Optional<Asistencia> findByOfertaIdOfertaAndAlumnoDniAndClaseIdClase(Long ofertaId, String alumnoDni, UUID idClase);
     
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(DISTINCT a.fecha) FROM Asistencia a WHERE a.oferta.idOferta = :ofertaId")
+    long countDiasConAsistencia(Long ofertaId);
+
     List<Asistencia> findByOfertaIdOfertaAndClaseIdClase(Long ofertaId, UUID claseId);
     
     List<Asistencia> findByOfertaIdOfertaAndFecha(Long ofertaId, LocalDate fecha);

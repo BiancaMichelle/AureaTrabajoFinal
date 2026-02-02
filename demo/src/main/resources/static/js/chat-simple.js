@@ -1,6 +1,8 @@
 // Chat Simple para pruebas rápidas
 class SimpleChat {
     constructor() {
+        this.processedIds = new Set();
+        this.isChecking = false;
         this.init();
         window.simpleChatInstance = this; // Expose instance globally
     }
@@ -21,6 +23,8 @@ class SimpleChat {
     }
 
     async checkNotifications() {
+        if (this.isChecking) return;
+        this.isChecking = true;
         try {
             const response = await fetch('/ia/chat/notifications');
             if (response.ok) {
@@ -37,6 +41,9 @@ class SimpleChat {
                     }
 
                     for (const notif of notifications) {
+                        if (this.processedIds.has(notif.id)) continue;
+                        this.processedIds.add(notif.id);
+
                         this.addMessage(notif.message, 'assistant');
                         // Marcar como leída
                         await fetch(`/ia/chat/notifications/read/${notif.id}`, { method: 'POST' });
@@ -45,6 +52,8 @@ class SimpleChat {
             }
         } catch (error) {
             console.error('Error checking notifications:', error);
+        } finally {
+            this.isChecking = false;
         }
     }
 
@@ -130,10 +139,15 @@ class SimpleChat {
         const sendButton = document.getElementById('send-message');
         const input = document.getElementById('chat-input');
 
+        // Expose open function
+        this.openChat = () => {
+             chatWindow.style.display = 'flex';
+             button.style.display = 'none';
+        };
+
         button.addEventListener('click', () => {
             if (chatWindow.style.display === 'none') {
-                chatWindow.style.display = 'flex';
-                button.style.display = 'none';
+                this.openChat();
             }
         });
 

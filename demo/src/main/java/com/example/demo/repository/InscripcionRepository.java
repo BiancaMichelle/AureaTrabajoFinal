@@ -27,6 +27,9 @@ public interface InscripcionRepository extends JpaRepository<Inscripciones, Long
     // Contar inscripciones activas por oferta
     int countByOfertaAndEstadoInscripcionTrue(OfertaAcademica oferta);
 
+    // Listar inscripciones activas por oferta
+    List<Inscripciones> findByOfertaAndEstadoInscripcionTrue(OfertaAcademica oferta);
+
     @Query("SELECT i FROM Inscripciones i WHERE i.alumno.dni = :dniAlumno")
     List<Inscripciones> findByAlumnoDni(String dniAlumno);
 

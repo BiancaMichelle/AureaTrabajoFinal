@@ -13,6 +13,19 @@ if (typeof window.AIChat === 'undefined') {
             this.messageQueue = [];
             this.rateLimitTimer = null;
             this.messagesPerMinute = 0;
+
+            // Deduplicación de notificaciones: almacenamos IDs ya procesados en localStorage
+            this.processedIdsKey = 'ia_processed_notifications';
+            this.processedIds = new Set();
+            this.isChecking = false;
+            try {
+                const raw = localStorage.getItem(this.processedIdsKey);
+                if (raw) {
+                    JSON.parse(raw).forEach(id => this.processedIds.add(id));
+                }
+            } catch (e) {
+                console.warn('No se pudo recuperar processedIds:', e);
+            }
             
             this.initializeElements();
             // Solo vincular eventos si se encontraron los elementos
@@ -191,10 +204,75 @@ if (typeof window.AIChat === 'undefined') {
             if (data.success) {
                 this.sessionId = data.sessionId;
                 this.updateConnectionStatus('connected');
+                // Iniciar polling de notificaciones una vez conectados
+                if (typeof this.startNotificationPolling === 'function') {
+                    this.startNotificationPolling();
+                }
             }
         } catch (error) {
             console.error('Error inicializando sesión:', error);
             this.updateConnectionStatus('error');
+        }
+    }
+
+    // Inicia el polling para buscar notificaciones tipo CHAT_IA (por ejemplo, análisis de rendimiento)
+    startNotificationPolling() {
+        // Evitar múltiples timers
+        if (this._notificationPollTimer) return;
+        // Consultar cada 20 segundos
+        this._notificationPollTimer = setInterval(() => this.checkNotifications(), 20000);
+        // Hacer una consulta inmediata al iniciar
+        setTimeout(() => this.checkNotifications(), 3000);
+    }
+
+    async checkNotifications() {
+        // Evitar llamadas concurrentes
+        if (this.isChecking) return;
+        this.isChecking = true;
+        try {
+            const resp = await fetch('/ia/chat/notifications');
+            if (!resp.ok) return;
+            const data = await resp.json();
+            if (!Array.isArray(data) || data.length === 0) return;
+
+            // Filtrar notificaciones ya procesadas usando IDs persistentes
+            const newNotifs = data.filter(n => n && n.id && !this.processedIds.has(n.id));
+            if (newNotifs.length === 0) return;
+
+            // Mostrar badge si chat cerrado (count con sólo nuevos)
+            if (!this.isOpen) {
+                this.showBadge(newNotifs.length);
+            }
+
+            for (const n of newNotifs) {
+                const msg = n.message || '';
+
+                // Marcar como procesada localmente antes de mostrar para reducir races con otros clientes
+                try {
+                    this.processedIds.add(n.id);
+                    localStorage.setItem(this.processedIdsKey, JSON.stringify(Array.from(this.processedIds)));
+                } catch (e) {
+                    console.warn('No se pudo persistir processedIds:', e);
+                }
+
+                // Si el chat está abierto mostramos inmediatamente con efecto de escritura
+                if (this.isOpen && typeof this.addMessageWithTypingEffect === 'function') {
+                    await this.addMessageWithTypingEffect(msg, 'ai');
+                } else if (this.isOpen) {
+                    this.addMessage(msg, 'ai');
+                } else {
+                    // Guardar en cola para mostrar al abrir chat
+                    this.messageQueue.push(msg);
+                }
+
+                // Marcar como leída en el servidor (no bloqueante para UI)
+                fetch(`/ia/chat/notifications/read/${n.id}`, { method: 'POST' })
+                    .catch(er => console.warn('No se pudo marcar notificación leída:', er));
+            }
+        } catch (e) {
+            console.error('Error fetching notifications:', e);
+        } finally {
+            this.isChecking = false;
         }
     }
     
@@ -206,7 +284,7 @@ if (typeof window.AIChat === 'undefined') {
         }
     }
     
-    openChat() {
+    async openChat() {
         this.isOpen = true;
         if (this.chatContainer) this.chatContainer.classList.add('show');
         if (this.toggleBtn) {
@@ -215,6 +293,18 @@ if (typeof window.AIChat === 'undefined') {
         }
         if (this.inputField) this.inputField.focus();
         this.hideBadge();
+
+        // Volcar mensajes pendientes (si los hubo durante el polling)
+        if (this.messageQueue && this.messageQueue.length) {
+            while (this.messageQueue.length) {
+                const msg = this.messageQueue.shift();
+                if (typeof this.addMessageWithTypingEffect === 'function') {
+                    await this.addMessageWithTypingEffect(msg, 'ai');
+                } else {
+                    this.addMessage(msg, 'ai');
+                }
+            }
+        }
     }
     
     closeChat() {

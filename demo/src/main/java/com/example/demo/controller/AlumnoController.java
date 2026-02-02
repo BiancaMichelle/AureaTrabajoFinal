@@ -33,8 +33,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.example.demo.DTOMP.ReferenceRequest;
 import com.example.demo.DTOMP.ResponseDTO;
-import com.mercadopago.exceptions.MPApiException;
-import com.mercadopago.exceptions.MPException;
 import com.example.demo.enums.EstadoCuota;
 import com.example.demo.enums.EstadoIntento;
 import com.example.demo.enums.EstadoOferta;
@@ -68,7 +66,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import java.io.ByteArrayInputStream;
 
 @Controller
 @RequestMapping("/alumno")

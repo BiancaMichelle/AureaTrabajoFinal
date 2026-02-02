@@ -5,6 +5,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
+import com.example.demo.service.AnalisisRendimientoService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,6 +20,14 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import com.example.demo.model.*;
 
+
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.security.web.csrf.CsrfToken;
 
 @Controller
 @RequestMapping("/docente")
@@ -38,6 +48,12 @@ public class DocenteController {
     private final ClaseRepository claseRepository;
     private final IntentoRepository intentoRepository;
     private final ObjectMapper objectMapper;
+    
+    @Autowired
+    private AnalisisRendimientoService analisisRendimientoService;
+
+    @Autowired
+    private NotificacionRepository notificacionRepository;
 
     public DocenteController(CursoRepository cursoRepository,
                            FormacionRepository formacionRepository,
@@ -439,6 +455,117 @@ public class DocenteController {
             System.out.println("❌ Error: " + e.getMessage());
             e.printStackTrace();
             return "redirect:/docente/mis-ofertas";
+        }
+    }
+    @PostMapping("/aula/{ofertaId}/analizar-rendimiento")
+    public String analizarRendimientoCurso(@PathVariable Long ofertaId, RedirectAttributes redirectAttributes, Principal principal) {
+        try {
+            String resultado = analisisRendimientoService.analizarCurso(ofertaId);
+            
+            // Enviar resumen al chat del docente
+            if (principal != null) {
+                usuarioRepository.findByDni(principal.getName()).ifPresent(docente -> {
+                    Notificacion notif = new Notificacion();
+                    notif.setUsuario(docente);
+                    notif.setTitulo("Resultado de Análisis");
+                    notif.setMensaje("🤖 " + resultado);
+                    notif.setTipo("CHAT_IA");
+                    notif.setLeida(false);
+                    notificacionRepository.save(notif); // Make sure repo is autowired
+                });
+            }
+            
+            // Usamos un mensaje corto para activar el disparador JS en aula.html
+            // y que sea el chat quien busque la notificación completa en DB.
+            redirectAttributes.addFlashAttribute("success", "ANÁLISIS_COMPLETADO");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Error al ejecutar el análisis: " + e.getMessage());
+        }
+        return "redirect:/docente/aula/" + ofertaId;
+    }
+
+    @org.springframework.web.bind.annotation.GetMapping("/ia/preparar-correo")
+    @ResponseBody
+    public String prepararCorreoIA(@RequestParam UUID alumnoId, @RequestParam Long ofertaId, @RequestParam String tipo,
+                                    HttpServletRequest request, Principal principal) {
+        try {
+            // Obtener datos del docente (para firma) y oferta
+            Usuario docente = usuarioRepository.findByDni(principal.getName()).orElse(null);
+            String nombreDocente = (docente != null) ? docente.getNombre() + " " + docente.getApellido() : "Docente";
+            
+            // Obtener borrador base
+            String draft = analisisRendimientoService.getBorradorCorreo(alumnoId, ofertaId, tipo);
+            
+            // Personalizar borrador con firma del docente
+            draft += "\n\nAtentamente,\n" + nombreDocente + "\nDocente a cargo.";
+            
+            // Obtener Oferta para el Asunto
+            OfertaAcademica oferta = ofertaAcademicaRepository.findById(ofertaId).orElse(null);
+            String nombreOferta = (oferta != null) ? oferta.getNombre() : "Curso";
+            String asunto = "Aviso Importante - " + nombreOferta + " - Seguimiento Académico";
+
+            // Obtener CSRF Token para el formulario
+            CsrfToken csrfToken = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
+            String csrfInput = "";
+            if (csrfToken != null) {
+                csrfInput = "<input type='hidden' name='" + csrfToken.getParameterName() + "' value='" + csrfToken.getToken() + "' />";
+            }
+
+            // Renderizamos un formulario simple para editar
+            return "<!DOCTYPE html><html lang='es'><head><meta charset='UTF-8'><title>Redactar Correo</title>" +
+                   "<link href='https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css' rel='stylesheet'></head>" +
+                   "<body class='bg-light'><div class='container mt-5'>" +
+                   "<div class='card shadow'><div class='card-header bg-primary text-white'><h5>📧 Redactar Mensaje Institucional</h5></div>" +
+                   "<div class='card-body'>" +
+                   "<form action='/docente/ia/enviar-correo-confirmado' method='post'>" +
+                   csrfInput +
+                   "<input type='hidden' name='alumnoId' value='" + alumnoId + "'>" +
+                   "<input type='hidden' name='ofertaId' value='" + ofertaId + "'>" +
+                   "<div class='mb-3'><label class='form-label'>Asunto:</label>" +
+                   "<input type='text' name='asunto' class='form-control' value='" + asunto + "' required></div>" +
+                   "<div class='mb-3'><label class='form-label'>Mensaje:</label>" +
+                   "<textarea name='cuerpo' class='form-control' rows='12' required>" + draft + "</textarea></div>" +
+                   "<div class='alert alert-info py-2'><small><i class='fas fa-info-circle'></i> Se enviará desde la cuenta institucional incluyendo tu firma.</small></div>" +
+                   "<div class='d-flex justify-content-end'>" +
+                   "<button type='button' class='btn btn-secondary me-2' onclick='window.close()'>Cancelar</button>" +
+                   "<button type='submit' class='btn btn-success'>🚀 Enviar Ahora</button>" +
+                   "</div></form></div></div></div></body></html>";
+        } catch (Exception e) {
+             return "Error: " + e.getMessage();
+        }
+    }
+
+    @PostMapping("/ia/enviar-correo-confirmado")
+    @ResponseBody
+    public String enviarCorreoConfirmado(@RequestParam UUID alumnoId, @RequestParam Long ofertaId, @RequestParam String asunto, @RequestParam String cuerpo) {
+        try {
+            // Reemplazamos saltos de línea por <br> para HTML email
+            String cuerpoHtml = cuerpo.replace("\n", "<br>");
+            analisisRendimientoService.enviarCorreoPersonalizado(alumnoId, ofertaId, asunto, cuerpoHtml);
+            
+            return "<div style='font-family:sans-serif; text-align:center; padding:50px;'>" +
+                   "<h1 style='color:green;'>✅ Correo Enviado</h1>" +
+                   "<p>El mensaje ha sido enviado exitosamente.</p>" +
+                   "<button onclick='window.close()' style='padding:10px 20px; cursor:pointer;'>Cerrar</button></div>";
+        } catch (Exception e) {
+             return "Error al enviar: " + e.getMessage();
+        }
+    }
+
+    @org.springframework.web.bind.annotation.GetMapping("/ia/enviar-correo")
+    @ResponseBody
+    public String enviarCorreoIA(@RequestParam UUID alumnoId, @RequestParam Long ofertaId, @RequestParam String tipo) {
+        try {
+            analisisRendimientoService.enviarCorreoInstitucional(alumnoId, ofertaId, tipo);
+            return "<div style='font-family:sans-serif; text-align:center; padding:50px;'>" +
+                   "<h1 style='color:green;'>✅ Correo Enviado</h1>" +
+                   "<p>La notificación institucional se ha enviado correctamente al alumno des de la cuenta oficial.</p>" +
+                   "<button onclick='window.close()' style='padding:10px 20px; cursor:pointer;'>Cerrar</button></div>";
+        } catch (Exception e) {
+             return "<div style='font-family:sans-serif; text-align:center; padding:50px;'>" +
+                   "<h1 style='color:red;'>❌ Error</h1>" +
+                   "<p>No se pudo enviar el correo: " + e.getMessage() + "</p>" + 
+                   "<button onclick='window.close()'>Cerrar</button></div>";
         }
     }
 }

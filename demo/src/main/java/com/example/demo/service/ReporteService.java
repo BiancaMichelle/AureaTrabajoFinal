@@ -25,7 +25,6 @@ import com.example.demo.model.Pago;
 import com.example.demo.model.Curso;
 import com.example.demo.model.Docente;
 import com.example.demo.model.Usuario;
-import com.example.demo.model.Cuota;
 import com.example.demo.repository.OfertaAcademicaRepository;
 import com.example.demo.repository.UsuarioRepository;
 import com.example.demo.repository.CuotaRepository;

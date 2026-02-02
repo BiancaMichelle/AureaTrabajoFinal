@@ -4,7 +4,6 @@ import java.util.List;
 import java.security.Principal;
 import java.util.Set;
 import java.util.HashSet;
-import java.util.Collections;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
