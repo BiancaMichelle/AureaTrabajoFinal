@@ -4,6 +4,9 @@ import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
@@ -18,10 +21,17 @@ import com.example.demo.enums.EstadoPago;
 import com.example.demo.model.Pago;
 import com.example.demo.repository.PagoRepository;
 import com.example.demo.service.ReporteService;
+import com.example.demo.service.AuditLogService;
+import com.example.demo.model.AuditLog;
+import com.example.demo.model.CustomUsuarioDetails;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.http.HttpHeaders;
+import jakarta.servlet.http.HttpServletRequest;
 
 @Controller
 @RequestMapping("/admin/pagos")
@@ -32,6 +42,9 @@ public class AdminPagoController {
     
     @Autowired
     private ReporteService reporteService;
+
+    @Autowired
+    private AuditLogService auditLogService;
 
     @GetMapping
     public String listarPagos(Model model, 
@@ -68,7 +81,8 @@ public class AdminPagoController {
             @RequestParam(required = false) String dni,
             @RequestParam(required = false) Long cursoId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
+            HttpServletRequest request) {
         
         try {
             List<Pago> pagos = pagoRepository.findAll(Sort.by(Sort.Direction.DESC, "fechaPago"));
@@ -105,7 +119,44 @@ public class AdminPagoController {
 
             java.io.ByteArrayInputStream pdfStream = reporteService.generarReportePagosPDF(pagos, cursoId);
             byte[] data = pdfStream.readAllBytes();
+            
+            // SAVE FILE
+            String savedFile = null;
+            try {
+                String baseName = "reporte_pagos_" + System.currentTimeMillis() + ".pdf";
+                Path uploadPath = Paths.get("uploads/informes");
+                if (!Files.exists(uploadPath)) Files.createDirectories(uploadPath);
+                Path filePath = uploadPath.resolve(baseName);
+                Files.write(filePath, data);
+                savedFile = baseName;
+            } catch (Exception e) {}
+            
             ByteArrayResource resource = new ByteArrayResource(data);
+
+
+            // Registrar Auditoría
+            try {
+                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                if (auth != null && auth.getPrincipal() instanceof CustomUsuarioDetails) {
+                    com.example.demo.model.Usuario usuario = ((CustomUsuarioDetails) auth.getPrincipal()).getUsuario();
+                    
+                    AuditLog log = new AuditLog();
+                    long now = System.currentTimeMillis();
+                    log.setFecha(new java.sql.Date(now));
+                    log.setHora(new java.sql.Time(now));
+                    log.setUsuario(usuario);
+                    if (usuario.getRoles() != null && !usuario.getRoles().isEmpty()) {
+                        log.setRol(usuario.getRoles().iterator().next());
+                    }
+                    log.setAccion("EXPORTAR_REPORTE");
+                    log.setAfecta("Reportes Pagos");
+                    log.setDetalles("Archivo: " + savedFile + " | Exportación de pagos."); 
+                    log.setExito(true);
+                    log.setIp(request.getRemoteAddr());
+                    
+                    auditLogService.registrar(log);
+                }
+            } catch (Exception e) {}
 
             String filename = "Reporte_Pagos_" + LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("ddMMyyyy_HHmm")) + ".pdf";
 

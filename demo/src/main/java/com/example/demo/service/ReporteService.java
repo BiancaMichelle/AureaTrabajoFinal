@@ -26,6 +26,7 @@ import com.example.demo.model.Curso;
 import com.example.demo.model.Docente;
 import com.example.demo.model.Usuario;
 import com.example.demo.repository.OfertaAcademicaRepository;
+import com.example.demo.enums.EstadoOferta;
 import com.example.demo.repository.UsuarioRepository;
 import com.example.demo.repository.CuotaRepository;
 import com.example.demo.enums.EstadoCuota;
@@ -981,7 +982,9 @@ public class ReporteService {
     public ByteArrayInputStream generarReporteOfertasPDF(List<OfertaAcademica> ofertas, LocalDate fechaInicio, LocalDate fechaFin) {
         // --- KPIs ---
         long totalOfertas = ofertas.size();
-        long ofertasPublicadas = ofertas.stream().filter(o -> o.getEstado() != null && "PUBLICADO".equals(o.getEstado().name())).count();
+        long ofertasEnCurso = ofertas.stream()
+                .filter(o -> o.getEstado() == EstadoOferta.ENCURSO)
+                .count();
         long totalInscritos = ofertas.stream().mapToLong(o -> o.getInscripciones() != null ? o.getInscripciones().size() : 0).sum();
         
         // Ingresos Estimados (Inscritos * Costo)
@@ -1045,7 +1048,7 @@ public class ReporteService {
         data.put("generadoPor", generadoPor);
         data.put("reporteId", "RO-" + System.currentTimeMillis());
         data.put("totalOfertas", totalOfertas);
-        data.put("ofertasPublicadas", ofertasPublicadas);
+        data.put("ofertasEnCurso", ofertasEnCurso);
         data.put("totalInscritos", totalInscritos);
         data.put("ofertasBajaOcupacion", ofertasConBajaOcupacion);
         data.put("ofertasLlenas", ofertasLlenas);
