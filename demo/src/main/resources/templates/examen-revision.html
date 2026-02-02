@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'Revisión: ' + ${examen.titulo}">Revisión de Examen</title>
+    <th:block th:if="${@environment.getProperty('app.useTailwindCdn','true') == 'true'}">
+        <script src="https://cdn.tailwindcss.com"></script>
+    </th:block>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen p-6">
+
+    <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
+        
+        <!-- Header -->
+        <div class="bg-blue-600 p-6 text-white">
+            <h1 class="text-3xl font-bold mb-2">Resultados del Examen</h1>
+            <h2 class="text-xl opacity-90" th:text="${examen.titulo}">Título del Examen</h2>
+            <div class="mt-4 flex flex-wrap gap-4 text-sm font-medium">
+                <div class="bg-white/20 px-3 py-1 rounded-full">
+                    <i class="fas fa-calendar mr-1"></i>
+                    Fecha: <span th:text="${#temporals.format(intento.fechaFin, 'dd/MM/yyyy HH:mm')}"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Score Section -->
+        <div class="p-8 border-b border-gray-200 bg-gray-50 flex flex-col items-center justify-center text-center">
+            <div class="text-gray-500 uppercase tracking-wide text-sm font-semibold mb-2">Calificación Final</div>
+            <div class="text-6xl font-extrabold text-blue-600 mb-2">
+                <span th:text="${#numbers.formatDecimal(intento.calificacion, 1, 1)}">0.0</span>
+                <span class="text-2xl text-gray-400 font-normal">/ 10</span>
+            </div>
+            <div class="inline-flex px-3 py-1 rounded-full text-sm font-medium mt-2"
+                 th:classappend="${intento.calificacion >= 6} ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'">
+                <span th:text="${intento.calificacion >= 6 ? 'APROBADO' : 'REPROBADO'}"></span>
+            </div>
+        </div>
+
+        <!-- Questions List -->
+        <div class="p-8 space-y-8">
+            <div th:each="resp, iterStat : ${respuestas}" class="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800">
+                        <span class="text-blue-600 mr-2" th:text="'Pregunta ' + ${iterStat.count}"></span>
+                    </h3>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm font-medium px-2 py-1 rounded bg-gray-100 text-gray-600">
+                            <span th:text="${#numbers.formatDecimal(resp.puntajeObtenido, 1, 1)}"></span> / 
+                            <span th:text="${resp.pregunta.puntaje}"></span> pts
+                        </span>
+                        <span th:if="${resp.puntajeObtenido == resp.pregunta.puntaje}" class="text-green-500"><i class="fas fa-check-circle text-xl"></i></span>
+                        <span th:if="${resp.puntajeObtenido == 0}" class="text-red-500"><i class="fas fa-times-circle text-xl"></i></span>
+                        <span th:if="${resp.puntajeObtenido > 0 and resp.puntajeObtenido < resp.pregunta.puntaje}" class="text-yellow-500"><i class="fas fa-exclamation-circle text-xl"></i></span>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <p class="text-gray-700 text-lg" th:text="${resp.pregunta.enunciado}">Enunciado de la pregunta</p>
+                </div>
+
+                <!-- Respuesta del Usuario -->
+                <div class="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-400 mb-4">
+                    <p class="text-xs text-blue-600 font-semibold uppercase mb-1">Tu Respuesta</p>
+                    <p class="text-gray-800" th:text="${resp.respuestaUsuario}">Respuesta...</p>
+                </div>
+
+                <!-- Feedback Docente (Si hay) Not in model, skipping -->
+                
+                <!-- Respuesta Correcta (Opcional, si queremos mostrarla) 
+                     Podríamos inferirla de Opciones si es Choice/VF -->
+                <div th:if="${resp.pregunta.tipoPregunta.name() == 'MULTIPLE_CHOICE' or resp.pregunta.tipoPregunta.name() == 'VERDADERO_FALSO' or resp.pregunta.tipoPregunta.name() == 'UNICA_RESPUESTA'}" 
+                     class="mt-4">
+                    <details class="text-sm text-gray-500">
+                        <summary class="cursor-pointer hover:text-blue-600">Ver opciones correctas</summary>
+                        <div class="mt-2 pl-4 border-l-2 border-green-200">
+                            <ul class="list-disc pl-4 text-green-700">
+                                <th:block th:each="opcion : ${resp.pregunta.opciones}">
+                                    <li th:if="${opcion.esCorrecta}" th:text="${opcion.descripcion}"></li>
+                                </th:block>
+                            </ul>
+                        </div>
+                    </details>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="bg-gray-50 p-6 border-t border-gray-200 flex justify-center">
+            <a href="javascript:history.back()" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-6 rounded-lg transition-colors">
+                <i class="fas fa-arrow-left mr-2"></i> Volver al Aula
+            </a>
+        </div>
+    </div>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</body>
+</html>

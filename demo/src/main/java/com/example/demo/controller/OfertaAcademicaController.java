@@ -34,6 +34,9 @@ public class OfertaAcademicaController {
     @Value("${app.base-url}")
     private String baseUrl;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.example.demo.service.OfertaAcademicaService ofertaAcademicaService;
+
     private final CursoService cursoService;
     private final OfertaAcademicaRepository ofertaAcademicaRepository;
     private final ModuloRepository moduloRepository;
@@ -80,6 +83,19 @@ public class OfertaAcademicaController {
         model.addAttribute("curso", oferta); // Mantener nombre "curso" para compatibilidad con la vista
         model.addAttribute("puedeModificar", puedeModificar);
         model.addAttribute("modulos", modulos);
+
+        // Calculo de progreso
+        double progreso = 0.0;
+        if (authentication != null) {
+            String dni = authentication.getName();
+            com.example.demo.model.Usuario usuario = usuarioRepository.findByDni(dni)
+                .or(() -> usuarioRepository.findByCorreo(dni))
+                .orElse(null);
+            if (usuario != null) {
+                progreso = ofertaAcademicaService.calcularProgreso(cursoIdSeguro, usuario);
+            }
+        }
+        model.addAttribute("progreso", progreso);
 
         return "aula";
     }

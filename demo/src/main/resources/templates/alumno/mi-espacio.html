@@ -469,6 +469,21 @@
 
             <!-- Sidebar con Eventos -->
             <div class="sidebar-panels">
+                <!-- PANEL TEST IA -->
+                <div class="panel" style="border-left: 4px solid #805ad5;">
+                    <div class="panel-header">
+                        <i class="fas fa-robot" style="color: #805ad5;"></i>
+                        <h3>Asistente IA</h3>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600 mb-4">Analiza tu rendimiento y recibe consejos personalizados.</p>
+                        <button onclick="triggerAnalysis()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 text-sm flex items-center justify-center gap-2">
+                            <i class="fas fa-magic"></i> Ejecutar Análisis
+                        </button>
+                        <p id="analysis-status" class="text-xs text-center text-gray-500 mt-2 font-semibold"></p>
+                    </div>
+                </div>
+
                  <!-- Próximas Clases -->
                 <div class="panel">
                     <div class="panel-header">
@@ -806,6 +821,66 @@
             }
 
             renderCalendar();
+
+            // Función para trigger manual del análisis IA
+            window.triggerAnalysis = async function() {
+                const btn = document.querySelector('button[onclick="triggerAnalysis()"]');
+                const status = document.getElementById('analysis-status');
+                
+                if(!btn) return;
+                
+                const originalText = btn.innerHTML;
+                
+                btn.disabled = true;
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+                status.textContent = 'Analizando tu rendimiento...';
+                status.className = 'text-xs text-center text-blue-600 mt-2 font-semibold';
+                
+                try {
+                    const response = await fetch('/ia/chat/trigger-analysis-personal', { method: 'POST' });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        
+                        status.textContent = '✅ Abriendo asistente...';
+                        status.className = 'text-xs text-center text-green-600 mt-2 font-bold';
+                        btn.innerHTML = '<i class="fas fa-check"></i> ¡Listo!';
+                        
+                        // Abrir asistente IA y mostrar mensaje
+                        setTimeout(() => {
+                            if (window.aiChat) {
+                                window.aiChat.openChat();
+                                
+                                if (data.suggestion) {
+                                    // Agregar mensaje directamente al chat
+                                    if(window.aiChat.addMessageWithTypingEffect) {
+                                        window.aiChat.addMessageWithTypingEffect("🤖 **Resultado del Análisis:**<br>" + data.suggestion, 'ai');
+                                    } else {
+                                        window.aiChat.addMessage("🤖 **Resultado del Análisis:**<br>" + data.suggestion, 'ai');
+                                    }
+                                }
+                            } else {
+                                console.error("AIChat no encontrado en window");
+                                status.textContent = '⚠️ Chat no disponible';
+                            }
+                        }, 800);
+
+                    } else {
+                        status.textContent = '❌ Error al ejecutar.';
+                        status.className = 'text-xs text-center text-red-600 mt-2 font-bold';
+                    }
+                } catch (e) {
+                    console.error(e);
+                    status.textContent = '❌ Error de conexión.';
+                    status.className = 'text-xs text-center text-red-600 mt-2 font-bold';
+                }
+                
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    btn.innerHTML = originalText;
+                }, 5000);
+            };
         });
     </script>
 </div>

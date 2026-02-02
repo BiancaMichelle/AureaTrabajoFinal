@@ -20,6 +20,11 @@ import com.example.demo.repository.CharlaRepository;
 import com.example.demo.repository.CursoRepository;
 import com.example.demo.repository.FormacionRepository;
 import com.example.demo.repository.SeminarioRepository;
+import com.example.demo.model.Usuario;
+import com.example.demo.repository.TareaRepository;
+import com.example.demo.repository.ExamenRepository;
+import com.example.demo.repository.EntregaRepository;
+import com.example.demo.repository.IntentoRepository;
 
 @Service
 public class OfertaAcademicaService {
@@ -34,6 +39,18 @@ public class OfertaAcademicaService {
     
     @Autowired
     private SeminarioRepository seminarioRepository;
+
+    @Autowired
+    private TareaRepository tareaRepository;
+    
+    @Autowired
+    private ExamenRepository examenRepository;
+    
+    @Autowired
+    private EntregaRepository entregaRepository;
+    
+    @Autowired
+    private IntentoRepository intentoRepository;
 
     /**
      * Valida reglas de negocio complejas antes de guardar
@@ -349,5 +366,90 @@ public class OfertaAcademicaService {
         if (actualizadas > 0) {
             System.out.println("🔄 Se actualizaron " + actualizadas + " ofertas (FINALIZADA/EN CURSO)");
         }
+    }
+
+    /**
+     * Calcula el progreso de un alumno en una oferta académica.
+     * Basado en tiempo transcurrido (50%) y actividades completadas (50%).
+     */
+    @Transactional(readOnly = true)
+    public double calcularProgreso(Long ofertaId, Usuario alumno) {
+        System.out.println("DEBUG PROGRESO: Calculando para oferta " + ofertaId + " alumno " + alumno.getId());
+        Optional<OfertaAcademica> ofertaOpt = obtenerPorId(ofertaId);
+        if (ofertaOpt.isEmpty()) {
+            System.out.println("DEBUG PROGRESO: Oferta no encontrada");
+            return 0.0;
+        }
+        OfertaAcademica oferta = ofertaOpt.get();
+
+        // 1. Progreso temporal
+        double timeProgress = 0.0;
+        long diasTotal = 0;
+        long diasTranscurridos = 0;
+        
+        if (oferta.getFechaInicio() != null && oferta.getFechaFin() != null) {
+            java.time.LocalDate hoy = java.time.LocalDate.now();
+            if (!hoy.isBefore(oferta.getFechaInicio())) {
+                 diasTotal = java.time.temporal.ChronoUnit.DAYS.between(oferta.getFechaInicio(), oferta.getFechaFin());
+                 diasTranscurridos = java.time.temporal.ChronoUnit.DAYS.between(oferta.getFechaInicio(), hoy);
+                 if (diasTotal > 0) {
+                      timeProgress = (double) diasTranscurridos / diasTotal;
+                 }
+                 if (timeProgress < 0) timeProgress = 0.0;
+                 if (timeProgress > 1) timeProgress = 1.0;
+            }
+        }
+        System.out.println("DEBUG PROGRESO: TimeProgress=" + timeProgress + " (TotalDias=" + diasTotal + ", Transcurridos=" + diasTranscurridos + ")");
+        
+        // 2. Progreso actividades
+        List<com.example.demo.model.Tarea> tareas = tareaRepository.findByCursoId(ofertaId);
+        List<com.example.demo.model.Examen> examenes = examenRepository.findByModulo_Curso_IdOferta(ofertaId);
+        
+        long totalActividades = tareas.size() + examenes.size();
+        System.out.println("DEBUG PROGRESO: Total Actividades=" + totalActividades + " (Tareas=" + tareas.size() + ", Examenes=" + examenes.size() + ")");
+        
+        // Optimización: Usar IDs para evitar lazy loading traversal
+        java.util.Set<Long> tareaIds = tareas.stream().map(t -> t.getIdActividad()).collect(java.util.stream.Collectors.toSet());
+        
+        long entregasCompletas = 0;
+        if (!tareas.isEmpty()) {
+             // Traer todas las entregas del alumno y filtrar en memoria por IDs de tareas del curso
+             entregasCompletas = entregaRepository.findByEstudiante(alumno).stream()
+                 .filter(e -> tareaIds.contains(e.getTarea().getIdActividad()))
+                 .count();
+        }
+        System.out.println("DEBUG PROGRESO: Entregas Completas=" + entregasCompletas);
+        
+        long examenesRendidos = 0;
+        if (!examenes.isEmpty()) {
+            for(com.example.demo.model.Examen e : examenes) {
+                // Verificar si hay intento finalizado para este examen
+                java.util.List<com.example.demo.model.Intento> intentos = intentoRepository.findByAlumno_IdAndExamen_IdActividad(alumno.getId(), e.getIdActividad());
+                boolean finalizado = intentos.stream().anyMatch(i -> i.getEstado() == com.example.demo.enums.EstadoIntento.FINALIZADO);
+                if(finalizado) examenesRendidos++;
+                
+                System.out.println("DEBUG PROGRESO: Examen " + e.getIdActividad() + " Intentos=" + intentos.size() + " Finalizado=" + finalizado);
+                if (!intentos.isEmpty()) {
+                    intentos.forEach(i -> System.out.println("   Intento State: " + i.getEstado()));
+                }
+            }
+        }
+        System.out.println("DEBUG PROGRESO: Examenes Rendidos=" + examenesRendidos);
+
+        double activityProgress = 0.0;
+        if (totalActividades > 0) {
+            activityProgress = (double) (entregasCompletas + examenesRendidos) / totalActividades;
+             if (activityProgress > 1) activityProgress = 1.0;
+        }
+        System.out.println("DEBUG PROGRESO: ActivityProgress=" + activityProgress);
+
+        // 3. Ponderación (50% tiempo, 50% actividades)
+        if (totalActividades == 0) {
+            return Math.round(timeProgress * 100.0);
+        }
+
+        double total = (timeProgress * 0.5 + activityProgress * 0.5) * 100.0;
+        System.out.println("DEBUG PROGRESO: Total Calc=" + total);
+        return Math.round(total * 100.0) / 100.0;
     }
 }

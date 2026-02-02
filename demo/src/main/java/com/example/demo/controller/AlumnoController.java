@@ -60,6 +60,8 @@ import com.example.demo.service.MercadoPagoService;
 import com.example.demo.service.InstitutoService;
 import com.example.demo.service.ReporteService;
 import com.example.demo.service.EmailService;
+import com.example.demo.service.OfertaAcademicaService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -94,6 +96,9 @@ public class AlumnoController {
     private final ReporteService reporteService;
     private final EmailService emailService;
     private final EntregaRepository entregaRepository;
+    
+    @Autowired
+    private OfertaAcademicaService ofertaAcademicaService;
 
     public AlumnoController(TareaRepository tareaRepository,
                           ExamenRepository examenRepository,
@@ -1134,6 +1139,16 @@ public class AlumnoController {
                 model.addAttribute("inscripcion", inscripcion);
                 model.addAttribute("puedeModificar", puedeModificar);
                 System.out.println("👤 Puede modificar: " + puedeModificar);
+                
+                // Calcular progreso
+                try {
+                    Double progreso = ofertaAcademicaService.calcularProgreso(oferta.getIdOferta(), alumno);
+                    model.addAttribute("progreso", progreso);
+                    System.out.println("📊 Progreso calculado: " + progreso + "%");
+                } catch (Exception e) {
+                    System.out.println("⚠️ Error calculando progreso: " + e.getMessage());
+                    model.addAttribute("progreso", 0.0);
+                }
                 
                 System.out.println("✅ Redirigiendo a template: aula");
                 return "aula"; 

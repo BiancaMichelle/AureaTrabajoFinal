@@ -24,10 +24,15 @@ import com.example.demo.model.Formacion;
 import com.example.demo.model.Horario;
 import com.example.demo.model.Inscripciones;
 import com.example.demo.model.Instituto;
+import com.example.demo.model.Modulo;
 import com.example.demo.model.OfertaAcademica;
 import com.example.demo.model.Rol;
 import com.example.demo.model.Seminario;
 import com.example.demo.model.Usuario;
+import com.example.demo.model.Tarea;
+import com.example.demo.model.Entrega;
+import com.example.demo.model.Examen;
+import com.example.demo.model.Intento;
 import com.example.demo.repository.AlumnoRepository;
 import com.example.demo.repository.CategoriaRepository;
 import com.example.demo.repository.CharlaRepository;
@@ -40,8 +45,13 @@ import com.example.demo.repository.ModuloRepository;
 import com.example.demo.repository.RolRepository;
 import com.example.demo.repository.SeminarioRepository;
 import com.example.demo.repository.UsuarioRepository;
+import com.example.demo.repository.TareaRepository;
+import com.example.demo.repository.EntregaRepository;
+import com.example.demo.repository.ExamenRepository;
+import com.example.demo.repository.IntentoRepository;
 
 import jakarta.transaction.Transactional;
+import java.time.LocalDateTime;
 
 @Component
 public class DataSeeder implements CommandLineRunner {
@@ -60,6 +70,12 @@ public class DataSeeder implements CommandLineRunner {
     private final SeminarioRepository seminarioRepository;
     private final FormacionRepository formacionRepository;
     private final com.example.demo.repository.OfertaAcademicaRepository ofertaAcademicaRepository;
+    
+    // Repos para actividades
+    private final TareaRepository tareaRepository;
+    private final EntregaRepository entregaRepository;
+    private final ExamenRepository examenRepository;
+    private final IntentoRepository intentoRepository;
  
     public DataSeeder(RolRepository roleRepository,
             UsuarioRepository usuarioRepository,
@@ -74,7 +90,11 @@ public class DataSeeder implements CommandLineRunner {
             CharlaRepository charlaRepository,
             SeminarioRepository seminarioRepository,
             FormacionRepository formacionRepository,
-            com.example.demo.repository.OfertaAcademicaRepository ofertaAcademicaRepository) {
+            com.example.demo.repository.OfertaAcademicaRepository ofertaAcademicaRepository,
+            TareaRepository tareaRepository,
+            EntregaRepository entregaRepository,
+            ExamenRepository examenRepository,
+            IntentoRepository intentoRepository) {
         this.roleRepository = roleRepository;
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
@@ -89,6 +109,10 @@ public class DataSeeder implements CommandLineRunner {
         this.seminarioRepository = seminarioRepository;
         this.formacionRepository = formacionRepository;
         this.ofertaAcademicaRepository = ofertaAcademicaRepository;
+        this.tareaRepository = tareaRepository;
+        this.entregaRepository = entregaRepository;
+        this.examenRepository = examenRepository;
+        this.intentoRepository = intentoRepository;
     }
 
     @Override
@@ -322,6 +346,112 @@ public class DataSeeder implements CommandLineRunner {
                     System.out.println("✅ Docente 12345678 asociado a la formación (lado docente): " + f1.getNombre());
                 }
             }
+            
+            // --- SECCIÓN AGREGADA: Curso con Riesgo para 44444444 ---
+            if (alumnoCarlos != null) {
+                // 1. Crear Curso Específico
+                String nombreCursoRiesgo = "Curso Intensivo de Java (Riesgo)";
+                Curso cursoRiesgo = null;
+                
+                // Verificar si existe para no duplicar en re-runs
+                boolean existeRiesgo = cursoRepository.findAll().stream().anyMatch(c -> c.getNombre().equalsIgnoreCase(nombreCursoRiesgo));
+                
+                if (!existeRiesgo) {
+                    cursoRiesgo = new Curso(
+                        nombreCursoRiesgo,
+                        "Curso diseñado para probar análisis de bajo rendimiento.",
+                        Modalidad.VIRTUAL,
+                        10000.0, true,
+                        LocalDate.now().minusMonths(1), LocalDate.now().plusMonths(2), 
+                        30, 3, 500.0, 10,
+                        Arrays.asList(docenteRoberto)
+                    );
+                    
+                    // Agregar Modulo
+                    Modulo mod = new Modulo();
+                    mod.setNombre("Módulo 1: Sintaxis Básica");
+                    mod.setDescripcion("Introducción al lenguaje.");
+                    mod.setFechaInicioModulo(LocalDate.now().minusWeeks(3));
+                    mod.setFechaFinModulo(LocalDate.now().plusWeeks(1));
+                    mod.setVisibilidad(true);
+                    
+                    // Vincular Modulo a Curso
+                    // PRIMERO guardamos el curso para obtener su ID y evitar TransientObjectException
+                    // porque Curso no tiene CascadeType.ALL en modulos
+                    asegurarHorarios(cursoRiesgo); 
+                    cursoRiesgo = cursoRepository.save(cursoRiesgo);
+
+                    mod.setCurso(cursoRiesgo); // Asumiendo que existe setCurso(Curso c)
+                    
+                    // Guardamos el modulo explícitamente
+                    mod = moduloRepository.save(mod);
+                    
+                    // No necesitamos setModulos(list) en cursoRiesgo para la persistencia
+                    // porque la relación es gestionada por el lado 'many' (Modulo)
+                    
+                    // 2. Inscribir Alumno
+                    Inscripciones inscRiesgo = new Inscripciones();
+                    inscRiesgo.setAlumno(alumnoCarlos);
+                    inscRiesgo.setOferta(cursoRiesgo);
+                    inscRiesgo.setFechaInscripcion(LocalDate.now().minusDays(20));
+                    inscRiesgo.setEstadoInscripcion(true);
+                    inscripcionRepository.save(inscRiesgo);
+                    
+                    // 3. Crear Actividades (Tarea y Examen) en el Modulo guardado
+                    // Usamos la variable 'mod' que acabamos de guardar
+                    Modulo moduloGuardado = mod;
+                    
+                    // TAREA (Baja Nota)
+                    Tarea tarea = new Tarea();
+                    tarea.setTitulo("TP1: " + "Variables");
+                    tarea.setDescripcion("Ejercicios básicos");
+                    tarea.setModulo(moduloGuardado);
+                    tarea.setVisibilidad(true);
+                    tarea.setFechaCreacion(LocalDateTime.now().minusDays(10));
+                    tarea = tareaRepository.save(tarea);
+                    
+                    Entrega entrega = new Entrega();
+                    entrega.setTarea(tarea);
+                    entrega.setEstudiante(alumnoCarlos); // Asumiendo setEstudiante acepta Usuario/Alumno
+                    entrega.setCalificacion(30.0); // NOTA BAJA
+                    entrega.setFechaEntrega(LocalDateTime.now().minusDays(8));
+                    entregaRepository.save(entrega);
+                    
+                    // EXAMEN YA REALIZADO (Baja Nota)
+                    Examen examen = new Examen();
+                    examen.setTitulo("Parcial 1: Tipos de Datos");
+                    examen.setDescripcion("Evaluación teórica");
+                    examen.setModulo(moduloGuardado);
+                    examen.setVisibilidad(true);
+                    examen.setFechaCreacion(LocalDateTime.now().minusDays(10));
+                    examen.setFechaApertura(LocalDateTime.now().minusDays(5));
+                    examen.setFechaCierre(LocalDateTime.now().minusDays(4));
+                    examen.setEstado(com.example.demo.enums.EstadoExamen.ACTIVO);
+                    examen = examenRepository.save(examen);
+                    
+                    Intento intento = new Intento();
+                    intento.setExamen(examen);
+                    intento.setAlumno(alumnoCarlos);
+                    intento.setCalificacion(4.0f); // NOTA BAJA
+                    intento.setEstado(com.example.demo.enums.EstadoIntento.FINALIZADO);
+                    intentoRepository.save(intento);
+                    
+                    // EXAMEN FUTURO (Para mañana)
+                    Examen examenFuturo = new Examen();
+                    examenFuturo.setTitulo("Evaluación de Recuperación / Cierre");
+                    examenFuturo.setDescripcion("Última oportunidad");
+                    examenFuturo.setModulo(moduloGuardado);
+                    examenFuturo.setVisibilidad(true);
+                    examenFuturo.setFechaCreacion(LocalDateTime.now());
+                    examenFuturo.setFechaApertura(LocalDateTime.now().plusDays(1));
+                    examenFuturo.setFechaCierre(LocalDateTime.now().plusDays(1).plusHours(2));
+                    examenFuturo.setEstado(com.example.demo.enums.EstadoExamen.PENDIENTE);
+                    examenRepository.save(examenFuturo);
+                    
+                    System.out.println("✅ Generado Escenario de Riesgo para: " + nombreCursoRiesgo);
+                }
+            }
+            // --- FIN SECCION ---
 
             Formacion f2 = optF2.orElse(null);
             if (f2 == null) {
@@ -651,6 +781,22 @@ public class DataSeeder implements CommandLineRunner {
                 
                 oferta.addHorario(h);
             }
+        }
+        
+                // FIX: Corregir intentos antiguos sin estado
+        List<com.example.demo.model.Intento> intentosSinEstado = intentoRepository.findAll().stream()
+            .filter(i -> i.getEstado() == null)
+            .collect(java.util.stream.Collectors.toList());
+        
+        if (!intentosSinEstado.isEmpty()) {
+            System.out.println("SEED: Corrigiendo " + intentosSinEstado.size() + " intentos con estado NULL -> FINALIZADO");
+            for(com.example.demo.model.Intento i : intentosSinEstado) {
+                i.setEstado(com.example.demo.enums.EstadoIntento.FINALIZADO);
+                intentoRepository.save(i);
+            }
+            System.out.println("✅ Reparados " + intentosSinEstado.size() + " intentos.");
+        } else {
+            System.out.println("SEED: No se encontraron intentos con estado NULL (OK).");
         }
     }
 }

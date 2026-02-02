@@ -112,6 +112,26 @@ public class ExamenController {
                 .anyMatch(a -> a.getAuthority().equals("DOCENTE") || a.getAuthority().equals("ADMIN") || a.getAuthority().equals("ROLE_ADMIN"));
 
             if (!esDocenteOAdmin) {
+                // 0. Validar si ya lo rindió y está corregido
+                try {
+                     com.example.demo.model.Usuario usuario = usuarioRepository.findByDni(principal.getName()).orElse(null);
+                     // Fix: Find Alumno ID properly (Assuming Usuario extends or finding Alumno by DNI)
+                     // Using AlumnoRepository directly if ID needed, or just casting if Usuario instance of Alumno
+                     Alumno alumno = alumnoRepository.findByDni(principal.getName()).orElse(null);
+                     if (alumno != null) {
+                        List<Intento> intentosPrevios = intentoRepository.findByAlumno_IdAndExamen_IdActividad(alumno.getId(), examenId);
+                        Intento intentoFinalizado = intentosPrevios.stream()
+                            .filter(i -> i.getEstado() == EstadoIntento.FINALIZADO && i.getCalificacion() != null)
+                            .findFirst().orElse(null);
+                        
+                        if (intentoFinalizado != null) {
+                            return "redirect:/examen/revision/" + examenId;
+                        }
+                     }
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+
                 // 1. Validar Inscripción Activa
                 List<Inscripciones> inscripciones = inscripcionRepository.findByAlumnoDniAndOfertaId(
                     principal.getName(), examen.getModulo().getCurso().getIdOferta());
@@ -189,6 +209,44 @@ public class ExamenController {
         } catch (Exception e) {
             e.printStackTrace();
             return "redirect:/";
+        }
+    }
+
+    /**
+     * Vista de revisión de examen corregido
+     */
+    @GetMapping("/revision/{examenId}")
+    public String verRevisionExamen(@PathVariable Long examenId, Principal principal, Model model) {
+        try {
+            Alumno alumno = alumnoRepository.findByDni(principal.getName())
+                  .orElseThrow(() -> new RuntimeException("Alumno no encontrado"));
+                  
+            // Buscar intento
+            List<Intento> intentos = intentoRepository.findByAlumno_IdAndExamen_IdActividad(alumno.getId(), examenId);
+            
+            // Tomar el último finalizado
+            Intento intento = intentos.stream()
+                .filter(i -> i.getEstado() == EstadoIntento.FINALIZADO && i.getCalificacion() != null)
+                .reduce((first, second) -> second)
+                .orElse(null);
+                
+            if (intento == null) {
+                // Si no hay intento corregido, intentar realizarlo
+                return "redirect:/examen/realizar/" + examenId;
+            }
+            
+            Examen examen = intento.getExamen();
+            // Asegurar carga de Respuestas (Lazy)
+            intento.getRespuestas().size(); 
+            
+            model.addAttribute("examen", examen);
+            model.addAttribute("intento", intento);
+            model.addAttribute("respuestas", intento.getRespuestas());
+            
+            return "examen-revision";
+        } catch (Exception e) {
+             e.printStackTrace();
+             return "redirect:/alumno/mis-ofertas";
         }
     }
 

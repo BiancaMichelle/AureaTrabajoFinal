@@ -73,6 +73,7 @@ import com.example.demo.service.InstitutoService;
 import com.example.demo.service.LocacionAPIService;
 import com.example.demo.service.OfertaAcademicaService;
 import com.example.demo.service.RegistroService;
+import com.example.demo.service.AnalisisRendimientoService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Controller
@@ -81,6 +82,9 @@ public class AdminController {
 
     @Value("${app.base-url}")
     private String baseUrl;
+
+    @Autowired
+    private AnalisisRendimientoService analisisRendimientoService;
 
     @Autowired
     private OfertaAcademicaRepository ofertaAcademicaRepository;
@@ -347,6 +351,18 @@ public class AdminController {
         }
     }
     
+    @PostMapping("/admin/ia/trigger-analysis")
+    @ResponseBody
+    public ResponseEntity<String> triggerAnalisisIA() {
+        try {
+            analisisRendimientoService.ejecutarAnalisisDiario();
+            return ResponseEntity.ok("Análisis de IA ejecutado correctamente.");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Error al ejecutar análisis: " + e.getMessage());
+        }
+    }
+
     /**
      * Endpoint para eliminar una oferta (Eliminación lógica: cambia estado a DE_BAJA)
      */

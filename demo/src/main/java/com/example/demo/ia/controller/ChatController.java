@@ -16,17 +16,58 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import com.example.demo.service.AnalisisRendimientoService;
+import com.example.demo.model.Notificacion;
+import com.example.demo.model.Usuario;
+import com.example.demo.repository.NotificacionRepository;
+import com.example.demo.repository.UsuarioRepository;
+import java.util.stream.Collectors;
+
 @Controller
 @RequestMapping("/ia")
 public class ChatController {
     
     @Autowired
     private ChatServiceSimple chatServiceSimple;
+
+    @Autowired
+    private AnalisisRendimientoService analisisRendimientoService;
+
+    @Autowired
+    private NotificacionRepository notificacionRepository;
+
+    @Autowired
+    private UsuarioRepository usuarioRepository;
     
     @GetMapping("/chat")
     public String mostrarChat(Model model) {
         model.addAttribute("pageTitle", "Asistente IA");
         return "ia/chat";
+    }
+    
+    @PostMapping("/chat/trigger-analysis-personal")
+    @ResponseBody
+    public ResponseEntity<?> triggerPersonalAnalysis(@AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED).build();
+        }
+        
+        Usuario usuario = usuarioRepository.findByDni(userDetails.getUsername()).orElse(null);
+        if (usuario == null) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        try {
+            String resultado = analisisRendimientoService.analizarAlumnoForce(usuario);
+            return ResponseEntity.ok(Map.of(
+                "success", true, 
+                "message", "Análisis completado.",
+                "suggestion", resultado
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("success", false, "error", e.getMessage()));
+        }
     }
     
     @PostMapping("/chat/message")
@@ -135,6 +176,41 @@ public class ChatController {
             "sessionId", sessionId,
             "success", true
         ));
+    }
+
+    @GetMapping("/chat/notifications")
+    @ResponseBody
+    public ResponseEntity<List<Map<String, Object>>> obtenerNotificacionesChat(@AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED).build();
+        }
+        
+        Usuario usuario = usuarioRepository.findByDni(userDetails.getUsername()).orElse(null);
+        if (usuario == null) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        List<Notificacion> notificaciones = notificacionRepository.findByUsuarioAndLeidaFalseAndTipo(usuario, "CHAT_IA");
+        
+        List<Map<String, Object>> result = notificaciones.stream().map(n -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", n.getId());
+            map.put("message", n.getMensaje());
+            map.put("timestamp", n.getFecha() != null ? n.getFecha().toString() : "");
+            return map;
+        }).collect(Collectors.toList());
+        
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/chat/notifications/read/{id}")
+    @ResponseBody
+    public ResponseEntity<?> marcarLeida(@PathVariable Long id) {
+        notificacionRepository.findById(id).ifPresent(n -> {
+            n.setLeida(true);
+            notificacionRepository.save(n);
+        });
+        return ResponseEntity.ok().build();
     }
     
     @GetMapping("/status")

@@ -2,13 +2,50 @@
 class SimpleChat {
     constructor() {
         this.init();
+        window.simpleChatInstance = this; // Expose instance globally
     }
 
     init() {
         this.createChatButton();
         this.createChatWindow();
         this.bindEvents();
+        this.startNotificationPolling();
         console.log('💬 Chat Simple iniciado');
+    }
+
+    startNotificationPolling() {
+        // Consultar cada 30 segundos
+        setInterval(() => this.checkNotifications(), 30000);
+        // Y consultar inmediatamente al iniciar
+        setTimeout(() => this.checkNotifications(), 2000);
+    }
+
+    async checkNotifications() {
+        try {
+            const response = await fetch('/ia/chat/notifications');
+            if (response.ok) {
+                const notifications = await response.json();
+                if (notifications && notifications.length > 0) {
+                    // Mostrar el punto rojo o indicador si el chat está cerrado
+                    const chatWindow = document.getElementById('chat-window-simple');
+                    if (chatWindow && chatWindow.style.display === 'none') {
+                        const button = document.getElementById('chat-button-simple');
+                        if (button) {
+                            button.style.border = '3px solid #ff4757';
+                            // Opcional: Agregar un contador visual
+                        }
+                    }
+
+                    for (const notif of notifications) {
+                        this.addMessage(notif.message, 'assistant');
+                        // Marcar como leída
+                        await fetch(`/ia/chat/notifications/read/${notif.id}`, { method: 'POST' });
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error checking notifications:', error);
+        }
     }
 
     createChatButton() {
