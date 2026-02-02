@@ -33,6 +33,18 @@ if (typeof window.AIChat === 'undefined') {
                 this.bindEvents();
                 this.initializeSession();
             }
+            // Exponer la instancia inmediatamente para reducir carreras de inicialización
+            try {
+                window.aiChat = this;
+                window.aiChatInitialized = true;
+                // Exponer utilidad de diagnóstico accesible desde consola
+                window.aiChat.dumpVisibilityDiagnostics = () => {
+                    try { this.checkVisibilityDiagnostics(); } catch (e) { console.warn('AIChat: dumpVisibilityDiagnostics error', e); }
+                };
+                console.log('🤖 AIChat: instancia expuesta en window.aiChat y aiChatInitialized=true');
+            } catch (e) {
+                console.warn('AIChat: no se pudo exponer la instancia globalmente', e);
+            }
         }
     
     initializeElements() {
@@ -89,6 +101,7 @@ if (typeof window.AIChat === 'undefined') {
                 
                 <!-- Cuerpo del chat -->
                 <div class="ai-chat-body">
+                    
                     <!-- Mensajes -->
                     <div id="ai-chat-messages" class="ai-chat-messages">
                         <div class="ai-welcome-message">
@@ -133,9 +146,19 @@ if (typeof window.AIChat === 'undefined') {
                     </button>
                 </div>
             </div>
-        `;
+`;
         
-        document.body.insertAdjacentHTML('beforeend', chatHTML);
+        console.log('AIChat: createChatStructure invoked');
+        if (!document.body) {
+            console.log('AIChat: document.body no existe aún, esperando DOMContentLoaded para insertar estructura del chat...');
+            document.addEventListener('DOMContentLoaded', () => {
+                document.body.insertAdjacentHTML('beforeend', chatHTML);
+                console.log('AIChat: estructura de chat insertada después de DOMContentLoaded');
+            }, { once: true });
+        } else {
+            document.body.insertAdjacentHTML('beforeend', chatHTML);
+            console.log('AIChat: estructura de chat insertada en document.body');
+        }
     }
     
     bindEvents() {
@@ -277,16 +300,25 @@ if (typeof window.AIChat === 'undefined') {
     }
     
     toggleChat() {
+        console.log(`AIChat: toggleChat called. isOpen=${this.isOpen}`);
         if (this.isOpen) {
+            console.log('AIChat: closing chat via toggleChat');
             this.closeChat();
         } else {
+            console.log('AIChat: opening chat via toggleChat');
             this.openChat();
         }
     }
     
     async openChat() {
-        this.isOpen = true;
-        if (this.chatContainer) this.chatContainer.classList.add('show');
+        console.log('AIChat: openChat() called');
+         this.isOpen = true;
+        if (this.chatContainer) {
+            this.chatContainer.classList.add('show');
+            // Añadir clase 'open' también para compatibilidad con estilos alternativos
+            this.chatContainer.classList.add('open');
+            console.log('AIChat: chatContainer classes show + open added');
+        }
         if (this.toggleBtn) {
             this.toggleBtn.classList.add('active');
             this.toggleBtn.innerHTML = '<i class="fas fa-times"></i>';
@@ -305,11 +337,26 @@ if (typeof window.AIChat === 'undefined') {
                 }
             }
         }
+
+        // Esperar a que la animación CSS termine (para que el usuario vea la ventana abriéndose antes de cualquier acción automática)
+        await this.sleep(300);
+        console.log('AIChat: openChat completed (post-animation)');
+
+        // Ejecutar diagnóstico de visibilidad para detectar overlays/estilos que oculten el chat
+        try {
+            this.checkVisibilityDiagnostics();
+        } catch (e) {
+            console.warn('AIChat: checkVisibilityDiagnostics fallo', e);
+        }
     }
     
     closeChat() {
         this.isOpen = false;
-        if (this.chatContainer) this.chatContainer.classList.remove('show');
+         if (this.chatContainer) {
+             this.chatContainer.classList.remove('show');
+             this.chatContainer.classList.remove('open');
+             console.log('AIChat: chatContainer classes show + open removed');
+         }
         if (this.toggleBtn) {
             this.toggleBtn.classList.remove('active');
             this.toggleBtn.innerHTML = '<i class="fas fa-robot"></i>';
@@ -397,8 +444,27 @@ if (typeof window.AIChat === 'undefined') {
             this.sendMessage();
         }
     }
+
+    async triggerAnalysis() {
+        this.addMessage("📊 Analizar mi Rendimiento Completo", 'user');
+        this.addMessage("Procesando tu solicitud... Esto puede tomar unos segundos. ⏳", 'ai');
+        
+        try {
+            const response = await fetch('/alumno/ia/analisis-personal');
+            if (response.ok) {
+                const html = await response.text();
+                // Send directly as HTML message, bypassing formatMessage in modified addMessage
+                this.addMessage(html, 'ai', null, true);
+            } else {
+                this.addMessage("❌ Error al obtener el análisis.", 'ai');
+            }
+        } catch (e) {
+            console.error(e);
+            this.addMessage("❌ Error de comunicación.", 'ai');
+        }
+    }
     
-    addMessage(text, sender, timestamp = null) {
+    addMessage(text, sender, timestamp = null, isHtml = false) {
         if (!this.messagesContainer) return null;
 
         const messageDiv = document.createElement('div');
@@ -412,7 +478,8 @@ if (typeof window.AIChat === 'undefined') {
         
         const content = document.createElement('div');
         content.className = 'ai-message-content';
-        content.innerHTML = this.formatMessage(text);
+        // If isHtml is true, use text directly, otherwise format it
+        content.innerHTML = isHtml ? text : this.formatMessage(text);
         
         const time = document.createElement('div');
         time.className = 'ai-message-time';
@@ -526,11 +593,109 @@ if (typeof window.AIChat === 'undefined') {
         );
     }
     
+    solicitarTutoria(ofertaId) {
+        if (confirm("¿Confirmas que deseas enviar un correo solicitando tutoría al docente de este curso?")) {
+            this.addMessage("Solicitando tutoría...", "user");
+            this.showTyping();
+            
+            fetch('/alumno/ia/solicitar-tutoria?ofertaId=' + ofertaId, { method: 'POST' })
+                .then(response => {
+                    if (response.ok) return response.text();
+                    throw new Error('Error en solicitud');
+                })
+                .then(msg => {
+                    this.showTyping(false);
+                    this.addMessage("✅ " + msg, "ai");
+                })
+                .catch(err => {
+                    this.showTyping(false);
+                    this.showErrorMessage("No se pudo enviar la solicitud. Intenta más tarde.");
+                });
+        }
+    }
+    
     scrollToBottom() {
         if (this.messagesContainer) {
             setTimeout(() => {
                 this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
             }, 50);
+        }
+    }
+
+    // Diagnóstico de visibilidad para detectar overlays, estilos inline o posicionamiento que oculte el chat
+    checkVisibilityDiagnostics() {
+        if (!this.chatContainer) {
+            console.warn('AIChat: checkVisibilityDiagnostics: no hay chatContainer para diagnosticar');
+            return;
+        }
+
+        const rect = this.chatContainer.getBoundingClientRect();
+        const cs = window.getComputedStyle(this.chatContainer);
+
+        console.log('AIChat: visibility diagnostics', {
+            display: cs.display,
+            visibility: cs.visibility,
+            opacity: cs.opacity,
+            zIndex: cs.zIndex,
+            position: cs.position,
+            left: cs.left,
+            top: cs.top,
+            right: cs.right,
+            bottom: cs.bottom,
+            rect: rect,
+            offsetWidth: this.chatContainer.offsetWidth,
+            offsetHeight: this.chatContainer.offsetHeight
+        });
+
+        // Revisar el elemento que ocupa el centro del contenedor
+        const cx = rect.left + (rect.width / 2);
+        const cy = rect.top + (rect.height / 2);
+        let elAtCenter = null;
+        try {
+            const px = Math.max(0, Math.min(window.innerWidth - 1, cx));
+            const py = Math.max(0, Math.min(window.innerHeight - 1, cy));
+            elAtCenter = document.elementFromPoint(px, py);
+        } catch (e) {
+            console.warn('AIChat: error en elementFromPoint', e);
+        }
+
+        console.log('AIChat: element at center:', elAtCenter, 'containedByChat?', this.chatContainer.contains(elAtCenter));
+
+        const hiddenOrOverlapped = (this.chatContainer.offsetWidth === 0 || this.chatContainer.offsetHeight === 0 || cs.display === 'none' || cs.visibility === 'hidden' || !this.chatContainer.contains(elAtCenter));
+
+        if (hiddenOrOverlapped) {
+            console.warn('AIChat: chat parece oculto o solapado. Aplicando estilos temporales de depuración para forzarlo visible.');
+
+            // Estilos temporales de prueba para forzar visibilidad (no invasivos para pruebas manuales)
+            this.chatContainer.style.zIndex = '99999';
+            this.chatContainer.style.display = 'block';
+            this.chatContainer.style.position = 'fixed';
+            this.chatContainer.style.right = '20px';
+            this.chatContainer.style.bottom = '20px';
+
+            const cs2 = window.getComputedStyle(this.chatContainer);
+            const rect2 = this.chatContainer.getBoundingClientRect();
+            const cx2 = rect2.left + (rect2.width / 2);
+            const cy2 = rect2.top + (rect2.height / 2);
+            let elAtCenter2 = null;
+            try {
+                const px2 = Math.max(0, Math.min(window.innerWidth - 1, cx2));
+                const py2 = Math.max(0, Math.min(window.innerHeight - 1, cy2));
+                elAtCenter2 = document.elementFromPoint(px2, py2);
+            } catch (e) {
+                console.warn('AIChat: error en elementFromPoint post-force', e);
+            }
+
+            console.log('AIChat: post-force diagnostics', {
+                display: cs2.display,
+                visibility: cs2.visibility,
+                opacity: cs2.opacity,
+                zIndex: cs2.zIndex,
+                rect: rect2,
+                elAtCenter: elAtCenter2
+            });
+        } else {
+            console.log('AIChat: chat visible según indicadores (no fuerza estilos)');
         }
     }
     

@@ -18,6 +18,13 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Scripts y Estilos de IA -->
+    <link rel="stylesheet" href="/style/ia/chat.css">
+    <!-- FontAwesome para íconos del chat -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="/js/ia/chat.js" defer></script>
 </head>
 <body class="bg-gray-100 flex items-center justify-center min-h-screen">
 
@@ -87,41 +94,77 @@
 
         <!-- Botón Test IA -->
         <button onclick="triggerAnalysis()" class="block w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 mt-6 text-center text-sm">
-            🤖 Test: Análisis Académico IA
+            Analizar mi Rendimiento con IA
         </button>
         <p id="analysis-status" class="text-xs text-center text-gray-500 mt-1"></p>
 
         <script>
-            async function triggerAnalysis() {
+            // Función para trigger manual del análisis IA
+            function triggerAnalysis() {
                 const btn = document.querySelector('button[onclick="triggerAnalysis()"]');
                 const status = document.getElementById('analysis-status');
                 
-                btn.disabled = true;
-                btn.classList.add('opacity-50', 'cursor-not-allowed');
-                status.textContent = 'Analizando tu rendimiento...';
-                
-                try {
-                    const response = await fetch('/ia/chat/trigger-analysis-personal', {
-                        method: 'POST'
-                    });
-                    
-                    if (response.ok) {
-                        status.textContent = '✅ Análisis completado. Revisa el chat.';
-                        status.classList.add('text-green-600');
-                        status.classList.remove('text-red-600');
-                    } else {
-                        status.textContent = '❌ Error al ejecutar análisis.';
-                        status.classList.add('text-red-600');
-                    }
-                } catch (e) {
-                    status.textContent = '❌ Error de conexión.';
-                    status.classList.add('text-red-600');
+                // Asegurar inicialización si no existe (fallback)
+                if ((!window.aiChat && !window.simpleChatInstance) && window.AIChat) {
+                     window.aiChat = new window.AIChat();
+                     window.aiChatInitialized = true;
+                     console.log("Chat inicializado bajo demanda");
                 }
+
+                // Buscar instancia del chat (apuntando a window.aiChat o window.parent)
+                const chatApp = window.aiChat || (window.parent ? window.parent.aiChat : null) || window.simpleChatInstance;
                 
-                setTimeout(() => {
-                    btn.disabled = false;
-                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
-                }, 5000);
+                if (chatApp) {
+                    // UI Feedback
+                    const originalText = btn.innerHTML;
+                    btn.disabled = true;
+                    btn.classList.add('opacity-50', 'cursor-not-allowed');
+                    btn.innerHTML = '⏳ Procesando...';
+                    
+                    if(status) {
+                        status.textContent = 'Abriendo asistente...';
+                        status.className = 'text-xs text-center text-green-600 mt-2 font-bold';
+                    }
+
+                    console.log("Iniciando secuencia: Abrir Chat -> Analizar");
+
+                    // Definir la función de ejecución
+                    const runAnalysis = () => {
+                         console.log("Chat visible. Ejecutando análisis...");
+                         if(chatApp.triggerAnalysis) {
+                            chatApp.triggerAnalysis();
+                        } else {
+                            chatApp.addMessage("Analizar mi rendimiento", "user");
+                        }
+
+                        // Restaurar botón
+                        setTimeout(() => {
+                            btn.disabled = false;
+                            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                            btn.innerHTML = originalText;
+                            if (status) status.textContent = '';
+                        }, 5000);
+                    };
+
+                    // Controlar la apertura del chat antes de ejecutar
+                    if (typeof chatApp.openChat === 'function') {
+                        // Promise.resolve maneja tanto si openChat retorna promesa (chat.js) o void (chat-simple.js)
+                        Promise.resolve(chatApp.openChat()).then(() => {
+                            // Pequeño delay de seguridad adicional para renderizado
+                            setTimeout(runAnalysis, 100); 
+                        });
+                    } else {
+                        console.warn("No se encontró método openChat, ejecutando directamente");
+                        runAnalysis();
+                    }
+
+                } else {
+                    console.error("Asistente IA no encontrado");
+                    if(status) {
+                        status.textContent = '❌ Error: Asistente no disponible (Recarga la página)';
+                        status.className = 'text-xs text-center text-red-600 mt-2 font-bold';
+                    }
+                }
             }
         </script>
 

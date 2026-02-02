@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -122,6 +123,46 @@ public class AnalisisRendimientoService {
             log.info("📧 Correo institucional enviado a {} por motivo: {}", alumno.getCorreo(), tipo);
         }
     }
+    
+    public void solicitarTutoria(Usuario alumno, Long ofertaId) {
+        OfertaAcademica oferta = ofertaAcademicaRepository.findById(ofertaId)
+            .orElseThrow(() -> new RuntimeException("Oferta no encontrada"));
+            
+        List<? extends Usuario> docentes = new ArrayList<>();
+        if (oferta instanceof Curso) {
+            docentes = ((Curso) oferta).getDocentes();
+        } else if (oferta instanceof Formacion) {
+            docentes = ((Formacion) oferta).getDocentes();
+        }
+        
+        if (docentes == null || docentes.isEmpty()) {
+            log.warn("Alumno {} solicitó tutoría para {} pero no hay docentes asignados.", alumno.getApellido(), oferta.getNombre());
+            return;
+        }
+
+        String asunto = "Solicitud de Tutoría - " + oferta.getNombre();
+        String cuerpoBase = "El alumno(a) <b>" + alumno.getNombre() + " " + alumno.getApellido() + "</b> (DNI: " + alumno.getDni() + ")" +
+                            " ha solicitado una tutoría.<br><br>" +
+                            "<b>Motivo:</b> Rendimiento bajo detectado automáticamente / Solicitud directa desde panel IA.<br>" +
+                            "<b>Curso:</b> " + oferta.getNombre() + "<br><br>" +
+                            "Por favor, póngase en contacto con el estudiante a la brevedad.<br>" +
+                            "Correo del estudiante: " + alumno.getCorreo();
+
+        for (Usuario docente : docentes) {
+            if (docente.getCorreo() != null && !docente.getCorreo().isEmpty()) {
+                emailService.sendEmail(docente.getCorreo(), asunto, cuerpoBase);
+            }
+             // Notificacion interna
+            Notificacion notif = new Notificacion();
+            notif.setUsuario(docente);
+            notif.setTitulo("🆘 Solicitud de Tutoría: " + alumno.getApellido());
+            notif.setMensaje("El alumno solicita ayuda en " + oferta.getNombre() + ". Revisar correo para más detalles.");
+            notif.setTipo("ALERTA");
+            notif.setLeida(false);
+            notificacionRepository.save(notif);
+        }
+        log.info("📧 Solicitud de tutoría enviada a {} docentes de la oferta {}", docentes.size(), oferta.getNombre());
+    }
 
     @Transactional
     public String analizarCurso(Long ofertaId) {
@@ -130,41 +171,121 @@ public class AnalisisRendimientoService {
         if (oferta == null) return "Curso no encontrado";
 
         List<Inscripciones> inscripciones = inscripcionRepository.findByOfertaAndEstadoInscripcionTrue(oferta);
-        int intervencionesGeneradas = 0;
         int alumnosAnalizados = 0;
         
-        StringBuilder reporteDetallado = new StringBuilder();
-        reporteDetallado.append("🔍 **Análisis de Rendimiento - ").append(oferta.getNombre()).append("**<br><br>");
+        // Estructuras para agregación
+        List<String> listadoRiesgoHtml = new ArrayList<>();
+        double sumaPromedios = 0;
+        double sumaAsistencia = 0;
+        int countConNotas = 0;
+        // int countConAsistencia = 0; 
+        
+        int riesgoAsistencia = 0;
+        int riesgoRendimiento = 0;
+        int actividadesPendientes = 0;
 
         for (Inscripciones insc : inscripciones) {
             alumnosAnalizados++;
-            List<String> alertas = analizarDesempenoEnOfertaDetallado(insc.getAlumno(), insc, false); // False: NO notificar individualmente al docente
+            Usuario alumno = insc.getAlumno();
+            
+            // 1. Recopilar métricas individuales para agregados
+            double promedio = calcularPromedio(alumno, oferta);
+            double asistencia = calcularAsistencia(alumno, oferta);
+            
+            if (promedio != 100.0) { // 100.0 es el valor centinela para "sin notas"
+                sumaPromedios += promedio;
+                countConNotas++;
+            }
+            sumaAsistencia += asistencia;
+            
+            // 2. Detectar alertas individuales
+            List<String> alertas = analizarDesempenoEnOfertaDetallado(alumno, insc, false); 
+            
             if (!alertas.isEmpty()) {
-                intervencionesGeneradas += alertas.size();
-                reporteDetallado.append("👤 **").append(insc.getAlumno().getNombre()).append("**: <br>");
-                alertas.forEach(a -> reporteDetallado.append(" - ").append(a).append("<br>"));
+                StringBuilder alumnoHtml = new StringBuilder();
+                alumnoHtml.append("<div style='background-color:#fff3cd; padding:10px; margin-bottom:10px; border-left:4px solid #ffc107; border-radius:4px;'>");
+                alumnoHtml.append("<strong>👤 ").append(alumno.getNombre()).append(" ").append(alumno.getApellido()).append("</strong><br>");
                 
-                // Botón para enviar correo institucional
-                String tipoPrincipal = alertas.get(0).contains("Asistencia") ? "BAJO_ASISTENCIA" : 
-                                       alertas.get(0).contains("Rendimiento") ? "BAJO_RENDIMIENTO" : "ACTIVIDADES_PENDIENTES";
+                String tipoPrincipal = "GENERICO";
+                for(String alerta : alertas) {
+                    alumnoHtml.append("• ").append(alerta).append("<br>");
+                    if(alerta.contains("Asistencia")) { riesgoAsistencia++; tipoPrincipal = "BAJO_ASISTENCIA"; }
+                    if(alerta.contains("Rendimiento")) { riesgoRendimiento++; tipoPrincipal = "BAJO_RENDIMIENTO"; }
+                    if(alerta.contains("vencidas")) { actividadesPendientes++; if(tipoPrincipal.equals("GENERICO")) tipoPrincipal = "ACTIVIDADES_PENDIENTES"; }
+                }
+
+                // Botón Acción
+                alumnoHtml.append("<div style='margin-top:8px;'>")
+                          .append("<form action='/docente/ia/preparar-correo' method='get' target='_blank' style='display:inline;'>")
+                          .append("<input type='hidden' name='alumnoId' value='").append(alumno.getId()).append("'>")
+                          .append("<input type='hidden' name='ofertaId' value='").append(oferta.getIdOferta()).append("'>")
+                          .append("<input type='hidden' name='tipo' value='").append(tipoPrincipal).append("'>")
+                          .append("<button type='submit' class='btn-accion-ia' style='background-color:#0d6efd; color:white; border:none; padding:4px 12px; border-radius:15px; font-size:12px; cursor:pointer;'>")
+                          .append("📧 Redactar Aviso</button>")
+                          .append("</form></div>");
                 
-                reporteDetallado.append("<div style='margin-top:5px; margin-bottom:15px;'>")
-                                .append("💡 <i>IA: Sugiero contactarlo. </i>")
-                                .append("<form action='/docente/ia/preparar-correo' method='get' target='_blank' style='display:inline;'>")
-                                .append("<input type='hidden' name='alumnoId' value='").append(insc.getAlumno().getId()).append("'>")
-                                .append("<input type='hidden' name='ofertaId' value='").append(oferta.getIdOferta()).append("'>")
-                                .append("<input type='hidden' name='tipo' value='").append(tipoPrincipal).append("'>")
-                                .append("<button type='submit' style='background-color:#ea4335; color:white; border:none; padding:5px 10px; border-radius:4px; font-size:12px; cursor:pointer;'>")
-                                .append("📧 Revisar y Enviar Correo</button>")
-                                .append("</form></div>");
+                alumnoHtml.append("</div>");
+                listadoRiesgoHtml.add(alumnoHtml.toString());
             }
         }
+        
+        // 3. Calcular Agregados
+        double promedioGeneral = (countConNotas > 0) ? (sumaPromedios / countConNotas) : 0.0;
+        double asistenciaGeneral = (alumnosAnalizados > 0) ? (sumaAsistencia / alumnosAnalizados) : 0.0;
+        
+        // 4. Generar Sugerencia Pedagógica
+        String sugerenciaPedagogica = generarSugerenciaPedagogica(oferta.getNombre(), promedioGeneral, asistenciaGeneral, riesgoAsistencia, riesgoRendimiento, alumnosAnalizados);
 
-        if (intervencionesGeneradas == 0) {
-            return "✅ Estado Óptimo: Se analizaron " + alumnosAnalizados + " alumnos y no se detectaron nuevos riesgos en este curso. ¡Buen trabajo!";
+        // 5. Construir Reporte Final
+        StringBuilder reporte = new StringBuilder();
+        reporte.append("<h3>📊 Reporte Estratégico: ").append(oferta.getNombre()).append("</h3>");
+        
+        // Seccion Resumen
+        reporte.append("<div style='display:flex; justify-content:space-around; margin-bottom:15px; background:#f8f9fa; padding:10px; border-radius:8px;'>")
+               .append("<div style='text-align:center;'><strong>").append(alumnosAnalizados).append("</strong><br><small style='color:gray'>Alumnos</small></div>")
+               .append("<div style='text-align:center; color:").append(promedioGeneral < 6 && countConNotas > 0 ? "#dc3545":"#198754").append(";'><strong>").append(countConNotas > 0 ? String.format("%.1f", promedioGeneral) : "-").append("</strong><br><small style='color:gray'>Promedio</small></div>")
+               .append("<div style='text-align:center; color:").append(asistenciaGeneral < 70 ? "#dc3545":"#198754").append(";'><strong>").append(String.format("%.1f%%", asistenciaGeneral)).append("</strong><br><small style='color:gray'>Asistencia</small></div>")
+               .append("</div>");
+               
+        // Seccion IA Contextual
+        reporte.append("<div style='background-color:#e7f5ff; padding:12px; border-left:4px solid #0d6efd; border-radius:4px; margin-bottom:20px;'>")
+               .append("<strong>🤖 Sugerencia Pedagógica (IA):</strong><br>")
+               .append(sugerenciaPedagogica)
+               .append("</div>");
+
+        // Seccion Estudiantes Prioritarios
+        if (!listadoRiesgoHtml.isEmpty()) {
+            reporte.append("<h5>⚠️ Alumnos que requieren atención (").append(listadoRiesgoHtml.size()).append(")</h5>");
+            for(String item : listadoRiesgoHtml) {
+                reporte.append(item);
+            }
         } else {
-            return reporteDetallado.toString();
+            reporte.append("<div style='text-align:center; color:#198754; padding:20px;'>✅ <strong>¡Excelente!</strong> No se detectaron estudiantes en riesgo en este momento.</div>");
         }
+
+        return reporte.toString();
+    }
+    
+    private String generarSugerenciaPedagogica(String curso, double promedio, double asistencia, int nAsistencia, int nRendimiento, int total) {
+        StringBuilder sb = new StringBuilder();
+        // Analisis de Asistencia
+        if (asistencia < 75.0 || (total > 0 && nAsistencia > (total * 0.3))) {
+            sb.append("📉 <strong>Retención:</strong> Se detecta un nivel de asistencia preocupante. ")
+              .append("Considere enviar un mensaje motivacional a todo el grupo o revisar si el horario de las sesiones síncronas es conveniente. ")
+              .append("Recuerde que no se suben clases grabadas, por lo que la asistencia síncrona es vital.<br><br>");
+        }
+        
+        // Analisis de Rendimiento
+        if (promedio > 0.1 && (promedio < 6.0 || (total > 0 && nRendimiento > (total * 0.25)))) {
+            sb.append("🧠 <strong>Comprensión:</strong> El promedio general es bajo. Los estudiantes podrían estar teniendo dificultades con los temas recientes. ")
+              .append("<strong>Sugerencia:</strong> Programar una sesión de repaso o publicar una guía de ejercicios resueltos antes de la próxima evaluación.");
+        } else if (promedio > 8.5) {
+            sb.append("🚀 <strong>Desempeño:</strong> El grupo muestra un excelente dominio de los contenidos. ")
+              .append("<strong>Sugerencia:</strong> Proponer desafíos opcionales avanzados para mantener el interés de los estudiantes más destacados.");
+        } else {
+            sb.append("📈 <strong>Progreso:</strong> El rendimiento es estable. Continúe con la planificación actual, pero monitoree a los casos puntuales.");
+        }
+        return sb.toString();
     }
     
     // Método auxiliar modificado para devolver detalles
@@ -255,6 +376,169 @@ public class AnalisisRendimientoService {
         return pendientes;
     }
     
+    /**
+     * Fuerza un análisis y devuelve el resultado para demostración manual
+     */
+    @Transactional
+    public String analizarAlumnoCompleto(Usuario alumno) {
+        StringBuilder html = new StringBuilder();
+        
+        // --- Integración del Análisis General (Método Anterior) ---
+        // Llamamos a analizarAlumnoForce para:
+        // 1. Obtener el resumen textual del "peor caso".
+        // 2. Generar/Guardar la Intervención en Base de Datos.
+        String resumenTexto = analizarAlumnoForce(alumno);
+        
+        // Formatear el resumen Markdown a HTML básico
+        String resumenHtml = resumenTexto
+            .replace("\n", "<br>")
+            .replaceAll("\\*\\*(.*?)\\*\\*", "<strong>$1</strong>");
+
+        html.append("<div class='space-y-6'>");
+        
+        // Cabecera Resumen Global (Con el texto del análisis force)
+        html.append("<div class='bg-white p-4 rounded shadow-sm border-l-4 border-indigo-500'>");
+        html.append("<h4 class='text-lg font-bold text-gray-800'>🎓 Tu Análisis de Rendimiento</h4>");
+        html.append("<div class='mt-2 p-3 bg-indigo-50 text-indigo-900 rounded text-sm'>").append(resumenHtml).append("</div>");
+        html.append("</div>");
+
+        List<Inscripciones> inscripciones = inscripcionRepository.findByAlumno(alumno);
+        // Filtramos solo cursos/formaciones activas
+        List<Inscripciones> validas = inscripciones == null ? List.of() : inscripciones.stream()
+            .filter(i -> Boolean.TRUE.equals(i.getEstadoInscripcion()))
+            .filter(i -> (i.getOferta() instanceof Curso) || (i.getOferta() instanceof Formacion))
+            .toList();
+
+        if (validas.isEmpty()) {
+            return "<div class='p-4 text-center'>No tienes cursadas activas para analizar.</div>";
+        }
+
+        // Detalle por Curso
+        for (Inscripciones insc : validas) {
+            OfertaAcademica oferta = insc.getOferta();
+            double promedio = calcularPromedio(alumno, oferta);
+            double asistencia = calcularAsistencia(alumno, oferta);
+            List<String> pendientes = detectarActividadesVencidasSinEntrega(alumno, oferta);
+            
+            // Determinar estado visual
+            boolean lowGrade = (promedio < 6.0 || (promedio > 10.0 && promedio < 60.0)) && promedio != 100.0;
+            // Riesgo si hay promedio bajo, asistencia baja, pendientes O si hay consejos detallados (ej. nota baja en examen especifico aunque promedio ok)
+            boolean riesgo = lowGrade || asistencia < 75.0 || !pendientes.isEmpty() || !getConsejosPersonalizados(alumno, oferta).isEmpty();
+            String borderClass = riesgo ? "border-red-400" : "border-green-400";
+            String bgClass = riesgo ? "bg-red-50" : "bg-green-50";
+
+            html.append("<div class='card shadow-sm mb-3 border ").append(borderClass).append("'>");
+            html.append("<div class='card-header ").append(bgClass).append(" font-bold'>").append(oferta.getNombre()).append("</div>");
+            html.append("<div class='card-body'>");
+            
+            // Grid de Métricas
+            html.append("<div class='row text-center mb-3'>");
+            // Promedio
+            html.append("<div class='col-4'>");
+            html.append("<h5 class='").append(lowGrade ? "text-danger" : "text-success").append(" font-bold'>").append(promedio == 100.0 ? "-" : String.format("%.1f", promedio)).append("</h5>");
+            html.append("<small class='text-muted'>Promedio</small>");
+            html.append("</div>");
+            // Asistencia
+            html.append("<div class='col-4'>");
+            html.append("<h5 class='").append(asistencia < 70.0 ? "text-danger" : "text-success").append(" font-bold'>").append(String.format("%.1f%%", asistencia)).append("</h5>");
+            html.append("<small class='text-muted'>Asistencia</small>");
+            html.append("</div>");
+            // Entregas Pendientes
+            html.append("<div class='col-4'>");
+            html.append("<h5 class='").append(!pendientes.isEmpty() ? "text-danger" : "text-success").append(" font-bold'>").append(pendientes.size()).append("</h5>");
+            html.append("<small class='text-muted'>Pendientes</small>");
+            html.append("</div>");
+            html.append("</div>"); // End row
+            
+            // Recomendaciones Específicas
+            html.append("<div class='mt-3 bg-light p-3 rounded'>");
+            html.append("<h6>💡 Recomendaciones:</h6>");
+            html.append("<ul class='list-unstyled mb-0 text-sm'>");
+            
+            boolean algunaRecomendacion = false;
+            // Detectamos promedio bajo considerando escalas 0-10 (<6) y 0-100 (<60)
+            boolean promedioBajo = (promedio < 6.0 || (promedio > 10.0 && promedio < 60.0)) && promedio != 100.0;
+                        // Integración de Consejos Personalizados por Actividad (Detalle Específico)
+            String consejosDetallados = getConsejosPersonalizados(alumno, oferta);
+            if (!consejosDetallados.isEmpty()) {
+                // Convertimos el string markdown-like del metodo a HTML simple si es necesario
+                // El metodo devuelve saltos <br> y **negritas**, es compatible.
+                html.append("<li class='mb-2'><strong>Detalles específicos:</strong>").append(consejosDetallados).append("</li>");
+                algunaRecomendacion = true;
+            }
+            if (promedioBajo) {
+                // Busqueda de proximo examen
+                Examen nextExam = null;
+                Modulo nextExamModule = null;
+                if (oferta instanceof Curso) {
+                    Curso c = (Curso) oferta;
+                    if (c.getModulos() != null) {
+                        LocalDateTime now = LocalDateTime.now();
+                        for (Modulo m : c.getModulos()) {
+                            if (m.getActividades() != null) {
+                                for (Actividad a : m.getActividades()) {
+                                    if (a instanceof Examen) {
+                                        Examen ex = (Examen) a;
+                                        if (ex.getFechaCierre() != null && ex.getFechaCierre().isAfter(now)) {
+                                            if (nextExam == null || ex.getFechaCierre().isBefore(nextExam.getFechaCierre())) {
+                                                nextExam = ex;
+                                                nextExamModule = m;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (nextExam != null) {
+                     html.append("<li class='mb-2'>📅 <strong>Próximo Examen:</strong> Se aproxima <u>").append(nextExam.getTitulo()).append("</u> (Cierra: ").append(nextExam.getFechaCierre().toLocalDate()).append(").<br>")
+                         .append("⚠️ Tu promedio es bajo, ¡es clave que apruebes este examen!<br>")
+                         .append("📝 <strong>Temas a evaluar:</strong> ").append(nextExamModule.getTemario() != null ? nextExamModule.getTemario() : "Contenidos del módulo.").append("<br>")
+                         .append("📚 <strong>Material de estudio:</strong> ").append(nextExamModule.getBibliografia() != null ? nextExamModule.getBibliografia() : "Recursos del aula virtual.").append("<br>")
+                         .append("💡 <strong>Sugerencia de estudio:</strong> Revisa los objetivos del módulo: <em>").append(nextExamModule.getObjetivos() != null ? nextExamModule.getObjetivos() : "Completar lecturas y prácticos").append("</em>.</li>");
+                } else {
+                    html.append("<li class='mb-2'>📚 <strong>Material de Estudio:</strong> Tu promedio es bajo. Te recomendamos repasar los módulos anteriores y realizar los tests de autoevaluación.</li>");
+                }
+                algunaRecomendacion = true;
+            }
+            if (asistencia < 75.0) {
+                html.append("<li class='mb-2'>📹 <strong>Clases en Vivo:</strong> Tu asistencia es baja (").append(String.format("%.1f", asistencia)).append("%). Recuerda que las clases no se graban, ¡es fundamental que asistas!</li>");
+                algunaRecomendacion = true;
+            }
+            if (!pendientes.isEmpty()) {
+                html.append("<li class='mb-2'>⚠️ <strong>Entregas:</strong> Prioriza subir: ").append(pendientes.stream().limit(2).collect(Collectors.joining(", ")));
+                if (pendientes.size() > 2) html.append(" y otras...");
+                html.append(".</li>");
+                algunaRecomendacion = true;
+            }
+            
+            if (!algunaRecomendacion) {
+                if (promedio >= 9.0) {
+                    html.append("<li>🌟 <strong>¡Excelente trabajo!</strong> Estás llevando la materia al día. ¿Te interesaría ayudar a compañeros en el foro?</li>");
+                } else {
+                    html.append("<li>✅ <strong>Todo en orden:</strong> Mantén este ritmo. Revisa regularmente las novedades del curso.</li>");
+                }
+            }
+            html.append("</ul>");
+            html.append("</div>");
+
+            // Botones de acción (Simulados)
+            html.append("<div class='mt-3 d-flex gap-2 justify-content-end'>");
+            if (lowGrade || !consejosDetallados.isEmpty()) {
+                 html.append("<button onclick='(window.aiChat || window.simpleChatInstance).solicitarTutoria(").append(oferta.getIdOferta()).append(")' class='btn btn-sm btn-warning text-white font-weight-bold' style='background-color:rgb(245, 158, 11); border:none;'>📧 Solicitar Tutoría</button>");
+            }
+            html.append("<a href='/alumno/aula/").append(oferta.getIdOferta()).append("' class='btn btn-sm btn-primary'>Ir al Curso</a>");
+            html.append("</div>");
+
+            html.append("</div></div>");
+        }
+        
+        html.append("</div>"); // End space-y-6
+        return html.toString();
+    }
+
     /**
      * Fuerza un análisis y devuelve el resultado para demostración manual
      */
@@ -352,9 +636,17 @@ public class AnalisisRendimientoService {
                 
                 if (asistenciaPeor < 70.0) {
                     sb.append("<br>⚠️ **Alerta**: Tu asistencia está por debajo del 70% requerido para aprobar.");
-                } else if (notaPeor < 60.0 && notaPeor != 100.0) {
+                } else if ((notaPeor < 6.0 || (notaPeor > 10.0 && notaPeor < 60.0)) && notaPeor != 100.0) {
                     sb.append("<br>⚠️ Tu promedio es bajo. Aquí tienes algunas recomendaciones:");
                     sb.append(getConsejosPersonalizados(alumno, targetOferta));
+                    
+                    // Botón para solicitar tutoría
+                    sb.append("<br><div style='margin-top: 10px;'>");
+                    sb.append("<button onclick=\"(window.aiChat || window.simpleChatInstance).solicitarTutoria(").append(targetOferta.getIdOferta()).append(")\" ");
+                    sb.append("style=\"background-color: #f59e0b; color: white; padding: 8px 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.9em; box-shadow: 0 2px 4px rgba(0,0,0,0.1);\">");
+                    sb.append("📧 Solicitar Tutoría con Docente");
+                    sb.append("</button>");
+                    sb.append("</div>");
                 } else {
                     sb.append("<br>Vas bien, pero no te descuides.");
                 }
@@ -401,7 +693,7 @@ public class AnalisisRendimientoService {
                                     grade = opt.get().getCalificacion();
                                 } else if (actividadCerrada && opt.isEmpty()) {
                                     // Tarea cerrada y sin entrega
-                                    consejos.append("<br>&nbsp;&nbsp;⚠️ **").append(titulo).append("**: No entregaste a tiempo.");
+                                    consejos.append("<br>&nbsp;&nbsp;⚠️ <strong>").append(titulo).append("</strong>: No entregaste a tiempo.");
                                     continue;
                                 }
                             } else if (a instanceof Examen) {
@@ -413,7 +705,7 @@ public class AnalisisRendimientoService {
                                         .max(Double::compareTo).orElse(0.0);
                                 } else if (actividadCerrada) {
                                      // Examen cerrado y sin intentos
-                                    consejos.append("<br>&nbsp;&nbsp;⚠️ **").append(titulo).append("**: No realizaste el examen a tiempo.");
+                                    consejos.append("<br>&nbsp;&nbsp;⚠️ <strong>").append(titulo).append("</strong>: No realizaste el examen a tiempo.");
                                     continue;
                                 }
                             }
@@ -421,8 +713,8 @@ public class AnalisisRendimientoService {
                             // Check logic: < 6 or (< 60 && > 10)
                             if (grade != null) {
                                 if (grade < 6.0 || (grade > 10.0 && grade < 60.0)) {
-                                    consejos.append("<br>&nbsp;&nbsp;❌ **").append(titulo).append("** (Nota: ").append(grade).append("): ");
-                                    consejos.append("Te sugiero repasar el contenido del **").append(m.getNombre()).append("** relacionado con esta actividad.");
+                                    consejos.append("<br>&nbsp;&nbsp;❌ <strong>").append(titulo).append("</strong> (Nota: ").append(grade).append("): ");
+                                    consejos.append("Te sugiero repasar el contenido del <strong>").append(m.getNombre()).append("</strong> relacionado con esta actividad.");
                                 }
                             }
                         }
@@ -603,7 +895,7 @@ public class AnalisisRendimientoService {
     
     private String generarRecomendacionParaDocente(String tipo) {
         if ("BAJO_ASISTENCIA".equals(tipo)) {
-            return "El alumno muestra signos de ausentismo crónico. Se recomienda contactarlo para verificar si tiene problemas de conectividad, salud o laborales que le impidan asistir. Fomentar la visualización de clases grabadas.";
+            return "El alumno muestra signos de ausentismo crónico. Se recomienda contactarlo para verificar si tiene problemas de conectividad, salud o laborales. Recordarle que no se dispone de grabaciones.";
         } else if ("BAJO_RENDIMIENTO".equals(tipo)) {
             return "El desempeño académico está por debajo de lo esperado. Sugiero ofrecerle una sesión de consulta breve o recomendarle material complementario específico de los temas donde falló.";
         } else if ("ACTIVIDADES_PENDIENTES".equals(tipo)) {
@@ -619,7 +911,7 @@ public class AnalisisRendimientoService {
         if ("BAJO_ASISTENCIA".equals(tipo)) {
             return "Hola " + nombre + ",\n\n" +
                    "Noté que has faltado a las últimas clases de " + curso + ". Quería saber si estás bien o si has tenido algún inconveniente para conectarte.\n" +
-                   "Recuerda que es importante mantener la regularidad, pero si necesitas ver las grabaciones, están disponibles en el aula.\n\n" +
+                   "Te recuerdo que en este curso no se utilizan grabaciones, por lo que la asistencia a los encuentros en vivo es muy importante para no perder el hilo.\n\n" +
                    "Quedo a tu disposición,\nSaludos.";
         } else if ("BAJO_RENDIMIENTO".equals(tipo)) {
              return "Hola " + nombre + ",\n\n" +
@@ -642,8 +934,8 @@ public class AnalisisRendimientoService {
         // Fallback local:
         if ("BAJO_ASISTENCIA".equals(tipo)) {
             return "Hola! He notado que te perdiste algunas clases de " + nombreCurso + ". " +
-                   "Te sugiero ver las grabaciones en el Aula Virtual para ponerte al día. " +
-                   "¿Necesitas ayuda con algún tema en específico?";
+                   "Recuerda que las clases son 100% síncronas y no quedan grabadas. " +
+                   "¿Necesitas ayuda para ponerte al día con los apuntes?";
         } else if ("BAJO_RENDIMIENTO".equals(tipo)) {
             return "Hola! Parece que " + nombreCurso + " se está poniendo difícil. " +
                    "Te recomiendo revisar el Módulo 3 y hacer los ejercicios de práctica nuevamente. " +

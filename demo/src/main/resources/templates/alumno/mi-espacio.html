@@ -823,63 +823,44 @@
             renderCalendar();
 
             // Función para trigger manual del análisis IA
-            window.triggerAnalysis = async function() {
+            window.triggerAnalysis = function() {
                 const btn = document.querySelector('button[onclick="triggerAnalysis()"]');
                 const status = document.getElementById('analysis-status');
                 
-                if(!btn) return;
+                // Buscar instancia del chat (apuntando a window.aiChat o window.simpleChatInstance)
+                const chatApp = window.aiChat || window.simpleChatInstance || (window.parent ? window.parent.aiChat : null);
                 
-                const originalText = btn.innerHTML;
-                
-                btn.disabled = true;
-                btn.classList.add('opacity-50', 'cursor-not-allowed');
-                status.textContent = 'Analizando tu rendimiento...';
-                status.className = 'text-xs text-center text-blue-600 mt-2 font-semibold';
-                
-                try {
-                    const response = await fetch('/ia/chat/trigger-analysis-personal', { method: 'POST' });
-                    
-                    if (response.ok) {
-                        const data = await response.json();
+                if (chatApp) {
+                    // UI Feedback
+                    if(btn) {
+                        btn.disabled = true;
+                        btn.classList.add('opacity-50', 'cursor-not-allowed');
+                        const originalText = btn.innerHTML;
+                        btn.innerHTML = '⏳ Procesando...';
                         
+                        setTimeout(() => {
+                            btn.disabled = false;
+                            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                            btn.innerHTML = originalText;
+                        }, 3000);
+                    }
+                    
+                    if(status) {
                         status.textContent = '✅ Abriendo asistente...';
                         status.className = 'text-xs text-center text-green-600 mt-2 font-bold';
-                        btn.innerHTML = '<i class="fas fa-check"></i> ¡Listo!';
-                        
-                        // Abrir asistente IA y mostrar mensaje
-                        setTimeout(() => {
-                            if (window.aiChat) {
-                                window.aiChat.openChat();
-                                
-                                if (data.suggestion) {
-                                    // Agregar mensaje directamente al chat
-                                    if(window.aiChat.addMessageWithTypingEffect) {
-                                        window.aiChat.addMessageWithTypingEffect("🤖 **Resultado del Análisis:**<br>" + data.suggestion, 'ai');
-                                    } else {
-                                        window.aiChat.addMessage("🤖 **Resultado del Análisis:**<br>" + data.suggestion, 'ai');
-                                    }
-                                }
-                            } else {
-                                console.error("AIChat no encontrado en window");
-                                status.textContent = '⚠️ Chat no disponible';
-                            }
-                        }, 800);
+                    }
 
-                    } else {
-                        status.textContent = '❌ Error al ejecutar.';
+                    // Open and trigger
+                    if(chatApp.openChat) chatApp.openChat();
+                    if(chatApp.triggerAnalysis) chatApp.triggerAnalysis();
+
+                } else {
+                    console.error("Asistente IA no encontrado");
+                    if(status) {
+                        status.textContent = '❌ Error: Asistente no disponible';
                         status.className = 'text-xs text-center text-red-600 mt-2 font-bold';
                     }
-                } catch (e) {
-                    console.error(e);
-                    status.textContent = '❌ Error de conexión.';
-                    status.className = 'text-xs text-center text-red-600 mt-2 font-bold';
                 }
-                
-                setTimeout(() => {
-                    btn.disabled = false;
-                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
-                    btn.innerHTML = originalText;
-                }, 5000);
             };
         });
     </script>

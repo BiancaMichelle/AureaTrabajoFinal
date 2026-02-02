@@ -33,7 +33,7 @@
     cursor: pointer;
     box-shadow: var(--ai-shadow);
     transition: var(--ai-transition);
-    z-index: 9999;
+    z-index: 10010; /* Align with primary chat styles */
     display: flex;
     align-items: center;
     justify-content: center;

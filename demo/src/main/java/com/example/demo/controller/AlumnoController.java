@@ -59,6 +59,7 @@ import com.example.demo.service.InstitutoService;
 import com.example.demo.service.ReporteService;
 import com.example.demo.service.EmailService;
 import com.example.demo.service.OfertaAcademicaService;
+import com.example.demo.service.AnalisisRendimientoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
@@ -96,6 +97,9 @@ public class AlumnoController {
     
     @Autowired
     private OfertaAcademicaService ofertaAcademicaService;
+
+    @Autowired
+    private AnalisisRendimientoService analisisRendimientoService;
 
     public AlumnoController(TareaRepository tareaRepository,
                           ExamenRepository examenRepository,
@@ -1240,6 +1244,33 @@ public class AlumnoController {
     @GetMapping("/perfil/actualizar")
     public String redirigirPerfilActualizar() {
         return "redirect:/perfil";
+    }
+
+    // Endpoint para IA - Análisis Personal del Alumno
+    @GetMapping("/ia/analisis-personal")
+    public ResponseEntity<String> analizarRendimientoPersonal(Principal principal) {
+        if (principal == null) return ResponseEntity.status(401).body("No autorizado");
+        
+        Optional<Usuario> usuarioOpt = usuarioRepository.findByDni(principal.getName());
+        if (usuarioOpt.isEmpty()) return ResponseEntity.notFound().build();
+
+        String reporteHtml = analisisRendimientoService.analizarAlumnoCompleto(usuarioOpt.get());
+        return ResponseEntity.ok(reporteHtml);
+    }
+    
+    @PostMapping("/ia/solicitar-tutoria")
+    public ResponseEntity<String> solicitarTutoria(@RequestParam Long ofertaId, Principal principal) {
+        if (principal == null) return ResponseEntity.status(401).body("No autorizado");
+        
+        Optional<Usuario> usuarioOpt = usuarioRepository.findByDni(principal.getName());
+        if (usuarioOpt.isEmpty()) return ResponseEntity.notFound().build();
+
+        try {
+            analisisRendimientoService.solicitarTutoria(usuarioOpt.get(), ofertaId);
+            return ResponseEntity.ok("Solicitud enviada correctamente a los docentes.");
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Error al procesar solicitud.");
+        }
     }
 }
 

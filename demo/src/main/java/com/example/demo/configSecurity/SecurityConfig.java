@@ -61,6 +61,7 @@ public class SecurityConfig {
                         .ignoringRequestMatchers(
                                 "/api/**",
                                 "/ia/**",
+                                "/alumno/ia/**",
                                 "/clase/docente-entrar/**",
                                 "/clase/docente/salir/**",
                                 "/pago/webhook",

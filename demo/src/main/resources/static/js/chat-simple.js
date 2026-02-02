@@ -12,7 +12,7 @@ class SimpleChat {
         this.createChatWindow();
         this.bindEvents();
         this.startNotificationPolling();
-        console.log('💬 Chat Simple iniciado');
+        console.log('Chat Simple iniciado');
     }
 
     startNotificationPolling() {
@@ -112,6 +112,9 @@ class SimpleChat {
                 Chat IA Aurea
                 <button id="close-chat" style="float: right; background: none; border: none; color: white; font-size: 18px; cursor: pointer;">×</button>
             </div>
+            <div style="padding: 10px; background: #f8f9fa; border-bottom: 1px solid #dee2e6; display:flex; gap:8px;">
+                 <button onclick="simpleChatInstance.triggerAnalysis()" style="border:1px solid #007bff; color: #007bff; background:white; border-radius:12px; font-size:11px; padding:4px 8px; cursor:pointer;">📊 Analizar mi Rendimiento</button>
+            </div>
             <div id="chat-messages" style="flex: 1; padding: 15px; overflow-y: auto; max-height: 350px; overflow-wrap: break-word; word-wrap: break-word; word-break: break-word;">
                 <div style="color: #666; font-size: 14px; margin-bottom: 10px;">
                     ¡Hola! Soy tu asistente de IA. ¿En qué puedo ayudarte?
@@ -165,6 +168,48 @@ class SimpleChat {
                 this.sendMessage();
             }
         });
+    }
+
+    async triggerAnalysis() {
+        this.addMessage("📊 Analizar mi Rendimiento", 'user');
+        this.addMessage("Procesando tu solicitud... ⏳", 'assistant');
+        
+        try {
+            const response = await fetch('/alumno/ia/analisis-personal');
+            if (response.ok) {
+                const html = await response.text();
+                this.addMessage(html, 'assistant');
+            } else {
+                this.addMessage("❌ Error al obtener el análisis.", 'error');
+            }
+        } catch (e) {
+            console.error(e);
+            this.addMessage("❌ Error de comunicación.", 'error');
+        }
+    }
+
+    solicitarTutoria(ofertaId) {
+        if (confirm("¿Confirmas que deseas enviar un correo solicitando tutoría al docente de este curso?")) {
+            this.addMessage("Solicitando tutoría...", "user");
+            
+             // Simulamos typing
+             const statusDiv = document.getElementById('status');
+             statusDiv.textContent = 'Procesando...';
+
+            fetch('/alumno/ia/solicitar-tutoria?ofertaId=' + ofertaId, { method: 'POST' })
+                .then(response => {
+                    if (response.ok) return response.text();
+                    throw new Error('Error en solicitud');
+                })
+                .then(msg => {
+                    statusDiv.textContent = '';
+                    this.addMessage("✅ " + msg, "assistant"); // assistant type for success style
+                })
+                .catch(err => {
+                    statusDiv.textContent = '';
+                    this.addMessage("❌ No se pudo enviar la solicitud. Intenta más tarde.", "error");
+                });
+        }
     }
 
     async sendMessage() {
