@@ -206,6 +206,11 @@ public class AnalisisRendimientoService {
     public static record OfertaRiesgo(Long id, String nombre, String motivo, long inscripcionesCount, String estado, java.time.LocalDate fechaInicio, int tareasCount) {}
 
     /**
+     * DTO para el resultado de baja manual
+     */
+    public static record BajaResultado(Long id, boolean success, String motivo, String nombre) {}
+
+    /**
      * Devuelve la lista de ofertas que cumplirían las condiciones de baja según las reglas
      * (NO aplica cambios en BD). Uso para mostrar modal al admin.
      */
@@ -289,15 +294,34 @@ public class AnalisisRendimientoService {
 
     /**
      * Aplica la baja (cambia estado y notifica) para la lista de ofertas indicadas por ID.
+     * Retorna lista de resultados con éxito o fallo por cada oferta.
      */
     @Transactional
-    public void aplicarBajasSeleccionadas(List<Long> ofertaIds) {
-        if (ofertaIds == null || ofertaIds.isEmpty()) return;
+    public List<BajaResultado> aplicarBajasSeleccionadas(List<Long> ofertaIds) {
+        List<BajaResultado> resultados = new ArrayList<>();
+        if (ofertaIds == null || ofertaIds.isEmpty()) return resultados;
+        
         for (Long id : ofertaIds) {
             OfertaAcademica oferta = ofertaAcademicaRepository.findById(id).orElse(null);
-            if (oferta == null) continue;
-            if (oferta.getEstado() == EstadoOferta.DE_BAJA) continue;
+            
+            if (oferta == null) {
+                resultados.add(new BajaResultado(id, false, "Oferta no encontrada", "ID " + id));
+                continue;
+            }
+            
+            if (oferta.getEstado() == EstadoOferta.DE_BAJA) {
+                resultados.add(new BajaResultado(id, false, "La oferta ya se encuentra dada de baja", oferta.getNombre()));
+                continue;
+            }
 
+            // Validar inscripciones activas para impedir la baja
+            int inscripcionesActivas = inscripcionRepository.countByOfertaAndEstadoInscripcionTrue(oferta);
+            if (inscripcionesActivas > 0) {
+                resultados.add(new BajaResultado(id, false, "Tiene " + inscripcionesActivas + " inscripciones activas", oferta.getNombre()));
+                continue;
+            }
+
+            // Aplicar baja si no hay impedimentos
             oferta.setEstado(EstadoOferta.DE_BAJA);
             ofertaAcademicaRepository.save(oferta);
 
@@ -321,7 +345,9 @@ public class AnalisisRendimientoService {
                     }
                 }
             }
+            resultados.add(new BajaResultado(id, true, "Baja aplicada correctamente", oferta.getNombre()));
         }
+        return resultados;
     }
 
     public void analizarAlumno(Usuario alumno) {

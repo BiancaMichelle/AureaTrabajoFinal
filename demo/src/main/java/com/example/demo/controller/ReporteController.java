@@ -91,36 +91,21 @@ public class ReporteController {
             return ResponseEntity.badRequest().body(Collections.singletonMap("error", "No se recibieron ids"));
         }
         try {
-            // Obtener contexto de riesgos para incluir en auditoría
-            List<?> riesgos = analisisRendimientoService.obtenerOfertasEnPeligro();
-            java.util.Map<Long, Object> mapaRiesgos = new java.util.HashMap<>();
-            for (Object o : riesgos) {
-                try {
-                    java.lang.reflect.Method m = o.getClass().getMethod("id");
-                    Long id = (Long) m.invoke(o);
-                    mapaRiesgos.put(id, o);
-                } catch (Exception ignored) {}
-            }
+            // Ejecutar bajas y obtener resultados (incluye validación de inscripciones activas)
+            List<AnalisisRendimientoService.BajaResultado> resultados = analisisRendimientoService.aplicarBajasSeleccionadas(ofertaIds);
 
-            // Construir detalles para auditoría antes de aplicar
+            // Construir detalles para auditoría
             StringBuilder detalles = new StringBuilder();
-            for (Long id : ofertaIds) {
-                if (mapaRiesgos.containsKey(id)) {
-                    Object o = mapaRiesgos.get(id);
-                    try {
-                        java.lang.reflect.Method getNombre = o.getClass().getMethod("nombre");
-                        java.lang.reflect.Method getMotivo = o.getClass().getMethod("motivo");
-                        detalles.append(getNombre.invoke(o)).append(" - ").append(getMotivo.invoke(o)).append("; ");
-                    } catch (Exception ex) {
-                        detalles.append("Oferta id= ").append(id).append("; ");
-                    }
+            boolean algunFallo = false;
+            
+            for (AnalisisRendimientoService.BajaResultado r : resultados) {
+                if (r.success()) {
+                    detalles.append("BAJA APLICADA: ").append(r.nombre()).append(" (ID: ").append(r.id()).append("); ");
                 } else {
-                    detalles.append("Oferta id= ").append(id).append(" (no en lista de riesgo); ");
+                    algunFallo = true;
+                    detalles.append("NO APLICADA: ").append(r.nombre()).append(" (ID: ").append(r.id()).append(") - Motivo: ").append(r.motivo()).append("; ");
                 }
             }
-
-            // Ejecutar bajas
-            analisisRendimientoService.aplicarBajasSeleccionadas(ofertaIds);
 
             // Registrar auditoría
             try {
@@ -138,7 +123,7 @@ public class ReporteController {
                     log.setAccion("DAR_DE_BAJA_OFERTAS_MANUAL");
                     log.setAfecta("OfertaAcademica");
                     log.setDetalles(detalles.toString());
-                    log.setExito(true);
+                    log.setExito(true); // Registramos éxito de la operación de auditoría, los detalles indican resultados individuales
                     log.setIp(request.getRemoteAddr());
                     auditLogService.registrar(log);
                 }
@@ -146,9 +131,9 @@ public class ReporteController {
                 System.err.println("Error registrando auditoría: " + e.getMessage());
             }
 
-            return ResponseEntity.ok(Collections.singletonMap("success", true));
+            return ResponseEntity.ok(resultados);
         } catch (Exception e) {
-            // Registrar auditoría de fallo
+            // Registrar auditoría de fallo técnico
             try {
                 Authentication auth = SecurityContextHolder.getContext().getAuthentication();
                 if (auth != null && auth.getPrincipal() instanceof CustomUsuarioDetails) {
@@ -163,7 +148,7 @@ public class ReporteController {
                     }
                     log.setAccion("DAR_DE_BAJA_OFERTAS_MANUAL");
                     log.setAfecta("OfertaAcademica");
-                    log.setDetalles("Error: " + e.getMessage());
+                    log.setDetalles("Error de sistema: " + e.getMessage());
                     log.setExito(false);
                     log.setIp(request.getRemoteAddr());
                     auditLogService.registrar(log);

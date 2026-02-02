@@ -1,7 +1,7 @@
 /**
  * Sistema global de modales de confirmación
  */
-const ModalConfirmacion = {
+window.ModalConfirmacion = {
     modalId: 'globalConfirmationModal',
     
     /**
