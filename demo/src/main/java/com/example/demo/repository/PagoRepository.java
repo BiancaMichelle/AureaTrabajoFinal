@@ -18,6 +18,9 @@ public interface PagoRepository extends JpaRepository<Pago, Long> {
 
     List<Pago> findByUsuarioId(java.util.UUID usuarioId);
 
+    // Para encontrar pagos abandonados (en proceso) antiguos
+    List<Pago> findByEstadoPagoAndFechaPagoBefore(com.example.demo.enums.EstadoPago estadoPago, LocalDateTime fechaPago);
+
     List<Pago> findByEstadoPago(String estadoPago);
 
     List<Pago> findByMetodoPago(String metodoPago);

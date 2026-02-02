@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      th:replace="~{reporte/layout/baseReporte :: layout(~{::style}, ~{::div.report-content})}">
+<head>
+    <style>
+        @page {
+            size: A4;
+        }
+        .data-table, .data-table th, .data-table td {
+            font-family: Arial, sans-serif !important;
+            font-size: 8pt !important;
+            padding: 4px !important;
+        }
+    </style>
+</head>
+<body>
+
+<div class="report-content">
+    
+    <div style="text-align: center; margin-bottom: 20px;">
+        <h2>Reporte de Usuarios del Sistema</h2>
+        <p style="font-size: 10pt; color: #666; margin-top: -10px;">
+            Periodo analizado: <span th:text="${periodoReporte}"></span>
+        </p>
+    </div>
+    
+    <!-- Resumen KPI Fila 1 -->
+    <table class="layout-table" style="margin-bottom: 20px;">
+        <tr>
+            <td style="width: 25%; padding: 0 5px;">
+                <div class="summary-box">
+                    <div class="summary-box-content">
+                        <div class="summary-label">Total Sistema</div>
+                        <div class="summary-value" th:text="${totalUsuariosSistema}">0</div>
+                    </div>
+                </div>
+            </td>
+            <td style="width: 25%; padding: 0 5px;">
+                <div class="summary-box">
+                    <div class="summary-box-content">
+                        <div class="summary-label">Total Filtrados</div>
+                        <div class="summary-value" th:text="${totalUsuariosReporte}" style="color: #2563eb;">0</div>
+                    </div>
+                </div>
+            </td>
+            <td style="width: 25%; padding: 0 5px;">
+                <div class="summary-box">
+                    <div class="summary-box-content">
+                        <div class="summary-label">Nuevos Ingresos<br/>(En Periodo)</div>
+                        <div class="summary-value" th:text="${nuevosIngresos}" style="color: #10b981;">0</div>
+                    </div>
+                </div>
+            </td>
+            <td style="width: 25%; padding: 0 5px;">
+                <div class="summary-box">
+                    <div class="summary-box-content">
+                        <div class="summary-label">Estado de Baja<br/>(Del Filtro)</div>
+                        <div class="summary-value" th:text="${usuariosInactivos}" style="color: #ef4444;">0</div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Gráfico Estadístico (Imagen Base64) -->
+    <div class="chart-container" th:if="${chartImage != null}">
+        <h3>Distribución de Usuarios por Rol</h3>
+        <img th:src="'data:image/png;base64,' + ${chartImage}" alt="Gráfico de Usuarios" style="width: 100%; max-height: 300px; object-fit: contain;"/>
+    </div>
+
+    <div class="page-break"></div>
+
+    <h3>Listado de Usuarios</h3>
+    
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="width: 12%;">DNI</th>
+                <th style="width: 25%;">Nombre Completo</th>
+                <th style="width: 20%;">Correo</th>
+                <th style="width: 13%;">Teléfono</th>
+                <th style="width: 10%;">Ofertas</th>
+                <th style="width: 12%;">Roles</th>
+                <th style="width: 8%;">Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="usuario : ${usuarios}">
+                <td th:text="${usuario.dni}">12345678</td>
+                <td>
+                    <span th:text="${usuario.nombre + ' ' + usuario.apellido}" style="font-weight: bold;">Nombre Apellido</span>
+                </td>
+                <td th:text="${usuario.correo}" style="font-size: 0.9em;">usuario@email.com</td>
+                <td th:text="${usuario.numTelefono}">-</td>
+                <td th:text="${usuario.inscripciones != null ? usuario.inscripciones.size() : 0}" style="text-align: center;">0</td>
+                <td>
+                    <div th:each="rol : ${usuario.roles}">
+                        <span th:text="${rol.nombre}" style="display:block; font-size: 0.8em;">ROL</span>
+                    </div>
+                </td>
+                <td>
+                    <span th:if="${usuario.estado}" class="status-badge" style="background-color: #d1fae5; color: #065f46; font-size: 0.8em;">ACTIVO</span>
+                    <span th:unless="${usuario.estado}" class="status-badge" style="background-color: #fee2e2; color: #b91c1c; font-size: 0.8em;">BAJA</span>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+</div>
+
+</body>
+</html>

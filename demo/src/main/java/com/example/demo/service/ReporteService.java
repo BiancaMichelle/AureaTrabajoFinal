@@ -7,19 +7,29 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StreamUtils;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.example.demo.model.OfertaAcademica;
 import com.example.demo.model.Pago;
 import com.example.demo.model.Curso;
 import com.example.demo.model.Docente;
 import com.example.demo.model.Usuario;
+import com.example.demo.model.Cuota;
 import com.example.demo.repository.OfertaAcademicaRepository;
 import com.example.demo.repository.UsuarioRepository;
+import com.example.demo.repository.CuotaRepository;
+import com.example.demo.enums.EstadoCuota;
 import com.lowagie.text.Chunk;
 import com.lowagie.text.Document;
 import com.lowagie.text.DocumentException;
@@ -30,8 +40,20 @@ import com.lowagie.text.Paragraph;
 import com.lowagie.text.Phrase;
 import com.lowagie.text.pdf.*;
 
+import java.util.Map;
+import java.util.Base64;
+import java.awt.image.BufferedImage;
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.JFreeChart;
+import org.jfree.data.general.DefaultPieDataset;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
+import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
+
 @Service
 public class ReporteService {
+
+    private static final Logger log = LoggerFactory.getLogger(ReporteService.class);
 
     @Autowired
     private OfertaAcademicaRepository ofertaRepository;
@@ -39,7 +61,87 @@ public class ReporteService {
     @Autowired
     private UsuarioRepository usuarioRepository;
 
-    public List<OfertaAcademica> filtrarOfertas(String nombre, String estado, Long categoriaId, LocalDate fechaInicio, LocalDate fechaFin) {
+    @Autowired
+    private CuotaRepository cuotaRepository;
+
+    @Autowired
+    private TemplateEngine templateEngine; // Thymeleaf Template Engine
+
+    private String cargarEstilos() {
+        try {
+            ClassPathResource resource = new ClassPathResource("static/style/reporte_pdf.css");
+            return StreamUtils.copyToString(resource.getInputStream(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return "body { font-family: Helvetica; }"; // Fallback simple
+        }
+    }
+
+    /**
+     * Genera un PDF a partir de una plantilla HTML Thymeleaf
+     */
+    public ByteArrayInputStream generarReportePdfDesdePlantilla(String templateName, Map<String, Object> data) {
+        log.info("📄 Iniciando generación de PDF desde plantilla: {}", templateName);
+        try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
+            Context context = new Context();
+            context.setVariables(data);
+            
+            log.debug("Procesando plantilla Thymeleaf...");
+            String htmlContent = templateEngine.process(templateName, context);
+            log.debug("HTML compilado (longitud: {})", htmlContent.length());
+            
+            // Validar HTML vacio
+            if (htmlContent == null || htmlContent.isEmpty()) {
+                throw new RuntimeException("La plantilla generó un HTML vacío");
+            }
+
+            log.debug("Renderizando PDF con OpenHTMLToPDF...");
+            PdfRendererBuilder builder = new PdfRendererBuilder();
+            builder.useFastMode();
+            builder.withHtmlContent(htmlContent, null);
+            builder.toStream(os);
+            builder.run();
+            
+            byte[] pdfBytes = os.toByteArray();
+            log.info("✅ PDF generado exitosamente. Tamaño: {} bytes", pdfBytes.length);
+            
+            return new ByteArrayInputStream(pdfBytes);
+        } catch (Exception e) {
+            log.error("❌ Error FATAL al generar PDF: {}", e.getMessage(), e);
+            throw new RuntimeException("Error generando PDF desde plantilla HTML: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Genera un gráfico de torta (Pie Chart) y lo devuelve como String Base64 para embeber en HTML
+     */
+    public String generarGraficoTortaBase64(Map<String, Number> datasetValues, String titulo) {
+        try {
+            DefaultPieDataset dataset = new DefaultPieDataset();
+            for (Map.Entry<String, Number> entry : datasetValues.entrySet()) {
+                dataset.setValue(entry.getKey(), entry.getValue());
+            }
+
+            JFreeChart chart = ChartFactory.createPieChart(
+                titulo,   // chart title
+                dataset,          // data
+                true,             // include legend
+                true,
+                false);
+
+            BufferedImage image = chart.createBufferedImage(600, 400);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            javax.imageio.ImageIO.write(image, "png", baos);
+            
+            byte[] bytes = baos.toByteArray();
+            return Base64.getEncoder().encodeToString(bytes);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public List<OfertaAcademica> filtrarOfertas(String nombre, String estado, Long categoriaId, LocalDate fechaInicio, LocalDate fechaFin, List<String> tipos) {
         List<OfertaAcademica> todas = ofertaRepository.findAll();
         
         return todas.stream()
@@ -48,6 +150,21 @@ public class ReporteService {
             .filter(o -> categoriaId == null || o.getCategorias().stream().anyMatch(c -> c.getIdCategoria().equals(categoriaId)))
             .filter(o -> fechaInicio == null || (o.getFechaInicio() != null && !o.getFechaInicio().isBefore(fechaInicio)))
             .filter(o -> fechaFin == null || (o.getFechaFin() != null && !o.getFechaFin().isAfter(fechaFin)))
+            .filter(o -> tipos == null || tipos.isEmpty() || tipos.contains(o.getTipoOferta()))
+            .collect(Collectors.toList());
+    }
+
+    public List<Usuario> filtrarUsuarios(String rol, Boolean estado, String nombre, LocalDate fechaInicio, LocalDate fechaFin) {
+        List<Usuario> todos = usuarioRepository.findAll();
+        
+        return todos.stream()
+            .filter(u -> rol == null || rol.isEmpty() || u.getRoles().stream().anyMatch(r -> r.getNombre().equalsIgnoreCase(rol)))
+            .filter(u -> estado == null || u.isEstado() == estado)
+            .filter(u -> nombre == null || nombre.isEmpty() || 
+                    (u.getNombre() + " " + u.getApellido()).toLowerCase().contains(nombre.toLowerCase()) ||
+                    u.getCorreo().toLowerCase().contains(nombre.toLowerCase()))
+            .filter(u -> fechaInicio == null || (u.getFechaRegistro() != null && !u.getFechaRegistro().toLocalDate().isBefore(fechaInicio)))
+            .filter(u -> fechaFin == null || (u.getFechaRegistro() != null && !u.getFechaRegistro().toLocalDate().isAfter(fechaFin)))
             .collect(Collectors.toList());
     }
 
@@ -780,6 +897,237 @@ public class ReporteService {
 
         return new ByteArrayInputStream(out.toByteArray());
     }
+
+    /**
+     * Versión HTML+CSS (Profesional) del reporte de pagos
+     */
+    public ByteArrayInputStream generarReportePagosPDF(List<Pago> pagos, Long filtroCursoId) {
+        // Calcular estadísticas
+        double totalMonto = pagos.stream().mapToDouble(p -> p.getMonto() != null ? p.getMonto().doubleValue() : 0).sum();
+        
+        // --- 1. Calcular Morosidad (Cuotas vencidas) ---
+        LocalDate today = LocalDate.now();
+        List<com.example.demo.model.Cuota> allCuotas = cuotaRepository.findAll();
+        
+        List<com.example.demo.model.Cuota> cuotasVencidas = allCuotas.stream()
+            .filter(c -> c.getEstado() == EstadoCuota.PENDIENTE)
+            .filter(c -> c.getFechaVencimiento() != null && c.getFechaVencimiento().isBefore(today))
+            .filter(c -> filtroCursoId == null || (c.getInscripcion() != null && c.getInscripcion().getOferta() != null && c.getInscripcion().getOferta().getIdOferta().equals(filtroCursoId)))
+            .collect(Collectors.toList());
+
+        long morososCount = cuotasVencidas.stream()
+            .map(c -> c.getInscripcion().getAlumno().getId())
+            .distinct()
+            .count();
+        
+        double deudaTotal = cuotasVencidas.stream()
+             .mapToDouble(c -> c.getMonto() != null ? c.getMonto().doubleValue() : 0)
+             .sum();
+
+        // --- 2. Ingresos por Curso (Breakdown) ---
+        Map<String, Double> ingresosPorCurso = pagos.stream()
+             .filter(p -> p.getOferta() != null)
+             .collect(Collectors.groupingBy(
+                 p -> p.getOferta().getNombre(),
+                 Collectors.summingDouble(p -> p.getMonto() != null ? p.getMonto().doubleValue() : 0.0)
+             ));
+
+        // --- 3. Cuotas Pendientes / Por vencer (Detalle) ---
+        List<Map<String, Object>> detalleCuotasList = cuotasVencidas.stream()
+               .limit(100) // Limitamos para no romper el PDF si son muchas
+               .map(c -> {
+                   Map<String, Object> map = new java.util.HashMap<>();
+                   map.put("alumno", c.getInscripcion().getAlumno().getNombre() + " " + c.getInscripcion().getAlumno().getApellido());
+                   map.put("curso", c.getInscripcion().getOferta() != null ? c.getInscripcion().getOferta().getNombre() : "N/A");
+                   map.put("cuota", "C-" + c.getNumeroCuota());
+                   map.put("vencimiento", c.getFechaVencimiento() != null ? c.getFechaVencimiento().toString() : "-");
+                   map.put("monto", String.format("$ %.2f", c.getMonto() != null ? c.getMonto().doubleValue() : 0.0));
+                   // Calcular interés simple del 5% como regla de negocio de ejemplo para el reporte
+                   double interes = (c.getMonto() != null ? c.getMonto().doubleValue() * 0.05 : 0.0);
+                   map.put("interes", String.format("$ %.2f", interes));
+                   return map;
+               }).collect(Collectors.toList());
+
+        // Preparar datos para el gráfico
+        Map<String, Number> datosGrafico = pagos.stream()
+            .collect(Collectors.groupingBy(
+                p -> p.getEstadoPago().toString(),
+                Collectors.counting()
+            ))
+            .entrySet().stream()
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+        String chartBase64 = generarGraficoTortaBase64(datosGrafico, "Distribución por Estado");
+
+        // Preparar contexto Thymeleaf
+        Map<String, Object> data = new java.util.HashMap<>();
+        data.put("pagos", pagos);
+        data.put("fechaEmision", LocalDate.now().toString());
+        data.put("reporteId", "RP-" + System.currentTimeMillis());
+        data.put("totalRecaudado", String.format("$ %.2f", totalMonto));
+        data.put("cantidadTransacciones", pagos.size());
+        data.put("morososCount", morososCount);
+        data.put("deudaTotal", String.format("$ %.2f", deudaTotal));
+        data.put("ingresosPorCurso", ingresosPorCurso);
+        data.put("detalleCuotas", detalleCuotasList); // Pasamos la nueva lista al contexto
+        data.put("chartImage", chartBase64);
+        data.put("estilos", cargarEstilos());
+
+        return generarReportePdfDesdePlantilla("reporte/reportePagos", data);
+    }
+
+    /**
+     * Versión HTML+CSS (Profesional) del reporte de ofertas
+     */
+    public ByteArrayInputStream generarReporteOfertasPDF(List<OfertaAcademica> ofertas, LocalDate fechaInicio, LocalDate fechaFin) {
+        // --- KPIs ---
+        long totalOfertas = ofertas.size();
+        long ofertasPublicadas = ofertas.stream().filter(o -> o.getEstado() != null && "PUBLICADO".equals(o.getEstado().name())).count();
+        long totalInscritos = ofertas.stream().mapToLong(o -> o.getInscripciones() != null ? o.getInscripciones().size() : 0).sum();
+        
+        // Ingresos Estimados (Inscritos * Costo)
+        double ingresosEstimados = ofertas.stream()
+                .mapToDouble(o -> {
+                    long insc = o.getInscripciones() != null ? o.getInscripciones().size() : 0;
+                    double cost = o.getCostoInscripcion() != null ? o.getCostoInscripcion() : 0.0;
+                    return insc * cost;
+                }).sum();
+
+        // Calculo de ocupación y alertas (Ofertas con cupos definidos)
+        long ofertasConBajaOcupacion = ofertas.stream()
+            .filter(o -> {
+                if(o.getCupos() == null || o.getCupos() >= 2000000000) return false;
+                long insc = o.getInscripciones() != null ? o.getInscripciones().size() : 0;
+                double porcentaje = (double) insc / o.getCupos();
+                return porcentaje < 0.5; // Menos del 50%
+            }).count();
+
+        long ofertasLlenas = ofertas.stream()
+            .filter(o -> {
+                if(o.getCupos() == null || o.getCupos() >= 2000000000) return false;
+                long insc = o.getInscripciones() != null ? o.getInscripciones().size() : 0;
+                return insc >= o.getCupos();
+            }).count();
+
+        // --- Gráfico: Ofertas por Tipo ---
+        Map<String, Number> datosGrafico = ofertas.stream()
+            .collect(Collectors.groupingBy(
+                o -> o.getTipoOferta() != null ? o.getTipoOferta() : "DESCONOCIDO", 
+                Collectors.counting()
+            ))
+            .entrySet().stream()
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+        String chartBase64 = generarGraficoTortaBase64(datosGrafico, "Distribución por Tipo");
+
+        // --- Contexto ---
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        
+        // Periodo Text
+        String periodoTexto = "Histórico Completo";
+        if (fechaInicio != null && fechaFin != null) {
+            periodoTexto = fechaInicio.format(formatter) + " al " + fechaFin.format(formatter);
+        } else if (fechaInicio != null) {
+            periodoTexto = "Desde " + fechaInicio.format(formatter);
+        } else if (fechaFin != null) {
+            periodoTexto = "Hasta " + fechaFin.format(formatter);
+        }
+        
+        // Info usuario generador
+        String generadoPor = "Sistema";
+        if (org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication() != null) {
+             generadoPor = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        }
+
+        Map<String, Object> data = new java.util.HashMap<>();
+        data.put("ofertas", ofertas);
+        data.put("fechaEmision", LocalDate.now().format(formatter));
+        data.put("periodoReporte", periodoTexto);
+        data.put("generadoPor", generadoPor);
+        data.put("reporteId", "RO-" + System.currentTimeMillis());
+        data.put("totalOfertas", totalOfertas);
+        data.put("ofertasPublicadas", ofertasPublicadas);
+        data.put("totalInscritos", totalInscritos);
+        data.put("ofertasBajaOcupacion", ofertasConBajaOcupacion);
+        data.put("ofertasLlenas", ofertasLlenas);
+        data.put("ingresosEstimados", String.format("$ %.2f", ingresosEstimados));
+        data.put("chartImage", chartBase64);
+        data.put("estilos", cargarEstilos());
+
+        return generarReportePdfDesdePlantilla("reporte/reporteOfertas", data);
+    }
+
+    /**
+     * Versión HTML+CSS (Profesional) del reporte de usuarios
+     */
+    @Transactional(readOnly = true)
+    public ByteArrayInputStream generarReporteUsuariosPDF(List<Usuario> usuarios, LocalDate fechaInicio, LocalDate fechaFin) {
+        // --- KPIs ---
+        long totalUsuariosReporte = usuarios.size();
+        long totalUsuariosSistema = usuarioRepository.count();
+        long usuariosActivos = usuarios.stream().filter(Usuario::isEstado).count();
+        long usuariosInactivos = totalUsuariosReporte - usuariosActivos;
+
+        // Nuevos en el periodo (solo si hay fechaInicio)
+        long nuevosIngresos = 0;
+        if(fechaInicio != null) {
+             nuevosIngresos = usuarios.stream().filter(u -> u.getFechaRegistro() != null && !u.getFechaRegistro().toLocalDate().isBefore(fechaInicio)).count();
+        } else {
+             // Si no hay filtro fecha inicio, mostramos total como nuevos (o 0 según semántica)
+             nuevosIngresos = totalUsuariosReporte; 
+        }
+        
+        // --- Distribución por Rol ---
+        // Asumiendo que un usuario puede tener varios roles, contamos ocurrencias de roles principales
+        Map<String, Long> rolesCount = usuarios.stream()
+            .flatMap(u -> u.getRoles().stream())
+            .collect(Collectors.groupingBy(
+                r -> r.getNombre(), // Nombre del rol
+                Collectors.counting()
+            ));
+
+        // --- Gráfico: Usuarios por Rol ---
+        Map<String, Number> datosGrafico = new java.util.HashMap<>();
+        rolesCount.forEach((k, v) -> datosGrafico.put(k, v));
+        
+        String chartBase64 = generarGraficoTortaBase64(datosGrafico, "Distribución por Rol");
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        
+        // Periodo Text
+        String periodoTexto = "Histórico Completo";
+        if (fechaInicio != null && fechaFin != null) {
+            periodoTexto = fechaInicio.format(formatter) + " al " + fechaFin.format(formatter);
+        } else if (fechaInicio != null) {
+            periodoTexto = "Desde " + fechaInicio.format(formatter);
+        } else if (fechaFin != null) {
+            periodoTexto = "Hasta " + fechaFin.format(formatter);
+        }
+
+        // Info usuario generador
+        String generadoPor = "Sistema";
+        if (org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication() != null) {
+             generadoPor = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        }
+
+        // --- Contexto ---
+        Map<String, Object> data = new java.util.HashMap<>();
+        data.put("usuarios", usuarios);
+        data.put("fechaEmision", LocalDate.now().format(formatter));
+        data.put("periodoReporte", periodoTexto);
+        data.put("generadoPor", generadoPor);
+        data.put("reporteId", "RU-" + System.currentTimeMillis());
+        data.put("totalUsuariosSistema", totalUsuariosSistema);
+        data.put("totalUsuariosReporte", totalUsuariosReporte);
+        data.put("usuariosActivos", usuariosActivos);
+        data.put("usuariosInactivos", usuariosInactivos);
+        data.put("nuevosIngresos", nuevosIngresos);
+        data.put("chartImage", chartBase64);
+        data.put("estilos", cargarEstilos());
+
+        return generarReportePdfDesdePlantilla("reporte/reporteUsuarios", data);
+    }
+
 
     private void addTableRow(PdfPTable table, String label, String value) {
         com.lowagie.text.Font boldFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12);

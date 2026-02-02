@@ -4216,6 +4216,28 @@
             </div>
 
             <div class="form-group" style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">Tipos de Oferta:</label>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; background: #f9fafb; padding: 12px; border-radius: 6px; border: 1px solid #e5e7eb;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0; font-size: 0.95em;">
+                        <input type="checkbox" name="tipos" value="Curso" checked style="width: 16px; height: 16px; accent-color: #2563eb; cursor: pointer;"> 
+                        <span style="color: #4b5563;">Curso</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0; font-size: 0.95em;">
+                        <input type="checkbox" name="tipos" value="Formación" checked style="width: 16px; height: 16px; accent-color: #2563eb; cursor: pointer;"> 
+                        <span style="color: #4b5563;">Formación Prof.</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0; font-size: 0.95em;">
+                        <input type="checkbox" name="tipos" value="Seminario" checked style="width: 16px; height: 16px; accent-color: #2563eb; cursor: pointer;"> 
+                        <span style="color: #4b5563;">Seminario</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0; font-size: 0.95em;">
+                        <input type="checkbox" name="tipos" value="Charla" checked style="width: 16px; height: 16px; accent-color: #2563eb; cursor: pointer;"> 
+                        <span style="color: #4b5563;">Charla</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 15px;">
                 <label for="report-estado" style="display: block; margin-bottom: 5px; font-weight: 500;">Estado:</label>
                 <select id="report-estado" name="estado" class="form-control" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
                     <option value="">Todos los estados</option>
@@ -4274,6 +4296,24 @@
             if (event.target == reportModal) {
                 closeModal();
             }
+        }
+
+        // Validación del formulario de reportes
+        const reportForm = document.getElementById('report-form');
+        if (reportForm) {
+            reportForm.addEventListener('submit', function(e) {
+                const checkboxes = document.querySelectorAll('input[name="tipos"]:checked');
+                
+                if (checkboxes.length === 0) {
+                    e.preventDefault();
+                    // Usar la función de notificación existente si está disponible, sino alert
+                    if (typeof mostrarNotificacion === 'function') {
+                        mostrarNotificacion('Debe seleccionar al menos un Tipo de Oferta para generar el reporte.', 'warning');
+                    } else {
+                        alert('Debe seleccionar al menos un Tipo de Oferta para generar el reporte.');
+                    }
+                }
+            });
         }
     });
 </script>

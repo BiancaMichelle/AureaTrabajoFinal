@@ -119,6 +119,23 @@
 			<artifactId>openpdf</artifactId>
 			<version>1.3.30</version>
 		</dependency>
+		<!-- OpenHTMLToPDF para reportes profesionales HTML -> PDF -->
+		<dependency>
+			<groupId>com.openhtmltopdf</groupId>
+			<artifactId>openhtmltopdf-pdfbox</artifactId>
+			<version>1.0.10</version>
+		</dependency>
+		<dependency>
+			<groupId>com.openhtmltopdf</groupId>
+			<artifactId>openhtmltopdf-slf4j</artifactId>
+			<version>1.0.10</version>
+		</dependency>
+		<!-- JFreeChart para gráficos en reportes -->
+		<dependency>
+			<groupId>org.jfree</groupId>
+			<artifactId>jfreechart</artifactId>
+			<version>1.5.3</version>
+		</dependency>
 	</dependencies>
 	<dependencyManagement>
 		<dependencies>

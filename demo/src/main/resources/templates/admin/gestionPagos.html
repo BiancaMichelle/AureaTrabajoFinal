@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      th:replace="~{layout/adminBase :: layout(~{::title}, ~{::main})}">
+<head>
+    <title>Gestión de Pagos - Administrador</title>
+</head>
+<body>
+
+    <main class="main-content">
+        <header class="main-header">
+            <h1><i class="fas fa-credit-card"></i> Gestión de Pagos</h1>
+            <div class="header-actions">
+                <a th:href="@{/admin/pagos/reporte(estado=${estadoSeleccionado}, dni=${dniBusqueda})}" class="btn-primary" target="_blank">
+                    <i class="fas fa-file-pdf"></i> Generar Reporte
+                </a>
+            </div>
+        </header>
+
+        <div class="admin-card">
+            <div class="card-header">
+                <h2>Filtros</h2>
+            </div>
+            <div class="card-body">
+                <form th:action="@{/admin/pagos}" method="get" class="search-form" style="display: flex; gap: 15px; align-items: flex-end;">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="dni">DNI del Alumno:</label>
+                        <input type="text" id="dni" name="dni" class="form-control" th:value="${dniBusqueda}" placeholder="Buscar por DNI...">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="estado">Estado del Pago:</label>
+                        <select id="estado" name="estado" class="form-control">
+                            <option value="">Todos</option>
+                            <option th:each="est : ${estados}" 
+                                    th:value="${est.name()}" 
+                                    th:text="${est.name()}"
+                                    th:selected="${estadoSeleccionado == est.name()}"></option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Filtrar</button>
+                    <a th:href="@{/admin/pagos}" class="btn btn-secondary"><i class="fas fa-eraser"></i> Limpiar</a>
+                </form>
+            </div>
+        </div>
+
+        <div class="admin-card mt-4">
+            <div class="card-header">
+                <h2>Lista de Pagos</h2>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Fecha</th>
+                                <th>Alumno</th>
+                                <th>Concepto</th>
+                                <th>Monto</th>
+                                <th>Método</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="pago : ${pagos}">
+                                <td th:text="${pago.idPago}">1</td>
+                                <td th:text="${#temporals.format(pago.fechaPago, 'dd/MM/yyyy HH:mm')}">01/01/2026</td>
+                                <td>
+                                    <div style="display: flex; flex-direction: column;">
+                                        <span style="font-weight: bold;" th:text="${pago.usuario.nombre + ' ' + pago.usuario.apellido}">Nombre</span>
+                                        <span style="font-size: 0.85em; color: #666;" th:text="${pago.usuario.dni}">DNI</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span th:if="${pago.oferta != null}" th:text="${pago.oferta.nombre}">Curso</span>
+                                    <span th:unless="${pago.oferta != null}" th:text="${pago.descripcion}">Descripción</span>
+                                    <span th:if="${!#lists.isEmpty(pago.cuotas)}" class="badge bg-info" style="font-size: 0.7em; margin-left: 5px;">Cuota</span>
+                                </td>
+                                <td style="font-weight: bold;" th:text="${#numbers.formatCurrency(pago.monto)}">$100.00</td>
+                                <td th:text="${pago.metodoPago}">TC</td>
+                                <td>
+                                    <span th:if="${pago.estadoPago.name() == 'COMPLETADO'}" class="status-badge status-active">Completado</span>
+                                    <span th:if="${pago.estadoPago.name() == 'PENDIENTE'}" class="status-badge status-pending">Pendiente</span>
+                                    <span th:if="${pago.estadoPago.name() == 'RECHAZADO'}" class="status-badge status-inactive">Rechazado</span>
+                                </td>
+                                <td>
+                                    <a th:if="${pago.estadoPago.name() == 'COMPLETADO'}" 
+                                       th:href="@{'/admin/pagos/comprobante/' + ${pago.idPago}}" 
+                                       class="btn-icon" title="Descargar Comprobante">
+                                        <i class="fas fa-file-pdf"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(pagos)}">
+                                <td colspan="8" class="text-center">No se encontraron pagos con los filtros seleccionados.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+</body>
+</html>

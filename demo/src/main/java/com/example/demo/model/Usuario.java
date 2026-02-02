@@ -135,6 +135,9 @@ public class Usuario {
   @OneToMany(mappedBy = "usuario")
   private List<Pago> pagos;
 
+  @OneToMany(mappedBy = "alumno")
+  private List<Inscripciones> inscripciones;
+
   // Método de validación personalizado para la edad
   @AssertTrue(message = "Debes tener al menos 16 años")
   public boolean isMayorDe16() {

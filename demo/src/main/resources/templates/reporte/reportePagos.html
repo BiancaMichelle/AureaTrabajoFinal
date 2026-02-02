@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      th:replace="~{reporte/layout/baseReporte :: layout(~{::style}, ~{::div.report-content})}">
+<head>
+    <style>
+        /* Estilos específicos para este reporte si hicieran falta */
+    </style>
+</head>
+<body>
+
+<div class="report-content">
+    
+    <h2>Reporte de Pagos y Transacciones</h2>
+    
+    <!-- Resumen KPI Fila 1 -->
+    <table class="layout-table" style="margin-bottom: 20px;">
+        <tr>
+            <td style="width: 50%; padding: 0 5px;">
+                <div class="summary-box">
+                    <div class="summary-box-content">
+                        <div class="summary-label">Total Recaudado</div>
+                        <div class="summary-value" th:text="${totalRecaudado}">$0.00</div>
+                    </div>
+                </div>
+            </td>
+            <td style="width: 50%; padding: 0 5px;">
+                <div class="summary-box">
+                    <div class="summary-box-content">
+                        <div class="summary-label">Transacciones</div>
+                        <div class="summary-value" th:text="${cantidadTransacciones}">0</div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Resumen KPI Fila 2 (Morosidad) -->
+    <table class="layout-table" style="margin-bottom: 30px;">
+        <tr>
+            <td style="width: 50%; padding: 0 5px;">
+                <div class="summary-box">
+                    <div class="summary-box-content">
+                        <div class="summary-label">Alumnos Morosos (Est.)</div>
+                        <div class="summary-value" th:text="${morososCount}" style="color: #ef4444;">0</div>
+                    </div>
+                </div>
+            </td>
+            <td style="width: 50%; padding: 0 5px;">
+                <div class="summary-box">
+                    <div class="summary-box-content">
+                        <div class="summary-label">Deuda Pendiente (Vencida)</div>
+                        <div class="summary-value" th:text="${deudaTotal}" style="color: #ef4444;">$0.00</div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Gráfico Estadístico (Imagen Base64) -->
+    <div class="chart-container" th:if="${chartImage != null}">
+        <h3>Distribución de Pagos por Estado</h3>
+        <img th:src="'data:image/png;base64,' + ${chartImage}" alt="Gráfico de Pagos" style="width: 100%; max-height: 300px; object-fit: contain;"/>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- Desglose por Curso -->
+    <div th:if="${ingresosPorCurso != null and !ingresosPorCurso.isEmpty()}">
+        <h3>Ingresos por Curso / Oferta</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Curso / Oferta</th>
+                    <th style="text-align: right;">Total Ingresos</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="entry : ${ingresosPorCurso}">
+                    <td th:text="${entry.key}">Curso Java</td>
+                    <td style="text-align: right;" th:text="'$ ' + ${#numbers.formatDecimal(entry.value, 1, 'COMMA', 2, 'POINT')}">$ 1000.00</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Informe de Morosidad (Cuotas Pendientes Vencidas) -->
+    <div th:if="${detalleCuotas != null and !detalleCuotas.isEmpty()}">
+        <h3>Informe de Morosidad (Cuotas Vencidas - Top 100)</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Alumno</th>
+                    <th>Curso</th>
+                    <th>Cuota</th>
+                    <th>Vencimiento</th>
+                    <th>Monto Base</th>
+                    <th>Interés (Est. 5%)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="c : ${detalleCuotas}">
+                    <td th:text="${c['alumno']}">Juan Perez</td>
+                    <td th:text="${c['curso']}">Java</td>
+                    <td th:text="${c['cuota']}">C-1</td>
+                    <td th:text="${c['vencimiento']}">2026-01-01</td>
+                    <td th:text="${c['monto']}">$100.00</td>
+                    <td th:text="${c['interes']}" style="color: #ef4444;">$5.00</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>Detalle de Transacciones (Pagos Realizados)</h3>
+    
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Fecha</th>
+                <th>Alumno</th>
+                <th>Concepto</th>
+                <th>Estado</th>
+                <th style="text-align: right;">Monto</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="pago : ${pagos}">
+                <td th:text="${pago.idPago}">1</td>
+                <td th:text="${#temporals.format(pago.fechaPago, 'dd/MM/yyyy HH:mm')}">01/01/2026</td>
+                <td>
+                    <div th:if="${pago.usuario != null}">
+                        <span th:text="${pago.usuario.nombre + ' ' + pago.usuario.apellido}">Nombre</span><br/>
+                        <small style="color: #666;" th:text="${pago.usuario.dni}">DNI</small>
+                    </div>
+                </td>
+                <td th:text="${pago.descripcion}">Concepto</td>
+                <td>
+                    <span th:text="${pago.estadoPago}" 
+                          th:class="'status-badge status-' + ${pago.estadoPago}">COMPLETADO</span>
+                </td>
+                <td style="text-align: right;" th:text="'$ ' + ${#numbers.formatDecimal(pago.monto, 1, 'COMMA', 2, 'POINT')}">$ 100.00</td>
+            </tr>
+        </tbody>
+    </table>
+
+</div>
+
+</body>
+</html>

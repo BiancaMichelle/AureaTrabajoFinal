@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      th:replace="~{reporte/layout/baseReporte :: layout(~{::style}, ~{::div.report-content})}">
+<head>
+    <style>
+        @page {
+            size: A4;
+            margin: 1.5cm;
+        }
+        .data-table, .data-table th, .data-table td {
+            font-family: Arial, sans-serif !important;
+            font-size: 8pt !important; /* Letra más chica */
+            padding: 3px !important;
+        }
+        .status-badge {
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-weight: bold;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+
+<div class="report-content">
+    
+    <div style="text-align: center; margin-bottom: 20px;">
+        <h2>Reporte de Ofertas Académicas</h2>
+        <p style="font-size: 10pt; color: #666; margin-top: -10px;">
+            Periodo analizado: <span th:text="${periodoReporte}"></span>
+        </p>
+    </div>
+    
+    <!-- Resumen KPI Fila 1 -->
+    <table class="layout-table" style="margin-bottom: 20px;">
+        <tr>
+            <td style="width: 50%; padding: 0 5px;">
+                <div class="summary-box">
+                    <div class="summary-box-content">
+                        <div class="summary-label">Total Ofertas</div>
+                        <div class="summary-value" th:text="${totalOfertas}">0</div>
+                    </div>
+                </div>
+            </td>
+            <td style="width: 50%; padding: 0 5px;">
+                <div class="summary-box">
+                    <div class="summary-box-content">
+                        <div class="summary-label">Publicadas (Activas)</div>
+                        <div class="summary-value" th:text="${ofertasPublicadas}">0</div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Resumen KPI Fila 2 -->
+    <table class="layout-table" style="margin-bottom: 30px;">
+        <tr>
+            <td style="width: 25%; padding: 0 5px;">
+                <div class="summary-box">
+                    <div class="summary-box-content">
+                        <div class="summary-label">Total Inscritos</div>
+                        <div class="summary-value" th:text="${totalInscritos}">0</div>
+                    </div>
+                </div>
+            </td>
+            <td style="width: 25%; padding: 0 5px;">
+                <div class="summary-box">
+                    <div class="summary-box-content">
+                        <div class="summary-label">Baja Demanda (&lt;50%)</div>
+                        <div class="summary-value" th:text="${ofertasBajaOcupacion}" style="color: #ea580c;">0</div>
+                    </div>
+                </div>
+            </td>
+            <td style="width: 25%; padding: 0 5px;">
+                <div class="summary-box">
+                    <div class="summary-box-content">
+                        <div class="summary-label">Cursos Llenos (100%)</div>
+                        <div class="summary-value" th:text="${ofertasLlenas}" style="color: #16a34a;">0</div>
+                    </div>
+                </div>
+            </td>
+            <td style="width: 25%; padding: 0 5px;">
+                <div class="summary-box">
+                    <div class="summary-box-content">
+                        <div class="summary-label">Ingresos Estimados</div>
+                        <div class="summary-value" th:text="${ingresosEstimados}">$0.00</div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Gráfico Estadístico (Imagen Base64) -->
+    <div class="chart-container" th:if="${chartImage != null}">
+        <h3>Distribución por Tipo de Oferta</h3>
+        <img th:src="'data:image/png;base64,' + ${chartImage}" alt="Gráfico de Ofertas" style="width: 100%; max-height: 300px; object-fit: contain;"/>
+    </div>
+
+    <div class="page-break"></div>
+
+    <h3>Detalle de Ofertas Listadas</h3>
+    
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="width: 25%;">Nombre</th>
+                <th style="width: 8%;">Tipo</th>
+                <th style="width: 8%;">Mod.</th>
+                <th style="width: 8%;">Est.</th>
+                <th style="width: 10%;">Inicio</th>
+                <th style="width: 10%;">Fin</th>
+                <th style="width: 5%; text-align: center;">Insc.</th>
+                <th style="width: 5%; text-align: center;">Cupo</th>
+                <th style="width: 8%; text-align: center;">% Ocup.</th>
+                <th style="width: 13%; text-align: right;">Costo</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="oferta : ${ofertas}">
+                <td>
+                    <span th:text="${oferta.nombre}" style="font-weight: bold;">Nombre del Curso</span>
+                </td>
+                <td th:text="${oferta.tipoOferta}" style="color: #333333;">TIPO</td>
+                <td th:text="${oferta.modalidad}">Modalidad</td>
+                <td>
+                     <span th:text="${oferta.estado}" style="color: #333333;">ESTADO</span>
+                </td>
+                <td th:text="${#temporals.format(oferta.fechaInicio, 'dd/MM/yyyy')}">01/01/2026</td>
+                <td th:text="${oferta.fechaFin != null ? #temporals.format(oferta.fechaFin, 'dd/MM/yyyy') : '-'}">01/02/2026</td>
+                <td style="text-align: center;">
+                    <span th:text="${oferta.inscripciones != null ? oferta.inscripciones.size() : 0}">0</span>
+                </td>
+                <td style="text-align: center;">
+                    <span th:if="${oferta.cupos != null and oferta.cupos < 2000000000}" th:text="${oferta.cupos}">100</span>
+                    <span th:unless="${oferta.cupos != null and oferta.cupos < 2000000000}">-</span>
+                </td>
+                
+                <!-- Cálculo de Ocupación -->
+                <td style="text-align: center;" 
+                    th:with="insc=${oferta.inscripciones != null ? oferta.inscripciones.size() : 0}, 
+                             cupo=${(oferta.cupos != null and oferta.cupos < 2000000000) ? oferta.cupos : 0}, 
+                             percent=${cupo > 0 ? (insc * 100.0 / cupo) : 0}">
+                    
+                    <span th:if="${cupo > 0}" 
+                          th:text="${#numbers.formatDecimal(percent, 1, 0) + '%'}"
+                          th:style="${percent < 50 ? 'color: #ea580c; font-weight:bold;' : (percent >= 100 ? 'color: #16a34a; font-weight:bold;' : '')}">
+                        50%
+                    </span>
+                    <span th:unless="${cupo > 0}">-</span>
+                </td>
+
+                <td style="text-align: right;" 
+                    th:text="${oferta.costoInscripcion != null ? '$ ' + #numbers.formatDecimal(oferta.costoInscripcion, 1, 'COMMA', 2, 'POINT') : '-'}">$ 100.00</td>
+            </tr>
+        </tbody>
+    </table>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,172 @@
+@page {
+    size: A4;
+    margin: 20mm;
+
+    @bottom-center {
+        content: "Página " counter(page) " de " counter(pages);
+        font-family: 'Helvetica', sans-serif;
+        font-size: 10pt;
+        color: #666;
+    }
+
+    @top-right {
+        content: "Instituto Aurea";
+        font-family: 'Helvetica', sans-serif;
+        font-size: 8pt;
+        color: #999;
+    }
+}
+
+body {
+    font-family: 'Helvetica', sans-serif;
+    line-height: 1.5;
+    color: #333;
+    margin: 0;
+    font-size: 12pt;
+}
+
+h1, h2, h3 {
+    color: #2c3e50;
+    margin-top: 0;
+}
+
+h1 {
+    font-size: 24pt;
+    border-bottom: 2px solid #2563eb;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+h2 {
+    font-size: 18pt;
+    margin-top: 20px;
+    margin-bottom: 15px;
+    background-color: #f8fafc;
+    padding: 8px 12px;
+    border-left: 5px solid #2563eb;
+}
+
+/* Estructura de layout con tablas para máxima compatibilidad PDF */
+.header-container {
+    /* Usamos una tabla para alinear los elementos del encabezado */
+    display: -fs-table;
+    -fs-table-cell-spacing: 0;
+    width: 100%;
+    margin-bottom: 30px;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 20px;
+}
+
+.header-left, .header-right {
+    display: -fs-table-cell;
+    vertical-align: middle;
+}
+
+.header-right {
+    text-align: right;
+}
+
+.report-meta {
+    font-size: 10pt;
+    color: #64748b;
+}
+
+/* Contenedor de las tarjetas de resumen */
+.layout-table {
+    width: 100%;
+    border-collapse: separate; /* Usar separate para que el border-spacing funcione */
+    border-spacing: 10px 0; /* Espacio horizontal entre celdas */
+    margin-bottom: 30px;
+    page-break-inside: avoid; /* Evita que la tabla se corte entre páginas */
+}
+
+.summary-box {
+    background: #f1f5f9;
+    border: 1px solid #cbd5f5;
+    border-radius: 8px;
+    padding: 20px; /* Aumentamos el padding */
+    text-align: center;
+    height: 100px; /* Altura fija para todas las cajas */
+    display: -fs-table; /* Usar display de tabla para centrar verticalmente */
+    width: 100%;
+}
+
+.summary-box-content {
+    display: -fs-table-cell;
+    vertical-align: middle;
+}
+
+.summary-value {
+    font-size: 22pt; /* Tamaño de fuente más grande */
+    font-weight: bold;
+    color: #2563eb;
+    margin: 5px 0;
+}
+
+.summary-label {
+    font-size: 11pt; /* Un poco más grande */
+    text-transform: uppercase;
+    color: #64748b;
+}
+
+table.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    font-size: 10pt;
+}
+
+table.data-table th, 
+table.data-table td {
+    border: 1px solid #e2e8f0;
+    padding: 10px 14px; /* Más padding */
+    text-align: left;
+}
+
+table.data-table th {
+    background-color: #f1f5f9; /* Un gris más suave */
+    color: #1e293b;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 9pt;
+}
+
+table.data-table tr:nth-child(even) {
+    background-color: #f8fafc;
+}
+
+.status-badge {
+    padding: 5px 10px; /* Más padding */
+    border-radius: 12px; /* Más redondeado */
+    font-size: 9pt;
+    font-weight: bold;
+    color: white;
+    display: inline-block;
+    text-transform: capitalize;
+}
+
+.status-COMPLETADO { background-color: #10b981; }
+.status-PENDIENTE { background-color: #f59e0b; }
+.status-EN_PROCESO { background-color: #3b82f6; }
+.status-FALLIDO { background-color: #ef4444; }
+.status-CANCELADO { background-color: #6b7280; }
+
+.chart-container {
+    text-align: center;
+    margin: 30px 0;
+    page-break-inside: avoid;
+}
+
+.chart-container img {
+    max-width: 90%; /* Reducir un poco para que no toque los bordes */
+    height: auto;
+}
+
+.footer {
+    /* El pie de página se gestiona con @bottom-center en @page */
+    display: none;
+}
+
+.page-break {
+    page-break-before: always;
+}

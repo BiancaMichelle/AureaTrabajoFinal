@@ -1,5 +1,6 @@
 package com.example.demo.controller;
 
+import com.example.demo.service.EmailService;
 import java.security.Principal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -93,6 +94,9 @@ public class ExamenController {
     private InstitutoService institutoService;
     
     @Autowired
+    private EmailService emailService;
+    
+    @Autowired
     private ObjectMapper objectMapper;
 
     /**
@@ -121,8 +125,11 @@ public class ExamenController {
                     return "redirect:/alumno/mis-ofertas?error=No+tienes+una+inscripcion+activa+para+este+curso";
                 }
                 
-                // 2. Validar Mora
-                Integer diasMoraPermitidos = institutoService.obtenerInstituto().getDiasMoraBloqueoAula();
+                // 2. Validar Mora (Con lógica de baja)
+                com.example.demo.model.Instituto instituto = institutoService.obtenerInstituto();
+                Integer diasMoraPermitidos = instituto.getDiasMoraBloqueoExamen();
+                if (diasMoraPermitidos == null) diasMoraPermitidos = 0;
+
                 // Usamos findByInscripcion y filtramos en memoria porque findCuotasVencidas no filtra por ID
                 List<Cuota> cuotas = cuotaRepository.findByInscripcionIdInscripcion(inscripcionActiva.getIdInscripcion());
                 List<Cuota> cuotasVencidas = cuotas.stream()
@@ -132,12 +139,33 @@ public class ExamenController {
                 
                 if (!cuotasVencidas.isEmpty()) {
                     long maxDiasMora = cuotasVencidas.stream()
-                        .mapToLong(c -> java.time.temporal.ChronoUnit.DAYS.between(c.getFechaVencimiento(), LocalDateTime.now()))
+                        .mapToLong(c -> java.time.temporal.ChronoUnit.DAYS.between(c.getFechaVencimiento(), LocalDate.now()))
                         .max().orElse(0);
                         
                     if (maxDiasMora > diasMoraPermitidos) {
-                         // Redirigir a vista de bloqueo (reutilizamos la del aula bloqueada)
-                         return "aula-bloqueada"; 
+                         // Baja de la inscripción (Oferta perdida)
+                         inscripcionActiva.setEstadoInscripcion(false);
+                         inscripcionRepository.save(inscripcionActiva);
+
+                         try {
+                            com.example.demo.model.Usuario alumno = usuarioRepository.findByDni(principal.getName()).orElse(null);
+                            if (alumno != null && alumno.getCorreo() != null) {
+                                String asunto = "Baja de inscripción - " + instituto.getNombreInstituto();
+                                String cuerpo = "Estimado/a " + alumno.getNombre() + ",<br><br>" +
+                                                "Lamentamos informarle que su inscripción al curso <b>" + 
+                                                examen.getModulo().getCurso().getNombre() + 
+                                                "</b> ha sido dada de baja debido a la falta de regularización de sus pagos (Mora superior a " + diasMoraPermitidos + " días).<br>" +
+                                                "Por favor, contacte con administración para más detalles.";
+                                emailService.sendEmail(alumno.getCorreo(), asunto, cuerpo);
+                            }
+                         } catch (Exception e) {
+                             e.printStackTrace();
+                         }
+
+                         return "redirect:/alumno/mis-ofertas?error=Tu+inscripción+ha+sido+cancelada+por+deuda+excesiva";
+                    } else {
+                        // Deuda existente pero dentro del margen de tolerancia -> Solo Bloqueo
+                        return "aula-bloqueada"; 
                     }
                 }
 
@@ -193,7 +221,10 @@ public class ExamenController {
                 }
                 
                 // 2. Validar Mora
-                Integer diasMoraPermitidos = institutoService.obtenerInstituto().getDiasMoraBloqueoAula();
+                com.example.demo.model.Instituto instituto = institutoService.obtenerInstituto();
+                Integer diasMoraPermitidos = instituto.getDiasMoraBloqueoExamen();
+                if (diasMoraPermitidos == null) diasMoraPermitidos = 0;
+
                 // Usamos findByInscripcion y filtramos en memoria
                 List<Cuota> cuotas = cuotaRepository.findByInscripcionIdInscripcion(inscripcionActiva.getIdInscripcion());
                 List<Cuota> cuotasVencidas = cuotas.stream()
@@ -203,11 +234,29 @@ public class ExamenController {
                 
                 if (!cuotasVencidas.isEmpty()) {
                     long maxDiasMora = cuotasVencidas.stream()
-                        .mapToLong(c -> java.time.temporal.ChronoUnit.DAYS.between(c.getFechaVencimiento(), LocalDateTime.now()))
+                        .mapToLong(c -> java.time.temporal.ChronoUnit.DAYS.between(c.getFechaVencimiento(), LocalDate.now()))
                         .max().orElse(0);
                         
                     if (maxDiasMora > diasMoraPermitidos) {
-                         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Acceso bloqueado por pagos pendientes"));
+                         // Baja de la inscripción (Oferta perdida)
+                         inscripcionActiva.setEstadoInscripcion(false);
+                         inscripcionRepository.save(inscripcionActiva);
+
+                         try {
+                            com.example.demo.model.Usuario alumno = usuarioRepository.findByDni(principal.getName()).orElse(null);
+                            if (alumno != null && alumno.getCorreo() != null) {
+                                String asunto = "Baja de inscripción - " + instituto.getNombreInstituto();
+                                String cuerpo = "Estimado/a " + alumno.getNombre() + ",<br><br>" +
+                                                "Lamentamos informarle que su inscripción al curso <b>" + 
+                                                examen.getModulo().getCurso().getNombre() + 
+                                                "</b> ha sido dada de baja debido a la falta de regularización de sus pagos.<br>";
+                                emailService.sendEmail(alumno.getCorreo(), asunto, cuerpo);
+                            }
+                         } catch (Exception e) {}
+
+                         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Oferta perdida por deuda excesiva"));
+                    } else {
+                         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Acceso bloqueado. Debe regularizar sus pagos."));
                     }
                 }
 

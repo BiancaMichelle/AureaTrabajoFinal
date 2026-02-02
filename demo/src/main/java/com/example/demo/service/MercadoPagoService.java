@@ -75,7 +75,8 @@ public class MercadoPagoService {
             pago.setUsuario(usuario);
             pago.setOferta(oferta);
             pago.setMonto(inputData.totalAmount());
-            pago.setEstadoPago(EstadoPago.PENDIENTE);
+            // Se inicia en EN_PROCESO para diferenciarlo de las cuotas que usan PENDIENTE
+            pago.setEstadoPago(EstadoPago.EN_PROCESO);
             pago.setMetodoPago("MERCADOPAGO");
             pago.setDescripcion("Inscripción a " + oferta.getNombre());
             pago.setPreferenceId(response.preferenceId());
@@ -216,16 +217,20 @@ public class MercadoPagoService {
                     break;
 
                 case "rejected":
-                case "cancelled":
                     pagoLocal.setEstadoPago(EstadoPago.FALLIDO);
                     pagoRepository.save(pagoLocal);
-                    log.info("❌ Pago rechazado/cancelado: {}", paymentId);
+                    log.info("❌ Pago rechazado: {}", paymentId);
+                    break;
+                case "cancelled":
+                    pagoLocal.setEstadoPago(EstadoPago.CANCELADO);
+                    pagoRepository.save(pagoLocal);
+                    log.info("🚫 Pago cancelado: {}", paymentId);
                     break;
                 case "in_process":
                 case "pending":
-                    pagoLocal.setEstadoPago(EstadoPago.PENDIENTE);
+                    pagoLocal.setEstadoPago(EstadoPago.EN_PROCESO);
                     pagoRepository.save(pagoLocal);
-                    log.info("⏳ Pago en proceso/pendiente: {}", paymentId);
+                    log.info("⏳ Pago en proceso: {}", paymentId);
                     break;
 
                 default:

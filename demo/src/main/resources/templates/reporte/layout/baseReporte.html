@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:fragment="layout(styles, content)">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Reporte Institucional</title>
+    <!-- CSS incrustado dinámicamente -->
+    <style th:utext="${estilos}">
+        /* Fallback o estilos base si no carga el externo */
+        body { font-family: sans-serif; }
+    </style>
+    <!-- Estilos específicos de la página hija -->
+    <th:block th:replace="${styles}"></th:block>
+</head>
+<body>
+
+    <!-- Encabezado General (Se repite o es fijo) -->
+    <div class="header-container">
+        <div class="header-left">
+            <h1 style="margin: 0; font-size: 20pt; color: #2563eb;">Instituto Aurea</h1>
+            <p style="margin: 0; color: #64748b;">Excelencia Académica</p>
+        </div>
+        <div class="header-right">
+            <div class="report-meta">
+                <p><strong>Fecha de Emisión:</strong> <span th:text="${fechaEmision}">01/01/2026</span></p>
+                <p><strong>Generado por:</strong> <span th:text="${generadoPor}">Sistema</span></p>
+                <p><strong>Reporte ID:</strong> <span th:text="${reporteId}">#0000</span></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenido Dinámico del Reporte -->
+    <div th:replace="${content}">
+        <p>Contenido del reporte...</p>
+    </div>
+
+    <!-- Pie de Página (Gestionado por CSS @page) -->
+    <div class="footer">
+        <p>Instituto Aurea - Av. Corrientes 1234, CABA - www.aurea.edu.ar</p>
+    </div>
+</body>
+</html>
