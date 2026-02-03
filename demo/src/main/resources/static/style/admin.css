@@ -3430,7 +3430,7 @@ textarea.form-control:focus {
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1000;
+    z-index: 20000; /* Asegurar que esté por encima de todo */
     animation: fadeIn 0.3s ease-out;
 }
 

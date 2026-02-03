@@ -3,7 +3,9 @@ package com.example.demo.model;
 import jakarta.servlet.http.HttpServletRequest;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.AfterReturning;
+import org.aspectj.lang.annotation.AfterThrowing;
 import org.aspectj.lang.annotation.Aspect;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -13,6 +15,7 @@ import com.example.demo.service.AuditLogService;
 import java.sql.Date;
 import java.sql.Time;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Set;
 
 @Aspect
@@ -27,90 +30,83 @@ public class AuditAspect {
         this.request = request;
     }
 
-    @AfterReturning("@annotation(auditable)")
-    public void registrar(JoinPoint jp, Auditable auditable) {
+    @AfterReturning(pointcut = "@annotation(auditable)", returning = "result")
+    public void registrar(JoinPoint jp, Auditable auditable, Object result) {
 
         AuditLog log = new AuditLog();
-
-        // ------------------------------------------------------------
-        // FECHA Y HORA
-        // ------------------------------------------------------------
         LocalDateTime now = LocalDateTime.now();
         log.setFecha(Date.valueOf(now.toLocalDate()));
         log.setHora(Time.valueOf(now.toLocalTime()));
 
-        // ------------------------------------------------------------
-        // ACCIÓN Y DETALLES
-        // ------------------------------------------------------------
         log.setAccion(auditable.action());
         log.setAfecta(auditable.entity());
-        log.setDetalles("Método ejecutado: " + jp.getSignature().getName());
-
-        // ------------------------------------------------------------
-        // USUARIO Y ROL DESDE SPRING SECURITY
-        // ------------------------------------------------------------
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         
-        System.out.println("🔍 Debug Auditoría:");
-        System.out.println("  - Authentication: " + (auth != null ? "Presente" : "Null"));
-        
-        if (auth != null) {
-            System.out.println("  - Autenticado: " + auth.isAuthenticated());
-            System.out.println("  - Nombre: " + auth.getName());
-            System.out.println("  - Principal tipo: " + auth.getPrincipal().getClass().getSimpleName());
-        }
+        // Analyze result for success/failure
+        boolean exito = true;
+        StringBuilder detalles = new StringBuilder("Método ejecutado: " + jp.getSignature().getName());
 
-        if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getName())) {
-
-            Object principal = auth.getPrincipal();
-
-            // Si usás un UserDetails personalizado
-            if (principal instanceof CustomUsuarioDetails usuarioDetails) {
-                System.out.println(" CustomUsuarioDetails encontrado");
-                Usuario usuario = usuarioDetails.getUsuario();
-                System.out.println("  - Usuario: " + usuario.getNombre() + " " + usuario.getApellido());
-                
-                log.setUsuario(usuario);
-                
-                // Obtener el primer rol del usuario (o el rol principal)
-                Set<Rol> roles = usuario.getRoles();
-                System.out.println("  - Roles disponibles: " + roles.size());
-                
-                if (!roles.isEmpty()) {
-                    Rol rolPrincipal = roles.iterator().next();
-                    System.out.println("  - Rol asignado: " + rolPrincipal.getNombre());
-                    log.setRol(rolPrincipal);
-                } else {
-                    System.out.println("  ⚠️ Usuario sin roles");
-                }
-            } else {
-                System.out.println("  ❌ Principal no es CustomUsuarioDetails: " + principal.getClass().getName());
-                
-                // Fallback: intentar obtener usuario por DNI desde authentication name
-                if (auth.getName() != null && !auth.getName().isEmpty()) {
-                    System.out.println("  🔄 Intentando fallback con DNI: " + auth.getName());
-                    // Aquí podrías agregar lógica para buscar el usuario por DNI si fuera necesario
+        if (result instanceof ResponseEntity) {
+            ResponseEntity<?> response = (ResponseEntity<?>) result;
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                exito = false;
+                detalles.append(" | Status: ").append(response.getStatusCode());
+            }
+            if (response.getBody() instanceof Map) {
+                Map<?, ?> body = (Map<?, ?>) response.getBody();
+                if (Boolean.FALSE.equals(body.get("success"))) {
+                    exito = false;
+                    if (body.containsKey("error")) {
+                        detalles.append(" | Error: ").append(body.get("error"));
+                    }
                 }
             }
-        } else {
-            System.out.println("Usuario no autenticado o anónimo");
         }
+        
+        log.setDetalles(detalles.toString());
+        log.setExito(exito);
 
-        // ------------------------------------------------------------
-        // IP Y DETALLES DE RED
-        // ------------------------------------------------------------
-        String clientIp = obtenerIpCliente(request);
-        log.setIp(clientIp);
+        setUsuarioFromAuth(log);
+        log.setIp(obtenerIpCliente(request));
 
-        // ------------------------------------------------------------
-        // ESTADO
-        // ------------------------------------------------------------
-        log.setExito(true);
-
-        // ------------------------------------------------------------
-        // GUARDAR LOG
-        // ------------------------------------------------------------
         auditService.registrar(log);
+    }
+    
+    @AfterThrowing(pointcut = "@annotation(auditable)", throwing = "ex")
+    public void registrarFallo(JoinPoint jp, Auditable auditable, Throwable ex) {
+        AuditLog log = new AuditLog();
+        LocalDateTime now = LocalDateTime.now();
+        log.setFecha(Date.valueOf(now.toLocalDate()));
+        log.setHora(Time.valueOf(now.toLocalTime()));
+        log.setAccion(auditable.action());
+        log.setAfecta(auditable.entity());
+        log.setExito(false);
+        log.setDetalles("Exception: " + ex.getClass().getSimpleName() + " - " + ex.getMessage() 
+            + " | Args: " + resumirArgs(jp.getArgs()));
+        log.setIp(obtenerIpCliente(request));
+        
+        setUsuarioFromAuth(log);
+        
+        auditService.registrar(log);
+    }
+
+    private void setUsuarioFromAuth(AuditLog log) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getName())) {
+            Object principal = auth.getPrincipal();
+            if (principal instanceof CustomUsuarioDetails) {
+                CustomUsuarioDetails usuarioDetails = (CustomUsuarioDetails) principal;
+                Usuario usuario = usuarioDetails.getUsuario();
+                log.setUsuario(usuario);
+                Set<Rol> roles = usuario.getRoles();
+                if (!roles.isEmpty()) {
+                    log.setRol(roles.iterator().next());
+                }
+            } else {
+                 if (auth.getName() != null && !auth.getName().isEmpty()) {
+                    // Fallback handled by services if needed, or left empty
+                }
+            }
+        }
     }
     
     private String obtenerIpCliente(HttpServletRequest request) {
@@ -124,5 +120,20 @@ public class AuditAspect {
             }
         }
         return request.getRemoteAddr();
+    }
+
+    private String resumirArgs(Object[] args) {
+        if (args == null || args.length == 0) return "";
+        StringBuilder sb = new StringBuilder();
+        for (Object a : args) {
+            if (a == null) continue;
+            if (a instanceof Long || a instanceof Integer || a instanceof String) {
+                sb.append(a.toString()).append(";");
+            } else if (a instanceof Usuario) {
+                Usuario u = (Usuario)a;
+                sb.append("usuario=").append(u.getDni()).append(";");
+            } 
+        }
+        return sb.toString();
     }
 }

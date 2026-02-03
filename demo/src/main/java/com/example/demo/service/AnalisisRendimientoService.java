@@ -33,6 +33,14 @@ import com.example.demo.repository.EntregaRepository;
 import com.example.demo.repository.IntentoRepository;
 import com.example.demo.repository.AsistenciaRepository;
 
+import com.example.demo.service.InstitutoService;
+import com.example.demo.model.Instituto;
+import com.example.demo.enums.EstadoOferta;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
+import java.util.Collections;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
@@ -44,6 +52,9 @@ public class AnalisisRendimientoService {
 
     @Autowired
     private UsuarioRepository usuarioRepository;
+    
+    @Autowired
+    private InstitutoService institutoService;
 
     @Autowired
     private InscripcionRepository inscripcionRepository;
@@ -82,6 +93,261 @@ public class AnalisisRendimientoService {
         }
         
         log.info("✅ Análisis finalizado.");
+    }
+
+    // Se ejecuta todos los días a las 06:00 AM para verificar bajas automáticas
+    @Scheduled(cron = "0 0 6 * * *")
+    @Transactional
+    public void ejecutarAnalisisDeBajaAutomatica() {
+        log.info("📉 Iniciando Análisis de Baja Automática de Ofertas...");
+        
+        Instituto instituto = institutoService.obtenerInstituto();
+        // Verificar si la baja automatica esta activada
+        if (!Boolean.TRUE.equals(instituto.getPermisoBajaAutomatica())) {
+            log.info("⏹️ Baja automática desactivada en configuración institucional.");
+            return;
+        }
+
+        int minAlumnos = instituto.getMinimoAlumnoBaja() != null ? instituto.getMinimoAlumnoBaja() : 5;
+        int diasInactividad = instituto.getInactividadBaja() != null ? instituto.getInactividadBaja() : 30;
+
+        List<OfertaAcademica> ofertasAnalizar = ofertaAcademicaRepository.findByEstadoIn(
+            Arrays.asList(EstadoOferta.ACTIVA, EstadoOferta.ENCURSO)
+        );
+
+        for (OfertaAcademica oferta : ofertasAnalizar) {
+            boolean darDeBaja = false;
+            String motivoBaja = "";
+            // Usamos la lista ya existente en el repo, optimizable con count query
+            List<Inscripciones> ins = inscripcionRepository.findByOfertaAndEstadoInscripcionTrue(oferta);
+            long inscripcionesCount = (ins != null) ? ins.size() : 0;
+
+            // 1. Análisis de Inicio Inminente (Solo para ACTIVA, aun no empezó o está por empezar)
+            // "falte de 3 a 1 dia para que comience"
+            if (oferta.getEstado() == EstadoOferta.ACTIVA && oferta.getFechaInicio() != null) {
+                long diasParaInicio = ChronoUnit.DAYS.between(LocalDate.now(), oferta.getFechaInicio());
+                if (diasParaInicio >= 1 && diasParaInicio <= 3) {
+                     if (inscripcionesCount <= minAlumnos) {
+                         darDeBaja = true;
+                         motivoBaja = "Inicio inminente (" + diasParaInicio + " días) con matrícula insuficiente (" + inscripcionesCount + " inscritos. Mínimo: " + minAlumnos + ")";
+                     }
+                }
+            }
+
+            // 2. Análisis de Matrícula e Inactividad (Solo para ENCURSO)
+            if (!darDeBaja && oferta.getEstado() == EstadoOferta.ENCURSO) {
+                 // "minimo de inscriptos"
+                 if (inscripcionesCount < minAlumnos) {
+                      darDeBaja = true;
+                      motivoBaja = "Matrícula insuficiente durante el cursado (" + inscripcionesCount + " inscritos. Mínimo: " + minAlumnos + ")";
+                 } else {
+                     // Inactividad de entregas
+                     List<Tarea> tareasCurso = new ArrayList<>();
+                     if (oferta instanceof Curso) {
+                         Curso c = (Curso) oferta;
+                         if (c.getModulos() != null) {
+                             c.getModulos().forEach(m -> {
+                                 if (m.getActividades() != null) {
+                                     m.getActividades().stream()
+                                         .filter(a -> a instanceof Tarea)
+                                         .map(a -> (Tarea) a)
+                                         .forEach(tareasCurso::add);
+                                 }
+                             });
+                         }
+                     }
+                     // Note: "Formacion" in this model does not contain nested Cursos;
+                     // inactivity-by-tasks validation applies only to Curso instances.
+                     
+                     // Si la oferta REQUIERE tareas (tiene tareas configuradas), validamos inactividad
+                     if (!tareasCurso.isEmpty()) {
+                         LocalDateTime fechaLimite = LocalDateTime.now().minusDays(diasInactividad);
+                         long entregasRecientes = entregaRepository.countByTareaInAndFechaEntregaAfter(tareasCurso, fechaLimite);
+                         if (entregasRecientes == 0) {
+                             darDeBaja = true;
+                             motivoBaja = "Inactividad: Ninguna entrega de tareas en los últimos " + diasInactividad + " días.";
+                         }
+                     }
+                 }
+            }
+
+            if (darDeBaja) {
+                log.warn("⚠️ BAJA AUTOMÁTICA para oferta {}: {}", oferta.getNombre(), motivoBaja);
+                oferta.setEstado(EstadoOferta.DE_BAJA);
+                ofertaAcademicaRepository.save(oferta);
+                
+                // Notificar docentes (si aplica)
+                List<? extends Usuario> docentes = new ArrayList<>();
+                if (oferta instanceof Curso) {
+                    docentes = ((Curso)oferta).getDocentes();
+                } else if (oferta instanceof Formacion) {
+                    docentes = ((Formacion)oferta).getDocentes();
+                }
+                
+                if(docentes != null) {
+                    for(Usuario doc : docentes) {
+                        if (doc.getCorreo() != null) {
+                            emailService.sendEmail(doc.getCorreo(), 
+                                "Baja Automática de Oferta: " + oferta.getNombre(), 
+                                "La oferta académica ha sido dada de baja automáticamente por el sistema.<br>" +
+                                "<b>Motivo:</b> " + motivoBaja + "<br>" +
+                                "Si considera que es un error, contacte con administración para reactivarla.");
+                        }
+                    }
+                }
+            }
+        }
+        log.info("✅ Análisis de baja finalizado.");
+    }
+
+    /**
+     * Estructura DTO para exponer las ofertas en peligro al frontend
+     */
+    public static record OfertaRiesgo(Long id, String nombre, String motivo, long inscripcionesCount, String estado, java.time.LocalDate fechaInicio, int tareasCount) {}
+
+    /**
+     * DTO para el resultado de baja manual
+     */
+    public static record BajaResultado(Long id, boolean success, String motivo, String nombre) {}
+
+    /**
+     * Devuelve la lista de ofertas que cumplirían las condiciones de baja según las reglas
+     * (NO aplica cambios en BD). Uso para mostrar modal al admin.
+     */
+    @Transactional(readOnly = true)
+    public List<OfertaRiesgo> obtenerOfertasEnPeligro() {
+        List<OfertaAcademica> ofertasAnalizar = ofertaAcademicaRepository.findByEstadoIn(
+            Arrays.asList(EstadoOferta.ACTIVA, EstadoOferta.ENCURSO)
+        );
+
+        Instituto instituto = institutoService.obtenerInstituto();
+        int minAlumnos = instituto.getMinimoAlumnoBaja() != null ? instituto.getMinimoAlumnoBaja() : 5;
+        int diasInactividad = instituto.getInactividadBaja() != null ? instituto.getInactividadBaja() : 30;
+
+        List<OfertaRiesgo> resultado = new ArrayList<>();
+
+        for (OfertaAcademica oferta : ofertasAnalizar) {
+            boolean darDeBaja = false;
+            String motivoBaja = "";
+            List<Inscripciones> ins = inscripcionRepository.findByOfertaAndEstadoInscripcionTrue(oferta);
+            long inscripcionesCount = (ins != null) ? ins.size() : 0;
+
+            if (oferta.getEstado() == EstadoOferta.ACTIVA && oferta.getFechaInicio() != null) {
+                long diasParaInicio = ChronoUnit.DAYS.between(LocalDate.now(), oferta.getFechaInicio());
+                if (diasParaInicio >= 1 && diasParaInicio <= 3) {
+                     if (inscripcionesCount <= minAlumnos) {
+                         darDeBaja = true;
+                         motivoBaja = "Inicio inminente (" + diasParaInicio + " días) con matrícula insuficiente (" + inscripcionesCount + " inscritos. Mínimo: " + minAlumnos + ")";
+                     }
+                }
+            }
+
+            if (!darDeBaja && oferta.getEstado() == EstadoOferta.ENCURSO) {
+                 if (inscripcionesCount < minAlumnos) {
+                      darDeBaja = true;
+                      motivoBaja = "Matrícula insuficiente durante el cursado (" + inscripcionesCount + " inscritos. Mínimo: " + minAlumnos + ")";
+                 } else {
+                     List<Tarea> tareasCurso = new ArrayList<>();
+                     if (oferta instanceof Curso) {
+                         Curso c = (Curso) oferta;
+                         if (c.getModulos() != null) {
+                             c.getModulos().forEach(m -> {
+                                 if (m.getActividades() != null) {
+                                     m.getActividades().stream()
+                                         .filter(a -> a instanceof Tarea)
+                                         .map(a -> (Tarea) a)
+                                         .forEach(tareasCurso::add);
+                                 }
+                             });
+                         }
+                     }
+
+                     if (!tareasCurso.isEmpty()) {
+                         LocalDateTime fechaLimite = LocalDateTime.now().minusDays(diasInactividad);
+                         long entregasRecientes = entregaRepository.countByTareaInAndFechaEntregaAfter(tareasCurso, fechaLimite);
+                         if (entregasRecientes == 0) {
+                             darDeBaja = true;
+                             motivoBaja = "Inactividad: Ninguna entrega de tareas en los últimos " + diasInactividad + " días.";
+                         }
+                     }
+                 }
+            }
+
+            if (darDeBaja) {
+                int tareasCount = 0;
+                if (oferta instanceof Curso) {
+                    Curso c = (Curso) oferta;
+                    if (c.getModulos() != null) {
+                        for (Modulo m : c.getModulos()) {
+                            if (m.getActividades() != null) {
+                                tareasCount += (int) m.getActividades().stream().filter(a -> a instanceof Tarea).count();
+                            }
+                        }
+                    }
+                }
+                resultado.add(new OfertaRiesgo(oferta.getIdOferta(), oferta.getNombre(), motivoBaja, inscripcionesCount, oferta.getEstado().name(), oferta.getFechaInicio(), tareasCount));
+            }
+        }
+
+        return resultado;
+    }
+
+    /**
+     * Aplica la baja (cambia estado y notifica) para la lista de ofertas indicadas por ID.
+     * Retorna lista de resultados con éxito o fallo por cada oferta.
+     */
+    @Transactional
+    public List<BajaResultado> aplicarBajasSeleccionadas(List<Long> ofertaIds) {
+        List<BajaResultado> resultados = new ArrayList<>();
+        if (ofertaIds == null || ofertaIds.isEmpty()) return resultados;
+        
+        for (Long id : ofertaIds) {
+            OfertaAcademica oferta = ofertaAcademicaRepository.findById(id).orElse(null);
+            
+            if (oferta == null) {
+                resultados.add(new BajaResultado(id, false, "Oferta no encontrada", "ID " + id));
+                continue;
+            }
+            
+            if (oferta.getEstado() == EstadoOferta.DE_BAJA) {
+                resultados.add(new BajaResultado(id, false, "La oferta ya se encuentra dada de baja", oferta.getNombre()));
+                continue;
+            }
+
+            // Validar inscripciones activas para impedir la baja
+            int inscripcionesActivas = inscripcionRepository.countByOfertaAndEstadoInscripcionTrue(oferta);
+            if (inscripcionesActivas > 0) {
+                resultados.add(new BajaResultado(id, false, "Tiene " + inscripcionesActivas + " inscripciones activas", oferta.getNombre()));
+                continue;
+            }
+
+            // Aplicar baja si no hay impedimentos
+            oferta.setEstado(EstadoOferta.DE_BAJA);
+            ofertaAcademicaRepository.save(oferta);
+
+            List<? extends Usuario> docentes = new ArrayList<>();
+            if (oferta instanceof Curso) {
+                docentes = ((Curso)oferta).getDocentes();
+            } else if (oferta instanceof Formacion) {
+                docentes = ((Formacion)oferta).getDocentes();
+            }
+
+            String motivo = "Dada de baja por administración: Confirmada por el usuario desde Reportes.";
+
+            if (docentes != null) {
+                for (Usuario doc : docentes) {
+                    if (doc.getCorreo() != null) {
+                        try {
+                            emailService.sendEmail(doc.getCorreo(), "Baja de Oferta: " + oferta.getNombre(), "La oferta ha sido dada de baja por administración.<br><b>Motivo:</b> " + motivo);
+                        } catch (Exception e) {
+                            log.error("Error enviando email a docente {}: {}", doc.getDni(), e.getMessage());
+                        }
+                    }
+                }
+            }
+            resultados.add(new BajaResultado(id, true, "Baja aplicada correctamente", oferta.getNombre()));
+        }
+        return resultados;
     }
 
     public void analizarAlumno(Usuario alumno) {

@@ -69,6 +69,17 @@
 
         <!-- VISTA DOCENTE: TABLA GLOBAL -->
         <div sec:authorize="hasAnyAuthority('DOCENTE', 'ADMIN')" class="space-y-8">
+
+            <!-- Atajos de Sección -->
+            <div th:if="${correccionExamenes != null and !correccionExamenes.empty}" class="flex flex-wrap gap-2">
+                <span class="text-sm font-medium text-gray-500 mr-2 self-center">Ir a examen:</span>
+                <a th:each="item : ${correccionExamenes}" 
+                   th:href="'#examen-' + ${item.idActividad}"
+                   class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-white text-purple-700 hover:bg-purple-50 transition-colors border border-purple-200 shadow-sm">
+                    <i class="fas fa-clipboard-check mr-1.5"></i>
+                    <span th:text="${item.titulo}">Examen</span>
+                </a>
+            </div>
             
             <!-- Tabla de Calificaciones -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -143,54 +154,356 @@
                 </div>
             </div>
 
-            <!-- SECCIÓN EXTRA: GESTIÓN DE CORRECCIÓN DE EXÁMENES -->
-            <div class="pt-8 border-t border-gray-200">
-                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-                    <i class="fas fa-tasks text-customGreen mr-3"></i> Gestión de Correcciones
-                </h2>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div th:each="item : ${correccionExamenes}" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-                        <div class="flex justify-between items-start mb-4">
-                            <div class="p-3 bg-purple-50 rounded-lg text-purple-600">
-                                <i class="fas fa-clipboard-check text-xl"></i>
-                            </div>
-                            <span th:if="${item.pendientes > 0}" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 animate-pulse">
-                                <span th:text="${item.pendientes}">0</span> pendientes
-                            </span>
-                            <span th:if="${item.pendientes == 0}" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                Al día
-                            </span>
-                        </div>
-                        
-                        <h3 class="text-lg font-bold text-gray-900 mb-1" th:text="${item.examen.titulo}">Título Examen</h3>
-                        <p class="text-sm text-gray-500 mb-4" th:text="${#temporals.format(item.examen.fechaCierre, 'dd/MM/yyyy HH:mm')}">Cierre</p>
-                        
-                        <div class="flex items-center justify-between text-sm text-gray-500 mb-6 bg-gray-50 p-3 rounded-lg">
-                            <div class="text-center">
-                                <span class="block font-bold text-gray-800 text-lg" th:text="${item.total}">0</span>
-                                <span class="text-xs">Intentos</span>
-                            </div>
-                            <div class="h-8 w-px bg-gray-300"></div>
-                            <div class="text-center">
-                                <span class="block font-bold text-green-600 text-lg" th:text="${item.finalizados}">0</span>
-                                <span class="text-xs">Corregidos</span>
-                            </div>
-                        </div>
-                        
-                        <a th:href="@{/examen/{id}/intentos(id=${item.examen.idActividad})}" 
-                           class="block w-full text-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
-                            Ir a Corregir / Ver Notas
-                        </a>
-                    </div>
-                    
-                    <!-- Empty State for Correction -->
-                    <div th:if="${correccionExamenes.empty}" class="col-span-full text-center py-10 bg-gray-50 rounded-xl border border-dashed border-gray-300">
-                        <i class="fas fa-folder-open text-gray-400 text-4xl mb-3"></i>
-                        <p class="text-gray-500">No hay exámenes registrados para corregir en este curso.</p>
+            <!-- SECCIÓN EXTRA: GESTIÓN DE CORRECCIÓN -->
+            <div class="pt-8 border-t border-gray-200" id="gestion-correcciones">
+                <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <h2 class="text-2xl font-bold text-gray-800 flex items-center">
+                        <i class="fas fa-tasks text-customGreen mr-3"></i> Gestión de Correcciones
+                    </h2>
+                    <div class="bg-gray-100 p-1 rounded-lg flex shrink-0">
+                         <button onclick="mostrarTab('tab-actividades')" id="btn-tab-actividades" class="px-4 py-2 rounded-md text-sm font-medium transition-all bg-white text-gray-800 shadow-sm">
+                             <i class="fas fa-file-alt mr-2"></i> Actividades
+                         </button>
+                         <button onclick="mostrarTab('tab-examenes')" id="btn-tab-examenes" class="px-4 py-2 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700 transition-all">
+                             <i class="fas fa-edit mr-2"></i> Exámenes
+                         </button>
                     </div>
                 </div>
+                
+                <div class="flex flex-col lg:flex-row gap-6 items-start">
+                    <!-- Column Left: Lists Area -->
+                    <div class="w-full">
+                        
+                        <!-- TAB: ACTIVIDADES (ENTREGAS) -->
+                        <div id="tab-actividades" class="space-y-8">
+                            <div th:if="${correccionTareas.empty}" class="text-center py-10 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                                <i class="fas fa-folder-open text-gray-400 text-4xl mb-3"></i>
+                                <p class="text-gray-500">No hay tareas creadas en este curso.</p>
+                            </div>
+                        
+                                <div th:each="item : ${correccionTareas}" th:id="'tarea-' + ${item.idActividad}" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden scroll-mt-24">                                <!-- Header Tarea -->
+                                <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                                    <div>
+                                        <h3 class="text-lg font-bold text-gray-800" th:text="${item.titulo}">Tarea</h3>
+                                        <div class="flex text-xs text-gray-500 gap-2 mt-0.5">
+                                            <span th:if="${item.fechaEntregaStr != null}" th:text="${item.fechaEntregaStr}">Fecha</span>
+                                            <span th:if="${item.fechaEntregaStr == null}">Sin fecha límite</span>
+                                            <span th:if="${item.entregasTardias}" class="text-amber-600 bg-amber-50 px-1.5 rounded border border-amber-100">Acepta tardías</span></div>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                       <span th:if="${item.pendientes > 0}" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 animate-pulse">
+                                            <span th:text="${item.pendientes}">0</span> sin calificar
+                                        </span>
+                                        <span class="text-xs text-gray-400" th:text="${item.total} + ' entregas'">0</span>
+                                    </div>
+                                </div>
+
+                                <!-- Table of Deliveries -->
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full divide-y divide-gray-100 table-fixed">
+                                        <thead class="bg-gray-50/50">
+                                            <tr>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/3">Alumno</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">Estado</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">Archivo/Nota</th>
+                                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="bg-white divide-y divide-gray-100">
+                                            <th:block th:each="entrega : ${item.entregas}">
+                                                <tr class="hover:bg-gray-50 transition-colors">
+                                                   <td class="px-6 py-4 whitespace-nowrap overflow-hidden text-ellipsis">
+                                                        <div class="text-sm font-medium text-gray-900" 
+                                                             th:text="${entrega.estudiante != null ? entrega.estudiante.nombre + ' ' + entrega.estudiante.apellido : 'Desconocido'}">Alumno</div>
+                                                        <div class="text-xs text-gray-500" 
+                                                             th:text="${entrega.fechaEntrega != null ? #temporals.format(entrega.fechaEntrega, 'dd/MM HH:mm') : '-'}">Fecha</div>
+                                                        <span th:if="${entrega.esTardia}" class="inline-block text-[10px] text-red-500 font-bold">TARDÍA</span>
+                                                   </td>
+                                                   <td class="px-6 py-4 whitespace-nowrap">
+                                                        <span th:if="${entrega.calificacion != null}" class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Calificado</span>
+                                                        <span th:if="${entrega.calificacion == null}" class="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">Pendiente</span>
+                                                   </td>
+                                                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                                        <div th:if="${entrega.calificacion != null}" class="font-bold text-gray-800">
+                                                            <span th:text="${#numbers.formatDecimal(entrega.calificacion, 1, 2)}">0.00</span> pts
+                                                        </div>
+                                                        <div th:if="${entrega.nombreArchivo != null}" class="text-xs text-blue-500 mt-1 truncate max-w-[150px]">
+                                                            <i class="fas fa-paperclip"></i> <span th:text="${entrega.nombreArchivo}">File</span>
+                                                        </div>
+                                                   </td>
+                                                   <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                        <button type="button"
+                                                           th:onclick="abrirModalCorreccion('/entrega/' + [[${entrega.idEntrega}]] + '/fragment-correccion')"
+                                                           class="text-indigo-600 hover:text-indigo-900 bg-indigo-50 px-3 py-1 rounded-md transition-colors">
+                                                            <span th:if="${entrega.calificacion == null}">Calificar</span>
+                                                            <span th:if="${entrega.calificacion != null}">Editar</span>
+                                                        </button>
+                                                   </td>
+                                                </tr>
+                                            </th:block>
+                                            <tr th:if="${#lists.isEmpty(item.entregas)}">
+                                                <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500 italic">No hay entregas registradas</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB: EXAMENES -->
+                        <div id="tab-examenes" class="space-y-8 hidden">
+                            <div th:each="item : ${correccionExamenes}" th:id="'examen-' + ${item.idActividad}" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden scroll-mt-24">
+                                <!-- Header Examen -->
+                                <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                                    <div>
+                                        <h3 class="text-lg font-bold text-gray-800" th:text="${item.titulo}">Examen</h3>
+                                        <p class="text-sm text-gray-500">
+                                            <span th:if="${item.fechaCierreStr != null}" th:text="${item.fechaCierreStr}">Fecha</span>
+                                            <span th:if="${item.fechaCierreStr == null}">Sin fecha límite</span>
+                                        </p>                                    
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                       <span th:if="${item.pendientes > 0}" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                                            <span th:text="${item.pendientes}">0</span> pendientes
+                                        </span>
+                                        <span class="text-xs text-gray-400" th:text="${item.total} + ' intentos'">0</span>
+                                    </div>
+                                </div>
+
+                                <!-- Table of Attempts -->
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full divide-y divide-gray-100 table-fixed">
+                                        <thead class="bg-gray-50/50">
+                                            <tr>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/3">Alumno</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">Estado</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">Nota</th>
+                                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="bg-white divide-y divide-gray-100">
+                                            <th:block th:each="intento : ${item.intentos}">
+                                                <tr class="hover:bg-gray-50 transition-colors">
+                                                   <td class="px-6 py-4 whitespace-nowrap overflow-hidden text-ellipsis">
+                                                        <div class="text-sm font-medium text-gray-900" th:text="${intento.alumno != null ? intento.alumno.nombre + ' ' + intento.alumno.apellido : 'Desconocido'}">Alumno</div>
+                                                        <div class="text-xs text-gray-500" th:text="${intento.fechaFin != null ? #temporals.format(intento.fechaFin, 'dd/MM HH:mm') : '-'}">Fecha</div>
+                                                   </td>
+                                                   <td class="px-6 py-4 whitespace-nowrap">
+                                                        <span th:if="${intento.estado?.name() == 'FINALIZADO'}" class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Calificado</span>
+                                                        <span th:if="${intento.estado?.name() == 'PENDIENTE_CORRECCION'}" class="px-2 py-1 bg-amber-100 text-amber-800 text-xs rounded-full">Pendiente</span>
+                                                        <span th:if="${intento.estado?.name() == 'EN_PROGRESO'}" class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">En curso</span>
+                                                   </td>
+                                                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                                        <span th:if="${intento.calificacion != null}" th:text="${#numbers.formatDecimal(intento.calificacion, 1, 2)}">0.00</span>
+                                                        <span th:if="${intento.calificacion == null}">--</span>
+                                                   </td>
+                                                   <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                        <button type="button"
+                                                           th:onclick="abrirModalCorreccion('/examen/' + [[${item.idActividad}]] + '/intentos/' + [[${intento.idIntento}]] + '/fragment-correccion')"
+                                                           class="text-indigo-600 hover:text-indigo-900 bg-indigo-50 px-3 py-1 rounded-md transition-colors">
+                                                            <span th:if="${intento.estado?.name() == 'PENDIENTE_CORRECCION'}">Corregir</span>
+                                                            <span th:if="${intento.estado?.name() == 'FINALIZADO'}">Ver</span>
+                                                        </button>
+                                                   </td>
+                                                </tr>
+                                            </th:block>
+                                            <tr th:if="${#lists.isEmpty(item.intentos)}">
+                                                <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500 italic">No hay intentos registrados</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- MODAL GENERICO CORRECCION -->
+                    <div id="modal-correccion" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                        <!-- Backdrop -->
+                        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                             <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onclick="cerrarModalCorreccion()"></div>
+
+                             <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+                             <!-- Modal Panel -->
+                             <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+                                  <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 relative" style="min-height: 400px;">
+                                       <button type="button" onclick="cerrarModalCorreccion()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-500 focus:outline-none">
+                                           <span class="sr-only">Cerrar</span>
+                                           <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                           </svg>
+                                       </button>
+                                       <div id="modal-content" class="mt-2 h-full">
+                                            <!-- Spinner Default -->
+                                            <div class="flex flex-col items-center justify-center py-20">
+                                                <i class="fas fa-circle-notch fa-spin text-4xl text-customGreen mb-4"></i>
+                                                <p class="text-gray-500">Cargando corrección...</p>
+                                            </div>
+                                       </div>
+                                  </div>
+                             </div>
+                        </div>
+                    </div>
+
+                </div>
             </div>
+
+            <script>
+                function mostrarTab(tabId) {
+                    // Hide all
+                    document.getElementById('tab-actividades').classList.add('hidden');
+                    document.getElementById('tab-examenes').classList.add('hidden');
+                    
+                    // Reset buttons
+                    document.getElementById('btn-tab-actividades').className = "px-4 py-2 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700 transition-all";
+                    document.getElementById('btn-tab-examenes').className = "px-4 py-2 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700 transition-all";
+
+                    // Show selected
+                    document.getElementById(tabId).classList.remove('hidden');
+                    document.getElementById('btn-' + tabId).className = "px-4 py-2 rounded-md text-sm font-medium transition-all bg-white text-gray-800 shadow-sm";
+                }
+
+                function abrirModalCorreccion(url) {
+                    const modal = document.getElementById('modal-correccion');
+                    const content = document.getElementById('modal-content');
+                    
+                    // Reset content to spinner
+                    content.innerHTML = `
+                        <div class="flex flex-col items-center justify-center py-20">
+                            <i class="fas fa-circle-notch fa-spin text-4xl text-customGreen mb-4"></i>
+                            <p class="text-gray-500">Cargando corrección...</p>
+                        </div>
+                    `;
+                    
+                    modal.classList.remove('hidden');
+
+                    fetch(url)
+                        .then(resp => {
+                            if(!resp.ok) throw new Error('Error de red');
+                            return resp.text();
+                        })
+                        .then(html => {
+                            content.innerHTML = html;
+                            // Initialize Exam Logic if present
+                            setTimeout(() => {
+                                initCalculoPuntaje();
+                            }, 100);
+                        })
+                        .catch(err => {
+                            console.error(err);
+                            content.innerHTML = `
+                                <div class="text-center p-10 text-red-500">
+                                    <i class="fas fa-exclamation-circle text-3xl mb-3"></i>
+                                    <p>Error al cargar el contenido.</p>
+                                </div>
+                            `;
+                        });
+                }
+                
+                function cerrarModalCorreccion() {
+                     document.getElementById('modal-correccion').classList.add('hidden');
+                }
+                
+                function cerrarPanelCorreccion() {
+                    cerrarModalCorreccion();
+                }
+
+                /* Lógica de Corrección de Examen */
+                function initCalculoPuntaje() {
+                    const inputs = document.querySelectorAll('.input-puntaje');
+                    const totalDisplay = document.getElementById('total-acumulado');
+                    
+                    if(!inputs.length || !totalDisplay) return;
+                    
+                    function calcularTotal() {
+                        let total = 0;
+                        inputs.forEach(input => {
+                            total += parseFloat(input.value || 0);
+                        });
+                        totalDisplay.textContent = total.toFixed(2);
+                    }
+                    
+                    inputs.forEach(input => {
+                        input.removeEventListener('input', calcularTotal); // avoid duplicates
+                        input.addEventListener('input', calcularTotal);
+                    });
+                    
+                    calcularTotal();
+                }
+
+                function confirmarCalificacionExamen() {
+                    const total = document.getElementById('total-acumulado')?.textContent || "0.00";
+                    const message = `¿Está seguro de asignar ${total} puntos a este examen?`;
+
+                    if (window.ModalConfirmacion) {
+                        ModalConfirmacion.show(
+                            'Confirmar Calificación',
+                            message,
+                            () => {
+                                // Find form inside the loaded content and submit
+                                const form = document.querySelector('#modal-content form');
+                                if (form) {
+                                    form.submit();
+                                } else {
+                                    alert("Error: No se encontró el formulario.");
+                                }
+                            }
+                        );
+                    } else {
+                        // Fallback if generic modal is not loaded
+                        if(confirm(message)) {
+                            const form = document.querySelector('#modal-content form');
+                            if(form) form.submit();
+                        }
+                    }
+                }
+                function confirmarCalificacionEntrega() {
+                    const calInput = document.querySelector('#modal-content form #calificacion');
+                    const cal = calInput ? parseFloat(calInput.value || 0).toFixed(2) : "0.00";
+                    const message = `¿Está seguro de asignar ${cal} puntos a esta entrega?`;
+
+                    if (window.ModalConfirmacion) {
+                        ModalConfirmacion.show('Confirmar Corrección', message, () => {
+                            const form = document.querySelector('#modal-content form');
+                            if (form) form.submit(); else alert("Error: No se encontró el formulario.");
+                        });
+                    } else {
+                        if (confirm(message)) {
+                            const form = document.querySelector('#modal-content form');
+                            if (form) form.submit();
+                        }
+                    }
+                }
+
+                function confirmarCalificacionEntrega() {
+                    const calInput = document.querySelector('#modal-content form #calificacion');
+                    const cal = calInput ? parseFloat(calInput.value || 0).toFixed(2) : "0.00";
+                    const message = `¿Está seguro de asignar ${cal} puntos a esta entrega?`;
+
+                    if (window.ModalConfirmacion) {
+                        ModalConfirmacion.show(
+                            'Confirmar Corrección',
+                            message,
+                            () => {
+                                const form = document.querySelector('#modal-content form');
+                                if (form) {
+                                    form.submit();
+                                } else {
+                                    alert("Error: No se encontró el formulario.");
+                                }
+                            }
+                        );
+                    } else {
+                         // Fallback
+                        if(confirm(message)) {
+                            const form = document.querySelector('#modal-content form');
+                            if(form) form.submit();
+                        }
+                    }
+                }
+
+            </script>
             
         </div>
 

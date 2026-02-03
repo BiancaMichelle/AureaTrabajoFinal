@@ -1,153 +1,452 @@
 <!DOCTYPE html>
-<html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/adminBase :: layout(~{::title}, ~{::main})}">
+<html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/adminBase :: layout(~{::title}, ~{::content})}">
 <head>
-    <title>Reportes - Aurea</title>
-    <style>
-        .report-card {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            padding: 2rem;
-            max-width: 800px;
-            margin: 2rem auto;
-        }
-        .form-section {
-            margin-bottom: 1.5rem;
-        }
-        .form-label {
-            font-weight: 600;
-            color: #374151;
-            display: block;
-            margin-bottom: 0.5rem;
-        }
-        .btn-download {
-            background-color: #007bff;
-            color: white;
-            padding: 0.75rem 1.5rem;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 1rem;
-            width: 100%;
-            transition: background-color 0.2s;
-        }
-        .btn-download:hover {
-            background-color: #0056b3;
-        }
-        .format-selector {
-            display: flex;
-            gap: 1rem;
-        }
-        .format-option {
-            flex: 1;
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            padding: 1rem;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .format-option:hover {
-            border-color: #007bff;
-        }
-        .format-option input[type="radio"] {
-            display: none;
-        }
-        .format-option input[type="radio"]:checked + label {
-            color: #007bff;
-            font-weight: bold;
-        }
-        .format-option.selected {
-            border-color: #007bff;
-            background-color: #f0f7ff;
-        }
-    </style>
+    <title>Gestión de Reportes</title>
 </head>
 <body>
-<main class="main-content">
-    <header class="main-header">
-        <h1><i class="fas fa-file-alt"></i> Generación de Reportes</h1>
-    </header>
+    <div th:fragment="content" class="main-content">
+        <!-- Add Tailwind CSS -->
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                prefix: 'tw-',
+                corePlugins: {
+                    preflight: false, // Disable preflight to avoid conflicts with existing styles
+                }
+            }
+        </script>
+        <style>
+             /* Custom overrides if needed */
+            .tw-modal {
+                transition: opacity 0.25s ease;
+            }
+            body.tw-modal-active {
+                overflow-x: hidden;
+                overflow-y: visible !important;
+            }
+        </style>
 
-    <div class="report-card">
-        <h2 style="border-bottom: 2px solid #f3f4f6; padding-bottom: 1rem; margin-bottom: 1.5rem;">
-            <i class="fas fa-filter"></i> Configurar Reporte
-        </h2>
-
-        <form action="/admin/reportes/ofertas/descargar" method="get" id="mainReportForm">
+        <div class="tw-container tw-mx-auto tw-px-4 tw-py-8">
             
-            <!-- Formato -->
-            <div class="form-section">
-                <label class="form-label">Formato de Salida</label>
-                <div class="format-selector">
-                    <div class="format-option selected" onclick="selectFormat(this)">
-                        <input type="radio" name="formato" value="pdf" id="fmt-pdf" checked>
-                        <label for="fmt-pdf">
-                            <i class="fas fa-file-pdf fa-2x" style="color: #dc3545; display: block; margin-bottom: 0.5rem;"></i>
-                            PDF
-                        </label>
+            <!-- Header -->
+            <div class="tw-mb-8">
+                <h1 class="tw-text-3xl tw-font-bold tw-text-gray-800">Centro de Reportes y Análisis</h1>
+                <p class="tw-text-gray-600 tw-mt-2">Genera reportes, analiza el rendimiento y gestiona ofertas académicas.</p>
+            </div>
+
+            <!-- Alerts -->
+            <div th:if="${mensaje}" 
+                 th:class="${'tw-mb-4 tw-p-4 tw-rounded-md tw-border ' + (tipoMensaje == 'success' ? 'tw-bg-green-50 tw-border-green-200 tw-text-green-700' : (tipoMensaje == 'danger' ? 'tw-bg-red-50 tw-border-red-200 tw-text-red-700' : 'tw-bg-blue-50 tw-border-blue-200 tw-text-blue-700'))}">
+                <i class="fas" th:classappend="${tipoMensaje == 'success' ? 'fa-check-circle' : (tipoMensaje == 'danger' ? 'fa-exclamation-circle' : 'fa-info-circle')}"></i>
+                <span th:text="${mensaje}">Mensaje del sistema</span>
+            </div>
+
+            <!-- Reports Generation Section -->
+            <div class="tw-grid tw-grid-cols-1 md:tw-grid-cols-3 tw-gap-6 tw-mb-10">
+                
+                <!-- Academic Report Card -->
+                <div class="tw-bg-white tw-rounded-lg tw-shadow-md tw-p-6 tw-border-t-4 tw-border-blue-500">
+                    <div class="tw-flex tw-items-center tw-justify-between tw-mb-4">
+                        <h3 class="tw-text-xl tw-font-semibold tw-text-gray-800">Académico</h3>
+                        <i class="fas fa-graduation-cap tw-text-blue-500 tw-text-2xl"></i>
                     </div>
-                    <div class="format-option" onclick="selectFormat(this)">
-                        <input type="radio" name="formato" value="excel" id="fmt-excel">
-                        <label for="fmt-excel">
-                            <i class="fas fa-file-excel fa-2x" style="color: #198754; display: block; margin-bottom: 0.5rem;"></i>
-                            Excel
-                        </label>
+                    <form th:action="@{/admin/reportes/ofertas/descargar}" method="get" target="_blank" onsubmit="setTimeout(() => window.location.reload(), 4000)">
+                        <input type="hidden" name="tipoReporte" value="ofertas">
+                        <input type="hidden" name="tipos" value="Curso,Formación,Seminario,Charla"> <!-- Todos los tipos por defecto -->
+                        <div class="tw-space-y-3">
+                            <div>
+                                <label class="tw-text-sm tw-font-medium tw-text-gray-700">Rango de Fechas</label>
+                                <div class="tw-flex tw-flex-col tw-gap-2">
+                                    <input type="date" name="fechaInicio" class="tw-w-full tw-text-sm tw-border-gray-300 tw-rounded-md tw-p-2 tw-border filter-input">
+                                    <input type="date" name="fechaFin" class="tw-w-full tw-text-sm tw-border-gray-300 tw-rounded-md tw-p-2 tw-border filter-input">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="tw-text-sm tw-font-medium tw-text-gray-700">Estado</label>
+                                <select name="estado" class="tw-w-full tw-text-sm tw-border-gray-300 tw-rounded-md tw-p-2 tw-border filter-input">
+                                    <option value="">Todos</option>
+                                    <option value="PUBLICADO">Publicado</option>
+                                    <option value="BORRADOR">Borrador</option>
+                                    <option value="CERRADO">Cerrado</option>
+                                </select>
+                            </div>
+                            <div class="tw-flex tw-items-center tw-justify-between tw-pt-3">
+                                <button type="submit" name="formato" value="pdf" class="tw-bg-blue-600 hover:tw-bg-blue-700 tw-text-white tw-px-4 tw-py-2 tw-rounded-md tw-text-sm tw-font-medium tw-transition-colors">
+                                    <i class="fas fa-file-pdf tw-mr-2"></i>PDF
+                                </button>
+                                <button type="submit" name="formato" value="excel" class="tw-bg-green-600 hover:tw-bg-green-700 tw-text-white tw-px-4 tw-py-2 tw-rounded-md tw-text-sm tw-font-medium tw-transition-colors">
+                                    <i class="fas fa-file-excel tw-mr-2"></i>Excel
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Users Report Card -->
+                <div class="tw-bg-white tw-rounded-lg tw-shadow-md tw-p-6 tw-border-t-4 tw-border-purple-500">
+                    <div class="tw-flex tw-items-center tw-justify-between tw-mb-4">
+                        <h3 class="tw-text-xl tw-font-semibold tw-text-gray-800">Usuarios</h3>
+                        <i class="fas fa-users tw-text-purple-500 tw-text-2xl"></i>
                     </div>
+                    <form th:action="@{/admin/reportes/usuarios/descargar}" method="get" target="_blank" onsubmit="setTimeout(() => window.location.reload(), 4000)">
+                        <div class="tw-space-y-3">
+                            <div>
+                                <label class="tw-text-sm tw-font-medium tw-text-gray-700">Rango de Registro</label>
+                                <div class="tw-flex tw-flex-col tw-gap-2">
+                                    <input type="date" name="fechaInicio" class="tw-w-full tw-text-sm tw-border-gray-300 tw-rounded-md tw-p-2 tw-border filter-input">
+                                    <input type="date" name="fechaFin" class="tw-w-full tw-text-sm tw-border-gray-300 tw-rounded-md tw-p-2 tw-border filter-input">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="tw-text-sm tw-font-medium tw-text-gray-700">Rol</label>
+                                <select name="rol" class="tw-w-full tw-text-sm tw-border-gray-300 tw-rounded-md tw-p-2 tw-border filter-input">
+                                    <option value="">Todos</option>
+                                    <option value="ALUMNO">Alumno</option>
+                                    <option value="DOCENTE">Docente</option>
+                                    <option value="ADMIN">Administrador</option>
+                                </select>
+                            </div>
+                            <div class="tw-pt-3">
+                                <button type="submit" class="tw-w-full tw-bg-purple-600 hover:tw-bg-purple-700 tw-text-white tw-px-4 tw-py-2 tw-rounded-md tw-text-sm tw-font-medium tw-transition-colors">
+                                    <i class="fas fa-file-pdf tw-mr-2"></i>Generar Reporte
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Payments Report Card -->
+                <div class="tw-bg-white tw-rounded-lg tw-shadow-md tw-p-6 tw-border-t-4 tw-border-yellow-500">
+                    <div class="tw-flex tw-items-center tw-justify-between tw-mb-4">
+                        <h3 class="tw-text-xl tw-font-semibold tw-text-gray-800">Pagos</h3>
+                        <i class="fas fa-money-bill-wave tw-text-yellow-500 tw-text-2xl"></i>
+                    </div>
+                    <form th:action="@{/admin/pagos/reporte}" method="get" target="_blank" onsubmit="setTimeout(() => window.location.reload(), 4000)">
+                        <div class="tw-space-y-3">
+                            <div>
+                                <label class="tw-text-sm tw-font-medium tw-text-gray-700">Fecha de Pago</label>
+                                <div class="tw-flex tw-flex-col tw-gap-2">
+                                    <input type="date" name="fechaInicio" class="tw-w-full tw-text-sm tw-border-gray-300 tw-rounded-md tw-p-2 tw-border filter-input">
+                                    <input type="date" name="fechaFin" class="tw-w-full tw-text-sm tw-border-gray-300 tw-rounded-md tw-p-2 tw-border filter-input">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="tw-text-sm tw-font-medium tw-text-gray-700">Estado</label>
+                                <select name="estado" class="tw-w-full tw-text-sm tw-border-gray-300 tw-rounded-md tw-p-2 tw-border filter-input">
+                                    <option value="">Todos</option>
+                                    <option value="APROBADO">Aprobado</option>
+                                    <option value="PENDIENTE">Pendiente</option>
+                                    <option value="RECHAZADO">Rechazado</option>
+                                </select>
+                            </div>
+                             <div class="tw-pt-3">
+                                <button type="submit" class="tw-w-full tw-bg-yellow-600 hover:tw-bg-yellow-700 tw-text-white tw-px-4 tw-py-2 tw-rounded-md tw-text-sm tw-font-medium tw-transition-colors">
+                                    <i class="fas fa-file-pdf tw-mr-2"></i>Generar Reporte
+                                </button>
+                            </div>
+                        </div>
+                    </form>
                 </div>
             </div>
 
-            <!-- Filtros -->
-            <div class="form-section">
-                <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                    <div>
-                        <label for="nombre" class="form-label">Filtrar por Nombre</label>
-                        <input type="text" id="nombre" name="nombre" class="form-control" placeholder="Nombre de la oferta...">
+            <!-- Analysis Section -->
+            <div class="tw-bg-white tw-rounded-lg tw-shadow-sm tw-mb-10 tw-overflow-hidden">
+                <div class="tw-bg-gray-50 tw-px-6 tw-py-4 tw-border-b tw-border-gray-200">
+                    <h3 class="tw-text-lg tw-font-semibold tw-text-gray-800">Análisis y Mantenimiento</h3>
+                </div>
+                <div class="tw-p-6 tw-flex tw-items-center tw-justify-between tw-flex-wrap tw-gap-4">
+                    <div class="tw-max-w-2xl">
+                        <h4 class="tw-font-medium tw-mb-2">Análisis de Baja Demanda</h4>
+                        <p class="tw-text-gray-600 tw-text-sm">Identifica automáticamente cursos y ofertas académicas que no cumplen con los criterios mínimos de inscripción o participación. Puedes revisar y confirmar las bajas sugeridas.</p>
                     </div>
-                    <div>
-                        <label for="estado" class="form-label">Estado</label>
-                        <select id="estado" name="estado" class="form-control">
-                            <option value="">Todos los estados</option>
-                            <option value="ACTIVA">Activa</option>
-                            <option value="BORRADOR">Borrador</option>
-                            <option value="FINALIZADA">Finalizada</option>
-                            <option value="CANCELADA">Cancelada</option>
-                        </select>
-                    </div>
+                    <button onclick="analizarBajaDemanda()" class="tw-bg-red-500 hover:tw-bg-red-600 tw-text-white tw-px-6 tw-py-3 tw-rounded-md tw-font-medium tw-shadow-sm tw-transition-colors tw-flex tw-items-center">
+                        <i class="fas fa-search-minus tw-mr-2"></i> Ejecutar Análisis
+                    </button>
                 </div>
             </div>
 
-            <div class="form-section">
-                <label class="form-label">Rango de Fechas (Inicio)</label>
-                <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                    <div>
-                        <small style="color: #6b7280; display: block; margin-bottom: 0.25rem;">Desde:</small>
-                        <input type="date" name="fechaInicio" class="form-control">
-                    </div>
-                    <div>
-                        <small style="color: #6b7280; display: block; margin-bottom: 0.25rem;">Hasta:</small>
-                        <input type="date" name="fechaFin" class="form-control">
-                    </div>
+            <!-- Reports History Section (Placeholder as backend doesn't provide list yet) -->
+            <div class="tw-bg-white tw-rounded-lg tw-shadow-sm">
+                 <div class="tw-bg-gray-50 tw-px-6 tw-py-4 tw-border-b tw-border-gray-200 tw-flex tw-justify-between tw-items-center">
+                    <h3 class="tw-text-lg tw-font-semibold tw-text-gray-800">Historial de Reportes Generados</h3>
+                </div>
+                <div class="tw-overflow-x-auto">
+                    <table class="tw-min-w-full tw-text-left tw-border-collapse">
+                        <thead>
+                            <tr class="tw-bg-gray-100 tw-text-gray-600 tw-text-xs tw-uppercase tw-tracking-wider border-b border-gray-200">
+                                <th class="tw-px-6 tw-py-3 tw-font-medium">ID</th>
+                                <th class="tw-px-6 tw-py-3 tw-font-medium">Tipo / Detalles</th>
+                                <th class="tw-px-6 tw-py-3 tw-font-medium">Fecha Generación</th>
+                                <th class="tw-px-6 tw-py-3 tw-font-medium">Generado Por</th>
+                                <th class="tw-px-6 tw-py-3 tw-font-medium">Estado</th>
+                                <th class="tw-px-6 tw-py-3 tw-font-medium tw-text-right">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody class="tw-divide-y tw-divide-gray-200 tw-bg-white">
+                            <tr th:each="reporte : ${reportes}" class="tw-hover:bg-gray-50 tw-transition-colors">
+                                <td class="tw-px-6 tw-py-4 tw-text-sm tw-text-gray-500" th:text="'#LOG-' + ${reporte.id}">#LOG-123</td>
+                                <td class="tw-px-6 tw-py-4 tw-text-sm tw-font-medium tw-text-gray-800">
+                                    <div class="tw-flex tw-flex-col">
+                                        <span th:text="${reporte.afecta}">Tipo</span>
+                                        <span class="tw-text-xs tw-text-gray-500" th:text="${reporte.detalles}">Detalles...</span>
+                                    </div>
+                                </td>
+                                <td class="tw-px-6 tw-py-4 tw-text-sm tw-text-gray-500">
+                                    <span th:text="${reporte.fecha}">2023-01-01</span> 
+                                    <span th:text="${reporte.hora}">12:00</span>
+                                </td>
+                                <td class="tw-px-6 tw-py-4 tw-text-sm tw-text-gray-500">
+                                    <div class="tw-flex tw-items-center">
+                                        <div class="tw-h-6 tw-w-6 tw-rounded-full tw-bg-blue-100 tw-text-blue-600 tw-flex tw-items-center tw-justify-center tw-mr-2 tw-text-xs">
+                                            <i class="fas fa-user"></i>
+                                        </div>
+                                        <span th:text="${reporte.usuario != null ? reporte.usuario.nombre : 'Sistema'}">Admin</span>
+                                    </div>
+                                </td>
+                                <td class="tw-px-6 tw-py-4 tw-text-sm">
+                                    <span th:if="${reporte.exito}" class="tw-bg-green-100 tw-text-green-800 tw-px-2 tw-py-1 tw-rounded-full tw-text-xs tw-font-medium">Exitoso</span>
+                                    <span th:unless="${reporte.exito}" class="tw-bg-red-100 tw-text-red-800 tw-px-2 tw-py-1 tw-rounded-full tw-text-xs tw-font-medium">Fallido</span>
+                                </td>
+                                <td class="tw-px-6 tw-py-4 tw-text-right tw-text-sm">
+                                    <div th:if="${reporte.detalles != null && reporte.detalles.contains('Archivo: ')}">
+                                         <!-- Extract filename logic safe implementation -->
+                                         <span th:with="tempStr=${#strings.substringAfter(reporte.detalles, 'Archivo: ')},
+                                                        filename=${tempStr.contains(' |') ? #strings.substringBefore(tempStr, ' |') : tempStr}">
+                                            
+                                            <a th:if="${filename != 'null'}" 
+                                               th:href="@{'/admin/reportes/archivo/' + ${filename}}" 
+                                               target="_blank"
+                                               class="tw-inline-flex tw-items-center tw-px-3 tw-py-1.5 tw-border tw-border-transparent tw-text-xs tw-font-medium tw-rounded-full tw-shadow-sm tw-text-white tw-bg-blue-600 hover:tw-bg-blue-700 focus:tw-outline-none">
+                                                <i class="fas fa-download tw-mr-1.5"></i> Descargar
+                                            </a>
+                                            <span th:if="${filename == 'null'}" class="tw-text-gray-400 tw-text-xs italic">No guardado</span>
+                                         </span>
+                                    </div>
+                                    <span th:unless="${reporte.detalles != null && reporte.detalles.contains('Archivo: ')}" class="tw-text-gray-400 tw-cursor-not-allowed">
+                                        <i class="fas fa-eye-slash"></i>
+                                    </span>
+                                </td>
+                            </tr>
+                             <!-- Empty state -->
+                             <tr th:if="${#lists.isEmpty(reportes)}">
+                                <td colspan="6" class="tw-px-6 tw-py-10 tw-text-center tw-text-gray-500 italic">
+                                    <div class="tw-flex tw-flex-col tw-items-center">
+                                        <i class="fas fa-history tw-text-gray-300 tw-text-4xl tw-mb-2"></i>
+                                        <p>No hay historial de reportes disponible recientemente.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-            <button type="submit" class="btn-download">
-                <i class="fas fa-download"></i> Descargar Reporte
-            </button>
-        </form>
+        </div>
+
+        <!-- Analysis Selection Modal -->
+        <div id="analisisModal" class="tw-fixed tw-inset-0 tw-z-[9999] tw-hidden tw-overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+            <div class="tw-flex tw-items-end tw-justify-center tw-min-h-screen tw-pt-4 tw-px-4 tw-pb-20 tw-text-center sm:tw-block sm:tw-p-0">
+                
+                <div class="tw-fixed tw-inset-0 tw-bg-gray-500 tw-bg-opacity-75 tw-transition-opacity" aria-hidden="true" onclick="cerrarModal()"></div>
+
+                <span class="tw-hidden sm:tw-inline-block sm:tw-align-middle sm:tw-h-screen" aria-hidden="true">&#8203;</span>
+
+                <div class="tw-inline-block tw-align-bottom tw-bg-white tw-rounded-lg tw-text-left tw-overflow-hidden tw-shadow-xl tw-transform tw-transition-all sm:tw-my-8 sm:tw-align-middle sm:tw-max-w-xl sm:tw-w-full">
+                    
+                    <div class="tw-bg-white tw-px-4 tw-pt-5 tw-pb-4 sm:tw-p-6 sm:tw-pb-4">
+                        <div class="sm:tw-flex sm:tw-items-start">
+                            <div class="tw-mx-auto tw-flex-shrink-0 tw-flex tw-items-center tw-justify-center tw-h-12 tw-w-12 tw-rounded-full tw-bg-red-100 sm:tw-mx-0 sm:tw-h-10 sm:tw-w-10">
+                                <i class="fas fa-exclamation-triangle tw-text-red-600"></i>
+                            </div>
+                            <div class="tw-mt-3 tw-text-center sm:tw-mt-0 sm:tw-ml-4 sm:tw-text-left tw-w-full">
+                                <h3 class="tw-text-lg tw-leading-6 tw-font-medium tw-text-gray-900" id="modal-title">
+                                    Resultados del Análisis de Baja Demanda
+                                </h3>
+                                <div class="tw-mt-2">
+                                    <p class="tw-text-sm tw-text-gray-500 tw-mb-4">
+                                        Las siguientes ofertas académicas han sido identificadas con bajo rendimiento o inscripciones insuficientes. Desmarca las que deseas conservar activas.
+                                    </p>
+                                    
+                                    <div class="tw-overflow-hidden tw-border tw-border-gray-200 tw-rounded-md">
+                                        <table class="tw-min-w-full tw-divide-y tw-divide-gray-200">
+                                            <thead class="tw-bg-gray-50">
+                                                <tr>
+                                                    <th scope="col" class="tw-px-4 tw-py-3 tw-text-left tw-text-xs tw-font-medium tw-text-gray-500 tw-uppercase tw-tracking-wider">
+                                                        <input type="checkbox" id="checkAll" checked onclick="toggleAll(this)" class="tw-rounded tw-text-red-600 focus:tw-ring-red-500">
+                                                    </th>
+                                                    <th scope="col" class="tw-px-4 tw-py-3 tw-text-left tw-text-xs tw-font-medium tw-text-gray-500 tw-uppercase tw-tracking-wider">Curso / Oferta</th>
+                                                    <th scope="col" class="tw-px-4 tw-py-3 tw-text-left tw-text-xs tw-font-medium tw-text-gray-500 tw-uppercase tw-tracking-wider">Inscritos</th>
+                                                    <th scope="col" class="tw-px-4 tw-py-3 tw-text-left tw-text-xs tw-font-medium tw-text-gray-500 tw-uppercase tw-tracking-wider">Motivo Detectado</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="tw-bg-white tw-divide-y tw-divide-gray-200" id="tablaResultadosBody">
+                                                <!-- Rows will be inserted here by JS -->
+                                            </tbody>
+                                        </table>
+                                        <div id="loadingMessage" class="tw-text-center tw-py-8 tw-text-gray-500 tw-hidden">
+                                            <i class="fas fa-spinner fa-spin tw-mr-2"></i> Analizando datos...
+                                        </div>
+                                        <div id="noDataMessage" class="tw-text-center tw-py-8 tw-text-gray-500 tw-hidden">
+                                            ¡Excelente! No se encontraron ofertas con baja demanda crítica.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tw-bg-gray-50 tw-px-4 tw-py-3 sm:tw-px-6 sm:tw-flex sm:tw-flex-row-reverse">
+                        <button type="button" onclick="confirmarBajas()" class="tw-w-full tw-inline-flex tw-justify-center tw-rounded-md tw-border tw-border-transparent tw-shadow-sm tw-px-4 tw-py-2 tw-bg-red-600 tw-text-base tw-font-medium tw-text-white hover:tw-bg-red-700 focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-offset-2 focus:tw-ring-red-500 sm:tw-ml-3 sm:tw-w-auto sm:tw-text-sm">
+                            Confirmar Bajas
+                        </button>
+                        <button type="button" onclick="cerrarModal()" class="tw-mt-3 tw-w-full tw-inline-flex tw-justify-center tw-rounded-md tw-border tw-border-gray-300 tw-shadow-sm tw-px-4 tw-py-2 tw-bg-white tw-text-base tw-font-medium tw-text-gray-700 hover:tw-bg-gray-50 focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-offset-2 focus:tw-ring-indigo-500 sm:tw-mt-0 sm:tw-ml-3 sm:tw-w-auto sm:tw-text-sm">
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // Simple functions to handle modal and fetching
+            function analizarBajaDemanda() {
+                const modal = document.getElementById('analisisModal');
+                const tbody = document.getElementById('tablaResultadosBody');
+                const loading = document.getElementById('loadingMessage');
+                const noData = document.getElementById('noDataMessage');
+                
+                modal.classList.remove('tw-hidden');
+                tbody.innerHTML = '';
+                loading.classList.remove('tw-hidden');
+                noData.classList.add('tw-hidden');
+
+                fetch('/admin/reportes/ofertas/en-peligro')
+                    .then(response => response.json())
+                    .then(data => {
+                        loading.classList.add('tw-hidden');
+                        if (data && data.length > 0) {
+                            data.forEach(item => {
+                                // Adapt field names based on the backend DTO likely used
+                                const id = item.id || item.ofertaId; 
+                                const nombre = item.nombre || item.nombreOferta;
+                                const inscritos = item.inscripcionesCount !== undefined ? item.inscripcionesCount : (item.inscritos || 0);
+                                const motivo = item.motivo || item.motivoRiesgo || "Baja participación";
+                                
+                                const row = `
+                                    <tr>
+                                        <td class="tw-px-4 tw-py-4 tw-whitespace-nowrap">
+                                            <input type="checkbox" name="ofertaBaja" value="${id}" checked class="tw-h-4 tw-w-4 tw-text-red-600 focus:tw-ring-red-500 tw-border-gray-300 tw-rounded">
+                                        </td>
+                                        <td class="tw-px-4 tw-py-4 tw-whitespace-nowrap tw-text-sm tw-font-medium tw-text-gray-900">${nombre}</td>
+                                        <td class="tw-px-4 tw-py-4 tw-whitespace-nowrap tw-text-sm tw-text-gray-500">${inscritos}</td>
+                                        <td class="tw-px-4 tw-py-4 tw-text-sm tw-text-gray-500">${motivo}</td>
+                                    </tr>
+                                `;
+                                tbody.insertAdjacentHTML('beforeend', row);
+                            });
+                        } else {
+                            noData.classList.remove('tw-hidden');
+                        }
+                    })
+                    .catch(err => {
+                        loading.classList.add('tw-hidden');
+                        tbody.innerHTML = '<tr><td colspan="4" class="tw-px-4 tw-py-4 tw-text-center tw-text-red-500">Error al cargar datos. Intente nuevamente.</td></tr>';
+                        console.error(err);
+                    });
+            }
+
+            function cerrarModal() {
+                document.getElementById('analisisModal').classList.add('tw-hidden');
+            }
+
+            function toggleAll(source) {
+                const checkboxes = document.getElementsByName('ofertaBaja');
+                for(let i=0; i<checkboxes.length; i++) {
+                    checkboxes[i].checked = source.checked;
+                }
+            }
+
+            function confirmarBajas() {
+                const selected = Array.from(document.querySelectorAll('input[name="ofertaBaja"]:checked')).map(cb => parseInt(cb.value));
+                
+                if (selected.length === 0) {
+                    if (typeof ModalConfirmacion !== 'undefined') {
+                        ModalConfirmacion.show('Atención', 'Por favor selecciona al menos una oferta para dar de baja.', null);
+                    } else {
+                        alert('Por favor selecciona al menos una oferta para dar de baja.');
+                    }
+                    return;
+                }
+
+                const ejecutarBaja = () => {
+                    // Obtener token y nombre de cabecera de los meta tags
+                    const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+                    const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+
+                    const headers = {
+                        'Content-Type': 'application/json'
+                    };
+
+                    if (csrfToken && csrfHeader) {
+                        headers[csrfHeader] = csrfToken;
+                    }
+
+                    fetch('/admin/reportes/ofertas/aplicar-bajas', {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify(selected)
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            return response.json();
+                        } else {
+                            return response.text().then(text => { throw new Error(text || response.statusText) });
+                        }
+                    })
+                    .then(resultados => {
+                        const exitosos = resultados.filter(r => r.success);
+                        const fallidos = resultados.filter(r => !r.success);
+
+                        let mensaje = "";
+                        if (exitosos.length > 0) {
+                            mensaje += `Se dieron de baja ${exitosos.length} ofertas correctamente.\n`;
+                        }
+                        if (fallidos.length > 0) {
+                            mensaje += `No se pudieron procesar ${fallidos.length} ofertas:\n`;
+                            fallidos.forEach(f => {
+                                mensaje += `- ${f.nombre || ('Oferta #' + f.id)}: ${f.motivo}\n`;
+                            });
+                        }
+
+                        if (typeof ModalConfirmacion !== 'undefined') {
+                            ModalConfirmacion.show('Resultados', mensaje, () => window.location.reload());
+                        } else {
+                            alert(mensaje);
+                            window.location.reload();
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        const msg = 'Error al aplicar cambios: ' + err.message;
+                        if (typeof ModalConfirmacion !== 'undefined') {
+                            ModalConfirmacion.show('Error', msg, null);
+                        } else {
+                            alert(msg);
+                        }
+                    });
+                };
+
+                if (typeof ModalConfirmacion !== 'undefined') {
+                    ModalConfirmacion.show('Confirmar Bajas', 
+                        `¿Estás seguro de dar de baja ${selected.length} ofertas seleccionadas? Esta acción no se puede deshacer fácilmente.`, 
+                        ejecutarBaja
+                    );
+                } else {
+                    if(confirm(`¿Estás seguro de dar de baja ${selected.length} ofertas seleccionadas? Esta acción no se puede deshacer fácilmente.`)) {
+                        ejecutarBaja();
+                    }
+                }
+            }
+        </script>
     </div>
-
-    <script>
-        function selectFormat(element) {
-            // Remover selected de todos
-            document.querySelectorAll('.format-option').forEach(el => el.classList.remove('selected'));
-            // Agregar al actual
-            element.classList.add('selected');
-            // Marcar radio
-            const radio = element.querySelector('input[type="radio"]');
-            if(radio) radio.checked = true;
-        }
-    </script>
-</main>
 </body>
 </html>

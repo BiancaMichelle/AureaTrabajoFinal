@@ -1,0 +1,82 @@
+<div class="h-full flex flex-col bg-white" th:fragment="panel-correccion">
+    <!-- Header -->
+    <div class="bg-indigo-600 text-white px-6 py-4 flex justify-between items-center shrink-0">
+        <div>
+            <h3 class="font-bold text-lg">Corrección de Entrega</h3>
+            <p class="text-indigo-100 text-xs" 
+               th:text="${entrega.estudiante.nombre + ' ' + entrega.estudiante.apellido}">Alumno</p>
+        </div>
+        <button onclick="cerrarPanelCorreccion()" type="button" class="text-indigo-100 hover:text-white transition-colors">
+            <i class="fas fa-times text-xl"></i>
+        </button>
+    </div>
+
+    <!-- Scrollable Content -->
+    <div class="flex-1 overflow-y-auto p-6 space-y-6">
+        <form id="form-calificacion-entrega" 
+              th:action="@{/entrega/corregir}" 
+              method="POST">
+            
+            <input type="hidden" name="idEntrega" th:value="${entrega.idEntrega}" />
+            <!-- Return URL: Assuming we are on /aula/calificaciones -->
+            <input type="hidden" name="returnUrl" value="" id="input-return-url" />
+
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <div class="mb-4">
+                    <h4 class="text-sm font-bold text-slate-700 mb-1">Archivo Enviado</h4>
+                    <div th:if="${entrega.nombreArchivo != null}" class="flex items-center gap-2 p-3 bg-white border border-slate-200 rounded-lg">
+                        <i class="fas fa-file-alt text-red-500 text-xl"></i>
+                        <div class="overflow-hidden">
+                            <p class="text-sm font-medium text-slate-800 truncate" th:text="${entrega.nombreArchivo}">Archivo.pdf</p>
+                            <a th:href="@{/uploads/{nombre}(nombre=${entrega.archivoNombreGuardado})}" target="_blank"
+                               class="text-xs text-blue-600 hover:underline">Descargar / Ver</a>
+                        </div>
+                    </div>
+                    <div th:if="${entrega.nombreArchivo == null}" class="p-3 bg-white border border-slate-200 rounded-lg italic text-slate-400 text-sm">
+                        Sin archivo adjunto
+                    </div>
+                </div>
+
+                <div class="mb-2">
+                    <h4 class="text-sm font-bold text-slate-700 mb-1">Contenido / Comentario del Alumno</h4>
+                    <div class="bg-white p-3 rounded-lg border border-slate-200 text-sm text-slate-600 min-h-[60px]"
+                         th:text="${entrega.contenido ?: 'Sin contenido de texto.'}">
+                        Texto...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Calificación -->
+            <div>
+                <label for="calificacion" class="block text-sm font-medium text-slate-700 mb-1">Calificación (0 - 100)</label>
+                <div class="relative rounded-md shadow-sm">
+                    <input type="number" step="0.01" min="0" max="100" required
+                           id="calificacion" name="calificacion" th:value="${entrega.calificacion}"
+                           class="block w-full rounded-md border-slate-300 focus:border-indigo-500 focus:ring-indigo-500 sm:text-lg font-bold pl-4 pr-12 py-3" 
+                           placeholder="0.00">
+                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                        <span class="text-slate-400 sm:text-sm">pts</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comentarios del Docente -->
+            <div>
+                <label for="comentarios" class="block text-sm font-medium text-slate-700 mb-1">Retroalimentación</label>
+                <textarea id="comentarios" name="comentarios" rows="4"
+                          class="block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                          placeholder="Escribe aquí tus observaciones para el alumno..."
+                          th:text="${entrega.comentarios}"></textarea>
+            </div>
+
+            <div class="pt-4 mt-6 border-t border-slate-100">
+                <button type="button" onclick="confirmarCalificacionEntrega()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg shadow-sm transition-all flex justify-center items-center gap-2">
+                    <i class="fas fa-save"></i> Guardar Corrección
+                </button>
+            </div>
+        </form>
+    </div>
+    <script>
+        document.getElementById('input-return-url').value = window.location.href;
+    </script>
+</div>

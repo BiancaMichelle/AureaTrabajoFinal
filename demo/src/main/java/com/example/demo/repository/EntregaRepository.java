@@ -20,4 +20,6 @@ public interface EntregaRepository extends JpaRepository<Entrega, Long> {
     List<Entrega> findByTarea(Tarea tarea);
 
     List<Entrega> findByTareaIn(List<Tarea> tareas);
+
+    long countByTareaInAndFechaEntregaAfter(List<Tarea> tareas, java.time.LocalDateTime fecha);
 }

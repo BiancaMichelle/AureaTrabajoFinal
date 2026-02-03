@@ -349,19 +349,68 @@ public class AulaController {
         if(isDocenteOrAdmin) {
             List<Map<String, Object>> correccionExamenes = new ArrayList<>();
             for(Examen e : examenes) {
-                // Requiere EstadoIntento importado o usar string/value
-                long pendientes = intentoRepository.countByExamen_IdActividadAndEstado(e.getIdActividad(), com.example.demo.enums.EstadoIntento.PENDIENTE_CORRECCION);
-                long totalIntentos = intentoRepository.findByExamen_IdActividad(e.getIdActividad()).size();
-                long finalizados = intentoRepository.countByExamen_IdActividadAndEstado(e.getIdActividad(), com.example.demo.enums.EstadoIntento.FINALIZADO);
+                // Fetch all attempts for the exam
+                List<Intento> intentos = intentoRepository.findByExamen_IdActividad(e.getIdActividad());
+                
+                // Filtrar intentos sin alumno (huérfanos) para evitar NPE en la vista
+                intentos = intentos.stream()
+                        .filter(i -> i.getAlumno() != null)
+                        .collect(Collectors.toList());
+
+                // Sort attempts by date descending (newest first)
+                intentos.sort(Comparator.comparing(Intento::getFechaFin, Comparator.nullsLast(Comparator.naturalOrder())).reversed());
+                
+                long pendientes = intentos.stream().filter(i -> i.getEstado() == com.example.demo.enums.EstadoIntento.PENDIENTE_CORRECCION).count();
+                long totalIntentos = intentos.size();
+                long finalizados = intentos.stream().filter(i -> i.getEstado() == com.example.demo.enums.EstadoIntento.FINALIZADO).count();
 
                 Map<String, Object> dato = new HashMap<>();
+                // Flatten data for view safety
+                dato.put("idActividad", e.getIdActividad());
+                dato.put("titulo", e.getTitulo());
+                dato.put("fechaCierreStr", e.getFechaCierre() != null ? e.getFechaCierre().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : null);
+
                 dato.put("examen", e);
                 dato.put("pendientes", pendientes);
                 dato.put("finalizados", finalizados);
                 dato.put("total", totalIntentos);
+                dato.put("intentos", intentos); // Pass attempts to view
                 correccionExamenes.add(dato);
             }
             model.addAttribute("correccionExamenes", correccionExamenes);
+
+            // Sección Corrección de Tareas (Solo Docente)
+            List<Map<String, Object>> correccionTareas = new ArrayList<>();
+            for(Tarea t : tareas) {
+                List<Entrega> entregas = entregaRepository.findByTarea(t);
+                
+                // Filtrar entregas sin estudiante para evitar NPE en la vista
+                entregas = entregas.stream()
+                        .filter(ent -> ent.getEstudiante() != null)
+                        .collect(Collectors.toList());
+
+                // Sort by date descending
+                entregas.sort(Comparator.comparing(Entrega::getFechaEntrega, Comparator.nullsLast(Comparator.naturalOrder())).reversed());
+
+                long pendientes = entregas.stream().filter(i -> i.getCalificacion() == null).count();
+                long total = entregas.size();
+                long calificados = entregas.stream().filter(i -> i.getCalificacion() != null).count();
+
+                Map<String, Object> dato = new HashMap<>();
+                // Flatten data for view safety
+                dato.put("idActividad", t.getIdActividad());
+                dato.put("titulo", t.getTitulo());
+                dato.put("fechaEntregaStr", t.getLimiteEntrega() != null ? t.getLimiteEntrega().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : null);
+                dato.put("entregasTardias", t.getEntregasTardias());
+
+                dato.put("tarea", t);
+                dato.put("pendientes", pendientes);
+                dato.put("calificados", calificados);
+                dato.put("total", total);
+                dato.put("entregas", entregas);
+                correccionTareas.add(dato);
+            }
+            model.addAttribute("correccionTareas", correccionTareas);
         }
 
         return "aula/calificaciones";
