@@ -526,11 +526,21 @@ public class EntregaController {
         return "docente/lista-entregas"; 
     }
 
+    @GetMapping("/{entregaId}/fragment-correccion")
+    @PreAuthorize("hasAnyAuthority('DOCENTE', 'ADMIN')")
+    public String getFragmentCorreccion(@PathVariable Long entregaId, Model model) {
+        Entrega entrega = entregaRepository.findById(entregaId)
+                .orElseThrow(() -> new RuntimeException("Entrega no encontrada"));
+        model.addAttribute("entrega", entrega);
+        return "docente/fragments/form-correccion-entrega"; 
+    }
+
     @PostMapping("/corregir")
     @PreAuthorize("hasAnyAuthority('DOCENTE', 'ADMIN')")
     public String corregirEntrega(@RequestParam("idEntrega") Long idEntrega,
                                   @RequestParam("calificacion") Double calificacion,
                                   @RequestParam(value = "comentarios", required = false) String comentarios,
+                                  @RequestParam(value = "returnUrl", required = false) String returnUrl,
                                   RedirectAttributes redirectAttributes) {
         
         try {
@@ -543,7 +553,24 @@ public class EntregaController {
             
             redirectAttributes.addFlashAttribute("success", "Calificación guardada correctamente.");
             
-            // Redirigir usando el ID de la tarea asociada
+            if (returnUrl != null && !returnUrl.isEmpty()) {
+                return "redirect:" + returnUrl;
+            }
+
+            // Integración para volver a calificaciones de la oferta
+            try {
+                if (entrega.getTarea() != null && 
+                    entrega.getTarea().getModulo() != null && 
+                    entrega.getTarea().getModulo().getCurso() != null) {
+                    
+                    Long idOferta = entrega.getTarea().getModulo().getCurso().getIdOferta();
+                    return "redirect:/aula/oferta/" + idOferta + "/calificaciones";
+                }
+            } catch (Exception ex) {
+                // Fallback silencioso
+            }
+
+            // Redirigir usando el ID de la tarea asociada (fallback final)
             return "redirect:/entrega/lista/" + entrega.getTarea().getIdActividad();
             
         } catch (Exception e) {

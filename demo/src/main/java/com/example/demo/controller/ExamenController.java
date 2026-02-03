@@ -529,24 +529,8 @@ public class ExamenController {
         Examen examen = examenRepository.findById(examenId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Examen no encontrado"));
 
-        var usuario = usuarioRepository.findByDni(authentication.getName())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
-
-        if (!puedeGestionarExamen(authentication, usuario, examen)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        }
-
-        List<Intento> intentos = intentoRepository.findByExamen_IdActividad(examenId);
-        intentos.sort(Comparator
-                .comparing(Intento::getFechaFin, Comparator.nullsLast(Comparator.naturalOrder()))
-                .reversed());
-
-        model.addAttribute("examen", examen);
-        model.addAttribute("modulo", examen.getModulo());
-        model.addAttribute("curso", examen.getModulo() != null ? examen.getModulo().getCurso() : null);
-        model.addAttribute("intentos", intentos);
-
-        return "docente/examen-intentos";
+        Long ofertaId = examen.getModulo().getCurso().getIdOferta();
+        return "redirect:/aula/oferta/" + ofertaId + "/calificaciones#examen-" + examenId;
     }
 
     @GetMapping("/{examenId}/intentos/{intentoId}/fragment-correccion")
@@ -637,7 +621,8 @@ public class ExamenController {
         
         redirectAttributes.addFlashAttribute("mensaje", "Calificación guardada correctamente");
         
-        return "redirect:/examen/" + intento.getExamen().getIdActividad() + "/intentos";
+        Long ofertaId = intento.getExamen().getModulo().getCurso().getIdOferta();
+        return "redirect:/aula/oferta/" + ofertaId + "/calificaciones#examen-" + intento.getExamen().getIdActividad();
     }
 
     @GetMapping("/detalle/{id}")
