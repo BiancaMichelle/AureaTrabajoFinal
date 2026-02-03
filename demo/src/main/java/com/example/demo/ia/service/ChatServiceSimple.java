@@ -341,12 +341,118 @@ public class ChatServiceSimple {
         // 2. Solicitud explícita de recomendaciones generales
         // "que me recomiendas", "que puedo estudiar", "cuales son las ofertas", "ofertas disponibles"
         if (m.contains("recomienda") || m.contains("estudiar") || m.contains("ofertas disponibles") || m.contains("que hay para mi")) {
-            String ofertas = obtenerContextoOfertas(userDni);
+            String ofertas = obtenerContextoOfertas(userDni, null);
             return "Basado en nuestro sistema, estas son las ofertas académicas disponibles actualmente:\n\n" + 
                    ofertas + "\n\n¿Te gustaría saber más detalles sobre alguna de ellas?";
         }
 
+        // 3. NUEVO: Filtrado por precio (MANEJO DIRECTO - NO DELEGAR A IA)
+        Double precioMaximo = extraerLimitePrecio(m);
+        if (precioMaximo != null) {
+            return filtrarOfertasPorPrecio(userDni, precioMaximo);
+        }
+
         return null; // Si no hay match, devolver null para que procese la IA
+    }
+    
+    /**
+     * Extrae el límite de precio de consultas como:
+     * "cursos de menos de 500", "ofertas menores a $100", "baratos menos de 1000"
+     */
+    private Double extraerLimitePrecio(String mensaje) {
+        if (mensaje == null) return null;
+        
+        // Patrones comunes de consulta de precio
+        if (!mensaje.contains("menos") && !mensaje.contains("menor") && 
+            !mensaje.contains("hasta") && !mensaje.contains("máximo") &&
+            !mensaje.contains("max") && !mensaje.contains("barato")) {
+            return null;
+        }
+        
+        // Extraer número del mensaje
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("(\\d+[.,]?\\d*)");
+        java.util.regex.Matcher matcher = pattern.matcher(mensaje);
+        
+        if (matcher.find()) {
+            try {
+                String numeroStr = matcher.group(1).replace(",", ".");
+                return Double.parseDouble(numeroStr);
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Filtra ofertas por precio DIRECTAMENTE (sin delegar a IA)
+     * para evitar problemas de comparación numérica del modelo LLM
+     */
+    private String filtrarOfertasPorPrecio(String userDni, Double precioMaximo) {
+        try {
+            List<OfertaAcademica> todasOfertas = obtenerOfertasSinDocente(userDni);
+            
+            // Filtrar por precio de inscripción
+            List<OfertaAcademica> ofertasFiltradas = todasOfertas.stream()
+                .filter(o -> o.getCostoInscripcion() != null && o.getCostoInscripcion() < precioMaximo)
+                .sorted((o1, o2) -> Double.compare(o1.getCostoInscripcion(), o2.getCostoInscripcion()))
+                .toList();
+            
+            if (ofertasFiltradas.isEmpty()) {
+                return String.format("❌ No encontré ofertas académicas con inscripción menor a $%.0f.\n\n" +
+                    "💡 Sugerencia: Puedes ajustar tu presupuesto o consultar por todas las ofertas disponibles.", 
+                    precioMaximo);
+            }
+            
+            StringBuilder sb = new StringBuilder();
+            sb.append(String.format("✅ Encontré %d oferta(s) con inscripción menor a $%.0f:\n\n", 
+                ofertasFiltradas.size(), precioMaximo));
+            
+            for (OfertaAcademica o : ofertasFiltradas) {
+                String tipo = (o instanceof Formacion) ? "FORMACIÓN" : "CURSO";
+                
+                // Refinar tipo según categorías
+                if(o.getCategorias() != null) {
+                    for(Categoria cat : o.getCategorias()) {
+                         String catName = cat.getNombre().trim().toUpperCase();
+                         if(catName.contains("CHARLA") || catName.contains("WEBINAR")) tipo = "CHARLA";
+                         else if(catName.contains("SEMINARIO") || catName.contains("TALLER")) tipo = "SEMINARIO";
+                    }
+                }
+                
+                sb.append(String.format("📚 [%s] %s\n", tipo, o.getNombre()));
+                sb.append(String.format("   💰 INSCRIPCIÓN: $%.0f", o.getCostoInscripcion()));
+                
+                // Agregar info de cuotas si aplica
+                if (o instanceof Curso) {
+                    Curso c = (Curso) o;
+                    if (c.getCostoCuota() != null && c.getCostoCuota() > 0) {
+                        sb.append(String.format(" | CUOTA: $%.0f (x%d cuotas)", c.getCostoCuota(), c.getNrCuotas()));
+                    }
+                } else if (o instanceof Formacion) {
+                    Formacion f = (Formacion) o;
+                    if (f.getCostoCuota() != null && f.getCostoCuota() > 0) {
+                        sb.append(String.format(" | CUOTA: $%.0f (x%d cuotas)", f.getCostoCuota(), f.getNrCuotas()));
+                    }
+                }
+                
+                sb.append("\n");
+                if (o.getDescripcion() != null) {
+                    sb.append("   📝 ").append(o.getDescripcion()).append("\n");
+                }
+                sb.append("\n");
+            }
+            
+            sb.append("💡 ¿Te gustaría más información sobre alguna de estas ofertas?");
+            
+            return sb.toString();
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error filtrando ofertas por precio: " + e.getMessage());
+            e.printStackTrace();
+            return "Hubo un error al buscar ofertas por precio. Por favor, intenta de nuevo.";
+        }
     }
     
     private String sanearMensaje(String mensaje) {
@@ -425,7 +531,7 @@ public class ChatServiceSimple {
         List<Map<String, Object>> messages = new ArrayList<>();
         
         // Obtener información de ofertas académicas activas para el contexto (PÚBLICO)
-        String contextoOfertas = obtenerContextoOfertas(userDni);
+        String contextoOfertas = obtenerContextoOfertas(userDni, null);
 
         System.out.println("=== CONTEXTO DE OFERTAS ENVIADO A LA IA ===\n" + contextoOfertas);
         
@@ -687,10 +793,17 @@ public class ChatServiceSimple {
         }
     }
     
-    private String obtenerContextoOfertas(String userDni) {
+    private String obtenerContextoOfertas(String userDni, Double precioMaximoFiltro) {
         try {
             // Buscamos ofertas ACTIVAS y EN CURSO
             List<OfertaAcademica> ofertas = obtenerOfertasSinDocente(userDni);
+            
+            // Aplicar filtro de precio si se especifica
+            if (precioMaximoFiltro != null) {
+                ofertas = ofertas.stream()
+                    .filter(o -> o.getCostoInscripcion() != null && o.getCostoInscripcion() < precioMaximoFiltro)
+                    .toList();
+            }
 
             if (ofertas.isEmpty()) {
                 return "No hay información de ofertas académicas disponible en este momento.";
