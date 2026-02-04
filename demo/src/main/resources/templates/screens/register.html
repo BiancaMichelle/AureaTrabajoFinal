@@ -80,8 +80,9 @@
             <div class="field-group">
                 <label for="dni">DNI</label>
                 <input type="text" id="dni" th:field="*{dni}" required 
-                    pattern="[0-9]{7,8}" 
-                    title="El DNI debe tener 7 u 8 dígitos" />
+                    inputmode="numeric" autocomplete="off" maxlength="8"
+                    pattern="\d{8,}" 
+                    title="El DNI debe tener solo números y al menos 8 dígitos" />
             </div>
             
             <div class="field-group">
@@ -107,9 +108,9 @@
                 <label for="telefono">Teléfono</label>
                 <!-- ✅ CORREGIDO: th:field y name correcto -->
                 <input type="tel" id="telefono" th:field="*{numTelefono}" 
-                    placeholder="54 9376-4123456" required 
-                    pattern="[\d\s\-\(\)\+]{10,}" 
-                    title="Debe tener al menos 10 dígitos" />
+                    placeholder="5491112345678" required inputmode="numeric" autocomplete="off" maxlength="15"
+                    pattern="\d{10,}" 
+                    title="Solo números, mínimo 10 dígitos" />
             </div>
             
             <div class="field-group">

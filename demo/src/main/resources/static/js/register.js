@@ -6,6 +6,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const nextBtn = document.getElementById("nextBtn");
     const submitBtn = document.getElementById("submitBtn");
     const formSteps = document.querySelectorAll(".form-step");
+    const dniInput = document.getElementById('dni');
+    const telefonoInput = document.getElementById('telefono');
     let currentStep = 0;
 
     // ✅ CONFIGURACIÓN PARA CAMPO DE FECHA
@@ -172,6 +174,22 @@ document.addEventListener("DOMContentLoaded", function () {
             hideFieldError(input);
         });
     }
+
+    function setupNumericInput(input, maxLength) {
+        if (!input) return;
+        input.addEventListener('input', () => {
+            const digits = input.value.replace(/\D/g, '');
+            input.value = maxLength ? digits.slice(0, maxLength) : digits;
+        });
+        input.addEventListener('keydown', (e) => {
+            if (['e', 'E', '+', '-', '.'].includes(e.key)) {
+                e.preventDefault();
+            }
+        });
+    }
+
+    setupNumericInput(dniInput, 8);
+    setupNumericInput(telefonoInput, 15);
 
     // ✅ Inicializar listeners de ubicación inmediatamente
     function initializeLocationListeners() {
@@ -734,6 +752,19 @@ document.addEventListener("DOMContentLoaded", function () {
             isValid = false;
         }
 
+        // Coherencia: al menos 10 años entre nacimiento y egreso
+        const fechaNacimientoInput = document.getElementById('fechaNacimientoBackend') || document.getElementById('fechaNacimiento');
+        if (fechaNacimientoInput && fechaNacimientoInput.value) {
+            const nacimientoYear = new Date(fechaNacimientoInput.value).getFullYear();
+            if (!isNaN(nacimientoYear) && !isNaN(año)) {
+                const diff = año - nacimientoYear;
+                if (diff < 10) {
+                    showFieldError(añoEgreso, 'El año de egreso debe ser al menos 10 años después de la fecha de nacimiento');
+                    isValid = false;
+                }
+            }
+        }
+
         // Validar colegio (solo letras, números y espacios)
         if (!/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-\.\(\)]+$/.test(colegioEgreso.value)) {
             showFieldError(colegioEgreso, 'Solo se permiten letras, números, espacios y los caracteres: - . ( )');
@@ -866,51 +897,50 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     nextBtn.addEventListener("click", async function () {
-    console.log("🔄 Validando paso antes de avanzar...");
-    
-    // Deshabilitar el botón temporalmente para evitar múltiples clics
-    nextBtn.disabled = true;
-    nextBtn.textContent = "Validando...";
-    
-    try {
-        const isValid = await validateStep(currentStep);
-        console.log("✅ Resultado validación:", isValid);
+        console.log("🔄 Validando paso antes de avanzar...");
         
-        if (isValid) {
-            // ✅ SI ES EL PASO 2 (DOMICILIO), GUARDAR LAS UBICACIONES ANTES DE AVANZAR
-            if (currentStep === 1) { // Paso 2 es índice 1
-                console.log("💾 Guardando ubicaciones antes de avanzar...");
-                const success = await guardarUbicaciones();
-                if (success) {
+        // Deshabilitar el botón temporalmente para evitar múltiples clics
+        nextBtn.disabled = true;
+        nextBtn.textContent = "Validando...";
+        
+        try {
+            const isValid = await validateStep(currentStep);
+            console.log("✅ Resultado validación:", isValid);
+            
+            if (isValid) {
+                // ✅ Si es el paso 2 (domicilio), guardar ubicaciones antes de avanzar
+                if (currentStep === 1) { // Paso 2 es índice 1
+                    console.log("💾 Guardando ubicaciones antes de avanzar...");
+                    const success = await guardarUbicaciones();
+                    if (success) {
+                        currentStep++;
+                        showStep(currentStep);
+                    } else {
+                        alert('Error al guardar la ubicación. Intenta nuevamente.');
+                    }
+                } else {
                     currentStep++;
                     showStep(currentStep);
-                } else {
-                    alert('Error al guardar la ubicación. Intenta nuevamente.');
                 }
             } else {
-                currentStep++;
-                showStep(currentStep);
+                console.log("❌ Validación fallida, no se avanza");
+                const stepNode = formSteps[currentStep];
+                const firstError = stepNode.querySelector('.input-error');
+                if (firstError) {
+                    firstError.focus();
+                    firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
             }
-        } else {
-            console.log("❌ Validación fallida, no se avanza");
-            // Mostrar mensaje general de error
-            const stepNode = formSteps[currentStep];
-            const firstError = stepNode.querySelector('.input-error');
-            if (firstError) {
-                firstError.focus();
-                firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
+        } catch (error) {
+            console.error('❌ Error durante la validación:', error);
+            alert('Error durante la validación. Intenta nuevamente.');
+        } finally {
+            // Rehabilitar el botón
+            nextBtn.disabled = false;
+            nextBtn.textContent = "Siguiente";
         }
-    } catch (error) {
-        console.error('❌ Error durante la validación:', error);
-        alert('Error durante la validación. Intenta nuevamente.');
-    } finally {
-        // Rehabilitar el botón
-        nextBtn.disabled = false;
-        nextBtn.textContent = "Siguiente";
-    }
-});
-    
+    });
+
     // ✅ Función para guardar ubicaciones
     function guardarUbicaciones() {
         return new Promise((resolve, reject) => {
@@ -919,22 +949,23 @@ document.addEventListener("DOMContentLoaded", function () {
             const ciudadId = document.getElementById('ciudadId').value;
             
             console.log("💾 Guardando ubicaciones:", { paisCodigo, provinciaCodigo, ciudadId });
-    
+
             if (!paisCodigo || !provinciaCodigo || !ciudadId) {
                 reject(new Error('Faltan datos de ubicación'));
                 return;
             }
-    
-            // ✅ Obtener el token CSRF del formulario principal
-            const csrfToken = document.querySelector('input[name="_csrf"]').value;
-            console.log("🔐 CSRF Token:", csrfToken);
-    
+
+            const csrfInput = document.querySelector('input[name="_csrf"]');
+            const csrfToken = csrfInput ? csrfInput.value : null;
+
             const formData = new FormData();
+            if (csrfToken) {
+                formData.append('_csrf', csrfToken);
+            }
             formData.append('paisCodigo', paisCodigo);
             formData.append('provinciaCodigo', provinciaCodigo);
             formData.append('ciudadId', ciudadId);
-            formData.append('_csrf', csrfToken); // ✅ Agregar el token CSRF
-    
+
             fetch('/api/ubicaciones/guardar', {
                 method: 'POST',
                 body: formData
