@@ -1000,6 +1000,9 @@
                                                                th:data-entrega-id="${tareasEntregas != null && tareasEntregas.containsKey(actividad.idActividad) ? tareasEntregas.get(actividad.idActividad).idEntrega : ''}"
                                                                th:data-entrega-fecha="${tareasEntregas != null && tareasEntregas.containsKey(actividad.idActividad) ? tareasEntregas.get(actividad.idActividad).fechaEntrega : ''}"
                                                                th:data-entrega-calif="${tareasEntregas != null && tareasEntregas.containsKey(actividad.idActividad) ? tareasEntregas.get(actividad.idActividad).calificacion : ''}"
+                                                                th:data-entrega-archivo="${tareasEntregas != null && tareasEntregas.containsKey(actividad.idActividad) ? tareasEntregas.get(actividad.idActividad).nombreArchivo : ''}"
+                                                                th:data-entrega-texto="${tareasEntregas != null && tareasEntregas.containsKey(actividad.idActividad) ? tareasEntregas.get(actividad.idActividad).contenido : ''}"
+                                                               th:data-tipo-entrega="${#strings.listJoin(actividad.tipoEntrega, ',')}"
                                                                onclick="abrirModalTarea(this)"
                                                                class="btn btn-sm btn-outline-primary rounded-pill px-3">
                                                                 Ver Tarea
@@ -3882,7 +3885,8 @@
                             openers.forEach(opener => {
                                 if (data.entregaId) opener.setAttribute('data-entrega-id', data.entregaId);
                                 if (data.entregaFecha) opener.setAttribute('data-entrega-fecha', data.entregaFecha);
-                                if (data.nombreArchivo) opener.setAttribute('data-entrega-archivo', data.nombreArchivo);
+                                if (data.nombreArchivo !== undefined) opener.setAttribute('data-entrega-archivo', data.nombreArchivo || '');
+                                if (data.contenido !== undefined) opener.setAttribute('data-entrega-texto', data.contenido || '');
                                 if (data.calificacion !== undefined && data.calificacion !== null) opener.setAttribute('data-entrega-calif', data.calificacion);
 
                                 // Añadir badge si no existe
@@ -4725,6 +4729,10 @@
             const entregaId = btn.getAttribute('data-entrega-id');
             const entregaFecha = btn.getAttribute('data-entrega-fecha');
             const calificacion = btn.getAttribute('data-entrega-calif');
+            const entregaArchivo = btn.getAttribute('data-entrega-archivo');
+            const entregaTexto = btn.getAttribute('data-entrega-texto');
+            const tipoEntregaAttr = btn.getAttribute('data-tipo-entrega') || '';
+            const tiposEntrega = tipoEntregaAttr.split(',').map(t => t.trim()).filter(Boolean);
 
             const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
 
@@ -4743,6 +4751,8 @@
                             <i class="fas fa-check-circle mr-2"></i> Tarea enviada
                         </div>
                         <p class="text-sm text-gray-600">Fecha: ${formatearFecha(entregaFecha)}</p>
+                        ${entregaTexto ? `<div class=\"mt-2 text-sm text-gray-700 bg-white border border-green-100 rounded p-3\"><strong>Texto enviado:</strong><br>${entregaTexto}</div>` : ''}
+                        ${entregaArchivo ? `<div class=\"mt-2 text-sm\"><a href=\"/entrega/descargar/${entregaId}\" class=\"text-blue-600 hover:underline\"><i class=\"fas fa-paperclip mr-1\"></i>${entregaArchivo}</a></div>` : ''}
                         ${calificacion ? `<p class="text-sm font-bold text-gray-800 mt-2">Calificación: ${calificacion}</p>` : '<p class="text-xs text-gray-500 mt-1">Pendiente de calificación</p>'}
                     </div>
                     ${puedeModificar ? `
@@ -4840,6 +4850,42 @@
             `;
             
             document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+            const modalEl = document.getElementById('tareaModal');
+            aplicarRestriccionesEntrega(modalEl, tiposEntrega);
+        }
+
+        function aplicarRestriccionesEntrega(modalEl, tiposEntrega) {
+            if (!modalEl) return;
+            const allowTexto = tiposEntrega.length === 0 || tiposEntrega.includes('TEXTO');
+            const allowArchivo = tiposEntrega.length === 0 || tiposEntrega.includes('ARCHIVOS');
+
+            const textoFields = modalEl.querySelectorAll('textarea[name="texto"]');
+            const archivoFields = modalEl.querySelectorAll('input[type="file"][name="archivo"]');
+
+            textoFields.forEach(field => {
+                const wrapper = field.closest('div');
+                if (allowTexto) {
+                    field.disabled = false;
+                    if (wrapper) wrapper.style.display = '';
+                } else {
+                    field.value = '';
+                    field.disabled = true;
+                    if (wrapper) wrapper.style.display = 'none';
+                }
+            });
+
+            archivoFields.forEach(field => {
+                const wrapper = field.closest('div');
+                if (allowArchivo) {
+                    field.disabled = false;
+                    if (wrapper) wrapper.style.display = '';
+                } else {
+                    field.value = '';
+                    field.disabled = true;
+                    if (wrapper) wrapper.style.display = 'none';
+                }
+            });
         }
         
         function escapeHtml(text) {

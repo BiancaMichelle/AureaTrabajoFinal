@@ -352,6 +352,7 @@ public class EntregaController {
                 body.put("entregaId", entregaExistente.getIdEntrega());
                 body.put("entregaFecha", java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm").format(entregaExistente.getFechaEntrega()));
                 body.put("nombreArchivo", entregaExistente.getNombreArchivo());
+                body.put("contenido", entregaExistente.getContenido());
                 body.put("calificacion", entregaExistente.getCalificacion());
                 return ResponseEntity.ok(body);
             } else {
