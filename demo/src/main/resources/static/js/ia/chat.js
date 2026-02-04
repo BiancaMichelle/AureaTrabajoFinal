@@ -66,10 +66,9 @@ if (typeof window.AIChat === 'undefined') {
     
     createChatStructure() {
         const chatHTML = `
-            <!-- Botón flotante -->
-            <button id="ai-chat-toggle" class="ai-chat-toggle" title="Asistente IA">
+            <!-- Botón flotante (sin burbuja de notificación) -->
+            <button id="ai-chat-toggle" class="ai-chat-toggle" title="Asistente IA" style="display: flex; visibility: visible; opacity: 1;">
                 <i class="fas fa-robot"></i>
-                <div id="ai-chat-badge" class="ai-chat-badge" style="display: none;">1</div>
             </button>
             
             <!-- Contenedor del chat -->
@@ -87,9 +86,6 @@ if (typeof window.AIChat === 'undefined') {
                         </button>
                         <button id="ai-minimize-btn" class="ai-action-btn" title="Minimizar">
                             <i class="fas fa-minus"></i>
-                        </button>
-                        <button id="ai-close-btn" class="ai-action-btn" title="Cerrar">
-                            <i class="fas fa-times"></i>
                         </button>
                     </div>
                 </div>
@@ -162,7 +158,7 @@ if (typeof window.AIChat === 'undefined') {
     }
     
     bindEvents() {
-        // Botón toggle
+        // Botón toggle (abre/cierra el modal)
         if (this.toggleBtn) {
             this.toggleBtn.addEventListener('click', () => this.toggleChat());
         }
@@ -188,24 +184,12 @@ if (typeof window.AIChat === 'undefined') {
             clearBtn.addEventListener('click', () => this.clearChat());
         }
         
-        // Botón cerrar
-        const closeBtn = document.getElementById('ai-close-btn');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => this.closeChat());
-        }
-        
         // Botón minimizar
         if (this.minimizeBtn) {
             this.minimizeBtn.addEventListener('click', () => this.minimizeChat());
         }
         
-        // Click fuera del chat para cerrar
-        document.addEventListener('click', (e) => {
-            if (this.isOpen && this.chatContainer && this.toggleBtn && 
-                !this.chatContainer.contains(e.target) && !this.toggleBtn.contains(e.target)) {
-                this.closeChat();
-            }
-        });
+        // NOTA: removido el cierre por click fuera para evitar cierres inesperados en otras vistas
         
         // Control de rate limiting
         setInterval(() => {
@@ -317,12 +301,27 @@ if (typeof window.AIChat === 'undefined') {
             this.chatContainer.classList.add('show');
             // Añadir clase 'open' también para compatibilidad con estilos alternativos
             this.chatContainer.classList.add('open');
+            // Asegurarse de que no esté minimizado al abrir
+            this.chatContainer.classList.remove('minimized');
             console.log('AIChat: chatContainer classes show + open added');
         }
+        if (this.minimizeBtn) {
+            const icon = this.minimizeBtn.querySelector('i');
+            if (icon) icon.className = 'fas fa-minus';
+        }
+        
+        // FORZAR actualización del botón toggle
         if (this.toggleBtn) {
+            // Asegurar visibilidad
+            this.toggleBtn.style.display = 'flex';
+            this.toggleBtn.style.visibility = 'visible';
+            this.toggleBtn.style.opacity = '1';
+            
+            // Actualizar estilo y contenido (sin badge)
             this.toggleBtn.classList.add('active');
             this.toggleBtn.innerHTML = '<i class="fas fa-times"></i>';
         }
+        
         if (this.inputField) this.inputField.focus();
         this.hideBadge();
 
@@ -355,10 +354,24 @@ if (typeof window.AIChat === 'undefined') {
          if (this.chatContainer) {
              this.chatContainer.classList.remove('show');
              this.chatContainer.classList.remove('open');
+             // Asegurar que si se cerró estando minimizado, se restaure el estado visual
+             this.chatContainer.classList.remove('minimized');
+             
+             // Restaurar el icono de maximizar por si acaso
+             if (this.minimizeBtn) {
+                 const icon = this.minimizeBtn.querySelector('i');
+                 if (icon) icon.className = 'fas fa-minus';
+             }
+
              console.log('AIChat: chatContainer classes show + open removed');
          }
         if (this.toggleBtn) {
+            this.toggleBtn.style.display = 'flex'; // Asegurar que sea visible
+            this.toggleBtn.style.visibility = 'visible';
+            this.toggleBtn.style.opacity = '1';
+            
             this.toggleBtn.classList.remove('active');
+            // Restaurar icono del robot (sin badge)
             this.toggleBtn.innerHTML = '<i class="fas fa-robot"></i>';
         }
     }
@@ -367,12 +380,19 @@ if (typeof window.AIChat === 'undefined') {
         if (this.chatContainer && this.minimizeBtn) {
             this.chatContainer.classList.toggle('minimized');
             const icon = this.minimizeBtn.querySelector('i');
+            const isMinimized = this.chatContainer.classList.contains('minimized');
+
             if (icon) {
-                if (this.chatContainer.classList.contains('minimized')) {
+                if (isMinimized) {
                     icon.className = 'fas fa-plus';
                 } else {
                     icon.className = 'fas fa-minus';
                 }
+            }
+
+            // Ocultar/Mostrar el botón toggle (la X de fondo) según el estado
+            if (this.toggleBtn) {
+                this.toggleBtn.style.display = isMinimized ? 'none' : 'flex';
             }
         }
     }
@@ -699,19 +719,12 @@ if (typeof window.AIChat === 'undefined') {
         }
     }
     
-    showBadge(count = 1) {
-        const badge = document.getElementById('ai-chat-badge');
-        if (badge) {
-            badge.textContent = count;
-            badge.style.display = 'flex';
-        }
+    showBadge() {
+        // Badge eliminado; función dejada como no-op para compatibilidad
     }
     
     hideBadge() {
-        const badge = document.getElementById('ai-chat-badge');
-        if (badge) {
-            badge.style.display = 'none';
-        }
+        // Badge eliminado; función dejada como no-op para compatibilidad
     }
     
     updateConnectionStatus(status) {
