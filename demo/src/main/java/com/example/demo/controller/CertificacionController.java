@@ -118,7 +118,8 @@ public class CertificacionController {
         // Calcular totales para certificación
         long totalACertificar = certificaciones.stream()
             .filter(c -> c.getEstado() == EstadoCertificacion.PROPUESTA || 
-                        c.getEstado() == EstadoCertificacion.APROBADO_DOCENTE)
+                        c.getEstado() == EstadoCertificacion.APROBADO_DOCENTE ||
+                        c.getEstado() == EstadoCertificacion.CERTIFICADO_EMITIDO)
             .count();
         
         // Agregar datos al modelo
@@ -152,7 +153,8 @@ public class CertificacionController {
             if (oferta.getEstado() == EstadoOferta.CERRADA) {
                 redirectAttributes.addFlashAttribute("error", 
                     "No se pueden modificar certificaciones de una oferta CERRADA");
-                return "redirect:/aula/oferta/" + ofertaId + "/certificaciones";
+                redirectAttributes.addFlashAttribute("abrirCertificaciones", true);
+                return "redirect:/aula/oferta/" + ofertaId + "/calificaciones";
             }
             
             // Obtener docente actual
@@ -174,7 +176,8 @@ public class CertificacionController {
                 "Error al aprobar alumno: " + e.getMessage());
         }
         
-        return "redirect:/aula/oferta/" + ofertaId + "/certificaciones";
+        redirectAttributes.addFlashAttribute("abrirCertificaciones", true);
+        return "redirect:/aula/oferta/" + ofertaId + "/calificaciones";
     }
     
     /**
@@ -197,14 +200,16 @@ public class CertificacionController {
             if (oferta.getEstado() == EstadoOferta.CERRADA) {
                 redirectAttributes.addFlashAttribute("error", 
                     "No se pueden modificar certificaciones de una oferta CERRADA");
-                return "redirect:/aula/oferta/" + ofertaId + "/certificaciones";
+                redirectAttributes.addFlashAttribute("abrirCertificaciones", true);
+                return "redirect:/aula/oferta/" + ofertaId + "/calificaciones";
             }
             
             // Validar que se proporcionen observaciones
             if (observaciones == null || observaciones.trim().isEmpty()) {
                 redirectAttributes.addFlashAttribute("error", 
                     "Debes proporcionar una justificación para rechazar al alumno");
-                return "redirect:/aula/oferta/" + ofertaId + "/certificaciones";
+                redirectAttributes.addFlashAttribute("abrirCertificaciones", true);
+                return "redirect:/aula/oferta/" + ofertaId + "/calificaciones";
             }
             
             // Obtener docente actual
@@ -223,7 +228,8 @@ public class CertificacionController {
                 "Error al rechazar alumno: " + e.getMessage());
         }
         
-        return "redirect:/aula/oferta/" + ofertaId + "/certificaciones";
+        redirectAttributes.addFlashAttribute("abrirCertificaciones", true);
+        return "redirect:/aula/oferta/" + ofertaId + "/calificaciones";
     }
     
     /**
@@ -238,11 +244,23 @@ public class CertificacionController {
             RedirectAttributes redirectAttributes) {
         
         try {
+            // Validar estado actual primero
+            OfertaAcademica oferta = ofertaRepository.findById(ofertaId)
+                    .orElseThrow(() -> new RuntimeException("Oferta no encontrada"));
+            
+            if (oferta.getEstado() == EstadoOferta.CERRADA) {
+                redirectAttributes.addFlashAttribute("error", 
+                    "Las notas ya han sido cerradas previamente.");
+                redirectAttributes.addFlashAttribute("abrirCertificaciones", true);
+                return "redirect:/aula/oferta/" + ofertaId + "/calificaciones";
+            }
+
             // Validar confirmación
             if (!"CONFIRMAR".equals(confirmacion)) {
                 redirectAttributes.addFlashAttribute("error", 
                     "Debes confirmar la acción para cerrar las notas");
-                return "redirect:/aula/oferta/" + ofertaId + "/certificaciones";
+                redirectAttributes.addFlashAttribute("abrirCertificaciones", true);
+                return "redirect:/aula/oferta/" + ofertaId + "/calificaciones";
             }
             
             // Obtener docente actual
@@ -259,10 +277,9 @@ public class CertificacionController {
                     String.format("Notas cerradas con %d aprobados. Hubo %d errores. Revisa los detalles.",
                         resultado.certificadosEmitidos, resultado.errores));
             } else {
+                // Notificación específica solicitada
                 redirectAttributes.addFlashAttribute("success", 
-                    String.format("¡Notas cerradas exitosamente! Se registraron %d alumnos aprobados. " +
-                        "El acta de cierre está disponible para descarga.",
-                        resultado.certificadosEmitidos));
+                    "Se cerró correctamente la acta y se envio a administración");
             }
             
         } catch (Exception e) {
@@ -270,7 +287,8 @@ public class CertificacionController {
                 "Error al cerrar notas: " + e.getMessage());
         }
         
-        return "redirect:/aula/oferta/" + ofertaId + "/certificaciones";
+        redirectAttributes.addFlashAttribute("abrirCertificaciones", true);
+        return "redirect:/aula/oferta/" + ofertaId + "/calificaciones";
     }
     
     /**
@@ -365,7 +383,8 @@ public class CertificacionController {
             if (oferta.getEstado() == EstadoOferta.CERRADA) {
                 redirectAttributes.addFlashAttribute("error", 
                     "No se pueden recalcular certificaciones de una oferta CERRADA");
-                return "redirect:/aula/oferta/" + ofertaId + "/certificaciones";
+                redirectAttributes.addFlashAttribute("abrirCertificaciones", true);
+                return "redirect:/aula/oferta/" + ofertaId + "/calificaciones";
             }
             
             // Recalcular
@@ -379,6 +398,7 @@ public class CertificacionController {
                 "Error al recalcular: " + e.getMessage());
         }
         
-        return "redirect:/aula/oferta/" + ofertaId + "/certificaciones";
+        redirectAttributes.addFlashAttribute("abrirCertificaciones", true);
+        return "redirect:/aula/oferta/" + ofertaId + "/calificaciones";
     }
 }

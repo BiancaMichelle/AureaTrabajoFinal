@@ -432,8 +432,8 @@ public class AulaController {
                     List<Certificacion> certificaciones = certificacionService.obtenerCertificacionesPorOferta(id);
                     model.addAttribute("certificaciones", certificaciones);
                     
-                    // Calcular total a certificar
-                    long totalACertificar = resumen.propuestas + resumen.aprobadosDocente;
+                    // Calcular total a certificar (incluye emitidos si ya está cerrada)
+                    long totalACertificar = resumen.propuestas + resumen.aprobadosDocente + resumen.certificadosEmitidos;
                     model.addAttribute("totalACertificar", totalACertificar);
                     
                     model.addAttribute("mostrarCertificaciones", true);
