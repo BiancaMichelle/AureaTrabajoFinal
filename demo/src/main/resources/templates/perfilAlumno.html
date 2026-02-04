@@ -389,11 +389,17 @@
                                         <label for="new-password" class="block text-sm font-medium text-gray-700">Nueva Contraseña</label>
                                         <input type="password" id="new-password" 
                                                class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm">
+                                        <div id="password-feedback" class="mt-2 text-xs text-gray-600 space-y-1">
+                                            <div id="pwd-length" class="pwd-rule">● 8 caracteres mínimo</div>
+                                            <div id="pwd-upper" class="pwd-rule">● 1 mayúscula</div>
+                                            <div id="pwd-special" class="pwd-rule">● 1 carácter especial</div>
+                                        </div>
                                     </div>
                                     <div>
                                         <label for="confirm-password" class="block text-sm font-medium text-gray-700">Confirmar Nueva Contraseña</label>
                                         <input type="password" id="confirm-password" 
                                                class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm">
+                                        <small id="confirm-feedback" class="block mt-1 text-xs"></small>
                                     </div>
                                 </div>
                                 
@@ -691,17 +697,63 @@
                 }
                 
                 // --- Lógica de Seguridad (Cambio de Contraseña) ---
+                // --- Lógica de Seguridad (Cambio de Contraseña) ---
                 const btnUpdatePass = document.getElementById('btn-update-password');
+                const pwdCurrent = document.getElementById('current-password');
+                const pwdNew = document.getElementById('new-password');
+                const pwdConfirm = document.getElementById('confirm-password');
+                const ruleLength = document.getElementById('pwd-length');
+                const ruleUpper = document.getElementById('pwd-upper');
+                const ruleSpecial = document.getElementById('pwd-special');
+                const confirmFeedback = document.getElementById('confirm-feedback');
+
+                function setRuleState(el, ok) {
+                    if (!el) return;
+                    el.style.color = ok ? '#15803d' : '#ef4444';
+                    el.style.fontWeight = ok ? '600' : '400';
+                }
+
+                function updatePasswordFeedbackPerfil() {
+                    const val = pwdNew ? (pwdNew.value || '') : '';
+                    const hasLength = val.length >= 8;
+                    const hasUpper = /[A-Z]/.test(val);
+                    const hasSpecial = /[^a-zA-Z0-9]/.test(val);
+
+                    setRuleState(ruleLength, hasLength);
+                    setRuleState(ruleUpper, hasUpper);
+                    setRuleState(ruleSpecial, hasSpecial);
+
+                    if (confirmFeedback && pwdConfirm) {
+                        if (!pwdConfirm.value) {
+                            confirmFeedback.textContent = '';
+                        } else if (pwdConfirm.value === val) {
+                            confirmFeedback.style.color = '#15803d';
+                            confirmFeedback.textContent = 'Las contraseñas coinciden';
+                        } else {
+                            confirmFeedback.style.color = '#ef4444';
+                            confirmFeedback.textContent = 'Las contraseñas no coinciden';
+                        }
+                    }
+                }
+
+                if (pwdNew) pwdNew.addEventListener('input', updatePasswordFeedbackPerfil);
+                if (pwdConfirm) pwdConfirm.addEventListener('input', updatePasswordFeedbackPerfil);
+
                 if (btnUpdatePass) {
                     btnUpdatePass.addEventListener('click', function() {
-                        const currentPass = document.getElementById('current-password').value;
-                        const newPass = document.getElementById('new-password').value;
-                        const confirmPass = document.getElementById('confirm-password').value;
+                        const currentPass = pwdCurrent ? pwdCurrent.value : '';
+                        const newPass = pwdNew ? pwdNew.value : '';
+                        const confirmPass = pwdConfirm ? pwdConfirm.value : '';
                         const errorDiv = document.getElementById('password-error');
                         const errorText = document.getElementById('password-error-text');
                         
                         // Reset error
-                        errorDiv.classList.add('hidden');
+                        if (errorDiv) errorDiv.classList.add('hidden');
+                        
+                        function showError(msg) {
+                            if (errorText) errorText.textContent = msg;
+                            if (errorDiv) errorDiv.classList.remove('hidden');
+                        }
                         
                         // Validations
                         if (!currentPass || !newPass || !confirmPass) {
@@ -714,17 +766,12 @@
                             return;
                         }
                         
-                        if (newPass.length < 8) {
-                            showError("La nueva contraseña debe tener al menos 8 caracteres");
-                            return;
-                        }
-                        
-                        const hasNumber = /\d/.test(newPass);
+                        const hasLength = newPass.length >= 8;
                         const hasUpper = /[A-Z]/.test(newPass);
-                        const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPass);
+                        const hasSpecial = /[^a-zA-Z0-9]/.test(newPass);
                         
-                        if (!hasNumber || !hasUpper || !hasSpecial) {
-                            showError("La contraseña debe incluir al menos una mayúscula, un número y un carácter especial");
+                        if (!hasLength || !hasUpper || !hasSpecial) {
+                            showError("La contraseña debe tener 8 caracteres, 1 mayúscula y 1 carácter especial");
                             return;
                         }
                         
@@ -759,11 +806,6 @@
                         
                         document.body.appendChild(form);
                         form.submit();
-                        
-                        function showError(msg) {
-                            errorText.textContent = msg;
-                            errorDiv.classList.remove('hidden');
-                        }
                     });
                 }
             });

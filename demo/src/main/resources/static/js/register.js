@@ -770,6 +770,51 @@ document.addEventListener("DOMContentLoaded", function () {
 
         return isValid;
     }
+
+    // ===== Feedback en vivo de contraseña =====
+    const pwdField = document.getElementById('password');
+    const pwdConfirmField = document.getElementById('confirmPassword');
+    const ruleLength = document.getElementById('pwd-length');
+    const ruleUpper = document.getElementById('pwd-upper');
+    const ruleSpecial = document.getElementById('pwd-special');
+    const confirmFeedback = document.getElementById('confirm-feedback');
+
+    function setRuleState(el, ok) {
+        if (!el) return;
+        el.style.color = ok ? '#15803d' : '#ef4444';
+        el.style.fontWeight = ok ? '600' : '400';
+    }
+
+    function updatePasswordFeedback() {
+        if (!pwdField) return;
+        const val = pwdField.value || '';
+        const hasLength = val.length >= 8;
+        const hasUpper = /[A-Z]/.test(val);
+        const hasSpecial = /[^a-zA-Z0-9]/.test(val);
+
+        setRuleState(ruleLength, hasLength);
+        setRuleState(ruleUpper, hasUpper);
+        setRuleState(ruleSpecial, hasSpecial);
+
+        if (confirmFeedback && pwdConfirmField) {
+            if (!pwdConfirmField.value) {
+                confirmFeedback.textContent = '';
+            } else if (pwdConfirmField.value === val) {
+                confirmFeedback.style.color = '#15803d';
+                confirmFeedback.textContent = 'Las contraseñas coinciden';
+            } else {
+                confirmFeedback.style.color = '#ef4444';
+                confirmFeedback.textContent = 'Las contraseñas no coinciden';
+            }
+        }
+    }
+
+    if (pwdField) {
+        pwdField.addEventListener('input', updatePasswordFeedback);
+    }
+    if (pwdConfirmField) {
+        pwdConfirmField.addEventListener('input', updatePasswordFeedback);
+    }
     
     // ✅ Funciones auxiliares
     function getCustomErrorMessage(input) {

@@ -188,11 +188,16 @@
             <div>
                 <label for="password">Contraseña</label>
                 <input type="password" id="password" th:field="*{contraseña}" minlength="8" required />
-                <small>La contraseña debe tener al menos 8 caracteres además de minuscula y mayuscula.</small>
+                <div id="password-feedback" class="pwd-feedback" style="margin-top:6px; font-size:12px; color:#4b5563;">
+                    <div id="pwd-length" class="pwd-rule">● 8 caracteres mínimo</div>
+                    <div id="pwd-upper" class="pwd-rule">● 1 mayúscula</div>
+                    <div id="pwd-special" class="pwd-rule">● 1 carácter especial</div>
+                </div>
             </div>
             <div>
                 <label for="confirmPassword">Repetir Contraseña</label>
                 <input type="password" id="confirmPassword" name="confirmPassword" required />
+                <small id="confirm-feedback" style="display:block; margin-top:6px; font-size:12px; color:#ef4444;"></small>
             </div>
             <div>
                 <label>
