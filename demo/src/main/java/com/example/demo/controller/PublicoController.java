@@ -72,6 +72,7 @@ public class PublicoController {
                 // 1. Obtener IDs de ofertas donde está INSCRITO (Como Alumno)
                 List<Inscripciones> inscripciones = inscripcionRepository.findByAlumnoId(usuario.getId());
                 idsInscritos.addAll(inscripciones.stream()
+                        .filter(i -> Boolean.TRUE.equals(i.getEstadoInscripcion())) // Solo inscripciones activas
                         .map(i -> i.getOferta().getIdOferta())
                         .collect(Collectors.toSet()));
 
@@ -129,6 +130,7 @@ public class PublicoController {
                 // 1. Obtener IDs de ofertas donde está INSCRITO (Como Alumno)
                 List<Inscripciones> inscripciones = inscripcionRepository.findByAlumnoId(usuario.getId());
                 idsInscritos.addAll(inscripciones.stream()
+                        .filter(i -> Boolean.TRUE.equals(i.getEstadoInscripcion())) // Solo inscripciones activas
                         .map(i -> i.getOferta().getIdOferta())
                         .collect(Collectors.toSet()));
 

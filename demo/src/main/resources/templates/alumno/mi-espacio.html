@@ -469,6 +469,45 @@
 
             <!-- Sidebar con Eventos -->
             <div class="sidebar-panels">
+                
+                <!-- Documentación de Ingreso -->
+                <div class="panel" style="border-left: 4px solid #3182ce;">
+                    <div class="panel-header">
+                        <i class="fas fa-file-contract" style="color: #3182ce;"></i>
+                        <h3>Documentación</h3>
+                    </div>
+                    <div>
+                        <div th:if="${#lists.isEmpty(inscripciones)}">
+                            <p class="text-sm text-gray-500 text-center py-2">No tienes inscripciones registradas.</p>
+                        </div>
+
+                        <div th:unless="${#lists.isEmpty(inscripciones)}">
+                            <p class="text-sm text-gray-600 mb-3" style="font-size: 0.9rem; color: #718096; margin-bottom: 0.75rem;">
+                                Estado de tus requisitos:
+                            </p>
+                            
+                            <!-- Estado ÚNICO para todo el alumno -->
+                            <div th:style="${alumno.documentacionEntregada} ? 'background-color: #f0fff4; border-radius: 8px; padding: 12px; border: 1px solid #c6f6d5; display: flex; align-items: center; gap: 10px; margin-bottom: 10px;' : 'background-color: #fffaf0; border-radius: 8px; padding: 12px; border: 1px solid #feebc8; display: flex; align-items: center; gap: 10px; margin-bottom: 10px;'">
+                                <i th:class="${alumno.documentacionEntregada} ? 'fas fa-check-circle' : 'fas fa-exclamation-circle'"
+                                   th:style="${alumno.documentacionEntregada} ? 'color: #48bb78; font-size: 1.5rem;' : 'color: #ed8936; font-size: 1.5rem;'"></i>
+                                <div>
+                                    <h5 th:text="${alumno.documentacionEntregada} ? 'Documentación Completa' : 'Documentación Pendiente'" 
+                                        style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #2d3748;">
+                                        Estado
+                                    </h5>
+                                    <p style="margin: 0; font-size: 0.85rem; color: #4a5568;">
+                                        <span th:text="${alumno.documentacionEntregada} ? 'Tus requisitos han sido verificados.' : 'Debes presentar tus documentos.'">Descripción</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button onclick="mostrarModalRequisitosGlobal()" type="button" style="width: 100%; padding: 10px; background-color: #4299e1; color: white; text-align: center; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.9rem; border: none; cursor: pointer; transition: background-color 0.2s;">
+                            <i class="fas fa-list-ul me-2"></i> Ver Qué Debo Entregar
+                        </button>
+                    </div>
+                </div>
+
                 <!-- PANEL TEST IA -->
                 <div class="panel" style="border-left: 4px solid #805ad5;">
                     <div class="panel-header">

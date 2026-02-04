@@ -52,6 +52,10 @@ document.addEventListener('DOMContentLoaded', function () {
         alumnoColegio: document.getElementById('detalle-usuario-colegio'),
         alumnoAnioEgreso: document.getElementById('detalle-usuario-anio-egreso'),
         alumnoUltimosEstudios: document.getElementById('detalle-usuario-ultimos-estudios'),
+        alumnoDocumentacionContainer: document.getElementById('detalle-usuario-doc-global-container'), // Nuevo contenedor
+        alumnoDocCheck: document.getElementById('detalle-usuario-doc-check'), // Nuevo checkbox global
+        alumnoDocLabel: document.getElementById('detalle-usuario-doc-label'), // Nuevo label global
+        alumnoInscripciones: document.getElementById('detalle-usuario-inscripciones'),
         docenteMatricula: document.getElementById('detalle-usuario-matricula'),
         docenteExperiencia: document.getElementById('detalle-usuario-experiencia'),
         docenteHorarios: document.getElementById('detalle-usuario-horarios')
@@ -500,6 +504,169 @@ document.addEventListener('DOMContentLoaded', function () {
         setModalTexto(modalDetalleRefs.alumnoColegio, detalle.colegioEgreso || 'No registrado');
         setModalTexto(modalDetalleRefs.alumnoAnioEgreso, detalle.añoEgreso || 'No especificado');
         setModalTexto(modalDetalleRefs.alumnoUltimosEstudios, detalle.ultimosEstudios || 'No especificado');
+
+        // Renderizar checkbox global de documentación
+        renderDocumentacionGlobal(detalle);
+
+        renderInscripcionesAlumno(detalle.inscripciones || []);
+    }
+
+    function renderDocumentacionGlobal(detalle) {
+        const checkbox = modalDetalleRefs.alumnoDocCheck;
+        const label = modalDetalleRefs.alumnoDocLabel;
+        const container = modalDetalleRefs.alumnoDocumentacionContainer;
+
+        if (!checkbox || !label || !container) return; // Si no existen en el DOM, ignorar
+
+        // Solo mostrar para alumnos (siempre se llama desde renderAlumnoDetalle, pero por seguridad)
+        // Ya validamos antes, así que asumimos que es alumno.
+        
+        const entregada = detalle.documentacionEntregada === true;
+        
+        checkbox.checked = entregada;
+        checkbox.dataset.alumnoId = detalle.id; // Guardamos ID para el evento change
+        
+        updateDocumentacionLabel(entregada);
+
+        // Añadir evento one-time o manejarlo globalmente (mejor global para evitar duplicados)
+        // El evento onchange ya está en el HTML llamando a toggleDocumentacionGlobal(this)
+    }
+
+    function updateDocumentacionLabel(entregada) {
+        const label = modalDetalleRefs.alumnoDocLabel;
+        if(entregada) {
+            label.textContent = 'Documentación Completada';
+            label.className = 'form-check-label text-success fw-bold';
+        } else {
+             label.textContent = 'Documentación Pendiente';
+             label.className = 'form-check-label text-warning fw-bold';
+        }
+    }
+
+    // Función GLOBAL llamada desde el HTML
+    window.toggleDocumentacionGlobal = function(checkbox) {
+        const idAlumno = modalDetalleRefs.alumnoDocCheck.dataset.alumnoId;
+        if (!idAlumno) return;
+
+        const label = modalDetalleRefs.alumnoDocLabel;
+        const originalState = !checkbox.checked;
+
+        // Feedback visual
+        label.textContent = 'Actualizando...';
+        label.className = 'form-check-label text-muted';
+
+        const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+        const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+        const headers = { 'Content-Type': 'application/json' };
+        if (csrfToken && csrfHeader) headers[csrfHeader] = csrfToken;
+
+        fetch(`/admin/alumnos/${idAlumno}/toggle-documentacion`, {
+            method: 'PUT',
+            headers: headers
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                const checked = data.nuevoEstado;
+                checkbox.checked = checked;
+                updateDocumentacionLabel(checked);
+                mostrarNotificacion('Estado de documentación actualizado', 'success');
+            } else {
+                throw new Error(data.message);
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            checkbox.checked = originalState;
+            updateDocumentacionLabel(originalState);
+            mostrarNotificacion('Error al actualizar: ' + err.message, 'error');
+        });
+    };
+
+    function renderInscripcionesAlumno(inscripciones) {
+        const container = modalDetalleRefs.alumnoInscripciones;
+        if (!container) return; // Si no existe el contenedor en HTML, salir.
+
+        container.innerHTML = '';
+
+        if (!Array.isArray(inscripciones) || inscripciones.length === 0) {
+            container.innerHTML = '<p class="text-muted small"><i class="fas fa-info-circle"></i> No hay inscripciones registradas.</p>';
+            return;
+        }
+
+        const table = document.createElement('table');
+        table.className = 'table table-sm table-borderless align-middle mb-0';
+        table.style.fontSize = '0.9rem';
+        table.innerHTML = `
+            <thead class="table-light">
+                <tr>
+                    <th>Oferta Académica</th>
+                    <th>Estado</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        `;
+
+        const tbody = table.querySelector('tbody');
+
+        inscripciones.forEach(insc => {
+            const tr = document.createElement('tr');
+            const estadoClass = insc.estadoInscripcion ? 'text-success' : 'text-danger';
+            const estadoIcon = insc.estadoInscripcion ? 'fa-check-circle' : 'fa-times-circle';
+            const estadoText = insc.estadoInscripcion ? 'Activa' : 'Cancelada/Finalizada';
+            
+            tr.innerHTML = `
+                <td><i class="fas fa-book-reader text-primary me-2"></i> ${insc.ofertaTitulo || 'Oferta sin título'}</td>
+                <td><span class="${estadoClass}"><i class="fas ${estadoIcon}"></i> ${estadoText}</span></td>
+                <td class="text-end">
+                    ${insc.estadoInscripcion ? `
+                        <button class="btn btn-sm btn-outline-danger" onclick="confirmarCancelarInscripcion(${insc.idInscripcion})" title="Cancelar Inscripción">
+                            <i class="fas fa-ban"></i> Cancelar
+                        </button>
+                    ` : '<span class="text-muted small">-</span>'}
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        container.appendChild(table);
+    }
+
+
+    window.confirmarCancelarInscripcion = function(idInscripcion) {
+        ModalConfirmacion.show(
+            'Cancelar Inscripción',
+            '¿Está seguro de que desea cancelar esta inscripción? El alumno perderá acceso al curso. Esta acción no se puede deshacer fácilmente.',
+            () => cancelarInscripcion(idInscripcion)
+        );
+    };
+
+    function cancelarInscripcion(idInscripcion) {
+        const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+        const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+        const headers = { 'Content-Type': 'application/json' };
+        if (csrfToken && csrfHeader) headers[csrfHeader] = csrfToken;
+
+        fetch(`/admin/inscripciones/${idInscripcion}/cancelar`, {
+            method: 'PUT',
+            headers: headers
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                mostrarNotificacion('Inscripción cancelada correctamente', 'success');
+                // Recargar el modal si es posible, o cerrar y recargar tabla
+                cerrarModalDetalleUsuario();
+                // Opcional: recargar solo el modal, pero requiere ID de usuario
+                loadUsuarios(currentPage);
+            } else {
+                mostrarNotificacion(data.message || 'Error al cancelar inscripción', 'error');
+            }
+        })
+        .catch(err => {
+            mostrarNotificacion('Error de conexión', 'error');
+        });
     }
 
     function renderDocenteDetalle(detalle = {}, rolesRaw = []) {

@@ -34,6 +34,9 @@ public class Alumno extends Usuario {
     @NotBlank(message = "Los últimos estudios son obligatorios")
     private String ultimosEstudios;
 
+    // Indica si el alumno ha entregado toda la documentación requerida (DNI, Título, etc.)
+    private Boolean documentacionEntregada = false;
+
     @OneToMany(mappedBy = "alumno", cascade = CascadeType.ALL)
     private List<Calificacion> calificaciones;
 

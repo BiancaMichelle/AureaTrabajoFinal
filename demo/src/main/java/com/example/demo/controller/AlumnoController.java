@@ -155,7 +155,10 @@ public class AlumnoController {
             model.addAttribute("alumno", alumno);
 
             List<Inscripciones> inscripciones = inscripcionRepository.findByAlumnoId(alumno.getId());
+            model.addAttribute("inscripciones", inscripciones); // Agregado para usar en la vista
+
             List<OfertaAcademica> ofertasActivas = inscripciones.stream()
+                .filter(i -> Boolean.TRUE.equals(i.getEstadoInscripcion())) // Filtrar inscripciones canceladas
                 .map(Inscripciones::getOferta)
                 .filter(oa -> oa.getEstado() == EstadoOferta.ACTIVA || oa.getEstado() == EstadoOferta.ENCURSO)
                 .collect(Collectors.toList());

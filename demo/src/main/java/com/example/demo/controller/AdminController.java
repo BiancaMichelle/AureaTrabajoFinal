@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Collections;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -1794,6 +1795,61 @@ public class AdminController {
         }
     }
 
+
+    @PutMapping("/admin/alumnos/{idAlumno}/toggle-documentacion")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> toggleDocumentacionAlumno(@PathVariable UUID idAlumno) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            Optional<Usuario> usuarioOpt = usuarioRepository.findById(idAlumno);
+            if (usuarioOpt.isEmpty() || !(usuarioOpt.get() instanceof Alumno)) {
+                response.put("success", false);
+                response.put("message", "Alumno no encontrado");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            }
+
+            Alumno alumno = (Alumno) usuarioOpt.get();
+            boolean nuevoEstado = Boolean.FALSE.equals(alumno.getDocumentacionEntregada());
+            alumno.setDocumentacionEntregada(nuevoEstado);
+            usuarioRepository.save(alumno);
+
+            response.put("success", true);
+            response.put("nuevoEstado", nuevoEstado);
+            response.put("message", "Estado de documentación del alumno actualizado");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "Error al actualizar documentación: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    @PutMapping("/admin/inscripciones/{idInscripcion}/cancelar")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> cancelarInscripcion(@PathVariable Long idInscripcion) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            Optional<Inscripciones> inscripcionOpt = inscripcionRepository.findById(idInscripcion);
+            if (inscripcionOpt.isEmpty()) {
+                response.put("success", false);
+                response.put("message", "Inscripción no encontrada");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            }
+
+            Inscripciones inscripcion = inscripcionOpt.get();
+            inscripcion.setEstadoInscripcion(false);
+            inscripcionRepository.save(inscripcion);
+
+            response.put("success", true);
+            response.put("message", "Inscripción cancelada correctamente");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "Error al cancelar inscripción: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
     @DeleteMapping("/admin/usuarios/{identificador}")
     @Auditable(action = "BAJA_USUARIO", entity = "Usuario")
     @ResponseBody
@@ -2036,6 +2092,7 @@ public class AdminController {
             data.put("colegioEgreso", alumno.getColegioEgreso());
             data.put("añoEgreso", alumno.getAñoEgreso());
             data.put("ultimosEstudios", alumno.getUltimosEstudios());
+            data.put("documentacionEntregada", alumno.getDocumentacionEntregada());
             
             // Validar inscripciones activas
             List<Inscripciones> inscripciones = inscripcionRepository.findByAlumno(alumno);
@@ -2043,6 +2100,18 @@ public class AdminController {
             if (activas > 0) {
                 warnings.add("El alumno tiene " + activas + " inscripción(es) activa(s). Se recomienda verificar antes de dar de baja.");
             }
+
+            // Mapear detalle de inscripciones para el panel de administración
+            List<Map<String, Object>> inscripcionesDetalle = inscripciones.stream().map(insc -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("idInscripcion", insc.getIdInscripcion());
+                map.put("ofertaTitulo", insc.getOferta().getNombre()); // Nombre de la oferta
+                map.put("fechaInscripcion", insc.getFechaInscripcion());
+                map.put("estadoInscripcion", insc.getEstadoInscripcion());
+                map.put("documentacionEntregada", insc.getDocumentacionEntregada() != null ? insc.getDocumentacionEntregada() : false);
+                return map;
+            }).collect(Collectors.toList());
+            data.put("inscripciones", inscripcionesDetalle);
         }
 
         if (usuario instanceof Docente) {

@@ -291,6 +291,7 @@
                                                          <form th:action="@{/alumno/inscribirse/{id}(id=${oferta.idOferta})}" method="post" class="d-inline" target="_blank" 
                                                                th:data-nombre="${oferta.nombre}" 
                                                                th:data-gratuito="${oferta.costoInscripcion == null or oferta.costoInscripcion == 0}"
+                                                               th:data-tipo="${oferta.tipoOferta}"
                                                                onsubmit="confirmarInscripcion(event)">
                                                               <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                                                               <button type="submit" class="btn btn-sm btn-primary rounded-pill px-3" title="Inscripción Rápida">Inscribirse <i class="fas fa-user-plus ms-1"></i></button>
@@ -379,6 +380,7 @@
                                                          <form th:action="@{/alumno/inscribirse/{id}(id=${oferta.idOferta})}" method="post" class="d-inline" target="_blank" 
                                                                th:data-nombre="${oferta.nombre}" 
                                                                th:data-gratuito="${oferta.costoInscripcion == null or oferta.costoInscripcion == 0}"
+                                                               th:data-tipo="${oferta.tipoOferta}"
                                                                onsubmit="confirmarInscripcion(event)">
                                                               <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                                                               <button type="submit" class="btn btn-sm btn-success rounded-pill px-3" title="Inscripción Rápida">Inscribirse <i class="fas fa-user-plus ms-1"></i></button>
@@ -468,6 +470,7 @@
                                                          <form th:action="@{/alumno/inscribirse/{id}(id=${oferta.idOferta})}" method="post" class="d-inline" target="_blank" 
                                                                th:data-nombre="${oferta.nombre}" 
                                                                th:data-gratuito="${oferta.costoInscripcion == null or oferta.costoInscripcion == 0}"
+                                                               th:data-tipo="${oferta.tipoOferta}"
                                                                onsubmit="confirmarInscripcion(event)">
                                                               <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                                                               <button type="submit" class="btn btn-sm btn-danger rounded-pill px-3" title="Inscripción Rápida">Inscribirse <i class="fas fa-user-plus ms-1"></i></button>
@@ -556,6 +559,7 @@
                                                          <form th:action="@{/alumno/inscribirse/{id}(id=${oferta.idOferta})}" method="post" class="d-inline" target="_blank" 
                                                                th:data-nombre="${oferta.nombre}" 
                                                                th:data-gratuito="${oferta.costoInscripcion == null or oferta.costoInscripcion == 0}"
+                                                               th:data-tipo="${oferta.tipoOferta}"
                                                                onsubmit="confirmarInscripcion(event)">
                                                               <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                                                               <button type="submit" class="btn btn-sm btn-info rounded-pill px-3" title="Inscripción Rápida">Inscribirse <i class="fas fa-user-plus ms-1"></i></button>
@@ -651,12 +655,19 @@
                 const nombreOferta = form.getAttribute('data-nombre');
                 // atributo data-gratuito devuelve string "true" o "false"
                 const esGratuito = form.getAttribute('data-gratuito') === 'true';
+                const tipoOferta = form.getAttribute('data-tipo');
+                const emailInstitucion = '[[${instituto != null ? instituto.email : "consultas@aurea.edu.ar"}]]';
                 
                 let mensaje = '';
                 if (esGratuito) {
                     mensaje = '¿Estás seguro que deseas inscribirte en "' + nombreOferta + '"? Serás inscripto automáticamente.';
                 } else {
                     mensaje = '¿Estás seguro que deseas inscribirte en "' + nombreOferta + '"? Si la oferta tiene costo, serás redirigido al pago.';
+                }
+
+                // Append documentation requirement for Curso and Formación
+                if (tipoOferta === 'Curso' || tipoOferta === 'Formación') {
+                    mensaje += '\n\nIMPORTANTE: Recuerda enviar foto de tu DNI y certificado de estudios al correo: ' + emailInstitucion;
                 }
                 
                 if (typeof ModalConfirmacion !== 'undefined') {

@@ -36,6 +36,9 @@ public class Inscripciones {
     
     private LocalDate fechaInscripcion;
     
+    // Campo para validar si el alumno entregó los requisitos (DNI, Título, Pago matrícula)
+    private Boolean documentacionEntregada = false;
+
     private Boolean estadoInscripcion; // true = activa, false = inactiva
     
     private String observaciones;

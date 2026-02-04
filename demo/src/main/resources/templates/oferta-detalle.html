@@ -271,6 +271,30 @@
                         </div>
                     </div>
 
+                    <!-- Requisitos de Inscripción (Only for Cursos and Formaciones) -->
+                    <div class="mb-5" th:if="${oferta.tipoOferta == 'Curso' or oferta.tipoOferta == 'Formación'}">
+                         <h3 class="section-title">Requisitos de Inscripción</h3>
+                         <div class="p-4 rounded-3 border-start border-4 border-info bg-light">
+                             <div class="d-flex">
+                                 <div class="me-3">
+                                     <i class="fas fa-file-alt fa-2x text-info"></i>
+                                 </div>
+                                 <div>
+                                     <h5 class="fw-bold mb-2">Documentación Requerida</h5>
+                                     <p class="mb-3">Para completar tu matriculación definitiva, deberás enviar la siguiente documentación digitalizada:</p>
+                                     <ul class="mb-3">
+                                         <li>Foto de DNI (Frente y Dorso)</li>
+                                         <li>Certificado de estudios secundarios completos (o constancia de título en trámite)</li>
+                                     </ul>
+                                     <p class="mb-0 small text-muted">
+                                         <i class="fas fa-envelope me-1"></i> Enviar a: 
+                                         <a th:href="'mailto:' + ${instituto != null ? instituto.email : 'consultas@aurea.edu.ar'}" class="text-info fw-bold" th:text="${instituto != null ? instituto.email : 'consultas@aurea.edu.ar'}">admision@aurea.edu.ar</a>
+                                     </p>
+                                 </div>
+                             </div>
+                         </div>
+                    </div>
+
                     <!-- Description -->
                     <div class="mb-5">
                         <h3 class="section-title">Descripción</h3>

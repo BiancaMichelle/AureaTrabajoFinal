@@ -139,8 +139,11 @@
             <div class="footer-section">
                 <h4>Navegación</h4>
                 <ul>
-                    <li><a href="#">Cursos</a></li>
-                    <li><a href="#">Formaciones</a></li>
+                    <li><a th:href="@{/#sec-curso}">Cursos</a></li>
+                    <li><a th:href="@{/#sec-formacion}">Formaciones</a></li>
+                    <li><a th:href="@{/#sec-seminario}">Seminarios</a></li>
+                    <li><a th:href="@{/#sec-charla}">Charlas</a></li>
+                    <li><a href="#" onclick="mostrarModalRequisitosGlobal(); return false;">Requisitos de Ingreso</a></li>
                     <li><a th:href="@{/#sobre-nosotros}">Sobre Nosotros</a></li>
                 </ul>
             </div>
@@ -206,6 +209,34 @@
         </div>
     </div>
 
+    <!-- Modal Requisitos de Ingreso (Global) -->
+    <div id="modalRequisitosIngreso" class="modal-overlay" style="display: none; z-index: 10000; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center;">
+        <div class="modal-content" style="max-width: 600px; background: white; border-radius: 8px; width: 90%; margin: auto; animation: slideIn 0.3s ease;">
+            <div class="modal-header" style="padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; font-size: 1.25rem;"><i class="fas fa-clipboard-list" style="color: #3182ce; margin-right: 10px;"></i> Requisitos de Ingreso</h3>
+                <button type="button" class="btn-close" onclick="document.getElementById('modalRequisitosIngreso').style.display='none'" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #aaa;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" style="padding: 20px;">
+                <p class="mb-3">Para cursar nuestras ofertas de tipo <strong>Curso</strong> y <strong>Formación</strong>, es requisito indispensable presentar:</p>
+                <ul style="list-style-type: disc; margin-left: 20px; margin-bottom: 20px; color: #4a5568;">
+                    <li class="mb-2"><strong>DNI:</strong> Foto o escaneo de frente y dorso.</li>
+                    <li class="mb-2"><strong>Título Secundario:</strong> Certificado analítico legalizado o constancia de título en trámite.</li>
+                </ul>
+                <div class="alert alert-info" style="background-color: #ebf8ff; border-left: 4px solid #4299e1; padding: 15px; border-radius: 4px;">
+                    <p class="mb-1" style="color: #2c5282; font-weight: bold;">¿Cómo enviarlo?</p>
+                    <p class="mb-0" style="color: #2b6cb0;">Envía los archivos digitalizados (PDF o JPG) al correo:</p>
+                    <a th:href="'mailto:' + ${instituto != null ? instituto.email : 'consultas@aurea.edu.ar'}" style="color: #3182ce; font-weight: bold; font-size: 1.1em; text-decoration: none;" th:text="${instituto != null ? instituto.email : 'consultas@aurea.edu.ar'}">consultas@aurea.edu.ar</a>
+                    <p class="mt-2 mb-0" style="font-size: 0.9em; color: #4a5568;">Asunto: REQUISITOS - [Tu Nombre] - [Nombre del Curso]</p>
+                </div>
+            </div>
+            <div class="modal-footer" style="padding: 15px 20px; border-top: 1px solid #eee; text-align: right;">
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('modalRequisitosIngreso').style.display='none'" style="padding: 8px 16px; border-radius: 6px; cursor: pointer; border: 1px solid #ccc; background: #fff; color: #333;">Entendido</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts Globales -->
     <script th:src="@{/js/modal-global.js}"></script>
     <script th:src="@{/js/main.js}"></script>
@@ -216,6 +247,13 @@
     <script th:src="@{/js/ia/chat.js}"></script>
 
     <script>
+        function mostrarModalRequisitosGlobal() {
+            var modal = document.getElementById('modalRequisitosIngreso');
+            if(modal) {
+                modal.style.display = 'flex';
+            }
+        }
+
         function confirmarSalidaBase() {
             ModalConfirmacion.show(
                 'Cerrar Sesión',
