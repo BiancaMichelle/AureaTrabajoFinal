@@ -10,6 +10,7 @@ import javax.validation.constraints.NotNull;
 
 import com.example.demo.enums.EstadoOferta;
 import com.example.demo.enums.Modalidad;
+import com.example.demo.enums.EstadoProcesoCertificacion;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
@@ -82,6 +83,9 @@ public class OfertaAcademica {
     private LocalDate fechaFin;
     @NotNull(message = "El campo certificado no puede estar vacío")
     private Boolean certificado;
+
+    @Enumerated(EnumType.STRING)
+    private EstadoProcesoCertificacion estadoProcesoCertificacion = EstadoProcesoCertificacion.EN_GESTION_CERTIFICACION;
     
     // Campos de ubicación/acceso (movidos desde subclases)
     private String lugar;
@@ -184,6 +188,21 @@ public class OfertaAcademica {
         // y tiene cupos disponibles (opcional, según lógica de negocio)
         return (this.estado == EstadoOferta.ACTIVA || this.estado == EstadoOferta.ENCURSO) &&
                (this.cupos == null || this.cupos > 0);
+    }
+
+    public Boolean getHabilitarCalculoCertificacion() {
+        if (this.fechaFin == null) return false;
+        
+        // Habilitado si el estado es FINALIZADA o CERRADA
+        if (this.estado == EstadoOferta.FINALIZADA || this.estado == EstadoOferta.CERRADA) {
+            return true;
+        }
+
+        // O si faltan 15 días o menos para finalizar
+        LocalDate hoy = LocalDate.now();
+        LocalDate fechaHabilitacion = this.fechaFin.minusDays(15);
+        
+        return !hoy.isBefore(fechaHabilitacion); 
     }
 
     /**
@@ -511,6 +530,12 @@ public class OfertaAcademica {
             case FINALIZADA:
                 // FINALIZADA: Cuando la fecha de fin pasó
                 if (fechaFin == null || !fechaFin.isBefore(hoy)) {
+                    return false;
+                }
+                break;
+            case CERRADA:
+                // CERRADA: Solo puede cerrarse desde FINALIZADA
+                if (this.estado != EstadoOferta.FINALIZADA) {
                     return false;
                 }
                 break;

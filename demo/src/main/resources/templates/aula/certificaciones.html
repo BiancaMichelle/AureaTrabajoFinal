@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" layout:decorate="~{layout/base}">
+<head>
+    <title>Certificaciones - Aurea</title>
+    <style>
+        .certificaciones-container {
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header-certificaciones {
+            margin-bottom: 2rem;
+        }
+        
+        .estado-oferta {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-left: 1rem;
+        }
+        
+        .estado-finalizada {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .estado-cerrada {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .resumen-box {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .resumen-item {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        
+        .resumen-item .numero {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #f59e0b;
+        }
+        
+        .resumen-item .label {
+            color: #6b7280;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+        
+        .filtros-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .filtro-btn {
+            padding: 0.75rem 1.5rem;
+            border: 2px solid #e5e7eb;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        
+        .filtro-btn:hover {
+            border-color: #f59e0b;
+            background: #fffbeb;
+        }
+        
+        .filtro-btn.activo {
+            background: #f59e0b;
+            color: white;
+            border-color: #f59e0b;
+        }
+        
+        .tabla-certificaciones {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .tabla-certificaciones table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .tabla-certificaciones th {
+            background: #f9fafb;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        
+        .tabla-certificaciones td {
+            padding: 1rem;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        
+        .tabla-certificaciones tr:hover {
+            background: #f9fafb;
+        }
+        
+        .estado-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        
+        .badge-propuesto {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .badge-aprobado {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .badge-rechazado {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .badge-no-cumple {
+            background: #f3f4f6;
+            color: #6b7280;
+        }
+        
+        .badge-emitido {
+            background: #dcfce7;
+            color: #166534;
+        }
+        
+        .acciones-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            border: none;
+            font-weight: 500;
+            cursor: pointer;
+            margin-right: 0.5rem;
+            transition: all 0.2s;
+        }
+        
+        .btn-aprobar {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-aprobar:hover {
+            background: #059669;
+        }
+        
+        .btn-rechazar {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .btn-rechazar:hover {
+            background: #dc2626;
+        }
+        
+        .btn-detalle {
+            background: #6b7280;
+            color: white;
+        }
+        
+        .btn-detalle:hover {
+            background: #4b5563;
+        }
+        
+        .zona-peligro {
+            background: #fef2f2;
+            border: 2px solid #fee2e2;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+        
+        .zona-peligro h3 {
+            color: #991b1b;
+            margin-bottom: 1rem;
+        }
+        
+        .btn-cerrar-notas {
+            background: #dc2626;
+            color: white;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.125rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-cerrar-notas:hover {
+            background: #b91c1c;
+            transform: scale(1.02);
+        }
+        
+        .btn-cerrar-notas:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .detalle-expandido {
+            background: #f9fafb;
+            padding: 1rem;
+            margin: 0.5rem 0;
+            border-radius: 8px;
+        }
+        
+        .detalle-expandido dl {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 0.5rem 1rem;
+        }
+        
+        .detalle-expandido dt {
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        .detalle-expandido dd {
+            color: #6b7280;
+        }
+        
+        .alert {
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        
+        .alert-success {
+            background: #d1fae5;
+            border-left: 4px solid #10b981;
+            color: #065f46;
+        }
+        
+        .alert-error {
+            background: #fee2e2;
+            border-left: 4px solid #ef4444;
+            color: #991b1b;
+        }
+        
+        .alert-warning {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            color: #92400e;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.activo {
+            display: flex;
+        }
+        
+        .modal-contenido {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+        }
+        
+        .btn-recalcular {
+            background: #3b82f6;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-recalcular:hover {
+            background: #2563eb;
+        }
+    </style>
+</head>
+
+<body>
+<main>
+    <div class="certificaciones-container">
+        <!-- Header -->
+        <div class="header-certificaciones">
+            <h1>
+                🎓 Gestión de Certificaciones
+                <span class="estado-oferta" 
+                      th:classappend="${oferta.estado.name() == 'CERRADA' ? 'estado-cerrada' : 'estado-finalizada'}">
+                    <span th:text="${oferta.estado == T(com.example.demo.enums.EstadoOferta).CERRADA ? '🔒 CERRADA' : '⏳ FINALIZADA'}"></span>
+                </span>
+            </h1>
+            <p style="color: #6b7280; margin-top: 0.5rem;">
+                <strong th:text="${oferta.nombre}"></strong>
+            </p>
+            <p th:if="${oferta.estado.name() != 'CERRADA'}" style="color: #f59e0b; margin-top: 0.5rem;">
+                ⚠️ Las notas aún NO están cerradas. Puedes modificar la lista de aprobados.
+            </p>
+            <p th:if="${oferta.estado.name() == 'CERRADA'}" style="color: #3b82f6; margin-top: 0.5rem;">
+                ℹ️ Las notas de esta oferta están CERRADAS. No se pueden realizar modificaciones.
+            </p>
+        </div>
+        
+        <!-- Alertas -->
+        <div th:if="${success}" class="alert alert-success">
+            <strong>✅ Éxito:</strong> <span th:text="${success}"></span>
+        </div>
+        <div th:if="${error}" class="alert alert-error">
+            <strong>❌ Error:</strong> <span th:text="${error}"></span>
+        </div>
+        <div th:if="${warning}" class="alert alert-warning">
+            <strong>⚠️ Advertencia:</strong> <span th:text="${warning}"></span>
+        </div>
+        
+        <!-- Resumen -->
+        <div class="resumen-box">
+            <div class="resumen-item">
+                <div class="numero" th:text="${resumen.totalInscritos}">25</div>
+                <div class="label">Total Inscritos</div>
+            </div>
+            <div class="resumen-item">
+                <div class="numero" style="color: #10b981;" th:text="${resumen.propuestas}">18</div>
+                <div class="label">✅ Propuestos (automático)</div>
+            </div>
+            <div class="resumen-item">
+                <div class="numero" style="color: #3b82f6;" th:text="${resumen.aprobadosDocente}">2</div>
+                <div class="label">➕ Aprobados (manual)</div>
+            </div>
+            <div class="resumen-item">
+                <div class="numero" style="color: #ef4444;" th:text="${resumen.rechazados}">3</div>
+                <div class="label">❌ Rechazados</div>
+            </div>
+            <div class="resumen-item">
+                <div class="numero" style="color: #6b7280;" th:text="${resumen.noCumplenCriterios}">2</div>
+                <div class="label">⚠️ No cumplen criterios</div>
+            </div>
+            <div class="resumen-item">
+                <div class="numero" style="color: #16a34a; font-size: 3rem;" th:text="${totalACertificar}">20</div>
+                <div class="label" style="font-weight: 700; color: #16a34a;">📜 TOTAL A INCLUIR EN ACTA</div>
+            </div>
+        </div>
+        
+        <!-- Botón de recalcular (solo si no está cerrada) -->
+        <div th:if="${oferta.estado.name() != 'CERRADA'}" style="margin-bottom: 1.5rem;">
+            <form th:action="@{/aula/oferta/{id}/certificaciones/recalcular(id=${oferta.idOferta})}" 
+                  method="post" style="display: inline;">
+                <button type="submit" class="btn-recalcular">
+                    🔄 Recalcular Certificaciones
+                </button>
+            </form>
+            <p style="color: #6b7280; font-size: 0.875rem; margin-top: 0.5rem;">
+                Útil si modificaste calificaciones después de finalizar la oferta
+            </p>
+        </div>
+        
+        <!-- Filtros -->
+        <div class="filtros-tabs">
+            <a th:href="@{/aula/oferta/{id}/certificaciones(id=${oferta.idOferta})}" 
+               class="filtro-btn" 
+               th:classappend="${filtroActual == null ? 'activo' : ''}">
+                📋 Todos (<span th:text="${resumen.totalInscritos}">25</span>)
+            </a>
+            <a th:href="@{/aula/oferta/{id}/certificaciones(id=${oferta.idOferta}, filtro='propuestos')}" 
+               class="filtro-btn" 
+               th:classappend="${filtroActual == 'propuestos' ? 'activo' : ''}">
+                ✅ Propuestos (<span th:text="${resumen.propuestas}">18</span>)
+            </a>
+            <a th:href="@{/aula/oferta/{id}/certificaciones(id=${oferta.idOferta}, filtro='aprobados')}" 
+               class="filtro-btn" 
+               th:classappend="${filtroActual == 'aprobados' ? 'activo' : ''}">
+                ➕ Aprobados Manual (<span th:text="${resumen.aprobadosDocente}">2</span>)
+            </a>
+            <a th:href="@{/aula/oferta/{id}/certificaciones(id=${oferta.idOferta}, filtro='rechazados')}" 
+               class="filtro-btn" 
+               th:classappend="${filtroActual == 'rechazados' ? 'activo' : ''}">
+                ❌ Rechazados (<span th:text="${resumen.rechazados}">3</span>)
+            </a>
+            <a th:href="@{/aula/oferta/{id}/certificaciones(id=${oferta.idOferta}, filtro='no-cumple')}" 
+               class="filtro-btn" 
+               th:classappend="${filtroActual == 'no-cumple' ? 'activo' : ''}">
+                ⚠️ No Cumplen (<span th:text="${resumen.noCumplenCriterios}">2</span>)
+            </a>
+        </div>
+        
+        <!-- Tabla de Certificaciones -->
+        <div class="tabla-certificaciones">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Alumno</th>
+                        <th style="text-align: center;">Promedio</th>
+                        <th style="text-align: center;">Asistencia</th>
+                        <th style="text-align: center;">Tareas</th>
+                        <th style="text-align: center;">Exámenes</th>
+                        <th>Estado</th>
+                        <th th:if="${puedeEditar}" style="text-align: center;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:if="${certificaciones.empty}">
+                        <td colspan="7" style="text-align: center; padding: 3rem; color: #9ca3af;">
+                            No hay certificaciones registradas para esta oferta
+                        </td>
+                    </tr>
+                    <th:block th:each="cert : ${certificaciones}">
+                        <tr>
+                            <td>
+                                <div style="font-weight: 600; color: #111827;">
+                                    <span th:text="${cert.inscripcion.alumno.apellido}"></span>, 
+                                    <span th:text="${cert.inscripcion.alumno.nombre}"></span>
+                                </div>
+                                <div style="font-size: 0.875rem; color: #6b7280; margin-top: 0.25rem;">
+                                    DNI: <span th:text="${cert.inscripcion.alumno.dni}"></span>
+                                </div>
+                                <button class="btn-detalle" style="margin-top: 0.5rem; font-size: 0.75rem;"
+                                        th:onclick="'toggleDetalle(' + ${cert.idCertificacion} + ')'">
+                                    Ver Detalle ▼
+                                </button>
+                            </td>
+                            <td style="text-align: center;">
+                                <span style="font-weight: 700; font-size: 1.25rem;"
+                                      th:style="${cert.promedioGeneral != null and cert.promedioGeneral >= 7.0 ? 'color: #10b981;' : 'color: #ef4444;'}">
+                                    <span th:text="${cert.promedioGeneral != null ? #numbers.formatDecimal(cert.promedioGeneral, 1, 2) : 'N/A'}">8.5</span>
+                                </span>
+                            </td>
+                            <td style="text-align: center;">
+                                <span th:if="${cert.porcentajeAsistencia != null}"
+                                      th:style="${cert.porcentajeAsistencia >= 75.0 ? 'color: #10b981;' : 'color: #ef4444;'}"
+                                      th:text="${#numbers.formatDecimal(cert.porcentajeAsistencia, 1, 1) + '%'}">92%</span>
+                                <span th:if="${cert.porcentajeAsistencia == null}">N/A</span>
+                            </td>
+                            <td style="text-align: center;">
+                                <span th:text="${cert.tareasEntregadas + '/' + cert.tareasTotales}">5/6</span>
+                                <div style="font-size: 0.75rem; color: #6b7280;">
+                                    <span th:if="${cert.tareasTotales > 0}"
+                                          th:text="${#numbers.formatDecimal((cert.tareasEntregadas * 100.0 / cert.tareasTotales), 1, 0) + '%'}">83%</span>
+                                </div>
+                            </td>
+                            <td style="text-align: center;">
+                                <span th:text="${cert.examenesAprobados + '/' + cert.examenesTotales}">3/3</span>
+                                <div style="font-size: 0.75rem; color: #6b7280;">
+                                    <span th:if="${cert.examenesTotales > 0}"
+                                          th:text="${#numbers.formatDecimal((cert.examenesAprobados * 100.0 / cert.examenesTotales), 1, 0) + '%'}">100%</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="estado-badge"
+                                      th:classappend="${cert.estado.name() == 'PROPUESTA' ? 'badge-propuesto' : 
+                                                       cert.estado.name() == 'APROBADO_DOCENTE' ? 'badge-aprobado' :
+                                                       cert.estado.name() == 'RECHAZADO_DOCENTE' ? 'badge-rechazado' :
+                                                       cert.estado.name() == 'CERTIFICADO_EMITIDO' ? 'badge-emitido' : 'badge-no-cumple'}">
+                                    <span th:text="${cert.estado.name() == 'PROPUESTA' ? '✅ Propuesto' :
+                                                    cert.estado.name() == 'APROBADO_DOCENTE' ? '➕ Aprobado Manual' :
+                                                    cert.estado.name() == 'RECHAZADO_DOCENTE' ? '❌ Rechazado' :
+                                                    cert.estado.name() == 'CERTIFICADO_EMITIDO' ? '📜 En Acta' :
+                                                    cert.estado.name() == 'NO_APLICA' ? '⚠️ No Cumple' : 'Pendiente'}">
+                                    </span>
+                                </span>
+                            </td>
+                            <td th:if="${puedeEditar}" style="text-align: center;">
+                                <!-- Botón Aprobar (solo si NO cumple o está rechazado) -->
+                                <button th:if="${cert.estado.name() == 'NO_APLICA' or cert.estado.name() == 'RECHAZADO_DOCENTE'}"
+                                        class="acciones-btn btn-aprobar"
+                                        th:onclick="'abrirModalAprobar(' + ${cert.inscripcion.idInscripcion} + ', \'' + ${cert.inscripcion.alumno.nombre} + ' ' + ${cert.inscripcion.alumno.apellido} + '\')'">
+                                    ✅ Aprobar
+                                </button>
+                                
+                                <!-- Botón Rechazar (solo si está propuesto o aprobado) -->
+                                <button th:if="${cert.estado.name() == 'PROPUESTA' or cert.estado.name() == 'APROBADO_DOCENTE'}"
+                                        class="acciones-btn btn-rechazar"
+                                        th:onclick="'abrirModalRechazar(' + ${cert.idCertificacion} + ', \'' + ${cert.inscripcion.alumno.nombre} + ' ' + ${cert.inscripcion.alumno.apellido} + '\')'">
+                                    ❌ Rechazar
+                                </button>
+                            </td>
+                        </tr>
+                        
+                        <!-- Fila expandible con detalles -->
+                        <tr th:id="'detalle-' + ${cert.idCertificacion}" style="display: none;">
+                            <td colspan="7">
+                                <div class="detalle-expandido">
+                                    <dl>
+                                        <dt>Email:</dt>
+                                        <dd th:text="${cert.inscripcion.alumno.email}"></dd>
+                                        
+                                        <dt>Fecha Inscripción:</dt>
+                                        <dd th:text="${#temporals.format(cert.inscripcion.fechaInscripcion, 'dd/MM/yyyy')}"></dd>
+                                        
+                                        <dt>Cumple Criterios Automáticos:</dt>
+                                        <dd th:text="${cert.cumpleCriteriosAutomaticos ? '✅ Sí' : '❌ No'}"></dd>
+                                        
+                                        <dt th:if="${cert.observacionesDocente != null}">Observaciones Docente:</dt>
+                                        <dd th:if="${cert.observacionesDocente != null}" th:text="${cert.observacionesDocente}"></dd>
+                                        
+                                        <dt th:if="${cert.docenteRevisor != null}">Revisado por:</dt>
+                                        <dd th:if="${cert.docenteRevisor != null}">
+                                            <span th:text="${cert.docenteRevisor.nombre + ' ' + cert.docenteRevisor.apellido}"></span>
+                                            <span th:if="${cert.fechaRevisionDocente != null}">
+                                                el <span th:text="${#temporals.format(cert.fechaRevisionDocente, 'dd/MM/yyyy HH:mm')}"></span>
+                                            </span>
+                                        </dd>
+                                        
+                                        <dt th:if="${cert.numeroCertificado != null}">Número de Registro:</dt>
+                                        <dd th:if="${cert.numeroCertificado != null}" th:text="${cert.numeroCertificado}"></dd>
+                                    </dl>
+                                </div>
+                            </td>
+                        </tr>
+                    </th:block>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Zona de Peligro: Cerrar Notas -->
+        <div th:if="${oferta.estado.name() != 'CERRADA'}" class="zona-peligro">
+            <h3>⚠️ ZONA DE PELIGRO</h3>
+            <p style="color: #6b7280; margin-bottom: 1.5rem;">
+                Una vez cerradas las notas, <strong>NO SE PUEDEN MODIFICAR</strong>. 
+                Se generará el acta de cierre con los <strong th:text="${totalACertificar}">20</strong> alumnos aprobados.
+            </p>
+            
+            <div th:if="${totalACertificar == 0}" style="color: #ef4444; margin-bottom: 1rem;">
+                ❌ No hay alumnos aprobados para incluir en el acta. Debes aprobar al menos un alumno antes de cerrar las notas.
+            </div>
+            
+            <button th:disabled="${totalACertificar == 0}"
+                    class="btn-cerrar-notas"
+                    onclick="abrirModalCerrar()">
+                🔒 Cerrar Notas y Generar Acta de Cierre
+            </button>
+        </div>
+        
+        <!-- Mostrar acta si está cerrada -->
+        <div th:if="${oferta.estado.name() == 'CERRADA'}" 
+             style="background: #dcfce7; border: 2px solid #86efac; border-radius: 12px; padding: 2rem; margin-top: 2rem;">
+            <h3 style="color: #166534; margin-bottom: 1rem;">✅ Acta de Cierre Generada</h3>
+            <p style="color: #166534;">
+                Las notas están cerradas. Se registraron <strong th:text="${resumen.certificadosEmitidos}">20</strong> alumnos aprobados.
+            </p>
+            <a th:href="@{/aula/oferta/{id}/certificaciones/acta-pdf(id=${oferta.idOferta})}"
+               class="btn-cerrar-notas"
+               style="background: #16a34a; display: inline-block; margin-top: 1rem;">
+                📄 Descargar Acta en PDF
+            </a>
+        </div>
+    </div>
+    
+    <!-- Modal: Aprobar Alumno -->
+    <div id="modalAprobar" class="modal">
+        <div class="modal-contenido">
+            <h3 style="margin-bottom: 1rem;">✅ Aprobar Alumno</h3>
+            <p id="textoAprobar" style="margin-bottom: 1.5rem; color: #6b7280;"></p>
+            <form id="formAprobar" method="post">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+                    Observaciones (opcional):
+                </label>
+                <textarea name="observaciones" 
+                          style="width: 100%; padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 8px; min-height: 100px; margin-bottom: 1rem;"
+                          placeholder="Ej: Aprobado por participación destacada en clase"></textarea>
+                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button type="button" onclick="cerrarModal('modalAprobar')"
+                            style="padding: 0.75rem 1.5rem; border: 2px solid #e5e7eb; background: white; border-radius: 8px; cursor: pointer;">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-aprobar" style="padding: 0.75rem 1.5rem;">
+                        Confirmar Aprobación
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Modal: Rechazar Alumno -->
+    <div id="modalRechazar" class="modal">
+        <div class="modal-contenido">
+            <h3 style="margin-bottom: 1rem; color: #dc2626;">❌ Rechazar Alumno</h3>
+            <p id="textoRechazar" style="margin-bottom: 1.5rem; color: #6b7280;"></p>
+            <form id="formRechazar" method="post">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+                    Justificación (obligatoria):
+                </label>
+                <textarea name="observaciones" required
+                          style="width: 100%; padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 8px; min-height: 100px; margin-bottom: 1rem;"
+                          placeholder="Ej: No cumple con asistencia mínima requerida"></textarea>
+                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button type="button" onclick="cerrarModal('modalRechazar')"
+                            style="padding: 0.75rem 1.5rem; border: 2px solid #e5e7eb; background: white; border-radius: 8px; cursor: pointer;">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-rechazar" style="padding: 0.75rem 1.5rem;">
+                        Confirmar Rechazo
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Modal: Cerrar Notas -->
+    <div id="modalCerrar" class="modal">
+        <div class="modal-contenido">
+            <h3 style="margin-bottom: 1rem; color: #dc2626;">⚠️ CONFIRMAR CIERRE DE NOTAS</h3>
+            <p style="margin-bottom: 1rem; color: #6b7280;">
+                Esta acción es <strong>IRREVERSIBLE</strong>.
+            </p>
+            <ul style="margin-bottom: 1.5rem; color: #6b7280; padding-left: 1.5rem;">
+                <li>Se generará un acta con <strong th:text="${totalACertificar}">20</strong> alumnos aprobados</li>
+                <li>La oferta cambiará a estado <strong>CERRADA</strong></li>
+                <li>No podrás modificar calificaciones ni certificaciones</li>
+            </ul>
+            <p style="margin-bottom: 1.5rem; font-weight: 600; color: #dc2626;">
+                ¿Estás seguro de continuar?
+            </p>
+            <form th:action="@{/aula/oferta/{id}/certificaciones/cerrar(id=${oferta.idOferta})}" method="post">
+                <input type="hidden" name="confirmacion" value="CONFIRMAR">
+                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button type="button" onclick="cerrarModal('modalCerrar')"
+                            style="padding: 0.75rem 1.5rem; border: 2px solid #e5e7eb; background: white; border-radius: 8px; cursor: pointer;">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-cerrar-notas" style="padding: 0.75rem 1.5rem;">
+                        ✅ Sí, Cerrar Notas
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        function toggleDetalle(certId) {
+            const detalle = document.getElementById('detalle-' + certId);
+            if (detalle.style.display === 'none') {
+                detalle.style.display = 'table-row';
+            } else {
+                detalle.style.display = 'none';
+            }
+        }
+        
+        function abrirModalAprobar(inscripcionId, nombreAlumno) {
+            const modal = document.getElementById('modalAprobar');
+            const texto = document.getElementById('textoAprobar');
+            const form = document.getElementById('formAprobar');
+            
+            const ofertaId = window.location.pathname.split('/')[3];
+            
+            texto.textContent = '¿Deseas aprobar a ' + nombreAlumno + ' para que aparezca en el acta de cierre?';
+            form.action = '/aula/oferta/' + ofertaId + '/certificaciones/aprobar/' + inscripcionId;
+            
+            modal.classList.add('activo');
+        }
+        
+        function abrirModalRechazar(certId, nombreAlumno) {
+            const modal = document.getElementById('modalRechazar');
+            const texto = document.getElementById('textoRechazar');
+            const form = document.getElementById('formRechazar');
+            
+            const ofertaId = window.location.pathname.split('/')[3];
+            
+            texto.textContent = '¿Deseas rechazar a ' + nombreAlumno + ' y quitarlo de la lista de aprobados?';
+            form.action = '/aula/oferta/' + ofertaId + '/certificaciones/rechazar/' + certId;
+            
+            modal.classList.add('activo');
+        }
+        
+        function abrirModalCerrar() {
+            document.getElementById('modalCerrar').classList.add('activo');
+        }
+        
+        function cerrarModal(modalId) {
+            document.getElementById(modalId).classList.remove('activo');
+        }
+        
+        // Cerrar modal al hacer clic fuera
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.remove('activo');
+                }
+            });
+        });
+    </script>
+</main>
+</body>
+</html>

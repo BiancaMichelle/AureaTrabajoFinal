@@ -4,5 +4,6 @@ public enum EstadoOferta {
     ACTIVA,
     DE_BAJA,
     ENCURSO,
-    FINALIZADA
+    FINALIZADA,      // Oferta terminó pero notas NO cerradas
+    CERRADA          // Notas cerradas, certificados emitidos - INMUTABLE
 }

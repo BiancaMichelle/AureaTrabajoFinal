@@ -543,7 +543,121 @@ public class DataSeeder implements CommandLineRunner {
             }
         }
         
+        // Curso finalizado especial para probar certificaciones
+        if (docenteRoberto != null) {
+            seedCursoFinalizadoCertTest(docenteRoberto);
+        } else {
+            System.err.println("SEED WARN: No se encontró el docente 12345678 para el curso de pruebas de certificaciones.");
+        }
+
         System.out.println("SEED: Proceso de ofertas finalizado.");
+    }
+
+    /**
+     * Crea un curso FINALIZADO con inscripciones buenas y malas para probar certificaciones.
+     * Incluye tareas y exámenes con notas altas y bajas.
+     */
+    private void seedCursoFinalizadoCertTest(Docente docente) {
+        final String nombreCurso = "Curso Certificaciones Test";
+
+        // Evitar duplicados
+        boolean existe = cursoRepository.findAll().stream()
+            .anyMatch(c -> c.getNombre().equalsIgnoreCase(nombreCurso));
+        if (existe) {
+            System.out.println("ℹ️ Curso de pruebas de certificaciones ya existe: " + nombreCurso);
+            return;
+        }
+
+        // Fechas pasadas para marcar como FINALIZADA
+        LocalDate inicio = LocalDate.now().minusMonths(3);
+        LocalDate fin = LocalDate.now().minusDays(10);
+
+        Curso curso = new Curso(
+            nombreCurso,
+            "Curso finalizado para probar certificaciones (buenos y malos)",
+            Modalidad.VIRTUAL,
+            12000.0,
+            true,
+            inicio,
+            fin,
+            20,
+            3,
+            500.0,
+            5,
+            Arrays.asList(docente)
+        );
+        curso.setEstado(EstadoOferta.FINALIZADA);
+        asegurarHorarios(curso);
+        curso = cursoRepository.save(curso);
+
+        // Módulo base
+        Modulo modulo = new Modulo();
+        modulo.setNombre("Módulo Único");
+        modulo.setDescripcion("Contenido resumido");
+        modulo.setCurso(curso);
+        modulo = moduloRepository.save(modulo);
+
+        // Tarea
+        Tarea tarea = new Tarea();
+        tarea.setTitulo("TP Integrador");
+        tarea.setDescripcion("Trabajo práctico de cierre");
+        tarea.setModulo(modulo);
+        tarea.setVisibilidad(true);
+        tarea.setFechaCreacion(LocalDateTime.now().minusDays(20));
+        tarea = tareaRepository.save(tarea);
+
+        // Examen
+        Examen examen = new Examen();
+        examen.setTitulo("Parcial Final");
+        examen.setDescripcion("Evaluación final");
+        examen.setModulo(modulo);
+        examen.setVisibilidad(true);
+        examen.setFechaCreacion(LocalDateTime.now().minusDays(18));
+        examen.setFechaApertura(LocalDateTime.now().minusDays(15));
+        examen.setFechaCierre(LocalDateTime.now().minusDays(14));
+        examen.setEstado(com.example.demo.enums.EstadoExamen.ACTIVO);
+        examen = examenRepository.save(examen);
+
+        // Alumnos (usar los creados en seedMasUsuarios)
+        Alumno bueno1 = alumnoRepository.findByDni("60000001").orElse(null);
+        Alumno bueno2 = alumnoRepository.findByDni("60000002").orElse(null);
+        Alumno malo1 = alumnoRepository.findByDni("60000003").orElse(null);
+        Alumno malo2 = alumnoRepository.findByDni("60000004").orElse(null);
+
+        List<Alumno> alumnos = Arrays.asList(bueno1, bueno2, malo1, malo2);
+        alumnos.stream().filter(a -> a == null).findAny().ifPresent(a -> System.err.println("SEED WARN: Faltan alumnos de prueba"));
+
+        for (Alumno alumno : alumnos) {
+            if (alumno == null) continue;
+
+            // Inscripción
+            Inscripciones ins = new Inscripciones();
+            ins.setAlumno(alumno);
+            ins.setOferta(curso);
+            ins.setFechaInscripcion(LocalDate.now().minusMonths(2));
+            ins.setEstadoInscripcion(true);
+            ins = inscripcionRepository.save(ins);
+
+            // Entrega con nota alta/baja
+            Entrega ent = new Entrega();
+            ent.setTarea(tarea);
+            ent.setEstudiante(alumno);
+            boolean esBueno = alumno.getDni().equals("60000001") || alumno.getDni().equals("60000002");
+            ent.setCalificacion(esBueno ? 9.0 : 4.0);
+            ent.setFechaEntrega(LocalDateTime.now().minusDays(12));
+            entregaRepository.save(ent);
+
+            // Intento de examen
+            Intento intento = new Intento();
+            intento.setExamen(examen);
+            intento.setAlumno((Alumno) alumno); // cast seguro porque esos DNIs son alumnos creados
+            intento.setCalificacion(esBueno ? 8.5f : 3.5f);
+            intento.setEstado(com.example.demo.enums.EstadoIntento.FINALIZADO);
+            intento.setFechaFin(LocalDateTime.now().minusDays(14));
+            intentoRepository.save(intento);
+        }
+
+        System.out.println("✅ Curso finalizado de pruebas creado: " + curso.getNombre());
     }
 
     private void crearCursoSiNoExiste(Curso curso) {

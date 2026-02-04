@@ -70,15 +70,64 @@
         <!-- VISTA DOCENTE: TABLA GLOBAL -->
         <div sec:authorize="hasAnyAuthority('DOCENTE', 'ADMIN')" class="space-y-8">
 
-            <!-- Atajos de Sección -->
-            <div th:if="${correccionExamenes != null and !correccionExamenes.empty}" class="flex flex-wrap gap-2">
-                <span class="text-sm font-medium text-gray-500 mr-2 self-center">Ir a examen:</span>
-                <a th:each="item : ${correccionExamenes}" 
-                   th:href="'#examen-' + ${item.idActividad}"
-                   class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-white text-purple-700 hover:bg-purple-50 transition-colors border border-purple-200 shadow-sm">
-                    <i class="fas fa-clipboard-check mr-1.5"></i>
-                    <span th:text="${item.titulo}">Examen</span>
-                </a>
+            <!-- Atajos de Sección + Certificaciones -->
+            <div class="flex flex-wrap gap-2 items-center">
+                <div th:if="${correccionExamenes != null and !correccionExamenes.empty}" class="flex flex-wrap gap-2 items-center">
+                    <span class="text-sm font-medium text-gray-500 mr-2 self-center">Ir a examen:</span>
+                    <a th:each="item : ${correccionExamenes}" 
+                       th:href="'#examen-' + ${item.idActividad}"
+                       class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-white text-purple-700 hover:bg-purple-50 transition-colors border border-purple-200 shadow-sm">
+                        <i class="fas fa-clipboard-check mr-1.5"></i>
+                        <span th:text="${item.titulo}">Examen</span>
+                    </a>
+                </div>
+
+                <!-- Botón temporal para calcular certificaciones: visible si finalizó o faltan < 15 días -->
+                <form th:if="${oferta.habilitarCalculoCertificacion}" 
+                      th:action="@{/aula/oferta/{id}/calcular-certificaciones(id=${oferta.idOferta})}" 
+                      method="post" 
+                      class="ml-auto"
+                      id="form-calcular-certificaciones">
+                    <input type="hidden" name="indiceAprobacion" id="indice-aprobacion-hidden" value="7.0" />
+                    <button type="button" 
+                            class="inline-flex items-center px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors text-sm font-medium"
+                            onclick="abrirModalCertificaciones()">
+                        <i class="fas fa-sync mr-2"></i>
+                        Calcular Certificaciones
+                    </button>
+                </form>
+            </div>
+
+            <!-- Modal índice de aprobación para certificaciones -->
+            <div id="modal-calcular-certificaciones" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
+                <div class="flex items-center justify-center min-h-screen px-4">
+                    <div class="fixed inset-0 bg-gray-900 bg-opacity-60" aria-hidden="true" onclick="cerrarModalCertificaciones()"></div>
+                    <div class="relative bg-white rounded-xl shadow-2xl max-w-lg w-full p-6">
+                        <div class="flex items-start justify-between mb-4">
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-900">Calcular certificaciones</h3>
+                                <p class="text-sm text-gray-600 mt-1">Define el índice de aprobación (nota mínima) para proponer certificados en este cálculo.</p>
+                            </div>
+                            <button type="button" class="text-gray-400 hover:text-gray-600" onclick="cerrarModalCertificaciones()">
+                                <span class="sr-only">Cerrar</span>
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+
+                        <div class="space-y-3">
+                            <label for="indice-aprobacion-input" class="block text-sm font-medium text-gray-700">Índice de aprobación</label>
+                            <input id="indice-aprobacion-input" type="number" step="0.1" min="0" max="20" value="7.0" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400" />
+                            <p class="text-xs text-gray-500">Ejemplo: 7.0 equivale a nota mínima de aprobación. Ajusta según el esquema de notas de la oferta.</p>
+                        </div>
+
+                        <div class="mt-6 flex justify-end gap-3">
+                            <button type="button" class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800" onclick="cerrarModalCertificaciones()">Cancelar</button>
+                            <button type="button" class="px-4 py-2 text-sm font-semibold text-white bg-yellow-500 hover:bg-yellow-600 rounded-lg" onclick="confirmarCalcularCertificaciones()">
+                                Confirmar cálculo
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
             
             <!-- Tabla de Calificaciones -->
@@ -166,6 +215,10 @@
                          </button>
                          <button onclick="mostrarTab('tab-examenes')" id="btn-tab-examenes" class="px-4 py-2 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700 transition-all">
                              <i class="fas fa-edit mr-2"></i> Exámenes
+                         </button>
+                         <button th:if="${mostrarCertificaciones}" onclick="mostrarTab('tab-certificaciones')" id="btn-tab-certificaciones" class="px-4 py-2 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700 transition-all relative">
+                             <i class="fas fa-certificate mr-2"></i> Certificaciones
+                             <span th:if="${totalACertificar > 0}" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center" th:text="${totalACertificar}">0</span>
                          </button>
                     </div>
                 </div>
@@ -315,6 +368,217 @@
                                 </div>
                             </div>
                         </div>
+                        
+                        <!-- TAB: CERTIFICACIONES -->
+                        <div id="tab-certificaciones" class="space-y-6 hidden" th:if="${mostrarCertificaciones}">
+                            
+                            <!-- Header con Estado -->
+                            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h3 class="text-xl font-bold text-gray-800 flex items-center">
+                                        <i class="fas fa-certificate text-yellow-500 mr-3"></i>
+                                        Gestión de Certificaciones
+                                    </h3>
+                                    <span th:if="${oferta.estado.name() == 'CERRADA'}" 
+                                          class="px-3 py-1 bg-red-100 text-red-800 text-sm font-bold rounded-full">
+                                        🔒 CERRADA - Inmutable
+                                    </span>
+                                    <span th:if="${oferta.estado.name() == 'FINALIZADA'}" 
+                                          class="px-3 py-1 bg-yellow-100 text-yellow-800 text-sm font-bold rounded-full">
+                                        ⚠️ Pendiente de Cierre
+                                    </span>
+                                </div>
+                                
+                                <!-- Resumen -->
+                                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4" th:if="${resumenCertificaciones != null}">
+                                    <div class="bg-gray-50 rounded-lg p-4 text-center">
+                                        <div class="text-2xl font-bold text-gray-800" th:text="${resumenCertificaciones.totalInscritos}">0</div>
+                                        <div class="text-xs text-gray-500 mt-1">Total Inscritos</div>
+                                    </div>
+                                    <div class="bg-green-50 rounded-lg p-4 text-center">
+                                        <div class="text-2xl font-bold text-green-600" th:text="${resumenCertificaciones.propuestas}">0</div>
+                                        <div class="text-xs text-gray-500 mt-1">✅ Propuestos</div>
+                                    </div>
+                                    <div class="bg-blue-50 rounded-lg p-4 text-center">
+                                        <div class="text-2xl font-bold text-blue-600" th:text="${resumenCertificaciones.aprobadosDocente}">0</div>
+                                        <div class="text-xs text-gray-500 mt-1">➕ Aprobados Manual</div>
+                                    </div>
+                                    <div class="bg-red-50 rounded-lg p-4 text-center">
+                                        <div class="text-2xl font-bold text-red-600" th:text="${resumenCertificaciones.rechazados}">0</div>
+                                        <div class="text-xs text-gray-500 mt-1">❌ Rechazados</div>
+                                    </div>
+                                    <div class="bg-gray-100 rounded-lg p-4 text-center">
+                                        <div class="text-2xl font-bold text-gray-500" th:text="${resumenCertificaciones.noCumplenCriterios}">0</div>
+                                        <div class="text-xs text-gray-500 mt-1">⚠️ No Cumple</div>
+                                    </div>
+                                    <div class="bg-yellow-50 rounded-lg p-4 text-center border-2 border-yellow-300">
+                                        <div class="text-2xl font-bold text-yellow-700" th:text="${totalACertificar}">0</div>
+                                        <div class="text-xs font-bold text-yellow-700 mt-1">🎓 A Certificar</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Lista de Alumnos -->
+                            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between gap-3">
+                                    <h4 class="text-lg font-bold text-gray-800">Lista de Alumnos</h4>
+                                    <a th:href="@{/aula/oferta/{id}/certificaciones/exportar-lista(id=${oferta.idOferta})}"
+                                       target="_blank"
+                                       class="inline-flex items-center px-3 py-2 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 rounded-lg shadow-sm">
+                                        <i class="fas fa-file-pdf mr-2"></i>
+                                        Exportar PDF (a certificar)
+                                    </a>
+                                </div>
+                                
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full divide-y divide-gray-200">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Alumno</th>
+                                                <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase">Promedio</th>
+                                                <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase">Asistencia</th>
+                                                <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase">Tareas</th>
+                                                <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase">Exámenes</th>
+                                                <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase">Estado</th>
+                                                <th th:if="${oferta.estado.name() != 'CERRADA'}" class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="bg-white divide-y divide-gray-200">
+                                            <tr th:each="cert : ${certificaciones}" class="hover:bg-gray-50">
+                                                <!-- Alumno -->
+                                                <td class="px-6 py-4 whitespace-nowrap">
+                                                    <div class="flex items-center">
+                                                        <div class="flex-shrink-0 h-10 w-10">
+                                                            <div class="h-10 w-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold">
+                                                                <span th:text="${#strings.substring(cert.inscripcion.alumno.nombre,0,1) + #strings.substring(cert.inscripcion.alumno.apellido,0,1)}">AL</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="ml-3">
+                                                            <div class="text-sm font-medium text-gray-900" 
+                                                                 th:text="${cert.inscripcion.alumno.apellido + ', ' + cert.inscripcion.alumno.nombre}">Apellido, Nombre</div>
+                                                            <div class="text-xs text-gray-500" th:text="${cert.inscripcion.alumno.dni}">DNI</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                
+                                                <!-- Promedio -->
+                                                <td class="px-4 py-4 whitespace-nowrap text-center">
+                                                    <span class="px-2 py-1 rounded-md text-sm font-bold"
+                                                          th:classappend="${cert.promedioGeneral >= 7 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}"
+                                                          th:text="${cert.promedioGeneral != null ? #numbers.formatDecimal(cert.promedioGeneral, 1, 2) : 'N/A'}">0.00</span>
+                                                </td>
+                                                
+                                                <!-- Asistencia -->
+                                                <td class="px-4 py-4 whitespace-nowrap text-center">
+                                                    <span class="px-2 py-1 rounded-md text-sm font-bold"
+                                                          th:classappend="${cert.porcentajeAsistencia >= 75 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}"
+                                                          th:text="${cert.porcentajeAsistencia != null ? #numbers.formatDecimal(cert.porcentajeAsistencia, 1, 1) + '%' : 'N/A'}">0%</span>
+                                                </td>
+                                                
+                                                <!-- Tareas -->
+                                                <td class="px-4 py-4 whitespace-nowrap text-center text-sm">
+                                                    <span th:text="${cert.tareasEntregadas + '/' + cert.tareasTotales}">0/0</span>
+                                                </td>
+                                                
+                                                <!-- Exámenes -->
+                                                <td class="px-4 py-4 whitespace-nowrap text-center text-sm">
+                                                    <span th:text="${cert.examenesAprobados + '/' + cert.examenesTotales}">0/0</span>
+                                                </td>
+                                                
+                                                <!-- Estado -->
+                                                <td class="px-4 py-4 whitespace-nowrap text-center">
+                                                    <span th:if="${cert.estado.name() == 'PROPUESTA'}" 
+                                                          class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium">
+                                                        ✅ Propuesto
+                                                    </span>
+                                                    <span th:if="${cert.estado.name() == 'APROBADO_DOCENTE'}" 
+                                                          class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">
+                                                        ➕ Aprobado Manual
+                                                    </span>
+                                                    <span th:if="${cert.estado.name() == 'RECHAZADO_DOCENTE'}" 
+                                                          class="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full font-medium">
+                                                        ❌ Rechazado
+                                                    </span>
+                                                    <span th:if="${cert.estado.name() == 'NO_APLICA'}" 
+                                                          class="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full font-medium">
+                                                        ⚠️ No Cumple
+                                                    </span>
+                                                    <span th:if="${cert.estado.name() == 'CERTIFICADO_EMITIDO'}" 
+                                                          class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full font-medium">
+                                                        🎓 Certificado
+                                                    </span>
+                                                </td>
+                                                
+                                                <!-- Acciones -->
+                                                <td th:if="${oferta.estado.name() != 'CERRADA'}" class="px-4 py-4 whitespace-nowrap text-center text-sm">
+                                                    <button th:if="${cert.estado.name() == 'PROPUESTA' or cert.estado.name() == 'APROBADO_DOCENTE'}"
+                                                            type="button"
+                                                            onclick="alert('Funcionalidad en desarrollo')"
+                                                            class="text-red-600 hover:text-red-900 bg-red-50 px-3 py-1 rounded-md transition-colors text-xs">
+                                                        ❌ Rechazar
+                                                    </button>
+                                                    <button th:if="${cert.estado.name() == 'NO_APLICA' or cert.estado.name() == 'RECHAZADO_DOCENTE'}"
+                                                            type="button"
+                                                            onclick="alert('Funcionalidad en desarrollo')"
+                                                            class="text-green-600 hover:text-green-900 bg-green-50 px-3 py-1 rounded-md transition-colors text-xs">
+                                                        ✅ Aprobar
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            
+                                            <tr th:if="${#lists.isEmpty(certificaciones)}">
+                                                <td colspan="7" class="px-6 py-8 text-center">
+                                                    <div class="text-gray-400">
+                                                        <i class="fas fa-info-circle text-3xl mb-2"></i>
+                                                        <p class="text-sm">No hay certificaciones calculadas aún.</p>
+                                                        <p class="text-xs mt-1">Asegúrate de que la oferta esté finalizada.</p>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <!-- Botón Cerrar Notas -->
+                            <div th:if="${oferta.estado.name() == 'FINALIZADA' and totalACertificar > 0}" 
+                                 class="bg-red-50 border-2 border-red-200 rounded-xl p-6">
+                                <h4 class="text-lg font-bold text-red-800 mb-2 flex items-center">
+                                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                                    Zona de Peligro
+                                </h4>
+                                <p class="text-sm text-red-700 mb-4">
+                                    Una vez cerradas las notas, <strong>NO SE PUEDEN MODIFICAR</strong>. 
+                                    Se generará el acta de cierre con <span th:text="${totalACertificar}">0</span> alumnos aprobados y se enviará a administración para revisión.
+                                </p>
+                                <form th:action="@{/aula/oferta/{id}/certificaciones/cerrar(id=${oferta.idOferta})}" 
+                                      method="post"
+                                      onsubmit="return confirm('⚠️ ADVERTENCIA: Esta acción es IRREVERSIBLE.\\n\\nSe emitirán ' + [[${totalACertificar}]] + ' certificados, la oferta quedará CERRADA y el acta se enviará a administración.\\n\\n¿Estás seguro de continuar?')">
+                                    <input type="hidden" name="confirmacion" value="CONFIRMAR" />
+                                    <button type="submit"
+                                            class="px-6 py-3 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition-colors">
+                                        🔒 Cerrar Acta y Enviar a Administración
+                                    </button>
+                                </form>
+                            </div>
+                            
+                            <!-- Botón Descargar Acta (si está cerrada) -->
+                            <div th:if="${oferta.estado.name() == 'CERRADA'}" 
+                                 class="bg-green-50 border-2 border-green-200 rounded-xl p-6 text-center">
+                                <i class="fas fa-check-circle text-green-600 text-4xl mb-3"></i>
+                                <h4 class="text-lg font-bold text-green-800 mb-2">Acta Cerrada y Enviada</h4>
+                                <p class="text-sm text-green-700 mb-4">
+                                    El acta está pendiente de revisión administrativa. Puedes descargar una copia.
+                                </p>
+                                <a th:href="@{/aula/oferta/{id}/certificaciones/acta-pdf(id=${oferta.idOferta})}"
+                                   target="_blank"
+                                   class="inline-block px-6 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition-colors">
+                                    <i class="fas fa-download mr-2"></i>
+                                    Descargar Acta en PDF
+                                </a>
+                            </div>
+                            
+                        </div>
                     </div>
 
                     <!-- MODAL GENERICO CORRECCION -->
@@ -354,14 +618,41 @@
                     // Hide all
                     document.getElementById('tab-actividades').classList.add('hidden');
                     document.getElementById('tab-examenes').classList.add('hidden');
+                    const tabCert = document.getElementById('tab-certificaciones');
+                    if (tabCert) tabCert.classList.add('hidden');
                     
                     // Reset buttons
                     document.getElementById('btn-tab-actividades').className = "px-4 py-2 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700 transition-all";
                     document.getElementById('btn-tab-examenes').className = "px-4 py-2 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700 transition-all";
+                    const btnCert = document.getElementById('btn-tab-certificaciones');
+                    if (btnCert) btnCert.className = "px-4 py-2 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700 transition-all relative";
 
                     // Show selected
                     document.getElementById(tabId).classList.remove('hidden');
-                    document.getElementById('btn-' + tabId).className = "px-4 py-2 rounded-md text-sm font-medium transition-all bg-white text-gray-800 shadow-sm";
+                    document.getElementById('btn-' + tabId).className = "px-4 py-2 rounded-md text-sm font-medium transition-all bg-white text-gray-800 shadow-sm" + (tabId === 'tab-certificaciones' ? ' relative' : '');
+                }
+
+                function abrirModalCertificaciones() {
+                    const modal = document.getElementById('modal-calcular-certificaciones');
+                    const input = document.getElementById('indice-aprobacion-input');
+                    if (input && !input.value) input.value = '7.0';
+                    if (modal) modal.classList.remove('hidden');
+                }
+
+                function cerrarModalCertificaciones() {
+                    const modal = document.getElementById('modal-calcular-certificaciones');
+                    if (modal) modal.classList.add('hidden');
+                }
+
+                function confirmarCalcularCertificaciones() {
+                    const form = document.getElementById('form-calcular-certificaciones');
+                    const input = document.getElementById('indice-aprobacion-input');
+                    const hidden = document.getElementById('indice-aprobacion-hidden');
+
+                    if (hidden && input) {
+                        hidden.value = input.value || '7.0';
+                    }
+                    if (form) form.submit();
                 }
 
                 function abrirModalCorreccion(url) {
@@ -503,6 +794,21 @@
                     }
                 }
 
+            </script>
+
+            <script th:inline="javascript">
+                document.addEventListener('DOMContentLoaded', function() {
+                    const abrir = /*[[${abrirCertificaciones}]]*/ false;
+                    if (!abrir) return;
+
+                    const tab = document.getElementById('tab-certificaciones');
+                    const btn = document.getElementById('btn-tab-certificaciones');
+
+                    if (tab && btn && typeof mostrarTab === 'function') {
+                        mostrarTab('tab-certificaciones');
+                        tab.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                });
             </script>
             
         </div>

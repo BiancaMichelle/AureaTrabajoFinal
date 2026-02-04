@@ -36,9 +36,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.example.demo.enums.Dias;
 import com.example.demo.enums.EstadoOferta;
+import com.example.demo.enums.EstadoProcesoCertificacion;
 import com.example.demo.enums.Modalidad;
 import com.example.demo.enums.TipoGenero;
 import com.example.demo.model.Alumno;
@@ -73,6 +75,7 @@ import com.example.demo.service.ImagenService;
 import com.example.demo.service.InstitutoService;
 import com.example.demo.service.LocacionAPIService;
 import com.example.demo.service.OfertaAcademicaService;
+import com.example.demo.service.CertificacionService;
 import com.example.demo.service.RegistroService;
 import com.example.demo.service.AnalisisRendimientoService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -138,6 +141,9 @@ public class AdminController {
     
     @Autowired
     private AuditLogRepository auditLogRepository;
+
+    @Autowired
+    private CertificacionService certificacionService;
 
 
     public AdminController(LocacionAPIService locacionApiService,
@@ -235,6 +241,63 @@ public class AdminController {
         model.addAttribute("actividadesRecientes", actividadesRecientes);
         
         return "admin/panelAdmin";
+    }
+
+    @GetMapping("/admin/certificaciones")
+    public String adminCertificaciones(Model model) {
+        List<OfertaAcademica> ofertasCerradas = ofertaAcademicaRepository.findByEstado(EstadoOferta.CERRADA);
+        ofertasCerradas.forEach(o -> {
+            if (o.getEstadoProcesoCertificacion() == null) {
+                o.setEstadoProcesoCertificacion(EstadoProcesoCertificacion.EN_GESTION_CERTIFICACION);
+            }
+        });
+
+        model.addAttribute("ofertas", ofertasCerradas);
+        model.addAttribute("estadosCert", EstadoProcesoCertificacion.values());
+        return "admin/certificaciones";
+    }
+
+    @PostMapping("/admin/certificaciones/{id}/estado")
+    public String actualizarEstadoCertificacion(
+            @PathVariable Long id,
+            @RequestParam EstadoProcesoCertificacion estado,
+            RedirectAttributes redirectAttributes) {
+        OfertaAcademica oferta = ofertaAcademicaRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Oferta no encontrada"));
+
+        oferta.setEstadoProcesoCertificacion(estado);
+        ofertaAcademicaRepository.save(oferta);
+
+        redirectAttributes.addFlashAttribute("success", "Estado de certificación actualizado");
+        return "redirect:/admin/certificaciones";
+    }
+
+    @PostMapping("/admin/certificaciones/{id}/cerrar")
+    public String cerrarNotasYEmitirActaAdmin(
+            @PathVariable Long id,
+            RedirectAttributes redirectAttributes) {
+        try {
+            OfertaAcademica oferta = ofertaAcademicaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Oferta no encontrada"));
+
+            Docente docenteReferencia = obtenerDocenteReferencia(oferta);
+            certificacionService.cerrarNotasYEmitirCertificados(id, docenteReferencia);
+
+            redirectAttributes.addFlashAttribute("success", "Notas cerradas y acta emitida para la oferta " + oferta.getNombre());
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Error al cerrar notas: " + e.getMessage());
+        }
+        return "redirect:/admin/certificaciones";
+    }
+
+    private Docente obtenerDocenteReferencia(OfertaAcademica oferta) {
+        if (oferta instanceof Curso curso && curso.getDocentes() != null && !curso.getDocentes().isEmpty()) {
+            return curso.getDocentes().get(0);
+        }
+        if (oferta instanceof Formacion formacion && formacion.getDocentes() != null && !formacion.getDocentes().isEmpty()) {
+            return formacion.getDocentes().get(0);
+        }
+        throw new RuntimeException("La oferta no tiene docente asignado para registrar el cierre");
     }
 
     @GetMapping("/admin/gestion-ofertas")

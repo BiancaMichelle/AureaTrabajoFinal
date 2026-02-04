@@ -7,11 +7,13 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.demo.enums.EstadoOferta;
+import com.example.demo.event.OfertaFinalizadaEvent;
 import com.example.demo.model.Auditable;
 import com.example.demo.model.Charla;
 import com.example.demo.model.Curso;
@@ -47,6 +49,9 @@ public class OfertaAcademicaService {
     
     @Autowired
     private ExamenRepository examenRepository;
+    
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
     
     @Autowired
     private EntregaRepository entregaRepository;
@@ -353,12 +358,22 @@ public class OfertaAcademicaService {
     public void verificarOfertasFinalizadas() {
         List<OfertaAcademica> todas = obtenerTodas();
         int actualizadas = 0;
+        List<OfertaAcademica> recienFinalizadas = new ArrayList<>();
         
         for (OfertaAcademica oferta : todas) {
             try {
+                EstadoOferta estadoAnterior = oferta.getEstado();
+                
                 if (oferta.actualizarEstadoSiFinalizada()) {
                     guardar(oferta);
                     actualizadas++;
+                    
+                    // Si cambió a FINALIZADA, publicar evento
+                    if (oferta.getEstado() == EstadoOferta.FINALIZADA && 
+                        estadoAnterior != EstadoOferta.FINALIZADA) {
+                        recienFinalizadas.add(oferta);
+                        System.out.println("🎓 Oferta finalizada detectada: " + oferta.getNombre());
+                    }
                 }
             } catch (Exception e) {
                 System.err.println("Error al actualizar estado de la oferta ID: " + oferta.getIdOferta() + " (" + oferta.getNombre() + "): " + e.getMessage());
@@ -367,6 +382,16 @@ public class OfertaAcademicaService {
         
         if (actualizadas > 0) {
             System.out.println("🔄 Se actualizaron " + actualizadas + " ofertas (FINALIZADA/EN CURSO)");
+        }
+        
+        // Publicar eventos para ofertas recién finalizadas
+        for (OfertaAcademica oferta : recienFinalizadas) {
+            try {
+                System.out.println("📢 Publicando evento de finalización para: " + oferta.getNombre());
+                eventPublisher.publishEvent(new OfertaFinalizadaEvent(this, oferta));
+            } catch (Exception e) {
+                System.err.println("❌ Error al publicar evento: " + e.getMessage());
+            }
         }
     }
 

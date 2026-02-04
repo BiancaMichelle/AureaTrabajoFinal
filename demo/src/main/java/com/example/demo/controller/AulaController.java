@@ -16,13 +16,19 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.example.demo.enums.EstadoAsistencia;
+import com.example.demo.enums.EstadoOferta;
+import com.example.demo.enums.EstadoCertificacion;
 import com.example.demo.model.*;
 import com.example.demo.repository.*;
 import com.example.demo.service.AsistenciaService;
+import com.example.demo.service.CertificacionService;
+import com.example.demo.service.CertificacionService.ResumenCertificaciones;
 
 @Controller
 @RequestMapping("/aula")
@@ -32,6 +38,7 @@ public class AulaController {
     private final InscripcionRepository inscripcionRepository;
     private final UsuarioRepository usuarioRepository;
     private final AsistenciaService asistenciaService;
+    private final CertificacionService certificacionService;
     private final ClaseRepository claseRepository;
     private final HorarioRepository horarioRepository;
     private final TareaRepository tareaRepository;
@@ -43,6 +50,7 @@ public class AulaController {
                           InscripcionRepository inscripcionRepository,
                           UsuarioRepository usuarioRepository,
                           AsistenciaService asistenciaService,
+                          CertificacionService certificacionService,
                           ClaseRepository claseRepository,
                           HorarioRepository horarioRepository,
                           TareaRepository tareaRepository,
@@ -53,6 +61,7 @@ public class AulaController {
         this.inscripcionRepository = inscripcionRepository;
         this.usuarioRepository = usuarioRepository;
         this.asistenciaService = asistenciaService;
+        this.certificacionService = certificacionService;
         this.claseRepository = claseRepository;
         this.horarioRepository = horarioRepository;
         this.tareaRepository = tareaRepository;
@@ -411,9 +420,63 @@ public class AulaController {
                 correccionTareas.add(dato);
             }
             model.addAttribute("correccionTareas", correccionTareas);
+            
+            // Datos de Certificaciones (Solo si oferta está FINALIZADA o CERRADA)
+            if (oferta.getEstado() == EstadoOferta.FINALIZADA || oferta.getEstado() == EstadoOferta.CERRADA) {
+                try {
+                    // Obtener resumen de certificaciones
+                    ResumenCertificaciones resumen = certificacionService.obtenerResumenCertificaciones(id);
+                    model.addAttribute("resumenCertificaciones", resumen);
+                    
+                    // Obtener lista completa de certificaciones
+                    List<Certificacion> certificaciones = certificacionService.obtenerCertificacionesPorOferta(id);
+                    model.addAttribute("certificaciones", certificaciones);
+                    
+                    // Calcular total a certificar
+                    long totalACertificar = resumen.propuestas + resumen.aprobadosDocente;
+                    model.addAttribute("totalACertificar", totalACertificar);
+                    
+                    model.addAttribute("mostrarCertificaciones", true);
+                } catch (Exception e) {
+                    System.err.println("⚠️ Error al cargar certificaciones: " + e.getMessage());
+                    model.addAttribute("mostrarCertificaciones", false);
+                }
+            } else {
+                model.addAttribute("mostrarCertificaciones", false);
+            }
         }
 
         return "aula/calificaciones";
+    }
+    
+    /**
+     * Endpoint temporal para calcular certificaciones manualmente
+     * DELETE DESPUÉS DE USAR
+     */
+    @PostMapping("/oferta/{id}/calcular-certificaciones")
+    public String calcularCertificacionesManual(@PathVariable Long id, 
+                                                @RequestParam(value = "indiceAprobacion", required = false) Double indiceAprobacion,
+                                                RedirectAttributes redirectAttributes,
+                                                Authentication auth) {
+        try {
+            OfertaAcademica oferta = ofertaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Oferta no encontrada"));
+            
+            System.out.println("🔧 Calculando certificaciones manualmente para: " + oferta.getNombre());
+            certificacionService.calcularCertificacionesAutomaticas(oferta, indiceAprobacion);
+            
+            redirectAttributes.addFlashAttribute("success", 
+                "✅ Certificaciones calculadas correctamente" +
+                (indiceAprobacion != null ? " (índice de aprobación: " + indiceAprobacion + ")" : ""));
+            // Señal para que la vista abra automáticamente la pestaña de certificaciones y haga scroll
+            redirectAttributes.addFlashAttribute("abrirCertificaciones", true);
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", 
+                "❌ Error: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return "redirect:/aula/oferta/" + id + "/calificaciones";
     }
 
     // API Endpoints for the frontend logic
