@@ -216,26 +216,85 @@
                 </div>
 
                 <!-- Como Alumno -->
-                <div th:if="${not #lists.isEmpty(alumnoActivos)}" class="mb-4">
+                <div th:if="${not #lists.isEmpty(alumnoInscripcionesActivas)}" class="mb-4">
                     <h6 class="text-muted text-uppercase small mb-3"><i class="fas fa-user-graduate me-1"></i> Cursando como alumno</h6>
                     <div class="row g-4">
-                        <div th:each="curso : ${alumnoActivos}" class="col-lg-4 col-md-6">
-                            <!-- Card Alumno Activo -->
-                            <div class="card h-100 border-0 shadow-sm border-start border-info border-4">
-                                <div class="card-header bg-white">
-                                    <h5 class="card-title mb-0 text-info" th:text="${curso.nombre}"></h5>
+                        <div th:each="inscripcion : ${alumnoInscripcionesActivas}" class="col-lg-4 col-md-6" th:with="curso=${inscripcion.oferta}">
+                            <!-- Card Alumno Activo (Estilo Unificado con Alumno) -->
+                            <div class="card h-100 border-0 shadow-sm">
+                                <div class="card-header bg-primary">
+                                    <h5 class="card-title mb-0 text-white" th:text="${curso.nombre}">Nombre del Curso</h5>
                                 </div>
                                 <div class="card-body">
-                                    <p class="card-text text-muted small" th:text="${curso.descripcion}"></p>
-                                    <div class="d-flex justify-content-between text-muted small mt-3">
-                                        <span><i class="fas fa-clock me-1"></i> <span th:text="${curso.duracion}"></span></span>
-                                        <span class="badge bg-info text-dark">Alumno</span>
+                                    <p class="card-text text-muted" th:text="${curso.descripcion}">Descripción</p>
+                                    <div class="mb-3">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <i class="fas fa-clock text-muted me-2"></i>
+                                            <small class="text-muted" th:text="${curso.duracion}">Duración</small>
+                                        </div>
+                                        <div class="d-flex align-items-center mb-2">
+                                            <i class="fas fa-chalkboard-teacher text-muted me-2"></i>
+                                            <small class="text-muted" th:text="${curso.modalidad}">Modalidad</small>
+                                        </div>
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-users text-muted me-2"></i>
+                                            <small class="text-muted">
+                                                <span th:if="${curso.inscripciones != null}" 
+                                                      th:text="${curso.cantidadAlumnosActivos + ' alumnos'}">
+                                                </span>
+                                            </small>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="card-footer bg-transparent text-end">
-                                    <a th:href="@{/docente/aula/{id}(id=${curso.idOferta})}" class="btn btn-info btn-sm text-white">
-                                        Ingresar al Aula <i class="fas fa-arrow-right ms-1"></i>
-                                    </a>
+                                <div class="card-footer bg-transparent">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="badge bg-info">Alumno</span>
+                                        
+                                         <div class="d-flex gap-2">
+                                            <!-- Botón Aula -->
+                                            <a th:href="@{/alumno/aula/{id}(id=${curso.idOferta})}" class="btn btn-primary btn-sm">
+                                                <i class="fas fa-door-open me-1"></i> Aula
+                                            </a>
+                                            
+                                            <!-- Botón Darse de Baja (Abre Modal) -->
+                                            <button type="button" class="btn btn-outline-danger btn-sm" 
+                                                    data-bs-toggle="modal" 
+                                                    th:data-bs-target="'#modalBajaDocente-' + ${inscripcion.idInscripcion}">
+                                                <i class="fas fa-user-times"></i> Baja
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Modal de Confirmación de Baja -->
+                                <div class="modal fade" th:id="'modalBajaDocente-' + ${inscripcion.idInscripcion}" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header bg-light">
+                                                <h5 class="modal-title text-danger"><i class="fas fa-exclamation-triangle"></i> Confirmar Baja</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p>Estás a punto de darte de baja de la oferta académica: <strong><span th:text="${curso.nombre}"></span></strong>.</p>
+                                                
+                                                <div class="alert alert-warning border-0 bg-warning bg-opacity-10 text-warning" role="alert">
+                                                    <h6 class="alert-heading fw-bold"><i class="fas fa-info-circle"></i> Consecuencias:</h6>
+                                                    <ul class="mb-0 small ps-3">
+                                                        <li>Perderás acceso inmediato a los contenidos y al aula virtual.</li>
+                                                        <li>Tu progreso actual será archivado.</li>
+                                                        <li>Si deseas reingresar, deberás inscribirte nuevamente.</li>
+                                                    </ul>
+                                                </div>
+                                                <p class="mb-0 text-center fw-bold">¿Estás seguro de continuar?</p>
+                                            </div>
+                                            <div class="modal-footer border-0">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                <form th:action="@{/alumno/darse-de-baja/{id}(id=${inscripcion.idInscripcion})}" method="post">
+                                                    <button type="submit" class="btn btn-danger">Sí, darme de baja</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -270,19 +329,39 @@
                 </div>
 
                 <!-- Como Alumno -->
-                <div th:if="${not #lists.isEmpty(alumnoFinalizados)}" class="mb-4">
+                <div th:if="${not #lists.isEmpty(alumnoInscripcionesFinalizadas)}" class="mb-4">
                      <h6 class="text-muted text-uppercase small mb-3"><i class="fas fa-user-graduate me-1"></i> Cursando como Alumno</h6>
                     <div class="row g-4">
-                        <div th:each="curso : ${alumnoFinalizados}" class="col-lg-4 col-md-6">
-                            <div class="card h-100 border-0 shadow-sm bg-light opacity-75">
+                        <div th:each="inscripcion : ${alumnoInscripcionesFinalizadas}" class="col-lg-4 col-md-6" th:with="curso=${inscripcion.oferta}">
+                            <!-- Card Alumno Finalizado (Unificado) -->
+                            <div class="card h-100 border-0 shadow-sm opacity-75">
+                                <div class="card-header bg-secondary">
+                                    <h5 class="card-title mb-0 text-white" th:text="${curso.nombre}">Nombre del Curso</h5>
+                                </div>
                                 <div class="card-body">
-                                    <h6 class="card-title text-muted" th:text="${curso.nombre}"></h6>
-                                    <span class="badge bg-secondary">Alumno - Finalizado</span>
+                                    <p class="card-text text-muted" th:text="${curso.descripcion}">Descripción</p>
+                                    <div class="mb-3">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <i class="fas fa-clock text-muted me-2"></i>
+                                            <small class="text-muted" th:text="${curso.duracion}">Duración</small>
+                                        </div>
+                                        <div class="d-flex align-items-center mb-2">
+                                            <i class="fas fa-info-circle text-muted me-2"></i>
+                                            <small class="text-muted">Finalizado</small>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="card-footer bg-transparent">
-                                    <a th:href="@{/docente/aula/{id}(id=${curso.idOferta})}" class="btn btn-outline-secondary btn-sm w-100">
-                                        Ver Historial
-                                    </a>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="badge bg-secondary">Finalizado</span>
+                                        
+                                         <div class="d-flex gap-2">
+                                            <!-- Aún permitimos entrar al aula para ver historial, pero deshabilitamos baja -->
+                                            <a th:href="@{/alumno/aula/{id}(id=${curso.idOferta})}" class="btn btn-outline-secondary btn-sm">
+                                                <i class="fas fa-history me-1"></i> Ver Aula
+                                            </a>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
