@@ -37,6 +37,9 @@ public class Instituto {
     @Column(length = 2000)
     private String vision;
     
+    @Column(length = 3000)
+    private String sobreNosotros;
+    
     @ElementCollection(fetch = FetchType.EAGER)
     private List<String> colores;
     

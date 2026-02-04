@@ -876,7 +876,7 @@ public class AlumnoController {
             redirectAttributes.addFlashAttribute("success", 
                 "¡Te has inscrito exitosamente a " + oferta.getNombre() + "!");
             
-            return "redirect:/alumno/mis-ofertas";
+            return "redirect:/alumno/aula/" + oferta.getIdOferta();
             
         } catch (Exception e) {
             System.err.println("❌ Error al crear inscripción: " + e.getMessage());

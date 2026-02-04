@@ -2177,6 +2177,7 @@ public class AdminController {
             instituto.setDescripcion(params.get("descripcion"));
             instituto.setMision(params.get("mision"));
             instituto.setVision(params.get("vision"));
+            instituto.setSobreNosotros(params.get("sobreNosotros")); // Campo nuevo
             instituto.setDireccion(params.get("direccion"));
             instituto.setTelefono(params.get("telefono"));
             instituto.setEmail(params.get("email"));

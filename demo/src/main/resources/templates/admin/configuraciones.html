@@ -51,7 +51,7 @@
 
                         <!-- Misión y Visión -->
                         <div class="form-section">
-                            <h4><i class="fas fa-eye"></i> Misión y Visión</h4>
+                            <h4><i class="fas fa-eye"></i> Misión, Visión y Nosotros</h4>
                             <div class="form-group">
                                 <label for="mision">Misión Institucional</label>
                                 <textarea id="mision" name="mision" class="form-control" 
@@ -63,6 +63,12 @@
                                 <textarea id="vision" name="vision" class="form-control" 
                                           rows="4" placeholder="Visión del instituto..."
                                           th:text="${instituto?.vision}"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="sobreNosotros">Sobre Nosotros</label>
+                                <textarea id="sobreNosotros" name="sobreNosotros" class="form-control" 
+                                          rows="5" placeholder="Breve historia y valores del instituto..."
+                                          th:text="${instituto?.sobreNosotros}"></textarea>
                             </div>
                         </div>
 

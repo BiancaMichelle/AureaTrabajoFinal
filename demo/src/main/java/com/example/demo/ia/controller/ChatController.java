@@ -182,7 +182,8 @@ public class ChatController {
     @ResponseBody
     public ResponseEntity<List<Map<String, Object>>> obtenerNotificacionesChat(@AuthenticationPrincipal UserDetails userDetails) {
         if (userDetails == null) {
-            return ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED).build();
+            // Usuario no autenticado, simplemente no tiene notificaciones, no es un error
+            return ResponseEntity.ok(List.of());
         }
         
         Usuario usuario = usuarioRepository.findByDni(userDetails.getUsername()).orElse(null);

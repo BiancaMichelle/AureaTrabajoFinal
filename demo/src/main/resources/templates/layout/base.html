@@ -54,10 +54,10 @@
         <nav class="nav">
             <div class="nav-left">
                 <a th:href="@{/}" class="nav-logo">Aurea</a>
-                <div class="nav-search">
-                    <input type="search" placeholder="  cursos, charlas...">
+                <form th:action="@{/publico}" method="get" class="nav-search">
+                    <input type="search" id="navSearchInput" name="q" th:value="${param.q}" placeholder="  cursos, charlas...">
                     <button type="submit"><i class="fa fa-search"></i></button>
-                </div>
+                </form>
             </div>
 
             <ul class="nav-menu">
@@ -93,7 +93,7 @@
                 
                 <!-- Links de Autenticación -->
                 <li class="nav-menu-item" sec:authorize="!isAuthenticated()">
-                    <a th:href="@{/login}" class="nav-menu-link nav-menu-link-button">Login</a>
+                    <a th:href="@{/login}" class="nav-menu-link nav-menu-link-button">Iniciar Sesión</a>
                 </li>
                 
                 <li class="nav-menu-item" sec:authorize="isAuthenticated()">
@@ -141,7 +141,7 @@
                 <ul>
                     <li><a href="#">Cursos</a></li>
                     <li><a href="#">Formaciones</a></li>
-                    <li><a href="#">Sobre Nosotros</a></li>
+                    <li><a th:href="@{/#sobre-nosotros}">Sobre Nosotros</a></li>
                 </ul>
             </div>
             <div class="footer-section">

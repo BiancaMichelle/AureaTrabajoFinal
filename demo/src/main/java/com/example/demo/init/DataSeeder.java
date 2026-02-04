@@ -596,13 +596,16 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private void crearInstitutoDefault() {
-        if (institutoRepository.findByNombreInstituto("ICEP").isEmpty()) {
+        java.util.List<Instituto> institutos = institutoRepository.findByNombreInstituto("ICEP");
+        
+        if (institutos.isEmpty()) {
             Instituto instituto = new Instituto();
             instituto.setNombreInstituto("ICEP");
             instituto.setDescripcion("Instituto de Capacitación y Educación Profesional");
             instituto.setMision("Brindar educación de calidad accesible para todos, fomentando el desarrollo profesional y personal de nuestros estudiantes a través de metodologías innovadoras y tecnología de vanguardia.");
             instituto.setVision("Ser reconocidos como una institución líder en educación profesional, referente por nuestra excelencia académica, compromiso social y capacidad de adaptación a las necesidades del mercado laboral global.");
-            
+            instituto.setSobreNosotros("Fundado con la convicción de que la educación transforma vidas, el ICEP se ha dedicado a formar profesionales competentes y éticos. Nuestra historia está marcada por la innovación constante y el compromiso con la excelencia académica. Creemos en el potencial de cada estudiante y trabajamos incansablemente para proporcionarles las herramientas necesarias para triunfar en un mundo competitivo.");
+
             // Colores predefinidos: Rojo (Primario) y Azul Oscuro (Secundario/Footer)
             instituto.setColores(Arrays.asList("#E5383B", "#0D1B2A"));
             
@@ -641,6 +644,14 @@ public class DataSeeder implements CommandLineRunner {
             
             institutoRepository.save(instituto);
             System.out.println("✅ Instituto por defecto creado: ICEP");
+        } else {
+            // Actualizar si existe pero no tiene 'sobreNosotros'
+            Instituto existente = institutos.get(0);
+            if (existente.getSobreNosotros() == null || existente.getSobreNosotros().isEmpty()) {
+                existente.setSobreNosotros("Fundado con la convicción de que la educación transforma vidas, el ICEP se ha dedicado a formar profesionales competentes y éticos. Nuestra historia está marcada por la innovación constante y el compromiso con la excelencia académica. Creemos en el potencial de cada estudiante y trabajamos incansablemente para proporcionarles las herramientas necesarias para triunfar en un mundo competitivo.");
+                institutoRepository.save(existente);
+                System.out.println("✅ 'Sobre Nosotros' actualizado en Instituto existente: ICEP");
+            }
         }
     }
 

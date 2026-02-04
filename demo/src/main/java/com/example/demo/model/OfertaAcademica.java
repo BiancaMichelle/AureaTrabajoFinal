@@ -196,7 +196,76 @@ public class OfertaAcademica {
         if (this instanceof Charla) return "Charla";
         return "General";
     }
+
+    public String getDuracionTexto() {
+        if (this instanceof Curso) {
+            return ((Curso) this).getDuracionMeses() + " Meses";
+        }
+        if (this instanceof Formacion) {
+            return ((Formacion) this).getDuracionMeses() + " Meses";
+        }
+        if (this instanceof Charla) {
+             Integer mins = ((Charla) this).getDuracionEstimada();
+             return (mins != null ? mins : 0) + " Minutos";
+        }
+        // Seminario o Default: calcular dias
+        if (fechaInicio != null && fechaFin != null) {
+            long diff = java.time.temporal.ChronoUnit.DAYS.between(fechaInicio, fechaFin);
+            if (diff == 0) return "1 Día";
+            return (diff + 1) + " Días";
+        }
+        return "N/A";
+    }
+
+    public String getPrecioDetalle() {
+        String moneda = "$"; 
+        if (this instanceof Curso) {
+            Curso c = (Curso) this;
+            return "Inscripción: " + moneda + (costoInscripcion != null ? costoInscripcion : 0) + 
+                   " + " + (c.getNrCuotas() != null ? c.getNrCuotas() : 0) + " cuotas de " + moneda + (c.getCostoCuota() != null ? c.getCostoCuota() : 0);
+        }
+        if (this instanceof Formacion) {
+            Formacion f = (Formacion) this;
+             return "Inscripción: " + moneda + (costoInscripcion != null ? costoInscripcion : 0) + 
+                   " + " + (f.getNrCuotas() != null ? f.getNrCuotas() : 0) + " cuotas de " + moneda + (f.getCostoCuota() != null ? f.getCostoCuota() : 0);
+        }
+        // Seminario y Charla (solo costo inscripcion)
+        if (costoInscripcion == null || costoInscripcion == 0) {
+            return "Gratuito";
+        }
+        return "Costo único: " + moneda + costoInscripcion;
+    }
     
+    /**
+     * Calcula la carga horaria semanal en horas basándose en los horarios asignados.
+     */
+    public Double getCargaHorariaSemanal() {
+        if (horarios == null || horarios.isEmpty()) {
+            return 0.0;
+        }
+        double totalHoras = 0.0;
+        for (Horario h : horarios) {
+            if (h.getHoraInicio() != null && h.getHoraFin() != null) {
+                long diffMs = h.getHoraFin().getTime() - h.getHoraInicio().getTime();
+                // ms -> horas
+                double horas = diffMs / (1000.0 * 60.0 * 60.0);
+                totalHoras += horas;
+            }
+        }
+        return Math.round(totalHoras * 100.0) / 100.0; // Redondear 2 decimales
+    }
+
+    /**
+     * Devuelve el título o certificación que otorga.
+     * Puede ser sobreescrito por las subclases.
+     */
+    public String getTituloCertificacion() {
+        if (Boolean.TRUE.equals(certificado)) {
+            return "Certificado de Aprobación";
+        }
+        return "Constancia de Participación";
+    }
+
     /**
      * Devuelve el tipo para consultas de base de datos
      */
@@ -332,8 +401,9 @@ public class OfertaAcademica {
     }
     
     /**
-     * Duración formateada para mostrar
+     * Duración formateada para mostrar (Delegada al método principal específico)
      */
+    /*
     public String getDuracionTexto() {
         Long dias = getDuracionDias();
         if (dias == null) return "No definida";
@@ -342,6 +412,7 @@ public class OfertaAcademica {
         if (dias < 30) return (dias / 7) + " semanas";
         return (dias / 30) + " meses";
     }
+    */
     /**
      * Devuelve la clase CSS para el badge de estado
      */

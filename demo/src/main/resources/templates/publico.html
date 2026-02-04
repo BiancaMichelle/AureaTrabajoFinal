@@ -4,6 +4,20 @@
 
 <head>
     <title th:text="${instituto?.nombreInstituto ?: 'Instituto Aurea'}">Instituto Aurea</title>
+    <style>
+        .oferta-item .card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .oferta-item .card:hover {
+            transform: translateY(-8px);
+            /* Sombra pronunciada y con tinte azul en la parte inferior para "iluminar" */
+            box-shadow: 0 12px 24px rgba(255, 252, 252, 0.473), 0 8px 16px rgba(197, 5, 5, 0.644);
+            border-bottom: 3px solid var(--bs-primary);
+        }
+    </style>
 </head>
 
     <div layout:fragment="content">
@@ -65,36 +79,82 @@
                         <p class="lead text-muted">Conoce más sobre nuestros valores y objetivos</p>
                     </div>
                 </div>
-                <div class="row g-4">
+                <div class="row g-5 align-items-center">
+                    <!-- Misión (Izquierda + Borde Azul Oscuro) -->
                     <div class="col-md-6">
-                        <div class="card h-100 border-0 shadow-sm">
-                            <div class="card-body text-center p-4">
-                                <div class="mb-3">
-                                    <i class="fas fa-bullseye fa-3x text-primary"></i>
-                                </div>
-                                <h3 class="card-title h4 text-primary">Nuestra Misión</h3>
-                                <p class="card-text" th:text="${instituto?.mision}">
-                                    Brindar educación de calidad y formar profesionales competentes para el mercado laboral actual, 
-                                    desarrollando habilidades técnicas y humanas que contribuyan al crecimiento personal y profesional.
-                                </p>
-                            </div>
+                        <div class="bg-white p-5 shadow h-100 position-relative" style="border-left: 6px solid #1a237e;">
+                            <h3 class="h3 fw-bold mb-3" style="color: #1a237e;">Nuestra Misión</h3>
+                            <p class="lead text-muted" th:text="${instituto?.mision}">
+                                Brindar educación de calidad y formar profesionales competentes...
+                            </p>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="card h-100 border-0 shadow-sm">
-                            <div class="card-body text-center p-4">
-                                <div class="mb-3">
-                                    <i class="fas fa-eye fa-3x text-primary"></i>
+                    
+                    <!-- Visión (Derecha + Borde Verde Azulado + Desplazado) -->
+                    <div class="col-md-6 mt-md-5 pt-md-4">
+                        <div class="bg-white p-5 shadow h-100 position-relative" style="border-left: 6px solid #00897b;">
+                            <h3 class="h3 fw-bold mb-3" style="color: #00897b;">Nuestra Visión</h3>
+                            <p class="lead text-muted" th:text="${instituto?.vision}">
+                                Ser referentes en educación profesional a nivel nacional...
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección Sobre Nosotros -->
+                <div class="row align-items-center mt-5" id="sobre-nosotros" th:if="${instituto?.sobreNosotros != null and !#strings.isEmpty(instituto.sobreNosotros)}">
+                    <!-- Imagen (lado izquierdo) -->
+                    <div class="col-lg-6 mb-4 mb-lg-0">
+                        <div class="position-relative">
+                            <!-- Marco decorativo en el fondo -->
+                            <div class="position-absolute bg-primary rounded-3" 
+                                 style="top: 20px; left: -20px; width: 100%; height: 100%; opacity: 0.1; z-index: 0;"></div>
+                            
+                            <!-- Imagen principal -->
+                            <img th:src="@{/img/nosotros.jpg}" alt="Sobre Nosotros" 
+                                 class="img-fluid rounded-3 shadow position-relative" 
+                                 style="z-index: 1; width: 100%; object-fit: cover; min-height: 400px;">
+                        </div>
+                    </div>
+                    
+                    <!-- Texto (lado derecho) -->
+                    <div class="col-lg-6 ps-lg-5">
+                        <div class="mb-3">
+                            <span class="badge bg-primary-subtle text-primary rounded-pill px-3 py-2 fw-bold small text-uppercase">
+                                Quiénes Somos
+                            </span>
+                        </div>
+                        <h2 class="display-6 fw-bold mb-4 text-dark">Sobre Nosotros</h2>
+                        <div class="lead text-muted" style="white-space: pre-wrap; font-size: 1.1rem; line-height: 1.8;" th:text="${instituto.sobreNosotros}">
+                            Historia y valores del instituto...
+                        </div>
+                        
+                        <!-- Características/Puntos fuertes (Estático para mejorar diseño) -->
+                        <div class="row g-4 mt-4">
+                            <div class="col-sm-6">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-shrink-0 btn-lg-square bg-primary-subtle rounded-circle d-flex align-items-center justify-content-center text-primary me-3">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 fw-bold">Excelencia Académica</h6>
+                                    </div>
                                 </div>
-                                <h3 class="card-title h4 text-primary">Nuestra Visión</h3>
-                                <p class="card-text" th:text="${instituto?.vision}">
-                                    Ser referentes en educación profesional a nivel nacional, reconocidos por la excelencia académica 
-                                    y la innovación en metodologías de enseñanza.
-                                </p>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-shrink-0 btn-lg-square bg-primary-subtle rounded-circle d-flex align-items-center justify-content-center text-primary me-3">
+                                        <i class="fas fa-user-graduate"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 fw-bold">Desarrollo Integral</h6>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
+
             </div>
         </section>
 
@@ -157,124 +217,355 @@
                     </div>
                 </div>
                 
-                <div class="row g-4" th:if="${not #lists.isEmpty(ofertas)}">
-                    <div th:each="oferta : ${ofertas}" class="col-lg-4 col-md-6 oferta-item"
-                         th:data-nombre="${oferta.nombre != null ? oferta.nombre.toLowerCase() : ''}"
-                         th:data-tipo="${oferta.tipoOferta}"
-                         th:data-modalidad="${oferta.modalidad}"
-                         th:data-categoria="${oferta.categorias != null and not #lists.isEmpty(oferta.categorias) ? oferta.categorias[0].idCategoria : ''}">
-                        <div class="card h-100 border-0 shadow-sm">
-                            <div class="card-header text-white" style="background-color: var(--dark-blue);">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="badge bg-light me-2" style="color: var(--dark-blue);"
-                                          th:text="${oferta.categorias != null and not #lists.isEmpty(oferta.categorias)} ? ${oferta.categorias[0].nombre} : 'General'">Categoría</span>
-                                    <span class="badge bg-warning text-dark" th:text="${oferta.tipoOferta}">TIPO</span>
-                                </div>
-                                <h5 class="card-title mb-0 mt-2">
-                                    <a th:href="@{/publico/oferta/{id}(id=${oferta.idOferta})}" class="text-white text-decoration-none" th:text="${oferta.nombre}">Título de la Oferta</a>
-                                </h5>
-                            </div>
-                            <div class="card-body">
-                                <p class="card-text" th:text="${oferta.descripcion}">
-                                    Descripción de la oferta académica que proporciona información detallada sobre el contenido y objetivos del programa.
-                                </p>
-                                <div class="row g-2 mb-3">
-                                    <div class="col-6">
-                                        <small class="text-muted">
-                                            <i class="fas fa-calendar me-1"></i>
-                                            <span th:text="${oferta.modalidad}">Modalidad</span>
-                                        </small>
-                                    </div>
-                                    <div class="col-6" th:if="${oferta.duracion}">
-                                        <small class="text-muted">
-                                            <i class="fas fa-clock me-1"></i>
-                                            <span th:text="${oferta.duracion}">Duración</span>
-                                        </small>
-                                    </div>
-                                    <div class="col-6" th:if="${oferta.certificado}">
-                                        <small class="text-success">
-                                            <i class="fas fa-certificate me-1"></i>
-                                            Con Certificado
-                                        </small>
-                                    </div>
-                                    <div class="col-6" th:if="${oferta.cuposDisponibles != null}">
-                                        <small class="text-info">
-                                            <i class="fas fa-users me-1"></i>
-                                            <span th:text="${oferta.cantidadAlumnosActivos} + ' de ' + ${oferta.cupos} + ' cupos'">x de xx cupos</span>
-                                        </small>
-                                    </div>
-                                    <div class="col-6" th:if="${oferta.cuposDisponibles == null}">
-                                        <small class="text-info">
-                                            <i class="fas fa-users me-1"></i>
-                                            Sin límite
-                                        </small>
-                                    </div>
-                                    <!-- Costo mensual para Curso (usa costoCuota) -->
-                                    <div class="col-12" th:if="${oferta.tipoOferta == 'CURSO' and oferta.costoCuota != null and oferta.costoCuota > 0}">
-                                        <small class="text-primary fw-bold">
-                                            <i class="fas fa-calendar-alt me-1"></i>
-                                            Costo mensual: $<span th:text="${#numbers.formatDecimal(oferta.costoCuota, 0, 'COMMA', 2, 'POINT')}">0</span>
-                                        </small>
-                                    </div>
-                                    <!-- Costo mensual para Formación (usa costoCuota si existe) -->
-                                    <div class="col-12" th:if="${oferta.tipoOferta == 'FORMACION' and oferta.costoCuota != null and oferta.costoCuota > 0}">
-                                        <small class="text-primary fw-bold">
-                                            <i class="fas fa-calendar-alt me-1"></i>
-                                            Costo mensual: $<span th:text="${#numbers.formatDecimal(oferta.costoCuota, 0, 'COMMA', 2, 'POINT')}">0</span>
-                                        </small>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="card-footer bg-transparent">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="h5 text-primary mb-0" th:if="${oferta.costoInscripcion != null and oferta.costoInscripcion > 0}">
-                                        $<span th:text="${#numbers.formatDecimal(oferta.costoInscripcion, 0, 'COMMA', 2, 'POINT')}">0</span>
-                                    </span>
-                                    <span class="h5 text-success mb-0" th:if="${oferta.costoInscripcion == null or oferta.costoInscripcion == 0}">
-                                        Gratuito
-                                    </span>
-                                    
-                                    <!-- Botones de Acción -->
-                                    <div>
-                                        <!-- Botón Ver Detalle (para todos) -->
-                                        <a th:href="@{/publico/oferta/{id}(id=${oferta.idOferta})}" class="btn btn-outline-secondary btn-sm me-1" style="color: var(--dark-blue); border-color: var(--dark-blue);">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-
-                                        <span th:if="${#authorization.expression('isAuthenticated()')}" th:remove="tag">
+                <!-- Contenedores por Tipo de Oferta -->
+                <div id="ofertas-container">
+                    
+                    <!-- Sección Cursos -->
+                    <div id="sec-curso" class="mb-5 oferta-section">
+                        <h3 class="fw-bold text-primary mb-3 border-bottom pb-2">
+                            <i class="fas fa-book me-2"></i>Cursos
+                        </h3>
+                        <div class="row g-4">
+                            <div th:each="oferta : ${ofertas}" th:if="${oferta.tipoOferta == 'Curso'}" 
+                                 class="col-lg-4 col-md-6 oferta-item"
+                                 th:data-nombre="${oferta.nombre != null ? oferta.nombre.toLowerCase() : ''}"
+                                 th:data-descripcion="${oferta.descripcion != null ? oferta.descripcion.toLowerCase() : ''}"
+                                 th:data-categoria-nombre="${oferta.categorias != null and not #lists.isEmpty(oferta.categorias) ? oferta.categorias[0].nombre.toLowerCase() : ''}"
+                                 th:data-tipo="${oferta.tipoOferta}"
+                                 th:data-modalidad="${oferta.modalidad}"
+                                 th:data-categoria="${oferta.categorias != null and not #lists.isEmpty(oferta.categorias) ? oferta.categorias[0].idCategoria : ''}">
+                                
+                                <div class="card h-100 border-0 shadow-sm oscurecer-hover position-relative overflow-hidden" style="border-top: 5px solid var(--dark-blue) !important;">
+                                    <div class="card-body pt-4">
+                                        <div class="d-flex justify-content-between align-items-start mb-3">
+                                             <span class="badge bg-light border text-muted" 
+                                                  th:text="${oferta.categorias != null and not #lists.isEmpty(oferta.categorias)} ? ${oferta.categorias[0].nombre} : 'General'">Categoría</span>
+                                             <span class="badge bg-primary text-white" th:text="${oferta.tipoOferta}">TIPO</span>
+                                        </div>
                                         
-                                        <!-- Caso: Ya es Docente del curso -->
-                                        <a th:if="${idsDocente != null and #sets.contains(idsDocente, oferta.idOferta)}"
-                                           th:href="@{/docente/aula/{id}(id=${oferta.idOferta})}"
-                                           class="btn btn-success btn-sm me-1">
-                                            <i class="fas fa-chalkboard-teacher me-1"></i> Aula Docente
-                                        </a>
-                                        
-                                        <!-- Caso: Ya está inscrito (Alumno) -->
-                                        <a th:if="${idsInscritos != null and #sets.contains(idsInscritos, oferta.idOferta)}"
-                                           th:href="@{/alumno/aula/{id}(id=${oferta.idOferta})}"
-                                           class="btn btn-info btn-sm text-white me-1">
-                                            <i class="fas fa-door-open me-1"></i> Ir al Aula
-                                        </a>
+                                        <h5 class="card-title fw-bold mb-3 text-dark" th:text="${oferta.nombre}">Nombre</h5>
+                                        <p class="card-text text-muted small mb-3" th:text="${#strings.abbreviate(oferta.descripcion, 100)}">Breve descripción...</p>
 
-                                        <!-- Caso: No inscrito y No docente (Mostrar Inscripción) -->
-                                        <th:block th:if="${(idsInscritos == null or !#sets.contains(idsInscritos, oferta.idOferta)) and (idsDocente == null or !#sets.contains(idsDocente, oferta.idOferta))}">
-                                            <form th:action="@{/alumno/inscribirse/{id}(id=${oferta.idOferta})}" 
-                                                  method="post" class="d-inline" target="_blank">
-                                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-                                                <button type="submit" class="btn btn-primary btn-sm">
-                                                    <i class="fas fa-user-plus me-1"></i>
-                                                    Inscribirse
-                                                </button>
-                                            </form>
-                                        </th:block>
-                                    </span>
-                                    <span th:unless="${#authorization.expression('isAuthenticated()')}" th:remove="tag">
-                                        <a th:href="@{/login}" class="btn btn-outline-primary btn-sm">
-                                            <i class="fas fa-sign-in-alt me-1"></i>
-                                            Iniciar sesión
-                                        </a>
-                                    </span>
+                                        <div class="vstack gap-2 small">
+                                             <div class="d-flex justify-content-between align-items-center">
+                                                <span class="text-secondary"><i class="fas fa-laptop me-2"></i>Modalidad</span>
+                                                <span class="fw-medium" th:text="${oferta.modalidad}">Virtual</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="text-secondary"><i class="far fa-calendar-alt me-2"></i>Fechas</span>
+                                                <span class="fw-medium" th:text="|${#temporals.format(oferta.fechaInicio, 'dd/MM')} - ${#temporals.format(oferta.fechaFin, 'dd/MM')}|">Fechas</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                 <span class="text-secondary"><i class="far fa-clock me-2"></i>Duración</span>
+                                                 <span class="fw-medium" th:text="${oferta.duracionTexto}">3 Meses</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center" th:if="${oferta.cargaHorariaSemanal > 0}">
+                                                 <span class="text-secondary"><i class="fas fa-hourglass-half me-2"></i>Carga Semanal</span>
+                                                 <span class="fw-medium" th:text="|${oferta.cargaHorariaSemanal} Hs|">5 Hs</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                 <span class="text-secondary"><i class="fas fa-user-check me-2"></i>Inscritos</span>
+                                                 <span>
+                                                     <!-- Changed from available to active/total -->
+                                                     <span class="fw-bold text-dark" th:text="${oferta.cupos - oferta.cuposDisponibles}">10</span>
+                                                     <span class="text-muted" th:text="|/ ${oferta.cupos}|">/ 30</span>
+                                                 </span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center" th:if="${oferta.certificado}">
+                                                 <span class="text-secondary"><i class="fas fa-certificate me-2"></i>Certificación</span>
+                                                 <span class="fw-medium" th:text="${oferta.tituloCertificacion}">Certificado</span>
+                                            </div>
+                                            
+                                             <div class="mt-3 p-2 bg-light rounded text-center">
+                                                 <span class="fw-bold text-success fs-5" th:text="${oferta.precioDetalle}">$PRECIO</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card-footer bg-white border-0 pb-3">
+                                         <div class="d-grid gap-2 mb-2">
+                                            <a th:href="@{/publico/oferta/{id}(id=${oferta.idOferta})}" class="btn btn-outline-primary rounded-pill">Ver Detalle</a>
+                                         </div>
+                                         <div class="d-flex justify-content-center">
+                                                <span th:if="${#authorization.expression('isAuthenticated()')}" th:remove="tag">
+                                                    <th:block th:if="${(idsInscritos == null or !#sets.contains(idsInscritos, oferta.idOferta)) and (idsDocente == null or !#sets.contains(idsDocente, oferta.idOferta))}">
+                                                         <form th:action="@{/alumno/inscribirse/{id}(id=${oferta.idOferta})}" method="post" class="d-inline" target="_blank" 
+                                                               th:data-nombre="${oferta.nombre}" 
+                                                               th:data-gratuito="${oferta.costoInscripcion == null or oferta.costoInscripcion == 0}"
+                                                               onsubmit="confirmarInscripcion(event)">
+                                                              <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                                              <button type="submit" class="btn btn-sm btn-primary rounded-pill px-3" title="Inscripción Rápida">Inscribirse <i class="fas fa-user-plus ms-1"></i></button>
+                                                         </form>
+                                                    </th:block>
+                                                    <a th:if="${idsInscritos != null and #sets.contains(idsInscritos, oferta.idOferta)}" th:href="@{/alumno/aula/{id}(id=${oferta.idOferta})}" class="btn btn-sm btn-info text-white rounded-pill px-3">Ir al Aula <i class="fas fa-door-open ms-1"></i></a>
+                                                    <a th:if="${idsDocente != null and #sets.contains(idsDocente, oferta.idOferta)}" th:href="@{/docente/aula/{id}(id=${oferta.idOferta})}" class="btn btn-sm btn-success rounded-pill px-3">Ir al Aula <i class="fas fa-chalkboard-teacher ms-1"></i></a>
+                                                </span>
+                                                <!-- Botón para NO autenticados -->
+                                                <a th:unless="${#authorization.expression('isAuthenticated()')}" th:href="@{/login}" class="btn btn-sm btn-primary rounded-pill px-3">Iniciar Sesión <i class="fas fa-sign-in-alt ms-1"></i></a>
+                                         </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sección Formaciones -->
+                    <div id="sec-formacion" class="mb-5 oferta-section">
+                        <h3 class="fw-bold text-success mb-3 border-bottom pb-2">
+                            <i class="fas fa-graduation-cap me-2"></i>Formaciones
+                        </h3>
+                        <div class="row g-4">
+                            <div th:each="oferta : ${ofertas}" th:if="${oferta.tipoOferta == 'Formación'}" 
+                                 class="col-lg-4 col-md-6 oferta-item"
+                                 th:data-nombre="${oferta.nombre != null ? oferta.nombre.toLowerCase() : ''}"
+                                 th:data-descripcion="${oferta.descripcion != null ? oferta.descripcion.toLowerCase() : ''}"
+                                 th:data-categoria-nombre="${oferta.categorias != null and not #lists.isEmpty(oferta.categorias) ? oferta.categorias[0].nombre.toLowerCase() : ''}"
+                                 th:data-tipo="${oferta.tipoOferta}"
+                                 th:data-modalidad="${oferta.modalidad}"
+                                 th:data-categoria="${oferta.categorias != null and not #lists.isEmpty(oferta.categorias) ? oferta.categorias[0].idCategoria : ''}">
+                                
+                                <div class="card h-100 border-0 shadow-sm oscurecer-hover position-relative overflow-hidden" style="border-top: 5px solid var(--bs-success) !important;">
+                                    <div class="card-body pt-4">
+                                        <div class="d-flex justify-content-between align-items-start mb-3">
+                                            <span class="badge bg-light border text-muted"
+                                                  th:text="${oferta.categorias != null and not #lists.isEmpty(oferta.categorias)} ? ${oferta.categorias[0].nombre} : 'General'">Categoría</span>
+                                            <span class="badge bg-success text-white" th:text="${oferta.tipoOferta}">TIPO</span>
+                                        </div>
+                                        
+                                        <h5 class="card-title fw-bold mb-3 text-dark" th:text="${oferta.nombre}">Nombre</h5>
+                                         <p class="card-text text-muted small mb-3" th:text="${#strings.abbreviate(oferta.descripcion, 100)}">Breve descripción...</p>
+                                        
+                                        <div class="vstack gap-2 small">
+                                             <div class="d-flex justify-content-between align-items-center">
+                                                <span class="text-secondary"><i class="fas fa-laptop me-2"></i>Modalidad</span>
+                                                <span class="fw-medium" th:text="${oferta.modalidad}">Virtual</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="text-secondary"><i class="far fa-calendar-alt me-2"></i>Fechas</span>
+                                                <span class="fw-medium" th:text="|${#temporals.format(oferta.fechaInicio, 'dd/MM')} - ${#temporals.format(oferta.fechaFin, 'dd/MM')}|">Fechas</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                 <span class="text-secondary"><i class="far fa-clock me-2"></i>Duración</span>
+                                                 <span class="fw-medium" th:text="${oferta.duracionTexto}">3 Meses</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center" th:if="${oferta.cargaHorariaSemanal > 0}">
+                                                 <span class="text-secondary"><i class="fas fa-hourglass-half me-2"></i>Carga Semanal</span>
+                                                 <span class="fw-medium" th:text="|${oferta.cargaHorariaSemanal} Hs|">5 Hs</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                 <span class="text-secondary"><i class="fas fa-user-check me-2"></i>Inscritos</span>
+                                                 <span>
+                                                     <!-- Changed from available to active/total -->
+                                                     <span class="fw-bold text-dark" th:text="${oferta.cupos - oferta.cuposDisponibles}">10</span>
+                                                     <span class="text-muted" th:text="|/ ${oferta.cupos}|">/ 30</span>
+                                                 </span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center" th:if="${oferta.certificado}">
+                                                 <span class="text-secondary"><i class="fas fa-certificate me-2"></i>Certificación</span>
+                                                 <span class="fw-medium" th:text="${oferta.tituloCertificacion}">Certificado</span>
+                                            </div>
+                                            
+                                             <div class="mt-3 p-2 bg-light rounded text-center">
+                                                 <span class="fw-bold text-success fs-5" th:text="${oferta.precioDetalle}">$PRECIO</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card-footer bg-white border-0 pb-3">
+                                         <div class="d-grid gap-2 mb-2">
+                                            <a th:href="@{/publico/oferta/{id}(id=${oferta.idOferta})}" class="btn btn-outline-success rounded-pill">Ver Detalle</a>
+                                         </div>
+                                         <div class="d-flex justify-content-center">
+                                                <span th:if="${#authorization.expression('isAuthenticated()')}" th:remove="tag">
+                                                    <th:block th:if="${(idsInscritos == null or !#sets.contains(idsInscritos, oferta.idOferta)) and (idsDocente == null or !#sets.contains(idsDocente, oferta.idOferta))}">
+                                                         <form th:action="@{/alumno/inscribirse/{id}(id=${oferta.idOferta})}" method="post" class="d-inline" target="_blank" 
+                                                               th:data-nombre="${oferta.nombre}" 
+                                                               th:data-gratuito="${oferta.costoInscripcion == null or oferta.costoInscripcion == 0}"
+                                                               onsubmit="confirmarInscripcion(event)">
+                                                              <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                                              <button type="submit" class="btn btn-sm btn-success rounded-pill px-3" title="Inscripción Rápida">Inscribirse <i class="fas fa-user-plus ms-1"></i></button>
+                                                         </form>
+                                                    </th:block>
+                                                    <a th:if="${idsInscritos != null and #sets.contains(idsInscritos, oferta.idOferta)}" th:href="@{/alumno/aula/{id}(id=${oferta.idOferta})}" class="btn btn-sm btn-info text-white rounded-pill px-3">Ir al Aula <i class="fas fa-door-open ms-1"></i></a>
+                                                    <a th:if="${idsDocente != null and #sets.contains(idsDocente, oferta.idOferta)}" th:href="@{/docente/aula/{id}(id=${oferta.idOferta})}" class="btn btn-sm btn-success rounded-pill px-3">Ir al Aula <i class="fas fa-chalkboard-teacher ms-1"></i></a>
+                                                </span>
+                                                <!-- Botón para NO autenticados -->
+                                                <a th:unless="${#authorization.expression('isAuthenticated()')}" th:href="@{/login}" class="btn btn-sm btn-success rounded-pill px-3">Iniciar Sesión <i class="fas fa-sign-in-alt ms-1"></i></a>
+                                         </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                
+                    <!-- Sección Seminarios -->
+                    <div id="sec-seminario" class="mb-5 oferta-section">
+                        <h3 class="fw-bold text-danger mb-3 border-bottom pb-2">
+                            <i class="fas fa-users me-2"></i>Seminarios
+                        </h3>
+                        <div class="row g-4">
+                            <div th:each="oferta : ${ofertas}" th:if="${oferta.tipoOferta == 'Seminario'}" 
+                                 class="col-lg-4 col-md-6 oferta-item"
+                                 th:data-nombre="${oferta.nombre != null ? oferta.nombre.toLowerCase() : ''}"
+                                 th:data-descripcion="${oferta.descripcion != null ? oferta.descripcion.toLowerCase() : ''}"
+                                 th:data-categoria-nombre="${oferta.categorias != null and not #lists.isEmpty(oferta.categorias) ? oferta.categorias[0].nombre.toLowerCase() : ''}"
+                                 th:data-tipo="${oferta.tipoOferta}"
+                                 th:data-modalidad="${oferta.modalidad}"
+                                 th:data-categoria="${oferta.categorias != null and not #lists.isEmpty(oferta.categorias) ? oferta.categorias[0].idCategoria : ''}">
+                                
+                                <div class="card h-100 border-0 shadow-sm oscurecer-hover position-relative overflow-hidden" style="border-top: 5px solid var(--bs-danger) !important;">
+                                    <div class="card-body pt-4">
+                                        <div class="d-flex justify-content-between align-items-start mb-3">
+                                            <span class="badge bg-light border text-muted"
+                                                  th:text="${oferta.categorias != null and not #lists.isEmpty(oferta.categorias)} ? ${oferta.categorias[0].nombre} : 'General'">Categoría</span>
+                                            <span class="badge bg-danger text-white" th:text="${oferta.tipoOferta}">TIPO</span>
+                                        </div>
+                                        
+                                        <h5 class="card-title fw-bold mb-3 text-dark" th:text="${oferta.nombre}">Nombre</h5>
+                                        <p class="card-text text-muted small mb-3" th:text="${#strings.abbreviate(oferta.descripcion, 100)}">Breve descripción...</p>
+                                        
+                                        <div class="vstack gap-2 small">
+                                             <div class="d-flex justify-content-between align-items-center">
+                                                <span class="text-secondary"><i class="fas fa-laptop me-2"></i>Modalidad</span>
+                                                <span class="fw-medium" th:text="${oferta.modalidad}">Virtual</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="text-secondary"><i class="far fa-calendar-alt me-2"></i>Fechas</span>
+                                                <span class="fw-medium" th:text="|${#temporals.format(oferta.fechaInicio, 'dd/MM')} - ${#temporals.format(oferta.fechaFin, 'dd/MM')}|">Fechas</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                 <span class="text-secondary"><i class="far fa-clock me-2"></i>Duración</span>
+                                                 <span class="fw-medium" th:text="${oferta.duracionTexto}">3 Meses</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center" th:if="${oferta.cargaHorariaSemanal > 0}">
+                                                 <span class="text-secondary"><i class="fas fa-hourglass-half me-2"></i>Carga Semanal</span>
+                                                 <span class="fw-medium" th:text="|${oferta.cargaHorariaSemanal} Hs|">5 Hs</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                 <span class="text-secondary"><i class="fas fa-users-cog me-2"></i>Inscritos</span>
+                                                 <span>
+                                                     <!-- Changed from available to active/total -->
+                                                     <span class="fw-bold text-dark" th:text="${oferta.cupos - oferta.cuposDisponibles}">10</span>
+                                                     <span class="text-muted" th:text="|/ ${oferta.cupos}|">/ 30</span>
+                                                 </span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center" th:if="${oferta.certificado}">
+                                                 <span class="text-secondary"><i class="fas fa-certificate me-2"></i>Certificación</span>
+                                                 <span class="fw-medium" th:text="${oferta.tituloCertificacion}">Certificado</span>
+                                            </div>
+                                            
+                                             <div class="mt-3 p-2 bg-light rounded text-center">
+                                                 <span class="fw-bold text-danger fs-5" th:text="${oferta.precioDetalle}">$PRECIO</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card-footer bg-white border-0 pb-3">
+                                         <div class="d-grid gap-2 mb-2">
+                                            <a th:href="@{/publico/oferta/{id}(id=${oferta.idOferta})}" class="btn btn-outline-danger rounded-pill">Ver Detalle</a>
+                                         </div>
+                                         <div class="d-flex justify-content-center">
+                                                <span th:if="${#authorization.expression('isAuthenticated()')}" th:remove="tag">
+                                                    <!-- Botones Accion -->
+                                                    <th:block th:if="${(idsInscritos == null or !#sets.contains(idsInscritos, oferta.idOferta)) and (idsDocente == null or !#sets.contains(idsDocente, oferta.idOferta))}">
+                                                         <form th:action="@{/alumno/inscribirse/{id}(id=${oferta.idOferta})}" method="post" class="d-inline" target="_blank" 
+                                                               th:data-nombre="${oferta.nombre}" 
+                                                               th:data-gratuito="${oferta.costoInscripcion == null or oferta.costoInscripcion == 0}"
+                                                               onsubmit="confirmarInscripcion(event)">
+                                                              <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                                              <button type="submit" class="btn btn-sm btn-danger rounded-pill px-3" title="Inscripción Rápida">Inscribirse <i class="fas fa-user-plus ms-1"></i></button>
+                                                         </form>
+                                                    </th:block>
+                                                    <a th:if="${idsInscritos != null and #sets.contains(idsInscritos, oferta.idOferta)}" th:href="@{/alumno/aula/{id}(id=${oferta.idOferta})}" class="btn btn-sm btn-info text-white rounded-pill px-3">Ir al Aula <i class="fas fa-door-open ms-1"></i></a>
+                                                    <a th:if="${idsDocente != null and #sets.contains(idsDocente, oferta.idOferta)}" th:href="@{/docente/aula/{id}(id=${oferta.idOferta})}" class="btn btn-sm btn-success rounded-pill px-3">Ir al Aula <i class="fas fa-chalkboard-teacher ms-1"></i></a>
+                                                </span>
+                                                <!-- Botón para NO autenticados -->
+                                                <a th:unless="${#authorization.expression('isAuthenticated()')}" th:href="@{/login}" class="btn btn-sm btn-danger rounded-pill px-3">Iniciar Sesión <i class="fas fa-sign-in-alt ms-1"></i></a>
+                                         </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sección Charlas -->
+                    <div id="sec-charla" class="mb-5 oferta-section">
+                        <h3 class="fw-bold text-info mb-3 border-bottom pb-2">
+                            <i class="fas fa-microphone me-2"></i>Charlas
+                        </h3>
+                        <div class="row g-4">
+                            <div th:each="oferta : ${ofertas}" th:if="${oferta.tipoOferta == 'Charla'}" 
+                                 class="col-lg-4 col-md-6 oferta-item"
+                                 th:data-nombre="${oferta.nombre != null ? oferta.nombre.toLowerCase() : ''}"
+                                 th:data-descripcion="${oferta.descripcion != null ? oferta.descripcion.toLowerCase() : ''}"
+                                 th:data-categoria-nombre="${oferta.categorias != null and not #lists.isEmpty(oferta.categorias) ? oferta.categorias[0].nombre.toLowerCase() : ''}"
+                                 th:data-tipo="${oferta.tipoOferta}"
+                                 th:data-modalidad="${oferta.modalidad}"
+                                 th:data-categoria="${oferta.categorias != null and not #lists.isEmpty(oferta.categorias) ? oferta.categorias[0].idCategoria : ''}">
+                                
+                                <div class="card h-100 border-0 shadow-sm oscurecer-hover position-relative overflow-hidden" style="border-top: 5px solid var(--bs-info) !important;">
+                                    <div class="card-body pt-4">
+                                        <div class="d-flex justify-content-between align-items-start mb-3">
+                                            <span class="badge bg-light border text-muted"
+                                                  th:text="${oferta.categorias != null and not #lists.isEmpty(oferta.categorias)} ? ${oferta.categorias[0].nombre} : 'General'">Categoría</span>
+                                            <span class="badge bg-info text-dark" th:text="${oferta.tipoOferta}">TIPO</span>
+                                        </div>
+                                        
+                                        <h5 class="card-title fw-bold mb-3 text-dark" th:text="${oferta.nombre}">Nombre</h5>
+                                        <p class="card-text text-muted small mb-3" th:text="${#strings.abbreviate(oferta.descripcion, 100)}">Breve descripción...</p>
+                                        
+                                        <div class="vstack gap-2 small">
+                                             <div class="d-flex justify-content-between align-items-center">
+                                                <span class="text-secondary"><i class="fas fa-laptop me-2"></i>Modalidad</span>
+                                                <span class="fw-medium" th:text="${oferta.modalidad}">Virtual</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="text-secondary"><i class="far fa-calendar-alt me-2"></i>Fechas</span>
+                                                <span class="fw-medium" th:text="|${#temporals.format(oferta.fechaInicio, 'dd/MM')} - ${#temporals.format(oferta.fechaFin, 'dd/MM')}|">Fechas</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                 <span class="text-secondary"><i class="far fa-clock me-2"></i>Duración</span>
+                                                 <span class="fw-medium" th:text="${oferta.duracionTexto}">3 Meses</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center" th:if="${oferta.cargaHorariaSemanal > 0}">
+                                                 <span class="text-secondary"><i class="fas fa-hourglass-half me-2"></i>Carga Semanal</span>
+                                                 <span class="fw-medium" th:text="|${oferta.cargaHorariaSemanal} Hs|">5 Hs</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                 <span class="text-secondary"><i class="fas fa-users-cog me-2"></i>Inscritos</span>
+                                                 <span>
+                                                     <span class="fw-bold text-dark" th:text="${oferta.cupos - oferta.cuposDisponibles}">10</span>
+                                                     <span class="text-muted" th:text="|/ ${oferta.cupos}|">/ 30</span>
+                                                 </span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center" th:if="${oferta.certificado}">
+                                                 <span class="text-secondary"><i class="fas fa-certificate me-2"></i>Certificación</span>
+                                                 <span class="fw-medium" th:text="${oferta.tituloCertificacion}">Certificado</span>
+                                            </div>
+                                            
+                                             <div class="mt-3 p-2 bg-light rounded text-center">
+                                                 <span class="fw-bold text-info fs-5" th:text="${oferta.precioDetalle}">$PRECIO</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card-footer bg-white border-0 pb-3">
+                                         <div class="d-grid gap-2 mb-2">
+                                            <a th:href="@{/publico/oferta/{id}(id=${oferta.idOferta})}" class="btn btn-outline-info rounded-pill">Ver Detalle</a>
+                                         </div>
+                                         <div class="d-flex justify-content-center">
+                                                <span th:if="${#authorization.expression('isAuthenticated()')}" th:remove="tag">
+                                                    <!-- Botones Accion -->
+                                                    <th:block th:if="${(idsInscritos == null or !#sets.contains(idsInscritos, oferta.idOferta)) and (idsDocente == null or !#sets.contains(idsDocente, oferta.idOferta))}">
+                                                         <form th:action="@{/alumno/inscribirse/{id}(id=${oferta.idOferta})}" method="post" class="d-inline" target="_blank" 
+                                                               th:data-nombre="${oferta.nombre}" 
+                                                               th:data-gratuito="${oferta.costoInscripcion == null or oferta.costoInscripcion == 0}"
+                                                               onsubmit="confirmarInscripcion(event)">
+                                                              <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                                              <button type="submit" class="btn btn-sm btn-info rounded-pill px-3" title="Inscripción Rápida">Inscribirse <i class="fas fa-user-plus ms-1"></i></button>
+                                                         </form>
+                                                    </th:block>
+                                                    <a th:if="${idsInscritos != null and #sets.contains(idsInscritos, oferta.idOferta)}" th:href="@{/alumno/aula/{id}(id=${oferta.idOferta})}" class="btn btn-sm btn-info text-white rounded-pill px-3">Ir al Aula <i class="fas fa-door-open ms-1"></i></a>
+                                                </span>
+                                                <!-- Botón para NO autenticados -->
+                                                <a th:unless="${#authorization.expression('isAuthenticated()')}" th:href="@{/login}" class="btn btn-sm btn-info rounded-pill px-3">Iniciar Sesión <i class="fas fa-sign-in-alt ms-1"></i></a>
+                                         </div>
                                     </div>
                                 </div>
                             </div>
@@ -353,6 +644,36 @@
     <!-- Scripts específicos de la página -->
     <th:block layout:fragment="scripts">
         <script>
+            // Función para confirmar inscripción
+            window.confirmarInscripcion = function(event) {
+                event.preventDefault();
+                const form = event.target;
+                const nombreOferta = form.getAttribute('data-nombre');
+                // atributo data-gratuito devuelve string "true" o "false"
+                const esGratuito = form.getAttribute('data-gratuito') === 'true';
+                
+                let mensaje = '';
+                if (esGratuito) {
+                    mensaje = '¿Estás seguro que deseas inscribirte en "' + nombreOferta + '"? Serás inscripto automáticamente.';
+                } else {
+                    mensaje = '¿Estás seguro que deseas inscribirte en "' + nombreOferta + '"? Si la oferta tiene costo, serás redirigido al pago.';
+                }
+                
+                if (typeof ModalConfirmacion !== 'undefined') {
+                    ModalConfirmacion.show(
+                        'Confirmar Inscripción',
+                        mensaje,
+                        function() {
+                            form.submit();
+                        }
+                    );
+                } else {
+                    if (confirm(mensaje)) {
+                        form.submit();
+                    }
+                }
+            };
+
             // Activar modal de cupos si existe el error
             document.addEventListener('DOMContentLoaded', function() {
                 var modalCupos = document.getElementById('modalCuposAgotados');
@@ -381,23 +702,55 @@
 
                         ofertas.forEach(oferta => {
                             const dataNombre = oferta.getAttribute('data-nombre') || '';
+                            const dataDescripcion = oferta.getAttribute('data-descripcion') || '';
+                            const dataCategoriaNombre = oferta.getAttribute('data-categoria-nombre') || '';
                             const dataTipo = oferta.getAttribute('data-tipo') || '';
                             const dataModalidad = oferta.getAttribute('data-modalidad') || '';
                             const dataCategoria = oferta.getAttribute('data-categoria') || '';
 
                             // Normalizar para ignorar mayúsculas/minúsculas y acentos
                             const normalize = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+                            const busquedaNorm = normalize(nombre);
                             
-                            const coincideNombre = dataNombre.includes(nombre);
+                            const coincideNombre = normalize(dataNombre).includes(busquedaNorm) || 
+                                                 normalize(dataDescripcion).includes(busquedaNorm) || 
+                                                 normalize(dataCategoriaNombre).includes(busquedaNorm);
+
                             const coincideTipo = tipo === '' || normalize(dataTipo) === tipo;
                             const coincideModalidad = modalidad === '' || dataModalidad === modalidad;
                             const coincideCategoria = categoria === '' || dataCategoria === categoria;
 
                             if (coincideNombre && coincideTipo && coincideModalidad && coincideCategoria) {
-                                oferta.style.display = ''; // Restaurar display original
+                                // Antes oferta.style.display = '', necesitamos asegurarnos que el padre col sea visible
+                                // oferta es el div col-lg-4, así que está bien
+                                oferta.style.display = ''; 
                                 visibles++;
                             } else {
                                 oferta.style.display = 'none';
+                            }
+                        });
+
+                        // Lógica para ocultar secciones vacías
+                        const sections = [
+                            { id: 'sec-curso', titleId: 'header-curso' }, // header-curso no tiene ID, lo agregamos en la vista?
+                            // No agregué IDs a los H3, pero puedo seleccionar h3 dentro de .oferta-section
+                            { id: 'sec-curso' },
+                            { id: 'sec-formacion' },
+                            { id: 'sec-seminario' },
+                            { id: 'sec-charla' }
+                        ];
+                        
+                        sections.forEach(sec => {
+                            const sectionContainer = document.getElementById(sec.id);
+                            if (sectionContainer) {
+                                // Buscar hijos visibles (que no tengan display: none directo)
+                                const visibleChildren = Array.from(sectionContainer.querySelectorAll('.oferta-item')).filter(el => el.style.display !== 'none');
+                                
+                                if (visibleChildren.length === 0) {
+                                    sectionContainer.style.display = 'none';
+                                } else {
+                                    sectionContainer.style.display = ''; // Restaurar
+                                }
                             }
                         });
                         
@@ -423,6 +776,48 @@
                 }
             });
 
+            // Sincronizar búsqueda del banner de navegación con el filtro local
+            document.addEventListener('DOMContentLoaded', function() {
+                const navSearchInput = document.getElementById('navSearchInput');
+                const filtroNombre = document.getElementById('filtroNombre');
+                
+                // 1. Si hay parámetro q en la URL, aplicarlo al iniciar
+                const urlParams = new URLSearchParams(window.location.search);
+                const queryParam = urlParams.get('q');
+                
+                if (queryParam && filtroNombre) {
+                    filtroNombre.value = queryParam;
+                    // Disparar evento input para filtrar
+                    const event = new Event('input', { bubbles: true });
+                    filtroNombre.dispatchEvent(event);
+                    
+                    // Sincronizar visualmente el input del nav
+                    if (navSearchInput) {
+                        navSearchInput.value = queryParam;
+                    }
+                }
+
+                // 2. Si estamos en esta página, hacer que el input del nav filtre en tiempo real
+                if (navSearchInput && filtroNombre) {
+                    navSearchInput.addEventListener('input', function() {
+                        filtroNombre.value = this.value;
+                        const event = new Event('input', { bubbles: true });
+                        filtroNombre.dispatchEvent(event);
+                    });
+
+                    // Prevenir el submit del form del nav si estamos en la página de búsqueda
+                    // para que no recargue, sino que filtre dinámicamente
+                    const navForm = navSearchInput.closest('form');
+                    if (navForm) {
+                        navForm.addEventListener('submit', function(e) {
+                            e.preventDefault();
+                            // El filtrado ya ocurre en el evento input
+                            // NO hacemos scroll (a petición del usuario)
+                        });
+                    }
+                }
+            });
+
             // Inicializar carrusel si existe
             document.addEventListener('DOMContentLoaded', function() {
                 var myCarousel = document.querySelector('#heroCarousel')
@@ -432,6 +827,25 @@
                         wrap: true
                     })
                 }
+            });
+
+            // Hacer clicable toda la tarjeta de oferta
+            document.addEventListener('DOMContentLoaded', function() {
+                const cards = document.querySelectorAll('.oferta-item .card');
+                cards.forEach(card => {
+                    card.addEventListener('click', function(e) {
+                        // Evitar conflicto si se clickea un botón o enlace específico dentro de la card
+                        if (e.target.closest('a') || e.target.closest('button') || e.target.closest('form')) {
+                            return;
+                        }
+                        
+                        // Buscar el enlace de detalle (título o botón ver)
+                        const link = card.querySelector('a[href*="/publico/oferta/"]');
+                        if (link) {
+                            window.location.href = link.href;
+                        }
+                    });
+                });
             });
         </script>
     </th:block>
