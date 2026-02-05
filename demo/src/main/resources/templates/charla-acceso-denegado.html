@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso Restringido - Videoconferencia</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 60px 40px;
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        .icon {
+            font-size: 80px;
+            margin-bottom: 30px;
+        }
+        
+        .icon-clock {
+            color: #f59e0b;
+        }
+        
+        .icon-finished {
+            color: #ef4444;
+        }
+        
+        h1 {
+            color: #1f2937;
+            font-size: 28px;
+            margin-bottom: 15px;
+        }
+        
+        .charla-name {
+            color: #667eea;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 30px;
+        }
+        
+        .info-box {
+            background: #f3f4f6;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 30px 0;
+            text-align: left;
+        }
+        
+        .info-box p {
+            color: #4b5563;
+            line-height: 1.8;
+            margin: 10px 0;
+            font-size: 16px;
+        }
+        
+        .info-box strong {
+            color: #1f2937;
+        }
+        
+        .info-box .highlight {
+            color: #667eea;
+            font-weight: 600;
+            font-size: 18px;
+        }
+        
+        .btn-home {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 15px 40px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 16px;
+            margin-top: 20px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-home:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-home i {
+            margin-right: 8px;
+        }
+        
+        .footer-note {
+            margin-top: 30px;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 40px 25px;
+            }
+            
+            h1 {
+                font-size: 24px;
+            }
+            
+            .charla-name {
+                font-size: 20px;
+            }
+            
+            .icon {
+                font-size: 60px;
+            }
+        }
+    </style>
+    
+    <!-- Font Awesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Icono según el tipo de error -->
+        <div class="icon" th:if="${error == 'demasiado-temprano'}">
+            <i class="fas fa-clock icon-clock"></i>
+        </div>
+        <div class="icon" th:if="${error == 'charla-finalizada'}">
+            <i class="fas fa-calendar-times icon-finished"></i>
+        </div>
+        
+        <!-- Título según el tipo de error -->
+        <h1 th:if="${error == 'demasiado-temprano'}">¡Aún es muy temprano!</h1>
+        <h1 th:if="${error == 'charla-finalizada'}">Charla Finalizada</h1>
+        
+        <p class="charla-name" th:text="${nombreCharla}">Nombre de la Charla</p>
+        
+        <!-- Mensaje para "demasiado temprano" -->
+        <div th:if="${error == 'demasiado-temprano'}" class="info-box">
+            <p><strong><i class="fas fa-info-circle"></i> La videoconferencia aún no está disponible</strong></p>
+            <p>Fecha y hora programada:</p>
+            <p class="highlight"><i class="fas fa-calendar"></i> <span th:text="${fechaHoraCharla}"></span></p>
+            <p style="margin-top: 20px;">Podrás ingresar a partir de las:</p>
+            <p class="highlight"><i class="fas fa-clock"></i> <span th:text="${horaAcceso}"></span></p>
+            <p style="margin-top: 15px; font-size: 14px; color: #6b7280;">
+                <i class="fas fa-lightbulb"></i> Tip: Puedes acceder 5 minutos antes del inicio
+            </p>
+        </div>
+        
+        <!-- Mensaje para "charla finalizada" -->
+        <div th:if="${error == 'charla-finalizada'}" class="info-box">
+            <p><strong><i class="fas fa-info-circle"></i> Esta videoconferencia ha finalizado</strong></p>
+            <p>Se realizó el día:</p>
+            <p class="highlight"><i class="fas fa-calendar-check"></i> <span th:text="${fechaHoraCharla}"></span></p>
+            <p style="margin-top: 15px; color: #6b7280;">
+                El acceso a la sala está cerrado.
+            </p>
+        </div>
+        
+        <a href="/" class="btn-home">
+            <i class="fas fa-home"></i> Ir a la Página Principal
+        </a>
+        
+        <p class="footer-note">
+            Si tienes dudas, contacta con el organizador del evento
+        </p>
+    </div>
+</body>
+</html>

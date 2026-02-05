@@ -79,7 +79,8 @@ public class SecurityConfig {
                                 "/api/**", "/admin/configuracion/carrusel/**",
                                 "/crear-admin-temporal", "/forgot-password", "/recuperacion/**",
                                 "/api/usuarios/**", "/admin/debug-user", "/api/categorias/**",
-                                "/pago/**", "/api/**", "/pago-resultado")
+                                "/pago/**", "/api/**", "/pago-resultado",
+                                "/charla/videoconferencia/**")
                         .permitAll()
                         .requestMatchers("/admin/**").hasAuthority("ADMIN")
                         .requestMatchers("/alumno/**", "/inscribirse/**").hasAnyAuthority("ALUMNO", "DOCENTE")

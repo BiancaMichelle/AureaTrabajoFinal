@@ -392,6 +392,20 @@ input:checked + .slider:before {
     pointer-events: none;
     opacity: 1;
 }
+
+/* Estilos para el input-group de videoconferencia */
+.input-group {
+    display: flex;
+    align-items: center;
+}
+
+.input-group .form-control {
+    flex: 1;
+}
+
+.input-group .btn {
+    white-space: nowrap;
+}
     </style>
 </head>
 <body>
@@ -467,9 +481,23 @@ input:checked + .slider:before {
                                 </div>
                                 <div class="form-group">
                                     <label for="fechaFin">Fecha de Fin *</label>
-                                    <input type="date" id="fechaFin" name="fechaFin" class="form-control" required>
+                                    <input type="date" id="fechaFin" name="fechaFin" class="form-control" required disabled>
                                     <small class="form-text text-muted">
                                         <i class="fas fa-info-circle"></i> Debe ser posterior a la fecha de inicio
+                                    </small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="fechaInicioInscripcion">Inicio de Inscripciones *</label>
+                                    <input type="date" id="fechaInicioInscripcion" name="fechaInicioInscripcion" class="form-control" required>
+                                    <small class="form-text text-muted">
+                                        <i class="fas fa-info-circle"></i> Desde cuándo se puede inscribir
+                                    </small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="fechaFinInscripcion">Fin de Inscripciones *</label>
+                                    <input type="date" id="fechaFinInscripcion" name="fechaFinInscripcion" class="form-control" required>
+                                    <small class="form-text text-muted">
+                                        <i class="fas fa-info-circle"></i> Hasta cuándo se puede inscribir
                                     </small>
                                 </div>
                             </div>
@@ -481,18 +509,30 @@ input:checked + .slider:before {
                             </div>
                         </div>
 
-                        <!-- Ubicación y Acceso -->
-                        <div class="form-section">
-                            <h4><i class="fas fa-map-marker-alt"></i> Ubicación y Acceso</h4>
-                            <div class="form-group" id="grupo-lugar">
-                                <label for="lugar">Lugar <span class="text-muted">(Requerido para Presencial/Híbrida)</span></label>
+                        <!-- Ubicación -->
+                        <div class="form-section" id="seccion-ubicacion" style="display: none;">
+                            <h4><i class="fas fa-map-marker-alt"></i> Ubicación</h4>
+                            <div class="form-group" id="grupo-lugar" style="display: none;">
+                                <label for="lugar">Ubicación *</label>
                                 <input type="text" id="lugar" name="lugar" class="form-control" 
                                        placeholder="Dirección física o aula">
+                                <small class="form-text text-muted">
+                                    <i class="fas fa-map-marker-alt"></i> Lugar donde se realizará la actividad presencial
+                                </small>
                             </div>
-                            <div class="form-group" id="grupo-enlace">
-                                <label for="enlace">Enlace <span class="text-muted">(Requerido para Virtual/Híbrida)</span></label>
-                                <input type="url" id="enlace" name="enlace" class="form-control" 
-                                       placeholder="https://zoom.us/...">
+                            <div class="form-group" id="grupo-enlace" style="display: none;">
+                                <label for="enlace">Enlace de Videoconferencia</label>
+                                <div style="display: flex; gap: 15px; align-items: flex-start;">
+                                    <input type="url" id="enlace" name="enlace" class="form-control" 
+                                           placeholder="Haz clic en el botón para generar el enlace" readonly style="flex: 1;">
+                                    <button type="button" class="btn btn-primary" onclick="generarVideoconferencia()" 
+                                            style="flex-shrink: 0; white-space: nowrap;">
+                                        <i class="fas fa-video"></i> Programar Videoconferencia
+                                    </button>
+                                </div>
+                                <small class="form-text text-muted">
+                                    <i class="fas fa-info-circle"></i> El moderador será el primer disertante ingresado
+                                </small>
                             </div>
                         </div>
 
@@ -510,18 +550,22 @@ input:checked + .slider:before {
                                     <input type="number" step="0.01" id="costoCuota" name="costoCuota" 
                                            class="form-control" placeholder="0.00">
                                 </div>
+                                <div class="form-group" id="grupo-dia-vencimiento" style="display: none;">
+                                    <label for="diaVencimiento">Día de Vencimiento *</label>
+                                    <input type="number" id="diaVencimiento" name="diaVencimiento" 
+                                           class="form-control" min="1" max="28" 
+                                           placeholder="Día del mes (1-28)">
+                                    <small class="form-text text-muted">
+                                        <i class="fas fa-calendar-check"></i>
+                                        Día del mes para vencimiento de cada cuota
+                                    </small>
+                                </div>
                                 <div class="form-group" id="grupo-nro-cuotas" style="display: none;">
                                     <label for="nrCuotas">Número de Cuotas</label>
-                                    <input type="number" id="nrCuotas" name="nrCuotas" class="form-control" min="1">
-                                </div>
-                                <div class="form-group" id="grupo-dia-vencimiento" style="display: none;">
-                                    <label for="diaVencimiento">Día de Vencimiento</label>
-                                    <input type="number" id="diaVencimiento" name="diaVencimiento" 
-                                           class="form-control" min="1" max="29" 
-                                           placeholder="Ingrese día del mes (1-29)">
+                                    <input type="number" id="nrCuotas" name="nrCuotas" class="form-control" min="1" readonly>
                                     <small class="form-text text-muted">
-                                        <i class="fas fa-info-circle"></i>
-                                        Día límite para pago sin mora (1-29). Después de esta fecha se aplicará el recargo por mora.
+                                        <i class="fas fa-calculator"></i>
+                                        Se calcula automáticamente según duración y día de vencimiento
                                     </small>
                                 </div>
                             </div>
@@ -675,6 +719,16 @@ input:checked + .slider:before {
                         <!-- Campos para CHARLA -->
                         <div id="fields-charla" class="form-section tipo-specific" style="display: none;">
                             <h4><i class="fas fa-microphone"></i> Información de la Charla</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="fechaCharla">Fecha de la Charla *</label>
+                                    <input type="date" id="fechaCharla" name="fechaCharla" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label for="horaCharla">Hora de Inicio *</label>
+                                    <input type="time" id="horaCharla" name="horaCharla" class="form-control">
+                                </div>
+                            </div>
                             <div class="form-group">
                                 <label for="publicoObjetivo">Público Objetivo</label>
                                 <input type="text" id="publicoObjetivo" name="publicoObjetivo" class="form-control" 
@@ -697,6 +751,16 @@ input:checked + .slider:before {
                         <!-- Campos para SEMINARIO -->
                         <div id="fields-seminario" class="form-section tipo-specific" style="display: none;">
                             <h4><i class="fas fa-users"></i> Información del Seminario</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="fechaSeminario">Fecha del Seminario *</label>
+                                    <input type="date" id="fechaSeminario" name="fechaSeminario" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label for="horaSeminario">Hora de Inicio *</label>
+                                    <input type="time" id="horaSeminario" name="horaSeminario" class="form-control">
+                                </div>
+                            </div>
                             <div class="form-group">
                                 <label for="publicoObjetivoSeminario">Público Objetivo</label>
                                 <input type="text" id="publicoObjetivoSeminario" name="publicoObjetivoSeminario" class="form-control" 
@@ -1645,6 +1709,36 @@ input:checked + .slider:before {
                 });
             }
             
+            // Manejador para mostrar/ocultar campos según modalidad
+            const modalidadSelect = document.getElementById('modalidad');
+            if (modalidadSelect) {
+                modalidadSelect.addEventListener('change', function() {
+                    actualizarCamposModalidad(this.value);
+                });
+            }
+            
+            // Listeners para cálculo automático de cuotas
+            const fechaInicio = document.getElementById('fechaInicio');
+            const fechaFin = document.getElementById('fechaFin');
+            const diaVencimiento = document.getElementById('diaVencimiento');
+            
+            if (fechaInicio) {
+                fechaInicio.addEventListener('change', function() {
+                    // Habilitar fechaFin cuando se selecciona fechaInicio
+                    if (fechaFin && this.value) {
+                        fechaFin.disabled = false;
+                        fechaFin.setAttribute('min', this.value);
+                    }
+                    calcularNumeroCuotas();
+                });
+            }
+            if (fechaFin) {
+                fechaFin.addEventListener('change', calcularNumeroCuotas);
+            }
+            if (diaVencimiento) {
+                diaVencimiento.addEventListener('change', calcularNumeroCuotas);
+            }
+            
             // Event listeners para disertantes (Enter key)
             const disertantesCharlaInput = document.getElementById('disertantesCharlaInput');
             if (disertantesCharlaInput) {
@@ -1764,6 +1858,9 @@ input:checked + .slider:before {
                 seccionMostrar.style.display = 'block';
                 console.log('✅ Mostrando campos específicos para:', tipoOferta);
             }
+            
+            // Actualizar campos según el tipo y modalidad
+            actualizarCamposModalidad();
         }
         
         // Función para limpiar datos del formulario cuando se cambia tipo
@@ -1804,6 +1901,198 @@ input:checked + .slider:before {
             
             console.log('🧹 Datos del formulario limpiados');
         }
+        
+        // Función para actualizar campos según modalidad seleccionada
+        function actualizarCamposModalidad() {
+            const modalidadSelect = document.getElementById('modalidad');
+            const tipoOfertaSelect = document.getElementById('tipoOferta');
+            
+            if (!modalidadSelect || !tipoOfertaSelect) return;
+            
+            const modalidad = modalidadSelect.value;
+            const tipoOferta = tipoOfertaSelect.value;
+            
+            const seccionUbicacion = document.getElementById('seccion-ubicacion');
+            const grupoLugar = document.getElementById('grupo-lugar');
+            const grupoEnlace = document.getElementById('grupo-enlace');
+            
+            if (!seccionUbicacion || !grupoLugar || !grupoEnlace) return;
+            
+            // Si no hay tipo de oferta o modalidad seleccionada, ocultar todo
+            if (!tipoOferta || !modalidad) {
+                seccionUbicacion.style.display = 'none';
+                grupoLugar.style.display = 'none';
+                grupoEnlace.style.display = 'none';
+                return;
+            }
+            
+            // Para CURSO y FORMACIÓN
+            if (tipoOferta === 'CURSO' || tipoOferta === 'FORMACION') {
+                grupoEnlace.style.display = 'none';
+                
+                // Mostrar ubicación solo para PRESENCIAL o HÍBRIDA
+                if (modalidad === 'PRESENCIAL' || modalidad === 'HIBRIDA') {
+                    seccionUbicacion.style.display = 'block';
+                    grupoLugar.style.display = 'block';
+                } else {
+                    seccionUbicacion.style.display = 'none';
+                    grupoLugar.style.display = 'none';
+                }
+                return;
+            }
+            
+            // Para CHARLA y SEMINARIO
+            if (tipoOferta === 'CHARLA' || tipoOferta === 'SEMINARIO') {
+                if (modalidad === 'PRESENCIAL') {
+                    // Solo ubicación, sin enlace
+                    seccionUbicacion.style.display = 'block';
+                    grupoLugar.style.display = 'block';
+                    grupoEnlace.style.display = 'none';
+                } else if (modalidad === 'VIRTUAL' || modalidad === 'HIBRIDA') {
+                    // Ubicación y enlace
+                    seccionUbicacion.style.display = 'block';
+                    grupoLugar.style.display = 'block';
+                    grupoEnlace.style.display = 'block';
+                } else {
+                    seccionUbicacion.style.display = 'none';
+                    grupoLugar.style.display = 'none';
+                    grupoEnlace.style.display = 'none';
+                }
+                return;
+            }
+            
+            // Caso por defecto: ocultar todo
+            seccionUbicacion.style.display = 'none';
+            grupoLugar.style.display = 'none';
+            grupoEnlace.style.display = 'none';
+        }
+        
+        // Función para calcular número de cuotas automáticamente
+        function calcularNumeroCuotas() {
+            const fechaInicio = document.getElementById('fechaInicio');
+            const fechaFin = document.getElementById('fechaFin');
+            const diaVencimiento = document.getElementById('diaVencimiento');
+            const nrCuotas = document.getElementById('nrCuotas');
+            
+            if (!fechaInicio || !fechaFin || !diaVencimiento || !nrCuotas) return;
+            
+            const inicio = fechaInicio.value;
+            const fin = fechaFin.value;
+            const dia = parseInt(diaVencimiento.value);
+            
+            if (!inicio || !fin || !dia) return;
+            
+            const fechaInicioDate = new Date(inicio);
+            const fechaFinDate = new Date(fin);
+            
+            // Calcular meses completos
+            let meses = (fechaFinDate.getFullYear() - fechaInicioDate.getFullYear()) * 12;
+            meses += fechaFinDate.getMonth() - fechaInicioDate.getMonth();
+            
+            // Ajustar según el día de vencimiento y el día de inicio
+            const diaInicio = fechaInicioDate.getDate();
+            const diaFinalizacion = fechaFinDate.getDate();
+            
+            // Si el curso inicia después del día de vencimiento, se pierde una cuota de ese mes
+            let cuotas = meses;
+            
+            if (diaInicio > dia) {
+                // Si el curso empieza después del día de vencimiento, no se paga ese mes
+                // pero sí todos los siguientes hasta el mes de finalización
+                cuotas = meses;
+            } else {
+                // Si el curso empieza antes o en el día de vencimiento, se paga ese mes
+                cuotas = meses + 1;
+            }
+            
+            // Si el curso termina antes del día de vencimiento del último mes, no se cuenta esa cuota
+            if (diaFinalizacion < dia && cuotas > 1) {
+                cuotas--;
+            }
+            
+            // Mínimo 1 cuota
+            cuotas = Math.max(1, cuotas);
+            
+            nrCuotas.value = cuotas;
+        }
+        
+        // Función para generar videoconferencia
+        window.generarVideoconferencia = function() {
+            const tipoOferta = document.getElementById('tipoOferta').value;
+            const nombreOferta = document.getElementById('nombre').value;
+            
+            if (!nombreOferta) {
+                mostrarNotificacion('Por favor, ingresa el nombre de la oferta primero', 'warning');
+                return;
+            }
+            
+            // Validar fecha y hora según el tipo
+            let fecha, hora;
+            if (tipoOferta === 'CHARLA') {
+                fecha = document.getElementById('fechaCharla').value;
+                hora = document.getElementById('horaCharla').value;
+                
+                if (!fecha || !hora) {
+                    mostrarNotificacion('Por favor, ingresa la fecha y hora de la charla', 'warning');
+                    return;
+                }
+            } else if (tipoOferta === 'SEMINARIO') {
+                fecha = document.getElementById('fechaSeminario').value;
+                hora = document.getElementById('horaSeminario').value;
+                
+                if (!fecha || !hora) {
+                    mostrarNotificacion('Por favor, ingresa la fecha y hora del seminario', 'warning');
+                    return;
+                }
+            }
+            
+            // Obtener el primer disertante según el tipo
+            let disertante = null;
+            if (tipoOferta === 'CHARLA') {
+                if (disertantesCharla.length > 0) {
+                    disertante = disertantesCharla[0];
+                }
+            } else if (tipoOferta === 'SEMINARIO') {
+                if (disertantesSeminario.length > 0) {
+                    disertante = disertantesSeminario[0];
+                }
+            }
+            
+            if (!disertante) {
+                mostrarNotificacion('Por favor, ingresa al menos un disertante primero', 'warning');
+                return;
+            }
+            
+            // Generar el nombre de la sala (similar a como se hace en clases)
+            const roomName = nombreOferta.toLowerCase()
+                .replace(/[áàäâ]/g, 'a')
+                .replace(/[éèëê]/g, 'e')
+                .replace(/[íìïî]/g, 'i')
+                .replace(/[óòöô]/g, 'o')
+                .replace(/[úùüû]/g, 'u')
+                .replace(/ñ/g, 'n')
+                .replace(/\s+/g, '-')
+                .replace(/[^a-z0-9-]/g, '');
+            
+            const safeRoomName = 'aurea-charla-' + roomName;
+            
+            // URL hacia el HTML de Aurea que mostrará el iframe (será creado en el backend)
+            // Pasar la fecha y hora como parámetros
+            const videoUrl = `/charla/videoconferencia/${safeRoomName}?fecha=${fecha}&hora=${hora}&moderador=${encodeURIComponent(disertante)}`;
+            
+            // Establecer el enlace en el campo
+            document.getElementById('enlace').value = window.location.origin + videoUrl;
+            
+            mostrarNotificacion(`Videoconferencia programada para ${fecha} ${hora}. Moderador: ${disertante}`, 'success');
+            
+            console.log('🎥 Videoconferencia generada:');
+            console.log('   - Room: ' + safeRoomName);
+            console.log('   - Moderador: ' + disertante);
+            console.log('   - Fecha: ' + fecha);
+            console.log('   - Hora: ' + hora);
+            console.log('   - URL: ' + videoUrl);
+        };
+
         
         // Variables globales para docentes seleccionados
         let docentesSeleccionados = {
@@ -4637,6 +4926,9 @@ if (typeof window.mostrarNotificacion !== 'function') {
                     actualizarHorariosChips();
                     console.log('Horarios cargados:', horariosSeleccionados.length, horariosSeleccionados);
                 }
+                
+                // Actualizar visibilidad de campos según modalidad y tipo
+                actualizarCamposModalidad();
                 
                 console.log('Formulario poblado exitosamente');
                 
