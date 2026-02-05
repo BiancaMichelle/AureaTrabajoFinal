@@ -49,6 +49,7 @@ import com.example.demo.model.CarruselImagen;
 import com.example.demo.model.Categoria;
 import com.example.demo.model.Charla;
 import com.example.demo.model.Curso;
+import com.example.demo.model.DisponibilidadDocente;
 import com.example.demo.model.Docente;
 import com.example.demo.model.Formacion;
 import com.example.demo.model.Horario;
@@ -78,6 +79,8 @@ import com.example.demo.service.OfertaAcademicaService;
 import com.example.demo.service.CertificacionService;
 import com.example.demo.service.RegistroService;
 import com.example.demo.service.AnalisisRendimientoService;
+import com.example.demo.service.DisponibilidadDocenteService;
+import com.example.demo.service.GeneradorHorariosService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Controller
@@ -135,6 +138,12 @@ public class AdminController {
 
     @Autowired
     private HorarioRepository horarioRepository;
+    
+    @Autowired
+    private DisponibilidadDocenteService disponibilidadDocenteService;
+    
+    @Autowired
+    private GeneradorHorariosService generadorHorariosService;
     
     @Autowired
     private InscripcionRepository inscripcionRepository;
@@ -1599,6 +1608,99 @@ public class AdminController {
         }
     }
 
+    /**
+     * Endpoint para generar propuestas automáticas de horarios para una oferta académica
+     */
+    @PostMapping("/admin/ofertas/generar-horarios-automaticos")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> generarHorariosAutomaticos(
+            @RequestParam Long idOferta,
+            @RequestParam String idDocente,
+            @RequestParam Double horasSemanales) {
+        
+        try {
+            System.out.println("📅 Generando propuestas automáticas de horarios...");
+            System.out.println("   - Oferta ID: " + idOferta);
+            System.out.println("   - Docente ID: " + idDocente);
+            System.out.println("   - Horas semanales: " + horasSemanales);
+            
+            // Validaciones - idOferta es OPCIONAL (puede ser null o 0 para ofertas nuevas)
+            if (idDocente == null || horasSemanales == null || horasSemanales <= 0) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("success", false);
+                errorResponse.put("message", "Parámetros inválidos: docente y horas semanales son requeridos");
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+            
+            // Buscar docente
+            Docente docente = docenteRepository.findById(java.util.UUID.fromString(idDocente))
+                .orElseThrow(() -> new RuntimeException("Docente no encontrado"));
+            
+            // Buscar oferta (solo si existe - para ofertas existentes)
+            OfertaAcademica oferta = null;
+            if (idOferta != null && idOferta > 0) {
+                oferta = ofertaAcademicaRepository.findById(idOferta).orElse(null);
+            }
+            
+            // Generar propuestas (oferta puede ser null para ofertas nuevas)
+            List<GeneradorHorariosService.PropuestaHorario> propuestas = 
+                generadorHorariosService.generarPropuestas(oferta, docente, horasSemanales);
+            
+            if (propuestas.isEmpty()) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("success", false);
+                errorResponse.put("message", "No se pudieron generar propuestas. El docente no tiene suficiente disponibilidad.");
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+            
+            // Convertir propuestas a JSON
+            List<Map<String, Object>> propuestasJSON = new ArrayList<>();
+            for (GeneradorHorariosService.PropuestaHorario propuesta : propuestas) {
+                Map<String, Object> propuestaMap = new HashMap<>();
+                propuestaMap.put("nombre", propuesta.getNombre());
+                propuestaMap.put("descripcion", propuesta.getDescripcion());
+                propuestaMap.put("horarios", propuesta.toJSON());
+                propuestaMap.put("totalHorasSemana", Math.round(propuesta.getTotalHorasSemana() * 100.0) / 100.0);
+                propuestaMap.put("cantidadDias", propuesta.getCantidadDias());
+                propuestaMap.put("promedioHorasPorDia", Math.round(propuesta.getPromedioHorasPorDia() * 100.0) / 100.0);
+                propuestaMap.put("cargaAdicionalDocente", Math.round(propuesta.getCargaAdicionalDocente() * 100.0) / 100.0);
+                propuestaMap.put("porcentajeCargaTotal", Math.round(propuesta.getPorcentajeCargaTotal() * 100.0) / 100.0);
+                propuestaMap.put("score", Math.round(propuesta.getScore() * 100.0) / 100.0);
+                propuestasJSON.add(propuestaMap);
+            }
+            
+            // Información adicional del docente
+            double cargaActual = disponibilidadDocenteService.calcularCargaHorariaSemanal(docente);
+            double disponibilidadTotal = disponibilidadDocenteService.calcularDisponibilidadTotalSemanal(docente);
+            double porcentajeOcupacion = disponibilidadDocenteService.calcularPorcentajeOcupacion(docente);
+            
+            Map<String, Object> infoDocente = new HashMap<>();
+            infoDocente.put("nombre", docente.getNombre() + " " + docente.getApellido());
+            infoDocente.put("cargaActual", Math.round(cargaActual * 100.0) / 100.0);
+            infoDocente.put("disponibilidadTotal", Math.round(disponibilidadTotal * 100.0) / 100.0);
+            infoDocente.put("porcentajeOcupacion", Math.round(porcentajeOcupacion * 100.0) / 100.0);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Propuestas generadas exitosamente");
+            response.put("propuestas", propuestasJSON);
+            response.put("infoDocente", infoDocente);
+            
+            System.out.println("✅ " + propuestas.size() + " propuestas generadas exitosamente");
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error al generar propuestas: " + e.getMessage());
+            e.printStackTrace();
+            
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Error al generar propuestas: " + e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+    }
+
     @GetMapping("/admin/ofertas")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> listarOfertas() {
@@ -2193,12 +2295,14 @@ public class AdminController {
                 }
             }
 
-            if (docente.getHorario() != null) {
-                List<Map<String, Object>> horarios = docente.getHorario().stream().map(horario -> {
+            // Obtener las disponibilidades del docente (no los horarios de clases)
+            List<DisponibilidadDocente> disponibilidades = disponibilidadDocenteService.obtenerDisponibilidades(docente);
+            if (disponibilidades != null && !disponibilidades.isEmpty()) {
+                List<Map<String, Object>> horarios = disponibilidades.stream().map(disponibilidad -> {
                     Map<String, Object> horarioMap = new HashMap<>();
-                    horarioMap.put("diaSemana", horario.getDia() != null ? horario.getDia().name() : null);
-                    horarioMap.put("horaInicio", horario.getHoraInicio() != null ? horario.getHoraInicio().toString().substring(0, 5) : null);
-                    horarioMap.put("horaFin", horario.getHoraFin() != null ? horario.getHoraFin().toString().substring(0, 5) : null);
+                    horarioMap.put("diaSemana", disponibilidad.getDia() != null ? disponibilidad.getDia().name() : null);
+                    horarioMap.put("horaInicio", disponibilidad.getHoraInicio() != null ? disponibilidad.getHoraInicio().toString().substring(0, 5) : null);
+                    horarioMap.put("horaFin", disponibilidad.getHoraFin() != null ? disponibilidad.getHoraFin().toString().substring(0, 5) : null);
                     return horarioMap;
                 }).collect(Collectors.toList());
                 data.put("horariosDisponibilidad", horarios);
@@ -2249,12 +2353,14 @@ public class AdminController {
             data.put("matricula", docente.getMatricula());
             data.put("experiencia", docente.getAñosExperiencia());
 
-            if (docente.getHorario() != null) {
-                List<Map<String, Object>> horarios = docente.getHorario().stream().map(horario -> {
+            // Obtener las disponibilidades del docente (no los horarios de clases)
+            List<DisponibilidadDocente> disponibilidades = disponibilidadDocenteService.obtenerDisponibilidades(docente);
+            if (disponibilidades != null && !disponibilidades.isEmpty()) {
+                List<Map<String, Object>> horarios = disponibilidades.stream().map(disponibilidad -> {
                     Map<String, Object> horarioMap = new HashMap<>();
-                    horarioMap.put("diaSemana", horario.getDia() != null ? horario.getDia().name() : null);
-                    horarioMap.put("horaInicio", horario.getHoraInicio() != null ? horario.getHoraInicio().toString().substring(0, 5) : null);
-                    horarioMap.put("horaFin", horario.getHoraFin() != null ? horario.getHoraFin().toString().substring(0, 5) : null);
+                    horarioMap.put("diaSemana", disponibilidad.getDia() != null ? disponibilidad.getDia().name() : null);
+                    horarioMap.put("horaInicio", disponibilidad.getHoraInicio() != null ? disponibilidad.getHoraInicio().toString().substring(0, 5) : null);
+                    horarioMap.put("horaFin", disponibilidad.getHoraFin() != null ? disponibilidad.getHoraFin().toString().substring(0, 5) : null);
                     return horarioMap;
                 }).collect(Collectors.toList());
                 data.put("horariosDisponibilidad", horarios);

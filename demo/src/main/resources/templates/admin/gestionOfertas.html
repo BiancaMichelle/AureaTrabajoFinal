@@ -72,6 +72,286 @@
         .text-danger {
             color: #dc3545 !important;
         }
+    /* =========================================
+    1. ESTILOS DEL SWITCH (MODO MANUAL/AUTO)
+    ========================================= */
+    .switch-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 25px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 12px;
+        border: 1px solid #e9ecef;
+    }
+
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 26px;
+    }
+
+    .switch input { 
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        -webkit-transition: .4s;
+        transition: .4s;
+        border-radius: 34px;
+    }
+
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 20px;
+        width: 20px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        -webkit-transition: .4s;
+        transition: .4s;
+        border-radius: 50%;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    /* Estado activo (Checked) */
+    input:checked + .slider {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    input:checked + .slider:before {
+        transform: translateX(24px);
+    }
+
+    .switch-labels {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .switch-title {
+        font-weight: 700;
+        color: #2c3e50;
+        font-size: 1rem;
+    }
+
+    .switch-desc {
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+
+    /* =========================================
+    2. INPUTS Y BOTONES (BARRA DE CONTROL)
+    ========================================= */
+    .control-panel {
+        display: flex;
+        align-items: flex-end;
+        gap: 15px;
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        margin-bottom: 20px;
+        flex-wrap: wrap; /* Para móviles */
+    }
+
+    .input-group-modern {
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .input-group-modern label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #495057;
+        font-size: 0.9rem;
+    }
+
+    .input-modern {
+        width: 100%;
+        padding: 10px 15px;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.3s;
+    }
+
+    .input-modern:focus {
+        border-color: #764ba2;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(118, 75, 162, 0.1);
+    }
+
+    .btn-generate {
+        padding: 12px 24px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+        height: 46px; /* Para alinear con el input */
+        white-space: nowrap;
+    }
+
+    .btn-generate:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(118, 75, 162, 0.3);
+    }
+
+    /* =========================================
+    3. TARJETAS DE PROPUESTAS
+    ========================================= */
+    .propuestas-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Responsivo */
+        gap: 25px;
+        margin-top: 20px;
+    }
+
+    .propuesta-card {
+        background: white;
+        border-radius: 16px;
+        padding: 0; /* Quitamos padding del contenedor principal */
+        box-shadow: 0 4px 6px rgba(0,0,0,0.02), 0 1px 3px rgba(0,0,0,0.05);
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        border: 2px solid transparent; /* Preparado para selección */
+        overflow: hidden;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .propuesta-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+    }
+
+    /* Estilo cuando está seleccionada (Usado por JS) */
+    .propuesta-card.card-selected {
+        border-color: #28a745;
+        background-color: #f8fff9;
+        box-shadow: 0 0 0 4px rgba(40, 167, 69, 0.1);
+    }
+
+    .propuesta-card.card-selected::after {
+        content: "Seleccionada";
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: #28a745;
+        color: white;
+        font-size: 0.7rem;
+        font-weight: bold;
+        padding: 4px 8px;
+        border-radius: 12px;
+        z-index: 2;
+    }
+
+    .card-body {
+        padding: 20px;
+        flex: 1; /* Empuja el botón al fondo */
+    }
+
+    .propuesta-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .propuesta-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #343a40;
+        margin: 0;
+    }
+
+    .score-badge {
+        padding: 4px 10px;
+        border-radius: 12px;
+        color: white;
+        font-weight: bold;
+        font-size: 0.85rem;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .stat-item {
+        background: #f8f9fa;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .horarios-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+    }
+
+    .horario-chip {
+        font-size: 0.75rem;
+        padding: 5px 10px;
+        background: #eef2ff;
+        color: #4f46e5;
+        border-radius: 6px;
+        border: 1px solid #e0e7ff;
+        font-weight: 600;
+    }
+
+    .btn-select-area {
+        padding: 15px 20px;
+        background: #f8f9fa;
+        border-top: 1px solid #eee;
+    }
+
+    .btn-seleccionar-propuesta {
+        width: 100%;
+        padding: 10px;
+        background: white;
+        color: #667eea;
+        border: 1px solid #667eea;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-seleccionar-propuesta:hover {
+        background: #667eea;
+        color: white;
+    }
+
+    .propuesta-card.card-selected .btn-seleccionar-propuesta {
+        background: #28a745;
+        border-color: #28a745;
+        color: white;
+        pointer-events: none; /* Deshabilitar click si ya está seleccionada */
+    }
     </style>
 </head>
 <body>
@@ -401,7 +681,19 @@
                 <!-- Sección de Horarios (para cursos y formaciones) -->
                 <div id="seccion-horarios" class="form-section" style="display: none;">
                     <h4><i class="fas fa-clock"></i> Horarios</h4>
-                    <div class="horarios-container">
+                    
+                    <!-- Switch Manual/Automático -->
+                    <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="modo-horario-switch" onchange="toggleModoHorario()">
+                            <label class="form-check-label" for="modo-horario-switch">
+                                <strong id="modo-label">Modo Manual</strong> - <span id="modo-descripcion">Selecciona días y horarios manualmente</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Modo Manual -->
+                    <div id="horarios-manual-container" class="horarios-container">
                         <div class="horario-form">
                             <div class="form-row">
                                 <div class="form-group">
@@ -438,6 +730,63 @@
                             <div id="lista-horarios" class="horarios-chips">
                                 <p class="no-horarios">No hay horarios programados</p>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- SWITCH DE MODO -->
+                    <div class="switch-wrapper">
+                        <label class="switch">
+                            <!-- Input checkbox oculto -->
+                            <input type="checkbox" id="modo-horario-switch" onchange="toggleModoHorario()">
+                            <span class="slider"></span>
+                        </label>
+                        <div class="switch-labels">
+                            <span class="switch-title" id="modo-label">Modo Manual</span>
+                            <span class="switch-desc" id="modo-descripcion">Selecciona días y horarios manualmente</span>
+                        </div>
+                    </div>
+
+                    <!-- CONTENEDOR MODO AUTOMÁTICO -->
+                    <div id="horarios-automatico-container" style="display: none;">
+                        
+                        <!-- Barra de Control (Inputs) -->
+                        <div class="control-panel">
+                            <div class="input-group-modern">
+                                <label for="horas-semanales">
+                                    <i class="fas fa-clock"></i> Horas semanales requeridas
+                                </label>
+                                <input type="number" id="horas-semanales" class="input-modern" 
+                                    placeholder="Ej: 6" min="1" step="0.5">
+                            </div>
+                            
+                            <button type="button" class="btn-generate" onclick="generarPropuestasAutomaticas()">
+                                <i class="fas fa-magic"></i> Generar Propuestas
+                            </button>
+                        </div>
+
+                        <!-- Información del docente (Banner informativo) -->
+                        <div id="info-docente-carga" style="display: none; margin-bottom: 20px;">
+                            <div style="background: #e7f3ff; border-left: 5px solid #0066cc; padding: 15px; border-radius: 8px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+                                <div><i class="fas fa-user-tie"></i> <strong>Docente:</strong> <span id="docente-nombre">-</span></div>
+                                <div><i class="fas fa-weight-hanging"></i> <strong>Carga:</strong> <span id="docente-carga-actual">0</span>h</div>
+                                <div><i class="fas fa-percentage"></i> <strong>Ocupación:</strong> <span id="docente-porcentaje-ocupacion">0</span>%</div>
+                            </div>
+                        </div>
+
+                        <!-- Grid de Propuestas -->
+                        <div id="propuestas-container" style="display: none;">
+                            <h5 style="color: #495057; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px;">
+                                <i class="fas fa-lightbulb" style="color: #ffc107;"></i> Propuestas Disponibles
+                            </h5>
+                            
+                            <div id="lista-propuestas" class="propuestas-grid">
+                                <!-- Aquí se inyectan las cartas vía JS -->
+                            </div>
+                        </div>
+                        
+                        <!-- Preview (si es necesario) -->
+                        <div id="preview-horarios-automaticos" style="display: none; margin-top: 20px;">
+                            <!-- ... contenido preview ... -->
                         </div>
                     </div>
                 </div>
@@ -1563,53 +1912,7 @@
             resultsDiv.style.display = 'block';
         }
         
-        // Función para agregar docente a la tabla
-        function agregarDocente(id, nombre, especialidad, tableId) {
-            const tabla = document.getElementById(tableId);
-            const tbody = tabla.querySelector('tbody');
-            
-            // Verificar si el docente ya está agregado
-            const tipoSeccion = tableId.includes('formacion') ? 'formacion' : 'curso';
-            const yaAgregado = docentesSeleccionados[tipoSeccion].find(d => d.id === id);
-            
-            if (yaAgregado) {
-                mostrarNotificacion('Este docente ya ha sido agregado', 'warning');
-                return;
-            }
-            
-            // Agregar a la lista de seleccionados
-            docentesSeleccionados[tipoSeccion].push({ id, nombre, especialidad });
-            
-            // Crear fila en la tabla
-            const fila = document.createElement('tr');
-            fila.innerHTML = `
-                <td>${nombre}</td>
-                <td>${especialidad}</td>
-                <td>
-                    <button type="button" class="btn-remove-docente" onclick="removerDocente(${id}, '${tableId}', this)">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </td>
-            `;
-            
-            tbody.appendChild(fila);
-            
-            // Ocultar resultados de búsqueda
-            const resultsDiv = document.querySelector('.search-results:not([style*="display: none"])');
-            if (resultsDiv) {
-                resultsDiv.style.display = 'none';
-            }
-            
-            // Limpiar campo de búsqueda
-            const searchInput = tableId.includes('formacion') ? 
-                document.getElementById('docente-search-formacion') : 
-                document.getElementById('docente-search');
-            if (searchInput) {
-                searchInput.value = '';
-            }
-            
-            console.log('✅ Docente agregado:', nombre);
-        }
+        // Nota: agregarDocente está definido como window.agregarDocente más abajo (línea ~2303)
         
         // Función para remover docente
         function removerDocente(id, tableId, button) {
@@ -2049,8 +2352,6 @@
             
             // Actualizar campo hidden del formulario
             actualizarDocentesHidden(tipoSeccion);
-            
-            console.log('✅ Docente seleccionado:', docente);
         };
         
         window.removerDocente = function(id, tableId, button) {
@@ -2273,6 +2574,341 @@
             actualizarHorariosChips();
             console.log('❌ Horario removido');
         };
+
+        // ================================================
+        // FUNCIÓN PARA MODO AUTOMÁTICO DE HORARIOS
+        // ================================================
+        
+        /**
+         * Toggle entre modo manual y automático de horarios
+         */
+        window.toggleModoHorario = function() {
+    const modoSwitch = document.getElementById('modo-horario-switch');
+    const modoLabel = document.getElementById('modo-label');
+    const modoDescripcion = document.getElementById('modo-descripcion');
+    
+    // Contenedores
+    const manualContainer = document.getElementById('horarios-manual-container'); // Tu contenedor viejo
+    const automaticoContainer = document.getElementById('horarios-automatico-container');
+    
+    if (modoSwitch && modoSwitch.checked) {
+        // --- MODO AUTOMÁTICO ACTIVADO ---
+        console.log('🤖 Cambiando a modo AUTOMÁTICO');
+        
+        // Actualizar textos del Switch
+        if (modoLabel) modoLabel.textContent = 'Modo Automático';
+        if (modoDescripcion) modoDescripcion.textContent = 'El sistema generará propuestas optimizadas';
+        
+        // Mostrar/ocultar contenedores
+        if (manualContainer) manualContainer.style.display = 'none';
+        if (automaticoContainer) automaticoContainer.style.display = 'block';
+        
+        // Limpiar horarios manuales previos para evitar conflictos
+        window.horariosSeleccionados = [];
+        
+        // Actualizar la vista de chips (función externa de tu sistema actual)
+        if (typeof actualizarHorariosChips === 'function') {
+            actualizarHorariosChips();
+        }
+
+    } else {
+        // --- MODO MANUAL ACTIVADO ---
+        console.log('✋ Cambiando a modo MANUAL');
+        
+        // Actualizar textos del Switch
+        if (modoLabel) modoLabel.textContent = 'Modo Manual';
+        if (modoDescripcion) modoDescripcion.textContent = 'Selecciona días y horarios manualmente';
+        
+        // Mostrar/ocultar contenedores
+        if (manualContainer) manualContainer.style.display = 'block';
+        if (automaticoContainer) automaticoContainer.style.display = 'none';
+        
+        // Opcional: Limpiar interfaz automática
+        const propuestasContainer = document.getElementById('propuestas-container');
+        const infoDocenteContainer = document.getElementById('info-docente-carga');
+        
+        if (propuestasContainer) propuestasContainer.style.display = 'none';
+        if (infoDocenteContainer) infoDocenteContainer.style.display = 'none';
+        
+        // Limpiar horarios
+        window.horariosSeleccionados = [];
+        if (typeof actualizarHorariosChips === 'function') {
+            actualizarHorariosChips();
+        }
+    }
+};
+
+/**
+ * Genera propuestas automáticas de horarios (Llamada AJAX)
+ */
+window.generarPropuestasAutomaticas = async function() {
+    console.log('🤖 Generando propuestas automáticas...');
+    
+    // 1. Obtener valores del DOM
+    const idOfertaInput = document.getElementById('idOferta');
+    const horasSemanalesInput = document.getElementById('horas-semanales');
+    
+    const idOferta = idOfertaInput ? idOfertaInput.value : 0;
+    const horasSemanales = horasSemanalesInput ? horasSemanalesInput.value : 0;
+    
+    // 2. Detectar Docente (Curso o Formación)
+    let idDocente = null;
+    const docentesCurso = document.getElementById('docentesCurso');
+    const docentesFormacion = document.getElementById('docentesFormacion');
+    
+    if (docentesCurso && docentesCurso.value) {
+        idDocente = docentesCurso.value;
+    } else if (docentesFormacion && docentesFormacion.value) {
+        idDocente = docentesFormacion.value;
+    }
+    
+    // 3. Validaciones
+    if (!idDocente) {
+        mostrarNotificacion('Por favor, selecciona un docente primero', 'warning');
+        return;
+    }
+    
+    if (!horasSemanales || horasSemanales <= 0) {
+        mostrarNotificacion('Por favor, ingresa las horas semanales requeridas', 'warning');
+        // Poner foco en el input para ayudar al usuario
+        if(horasSemanalesInput) horasSemanalesInput.focus();
+        return;
+    }
+    
+    // 4. Petición al Servidor
+    try {
+        // Mostrar estado de carga (opcional: cambiar texto botón)
+        const btnGenerar = document.querySelector('.btn-generate');
+        const textoOriginal = btnGenerar ? btnGenerar.innerHTML : '';
+        if(btnGenerar) {
+            btnGenerar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+            btnGenerar.disabled = true;
+        }
+
+        const formData = new FormData();
+        formData.append('idOferta', idOferta);
+        formData.append('idDocente', idDocente);
+        formData.append('horasSemanales', horasSemanales);
+        
+        // Manejo de CSRF para Spring Security (si aplica)
+        const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+        const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content') || 'X-CSRF-TOKEN';
+        
+        const headers = {};
+        if (csrfToken && csrfHeader) {
+            headers[csrfHeader] = csrfToken;
+        }
+        
+        const response = await fetch('/admin/ofertas/generar-horarios-automaticos', {
+            method: 'POST',
+            headers: headers,
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        // Restaurar botón
+        if(btnGenerar) {
+            btnGenerar.innerHTML = textoOriginal;
+            btnGenerar.disabled = false;
+        }
+        
+        if (data.success) {
+            console.log('✅ Propuestas generadas:', data);
+            mostrarPropuestas(data.propuestas, data.infoDocente);
+            mostrarNotificacion('Propuestas generadas exitosamente', 'success');
+        } else {
+            mostrarNotificacion(data.message || 'Error al generar propuestas', 'error');
+        }
+    } catch (error) {
+        console.error('❌ Error:', error);
+        mostrarNotificacion('Error de conexión: ' + error.message, 'error');
+        
+        // Restaurar botón en caso de error
+        const btnGenerar = document.querySelector('.btn-generate');
+        if(btnGenerar) {
+            btnGenerar.innerHTML = '<i class="fas fa-magic"></i> Generar Propuestas';
+            btnGenerar.disabled = false;
+        }
+    }
+};
+
+/**
+ * Renderiza las tarjetas de propuestas en el HTML
+ */
+function mostrarPropuestas(propuestas, infoDocente) {
+    const listaPropuestas = document.getElementById('lista-propuestas');
+    const propuestasContainer = document.getElementById('propuestas-container');
+    const infoDocenteDiv = document.getElementById('info-docente-carga');
+    
+    // 1. Mostrar Banner de Información del Docente
+    if (infoDocente && infoDocenteDiv) {
+        const nombreSpan = document.getElementById('docente-nombre');
+        const cargaSpan = document.getElementById('docente-carga-actual');
+        const porcentajeSpan = document.getElementById('docente-porcentaje-ocupacion');
+        
+        if (nombreSpan) nombreSpan.textContent = infoDocente.nombre;
+        if (cargaSpan) cargaSpan.textContent = infoDocente.cargaActual;
+        if (porcentajeSpan) porcentajeSpan.textContent = infoDocente.porcentajeOcupacion;
+        
+        infoDocenteDiv.style.display = 'block';
+    }
+    
+    // 2. Generar Tarjetas
+    if (listaPropuestas) {
+        listaPropuestas.innerHTML = ''; // Limpiar anteriores
+        
+        propuestas.forEach((propuesta, index) => {
+            // Crear elemento contenedor
+            const card = document.createElement('div');
+            card.className = 'propuesta-card'; // Clase CSS principal
+            card.id = `propuesta-card-${index}`; // ID único para selección
+            
+            // Generar HTML de los horarios (chips pequeños dentro de la card)
+            const horariosHTML = propuesta.horarios.map(h => 
+                `<span class="horario-chip">
+                    ${formatearDia(h.dia)} ${h.horaInicio}-${h.horaFin}
+                </span>`
+            ).join('');
+            
+            // Construir el HTML interno de la tarjeta
+            card.innerHTML = `
+                <div class="card-body">
+                    <div class="propuesta-header">
+                        <div>
+                            <h6 class="propuesta-title">${propuesta.nombre}</h6>
+                            <small style="color:#6c757d;">Opción sugerida</small>
+                        </div>
+                        <div class="score-badge" style="background: ${getScoreColor(propuesta.score)};">
+                            ${propuesta.score} pts
+                        </div>
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <i class="fas fa-clock"></i> ${propuesta.totalHorasSemana}h/sem
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-calendar-day"></i> ${propuesta.cantidadDias} días
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-hourglass-half"></i> Prom: ${propuesta.promedioHorasPorDia}h
+                        </div>
+                    </div>
+                    
+                    <div class="horarios-list">
+                        ${horariosHTML}
+                    </div>
+                </div>
+                
+                <div class="btn-select-area">
+                    <button class="btn-seleccionar-propuesta" type="button" onclick="seleccionarPropuesta(${index})">
+                        <i class="fas fa-check"></i> Seleccionar
+                    </button>
+                </div>
+            `;
+            
+            listaPropuestas.appendChild(card);
+        });
+        
+        // Hacer visible el contenedor grid
+        propuestasContainer.style.display = 'block';
+        
+        // Scroll suave hacia las propuestas
+        propuestasContainer.scrollIntoView({ behavior: 'smooth' });
+    }
+    
+    // Guardar en global para acceder luego al seleccionar
+    window.propuestasGeneradas = propuestas;
+}
+
+/**
+ * Selecciona una propuesta, marca la tarjeta visualmente y asigna horarios
+ */
+window.seleccionarPropuesta = function(index) {
+    const propuesta = window.propuestasGeneradas[index];
+    console.log('✅ Propuesta seleccionada:', propuesta);
+    
+    // 1. Lógica de Datos: Asignar horarios al array global
+    window.horariosSeleccionados = [];
+    propuesta.horarios.forEach(h => {
+        window.horariosSeleccionados.push({
+            dia: h.dia,
+            horaInicio: h.horaInicio,
+            horaFin: h.horaFin
+        });
+    });
+    
+    // 2. Actualizar UI externa (tus chips de horarios seleccionados)
+    if (typeof actualizarHorariosChips === 'function') {
+        actualizarHorariosChips();
+    }
+    
+    // 3. Lógica Visual: Marcar la tarjeta activa
+    
+    // A) Quitar clase 'card-selected' de TODAS las tarjetas
+    const allCards = document.querySelectorAll('.propuesta-card');
+    allCards.forEach(card => {
+        card.classList.remove('card-selected');
+        
+        // Resetear botón a estado normal
+        const btn = card.querySelector('.btn-seleccionar-propuesta');
+        if(btn) {
+            btn.innerHTML = '<i class="fas fa-check"></i> Seleccionar';
+            btn.classList.remove('btn-success');
+        }
+    });
+
+    // B) Añadir clase 'card-selected' a la tarjeta ELEGIDA
+    const selectedCard = document.getElementById(`propuesta-card-${index}`);
+    if (selectedCard) {
+        selectedCard.classList.add('card-selected');
+        
+        // Cambiar texto del botón para feedback
+        const btn = selectedCard.querySelector('.btn-seleccionar-propuesta');
+        if(btn) {
+            btn.innerHTML = '<i class="fas fa-check-circle"></i> Seleccionado';
+        }
+    }
+    
+    mostrarNotificacion('Propuesta seleccionada correctamente', 'success');
+};
+
+/**
+ * UTILIDAD: Formatea el nombre del día (LUNES -> Lun)
+ */
+function formatearDia(dia) {
+    const dias = {
+        'LUNES': 'Lun',
+        'MARTES': 'Mar',
+        'MIERCOLES': 'Mié',
+        'JUEVES': 'Jue',
+        'VIERNES': 'Vie',
+        'SABADO': 'Sáb',
+        'DOMINGO': 'Dom'
+    };
+    return dias[dia] || dia;
+}
+
+/**
+ * UTILIDAD: Obtiene color del badge según el puntaje (score)
+ */
+function getScoreColor(score) {
+    if (score >= 80) return 'linear-gradient(135deg, #28a745 0%, #20c997 100%)'; // Verde
+    if (score >= 60) return 'linear-gradient(135deg, #17a2b8 0%, #138496 100%)'; // Azul cyan
+    return 'linear-gradient(135deg, #ffc107 0%, #ff9800 100%)'; // Naranja/Amarillo
+}
+
+/**
+ * UTILIDAD: Wrapper para notificaciones (por si no tienes Toastr/Swal)
+ * Si ya tienes una función mostrarNotificacion global, puedes borrar esto.
+ */
+if (typeof window.mostrarNotificacion !== 'function') {
+    window.mostrarNotificacion = function(mensaje, tipo) {
+        // Fallback simple por si no existe la librería de alertas
+        alert((tipo === 'error' ? '❌ ' : '✅ ') + mensaje);
+    };
+}
         
         // ================= VALIDACIÓN Y ENVÍO DEL FORMULARIO =================
         

@@ -968,3 +968,278 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 });
+
+// ================================================
+// FUNCIONES PARA MODO AUTOMÁTICO DE HORARIOS
+// ================================================
+
+/**
+ * Toggle entre modo manual y automático de horarios
+ */
+window.toggleModoHorario = function() {
+    const modoSwitch = document.getElementById('modo-horario-switch');
+    const modoLabel = document.getElementById('modo-label');
+    const modoDescripcion = document.getElementById('modo-descripcion');
+    const manualContainer = document.getElementById('horarios-manual-container');
+    const automaticoContainer = document.getElementById('horarios-automatico-container');
+    
+    if (modoSwitch.checked) {
+        // Modo Automático activado
+        console.log('🤖 Cambiando a modo AUTOMÁTICO');
+        modoLabel.textContent = 'Modo Automático';
+        modoDescripcion.textContent = 'El sistema generará propuestas optimizadas';
+        
+        // Mostrar/ocultar contenedores
+        manualContainer.style.display = 'none';
+        automaticoContainer.style.display = 'block';
+        
+        // Limpiar horarios manuales
+        horariosArray = [];
+        actualizarListaHorarios();
+    } else {
+        // Modo Manual activado
+        console.log('✋ Cambiando a modo MANUAL');
+        modoLabel.textContent = 'Modo Manual';
+        modoDescripcion.textContent = 'Selecciona días y horarios manualmente';
+        
+        // Mostrar/ocultar contenedores
+        manualContainer.style.display = 'block';
+        automaticoContainer.style.display = 'none';
+        
+        // Limpiar propuestas automáticas
+        const propuestasContainer = document.getElementById('propuestas-container');
+        const previewContainer = document.getElementById('preview-horarios-automaticos');
+        const infoDocenteContainer = document.getElementById('info-docente-carga');
+        
+        if (propuestasContainer) propuestasContainer.style.display = 'none';
+        if (previewContainer) previewContainer.style.display = 'none';
+        if (infoDocenteContainer) infoDocenteContainer.style.display = 'none';
+        
+        // Limpiar horarios automáticos si los hubiera
+        horariosArray = [];
+        actualizarListaHorarios();
+    }
+}
+
+/**
+ * Genera propuestas automáticas de horarios
+ */
+async function generarPropuestasAutomaticas() {
+    console.log('🤖 Generando propuestas automáticas...');
+    
+    // Validaciones
+    const idOferta = document.getElementById('idOferta')?.value;
+    const horasSemanales = document.getElementById('horas-semanales').value;
+    
+    // Obtener docente seleccionado (del campo de docentes)
+    let idDocente = null;
+    const docentesCurso = document.getElementById('docentesCursoSelect');
+    const docentesFormacion = document.getElementById('docentesFormacionSelect');
+    
+    if (docentesCurso && docentesCurso.value) {
+        idDocente = docentesCurso.value;
+    } else if (docentesFormacion && docentesFormacion.value) {
+        idDocente = docentesFormacion.value;
+    }
+    
+    // Validar campos
+    if (!idDocente) {
+        mostrarAlerta('Por favor, selecciona un docente primero', 'warning');
+        return;
+    }
+    
+    if (!horasSemanales || horasSemanales <= 0) {
+        mostrarAlerta('Por favor, ingresa las horas semanales requeridas', 'warning');
+        return;
+    }
+    
+    // Mostrar loading
+    mostrarLoading('Generando propuestas optimizadas...');
+    
+    try {
+        const formData = new FormData();
+        formData.append('idOferta', idOferta || 0); // Si es nueva oferta, enviar 0
+        formData.append('idDocente', idDocente);
+        formData.append('horasSemanales', horasSemanales);
+        
+        const response = await fetch('/admin/ofertas/generar-horarios-automaticos', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            console.log('✅ Propuestas generadas:', data);
+            mostrarPropuestas(data.propuestas, data.infoDocente);
+            ocultarLoading();
+            mostrarAlerta('Propuestas generadas exitosamente', 'success');
+        } else {
+            ocultarLoading();
+            mostrarAlerta(data.message || 'Error al generar propuestas', 'error');
+        }
+    } catch (error) {
+        console.error('❌ Error:', error);
+        ocultarLoading();
+        mostrarAlerta('Error al generar propuestas: ' + error.message, 'error');
+    }
+}
+
+/**
+ * Muestra las propuestas generadas
+ */
+function mostrarPropuestas(propuestas, infoDocente) {
+    const listaPropuestas = document.getElementById('lista-propuestas');
+    const propuestasContainer = document.getElementById('propuestas-container');
+    const infoDocenteDiv = document.getElementById('info-docente-carga');
+    
+    // Mostrar información del docente
+    if (infoDocente) {
+        document.getElementById('docente-nombre').textContent = infoDocente.nombre;
+        document.getElementById('docente-carga-actual').textContent = infoDocente.cargaActual;
+        document.getElementById('docente-disponibilidad-total').textContent = infoDocente.disponibilidadTotal;
+        document.getElementById('docente-porcentaje-ocupacion').textContent = infoDocente.porcentajeOcupacion;
+        infoDocenteDiv.style.display = 'block';
+    }
+    
+    // Limpiar propuestas anteriores
+    listaPropuestas.innerHTML = '';
+    
+    // Crear cards de propuestas
+    propuestas.forEach((propuesta, index) => {
+        const card = document.createElement('div');
+        card.className = 'propuesta-card';
+        card.innerHTML = `
+            <div class="propuesta-header">
+                <div>
+                    <h6 style="margin: 0; color: #2c3e50;">
+                        <i class="fas fa-calendar-alt"></i> ${propuesta.nombre}
+                    </h6>
+                    <small style="color: #6c757d;">${propuesta.descripcion}</small>
+                </div>
+                <div class="score-badge" style="background: ${getScoreColor(propuesta.score)};">
+                    ${propuesta.score}
+                </div>
+            </div>
+            
+            <div class="propuesta-stats">
+                <div class="stat-item">
+                    <i class="fas fa-clock"></i>
+                    <span>${propuesta.totalHorasSemana}h/sem</span>
+                </div>
+                <div class="stat-item">
+                    <i class="fas fa-calendar-day"></i>
+                    <span>${propuesta.cantidadDias} días</span>
+                </div>
+                <div class="stat-item">
+                    <i class="fas fa-hourglass-half"></i>
+                    <span>${propuesta.promedioHorasPorDia}h/día</span>
+                </div>
+            </div>
+            
+            <div class="propuesta-horarios">
+                ${propuesta.horarios.map(h => `
+                    <span class="horario-chip">
+                        <i class="fas fa-circle" style="font-size: 6px;"></i>
+                        ${formatearDia(h.dia)}: ${h.horaInicio} - ${h.horaFin}
+                    </span>
+                `).join('')}
+            </div>
+            
+            <button class="btn-seleccionar-propuesta" onclick="seleccionarPropuesta(${index})">
+                <i class="fas fa-check"></i> Seleccionar
+            </button>
+        `;
+        listaPropuestas.appendChild(card);
+    });
+    
+    // Mostrar container de propuestas
+    propuestasContainer.style.display = 'block';
+    
+    // Guardar propuestas en variable global para uso posterior
+    window.propuestasGeneradas = propuestas;
+}
+
+/**
+ * Selecciona una propuesta y asigna sus horarios
+ */
+function seleccionarPropuesta(index) {
+    const propuesta = window.propuestasGeneradas[index];
+    console.log('✅ Propuesta seleccionada:', propuesta);
+    
+    // Limpiar horarios anteriores
+    horariosArray = [];
+    
+    // Agregar horarios de la propuesta al array global
+    propuesta.horarios.forEach(h => {
+        horariosArray.push({
+            dia: h.dia,
+            horaInicio: h.horaInicio,
+            horaFin: h.horaFin
+        });
+    });
+    
+    // Actualizar vista previa
+    mostrarPreviewHorariosAutomaticos(propuesta);
+    
+    // Marcar visualmente la propuesta seleccionada
+    document.querySelectorAll('.propuesta-card').forEach((card, i) => {
+        if (i === index) {
+            card.style.border = '2px solid #28a745';
+            card.style.background = '#f0fff4';
+        } else {
+            card.style.border = '1px solid #dee2e6';
+            card.style.background = 'white';
+        }
+    });
+    
+    mostrarAlerta(`Propuesta "${propuesta.nombre}" seleccionada`, 'success');
+}
+
+/**
+ * Muestra preview de los horarios seleccionados automáticamente
+ */
+function mostrarPreviewHorariosAutomaticos(propuesta) {
+    const previewContainer = document.getElementById('preview-horarios-automaticos');
+    const previewChips = document.getElementById('preview-horarios-chips');
+    
+    previewChips.innerHTML = '';
+    
+    propuesta.horarios.forEach(h => {
+        const chip = document.createElement('span');
+        chip.className = 'horario-chip';
+        chip.innerHTML = `
+            <i class="fas fa-clock"></i>
+            ${formatearDia(h.dia)}: ${h.horaInicio} - ${h.horaFin}
+        `;
+        previewChips.appendChild(chip);
+    });
+    
+    previewContainer.style.display = 'block';
+}
+
+/**
+ * Formatea el día para mostrar
+ */
+function formatearDia(dia) {
+    const dias = {
+        'LUNES': 'Lun',
+        'MARTES': 'Mar',
+        'MIERCOLES': 'Mié',
+        'JUEVES': 'Jue',
+        'VIERNES': 'Vie',
+        'SABADO': 'Sáb',
+        'DOMINGO': 'Dom'
+    };
+    return dias[dia] || dia;
+}
+
+/**
+ * Retorna color según el score
+ */
+function getScoreColor(score) {
+    if (score >= 90) return 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+    if (score >= 75) return 'linear-gradient(135deg, #00b4db 0%, #0083b0 100%)';
+    return 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
+}
+

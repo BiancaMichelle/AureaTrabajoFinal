@@ -25,6 +25,9 @@ public class Docente extends Usuario{
     @OneToMany(mappedBy = "docente")
     private List<Horario> horario = new ArrayList<>();
     
+    @OneToMany(mappedBy = "docente", cascade = jakarta.persistence.CascadeType.ALL, orphanRemoval = true)
+    private List<DisponibilidadDocente> disponibilidades = new ArrayList<>();
+    
     @ManyToMany
     @JoinTable(
         name = "docente_formacion", 
@@ -42,5 +45,26 @@ public class Docente extends Usuario{
         }
         this.horario.add(h);
         h.setDocente(this);
+    }
+    
+    public void addDisponibilidad(DisponibilidadDocente disponibilidad) {
+        if (this.disponibilidades == null) {
+            this.disponibilidades = new ArrayList<>();
+        }
+        this.disponibilidades.add(disponibilidad);
+        disponibilidad.setDocente(this);
+    }
+    
+    public void removeDisponibilidad(DisponibilidadDocente disponibilidad) {
+        if (this.disponibilidades != null) {
+            this.disponibilidades.remove(disponibilidad);
+            disponibilidad.setDocente(null);
+        }
+    }
+    
+    public void clearDisponibilidades() {
+        if (this.disponibilidades != null) {
+            this.disponibilidades.clear();
+        }
     }
 }
