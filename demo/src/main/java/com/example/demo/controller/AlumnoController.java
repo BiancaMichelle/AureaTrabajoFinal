@@ -115,6 +115,9 @@ public class AlumnoController {
 
     @Autowired
     private AnalisisRendimientoService analisisRendimientoService;
+    
+    @Autowired
+    private com.example.demo.service.NotificacionInscripcionService notificacionInscripcionService;
 
     public AlumnoController(TareaRepository tareaRepository,
                           ExamenRepository examenRepository,
@@ -783,6 +786,25 @@ public class AlumnoController {
                 return "redirect:/publico";
             }
             
+            // ✅ Verificar si las inscripciones están abiertas
+            if (!oferta.getInscripcionesAbiertas()) {
+                String mensaje;
+                String estadoInscripcion = oferta.getEstadoInscripcion();
+                
+                // Si son próximas, mostrar modal de notificación
+                if ("Próximamente".equals(estadoInscripcion)) {
+                    redirectAttributes.addFlashAttribute("inscripcionProxima", true);
+                    redirectAttributes.addFlashAttribute("ofertaProxima", oferta);
+                    return "redirect:/publico";
+                } else {
+                    // Si ya cerraron, mostrar mensaje de error
+                    mensaje = "Las inscripciones para '" + oferta.getNombre() + "' ya han cerrado. " +
+                             "Finalizaron el " + oferta.getFechaFinInscripcion().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+                    redirectAttributes.addFlashAttribute("error", mensaje);
+                    return "redirect:/publico";
+                }
+            }
+            
             // ✅ Verificar cupos disponibles (Validación consistente con Frontend)
             // Usamos los datos de la entidad cargada para asegurar consistencia con lo que ve el usuario
             long inscritosReales = oferta.getCantidadAlumnosActivos();
@@ -1447,6 +1469,36 @@ public class AlumnoController {
         }).collect(Collectors.toList());
 
         return ResponseEntity.ok(resultado);
+    }
+    
+    /**
+     * Solicitar notificación cuando se abran las inscripciones
+     */
+    @PostMapping("/notificar-inscripcion/{ofertaId}")
+    @ResponseBody
+    public ResponseEntity<?> solicitarNotificacionInscripcion(@PathVariable Long ofertaId, Authentication authentication) {
+        try {
+            String dni = authentication.getName();
+            
+            Usuario usuario = usuarioRepository.findByDni(dni)
+                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+            
+            OfertaAcademica oferta = ofertaAcademicaRepository.findById(ofertaId)
+                    .orElseThrow(() -> new RuntimeException("Oferta no encontrada"));
+            
+            notificacionInscripcionService.solicitarNotificacion(usuario, oferta);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Te notificaremos por email cuando se abran las inscripciones");
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Error al procesar tu solicitud: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
     }
 }
 

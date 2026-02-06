@@ -67,7 +67,8 @@ public class OfertaAcademica {
     private Double recargoMora;
     
 
-    @NotEmpty(message = "Los horarios no pueden estar vacíos")
+    // Horarios semanales (solo para CURSO y FORMACION)
+    // Las Charlas y Seminarios tienen fecha/hora específica, no necesitan horarios semanales
     @OneToMany(mappedBy = "ofertaAcademica", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Horario> horarios = new ArrayList<>();
 
@@ -81,6 +82,13 @@ public class OfertaAcademica {
     private LocalDate fechaInicio;
     @NotNull(message = "La fecha de fin no puede estar vacía")
     private LocalDate fechaFin;
+    
+    // Fechas de inscripción
+    @NotNull(message = "La fecha de inicio de inscripción no puede estar vacía")
+    private LocalDate fechaInicioInscripcion;
+    @NotNull(message = "La fecha de fin de inscripción no puede estar vacía")
+    private LocalDate fechaFinInscripcion;
+    
     @NotNull(message = "El campo certificado no puede estar vacío")
     private Boolean certificado;
 
@@ -118,6 +126,9 @@ public class OfertaAcademica {
         this.visibilidad = true; // Default
         this.permiteInscripcionTardia = false;
         this.aula = new Aula();
+        // Por defecto, inscripciones abiertas desde hoy hasta el inicio
+        this.fechaInicioInscripcion = LocalDate.now();
+        this.fechaFinInscripcion = fechaInicio != null ? fechaInicio : LocalDate.now().plusMonths(1);
     }
     
     @ManyToMany(fetch = FetchType.EAGER) // Cambié a EAGER para facilitar
@@ -141,6 +152,13 @@ public class OfertaAcademica {
         if (fechaInicio != null && fechaFin != null && fechaInicio.isAfter(fechaFin)) {
             throw new IllegalStateException("La fecha de inicio no puede ser posterior a la fecha de fin.");
         }
+        
+        if (fechaInicioInscripcion != null && fechaFinInscripcion != null && fechaInicioInscripcion.isAfter(fechaFinInscripcion)) {
+            throw new IllegalStateException("La fecha de inicio de inscripción no puede ser posterior a la fecha de fin de inscripción.");
+        }
+        
+        // REMOVIDO: Validación que las inscripciones deben cerrar antes del inicio
+        // Las inscripciones pueden continuar incluso después del inicio de la oferta
         
         // Validación de horarios (opcional: descomentar si se quiere forzar al menos uno)
         // if (this.horarios == null || this.horarios.isEmpty()) {
@@ -188,6 +206,42 @@ public class OfertaAcademica {
         // y tiene cupos disponibles (opcional, según lógica de negocio)
         return (this.estado == EstadoOferta.ACTIVA || this.estado == EstadoOferta.ENCURSO) &&
                (this.cupos == null || this.cupos > 0);
+    }
+    
+    /**
+     * Verifica si las inscripciones están abiertas actualmente
+     */
+    public Boolean getInscripcionesAbiertas() {
+        if (fechaInicioInscripcion == null || fechaFinInscripcion == null) {
+            return false;
+        }
+        LocalDate hoy = LocalDate.now();
+        return !hoy.isBefore(fechaInicioInscripcion) && !hoy.isAfter(fechaFinInscripcion);
+    }
+    
+    /**
+     * Obtiene el estado de inscripción para mostrar en la UI
+     */
+    public String getEstadoInscripcion() {
+        if (fechaInicioInscripcion == null || fechaFinInscripcion == null) {
+            return "No disponible";
+        }
+        LocalDate hoy = LocalDate.now();
+        if (hoy.isBefore(fechaInicioInscripcion)) {
+            return "Próximamente";
+        } else if (hoy.isAfter(fechaFinInscripcion)) {
+            return "Cerradas";
+        } else {
+            return "Abiertas";
+        }
+    }
+    
+    /**
+     * Verifica si se puede inscribir considerando fechas y cupos
+     */
+    public Boolean getPuedeInscribirse() {
+        return getInscripcionesAbiertas() && tieneCuposDisponibles() && 
+               (estado == EstadoOferta.ACTIVA || estado == EstadoOferta.ENCURSO);
     }
 
     public Boolean getHabilitarCalculoCertificacion() {
@@ -654,7 +708,8 @@ public class OfertaAcademica {
                                     LocalDate fechaInicio, LocalDate fechaFin, 
                                     Modalidad modalidad, Integer cupos, Boolean visibilidad,
                                     Double costoInscripcion, Double recargoMora, Boolean certificado,
-                                    String lugar, String enlace) {
+                                    String lugar, String enlace,
+                                    LocalDate fechaInicioInscripcion, LocalDate fechaFinInscripcion) {
         if (nombre != null && !nombre.trim().isEmpty()) {
             this.nombre = nombre.trim();
         }
@@ -675,6 +730,14 @@ public class OfertaAcademica {
             this.fechaFin = fechaFin;
             // Recalcular duración en meses
             calcularDuracionMeses();
+        }
+        
+        if (fechaInicioInscripcion != null) {
+            this.fechaInicioInscripcion = fechaInicioInscripcion;
+        }
+        
+        if (fechaFinInscripcion != null) {
+            this.fechaFinInscripcion = fechaFinInscripcion;
         }
         
         if (modalidad != null) {
@@ -734,6 +797,21 @@ public class OfertaAcademica {
             errores.add("La fecha de fin debe ser posterior a la fecha de inicio");
         }
         
+        if (fechaInicioInscripcion == null) {
+            errores.add("La fecha de inicio de inscripción es obligatoria");
+        }
+        
+        if (fechaFinInscripcion == null) {
+            errores.add("La fecha de fin de inscripción es obligatoria");
+        }
+        
+        if (fechaInicioInscripcion != null && fechaFinInscripcion != null && fechaFinInscripcion.isBefore(fechaInicioInscripcion)) {
+            errores.add("La fecha de fin de inscripción debe ser posterior a la fecha de inicio de inscripción");
+        }
+        
+        // REMOVIDO: Validación que las inscripciones deben cerrar antes del inicio
+        // Las inscripciones pueden continuar incluso después del inicio de la oferta
+        
         if (cupos != null && cupos <= 0) {
             errores.add("Los cupos deben ser mayor a 0");
         }
@@ -767,6 +845,12 @@ public class OfertaAcademica {
         }
         if (datos.containsKey("fechaFin")) {
             this.setFechaFin(convertirFecha(datos.get("fechaFin")));
+        }
+        if (datos.containsKey("fechaInicioInscripcion")) {
+            this.setFechaInicioInscripcion(convertirFecha(datos.get("fechaInicioInscripcion")));
+        }
+        if (datos.containsKey("fechaFinInscripcion")) {
+            this.setFechaFinInscripcion(convertirFecha(datos.get("fechaFinInscripcion")));
         }
         if (datos.containsKey("modalidad")) {
              String modStr = (String) datos.get("modalidad");

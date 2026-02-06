@@ -858,6 +858,8 @@ public class AdminController {
             @RequestParam(required = false) Double costoInscripcion,
             @RequestParam(required = false) String fechaInicio,
             @RequestParam(required = false) String fechaFin,
+            @RequestParam(required = false) String fechaInicioInscripcion,
+            @RequestParam(required = false) String fechaFinInscripcion,
             @RequestParam(required = false) String modalidad,
             @RequestParam(required = false) String otorgaCertificado,
             @RequestParam(required = false) MultipartFile imagen,
@@ -926,7 +928,7 @@ public class AdminController {
             }
             
             // Validar formato de fechas
-            LocalDate fechaInicioDate, fechaFinDate;
+            LocalDate fechaInicioDate, fechaFinDate, fechaInicioInscripcionDate, fechaFinInscripcionDate;
             try {
                 fechaInicioDate = LocalDate.parse(fechaInicio);
                 fechaFinDate = LocalDate.parse(fechaFin);
@@ -938,6 +940,35 @@ public class AdminController {
                     errorResponse.put("message", "La fecha de inicio no puede ser posterior a la fecha de fin");
                     return ResponseEntity.badRequest().body(errorResponse);
                 }
+                
+                // Validar fechas de inscripción
+                if (fechaInicioInscripcion == null || fechaInicioInscripcion.trim().isEmpty()) {
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("success", false);
+                    errorResponse.put("message", "La fecha de inicio de inscripción es obligatoria");
+                    return ResponseEntity.badRequest().body(errorResponse);
+                }
+                
+                if (fechaFinInscripcion == null || fechaFinInscripcion.trim().isEmpty()) {
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("success", false);
+                    errorResponse.put("message", "La fecha de fin de inscripción es obligatoria");
+                    return ResponseEntity.badRequest().body(errorResponse);
+                }
+                
+                fechaInicioInscripcionDate = LocalDate.parse(fechaInicioInscripcion);
+                fechaFinInscripcionDate = LocalDate.parse(fechaFinInscripcion);
+                
+                // Validar que fecha de inicio de inscripción no sea posterior a fecha de fin de inscripción
+                if (fechaInicioInscripcionDate.isAfter(fechaFinInscripcionDate)) {
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("success", false);
+                    errorResponse.put("message", "La fecha de inicio de inscripción no puede ser posterior a la fecha de fin de inscripción");
+                    return ResponseEntity.badRequest().body(errorResponse);
+                }
+                
+                // REMOVIDO: Validación que las inscripciones deben cerrar antes del inicio
+                // Las inscripciones pueden continuar incluso después del inicio de la oferta
             } catch (Exception e) {
                 Map<String, Object> errorResponse = new HashMap<>();
                 errorResponse.put("success", false);
@@ -945,18 +976,24 @@ public class AdminController {
                 return ResponseEntity.badRequest().body(errorResponse);
             }
             
-            // Validar lugar y enlace según modalidad para TODOS los tipos
+            // Validar lugar y enlace según modalidad
+            // IMPORTANTE: Enlace obligatorio SOLO para CHARLA y SEMINARIO en modalidad virtual/híbrida
             boolean esVirtual = "VIRTUAL".equalsIgnoreCase(modalidad) || "HIBRIDA".equalsIgnoreCase(modalidad);
             boolean esPresencial = "PRESENCIAL".equalsIgnoreCase(modalidad) || "HIBRIDA".equalsIgnoreCase(modalidad);
+            boolean esCharlaOSeminario = "CHARLA".equalsIgnoreCase(tipoOferta) || "SEMINARIO".equalsIgnoreCase(tipoOferta);
             
-            // Validar enlace si es virtual/híbrida
-            if (esVirtual) {
+            // Validar enlace si es virtual/híbrida SOLO para Charla y Seminario
+            if (esVirtual && esCharlaOSeminario) {
                 if (enlace == null || enlace.trim().isEmpty()) {
                     Map<String, Object> errorResponse = new HashMap<>();
                     errorResponse.put("success", false);
-                    errorResponse.put("message", "Para modalidad Virtual o Híbrida, el enlace es obligatorio");
+                    errorResponse.put("message", "Para modalidad Virtual o Híbrida en Charlas y Seminarios, el enlace es obligatorio");
                     return ResponseEntity.badRequest().body(errorResponse);
                 }
+            }
+            
+            // Validar URL si se proporciona enlace
+            if (enlace != null && !enlace.trim().isEmpty()) {
                 try {
                     new java.net.URL(enlace);
                 } catch (java.net.MalformedURLException e) {
@@ -1019,21 +1056,25 @@ public class AdminController {
             // Crear la instancia específica según el tipo
             switch (tipoOferta.toUpperCase()) {
                 case "CURSO":
-                    oferta = crearCurso(nombre, descripcion, cupos, costoInscripcion, fechaInicio, fechaFin, modalidad, lugar, enlace,
+                    oferta = crearCurso(nombre, descripcion, cupos, costoInscripcion, fechaInicio, fechaFin, 
+                                      fechaInicioInscripcion, fechaFinInscripcion, modalidad, lugar, enlace,
                                       temario, docentesCurso, costoCuota, costoMora, nrCuotas, diaVencimiento);
                     break;
                 case "FORMACION":
-                    oferta = crearFormacion(nombre, descripcion, cupos, costoInscripcion, fechaInicio, fechaFin, modalidad, lugar, enlace,
+                    oferta = crearFormacion(nombre, descripcion, cupos, costoInscripcion, fechaInicio, fechaFin,
+                                          fechaInicioInscripcion, fechaFinInscripcion, modalidad, lugar, enlace,
                                           planFormacion, docentesFormacion, 
                                           costoCuotaFormacion, costoMoraFormacion, nrCuotasFormacion, diaVencimientoFormacion);
                     break;
                 case "CHARLA":
-                    oferta = crearCharla(nombre, descripcion, cupos, costoInscripcion, fechaInicio, fechaFin, modalidad,
+                    oferta = crearCharla(nombre, descripcion, cupos, costoInscripcion, fechaInicio, fechaFin,
+                                       fechaInicioInscripcion, fechaFinInscripcion, modalidad,
                                        lugar, enlace, duracionEstimada, disertantesCharla, 
                                        publicoObjetivoCharla);
                     break;
                 case "SEMINARIO":
-                    oferta = crearSeminario(nombre, descripcion, cupos, costoInscripcion, fechaInicio, fechaFin, modalidad,
+                    oferta = crearSeminario(nombre, descripcion, cupos, costoInscripcion, fechaInicio, fechaFin,
+                                          fechaInicioInscripcion, fechaFinInscripcion, modalidad,
                                           lugar, enlace, duracionMinutos, disertantesSeminario, publicoObjetivoSeminario);
                     break;
                 default:
@@ -1164,11 +1205,13 @@ public class AdminController {
     // Métodos auxiliares para crear cada tipo de oferta específica
     
     private Curso crearCurso(String nombre, String descripcion, Integer cupos, Double costo,
-                           String fechaInicio, String fechaFin, String modalidad, String lugar, String enlace,
+                           String fechaInicio, String fechaFin, String fechaInicioInscripcion, String fechaFinInscripcion,
+                           String modalidad, String lugar, String enlace,
                            String temario, String docentesIds, Double costoCuota, Double costoMora, 
                            Integer nrCuotas, Integer diaVencimiento) {
         Curso curso = new Curso();
-        configurarOfertaBase(curso, nombre, descripcion, cupos, costo, fechaInicio, fechaFin, modalidad, lugar, enlace);
+        configurarOfertaBase(curso, nombre, descripcion, cupos, costo, fechaInicio, fechaFin, 
+                           fechaInicioInscripcion, fechaFinInscripcion, modalidad, lugar, enlace);
         
         // Campos específicos del curso
         curso.setTemario(temario);
@@ -1190,11 +1233,13 @@ public class AdminController {
     }
     
     private Formacion crearFormacion(String nombre, String descripcion, Integer cupos, Double costo,
-                                   String fechaInicio, String fechaFin, String modalidad, String lugar, String enlace,
+                                   String fechaInicio, String fechaFin, String fechaInicioInscripcion, String fechaFinInscripcion,
+                                   String modalidad, String lugar, String enlace,
                                    String plan, String docentesIds, Double costoCuota, Double costoMora,
                                    Integer nrCuotas, Integer diaVencimiento) {
         Formacion formacion = new Formacion();
-        configurarOfertaBase(formacion, nombre, descripcion, cupos, costo, fechaInicio, fechaFin, modalidad, lugar, enlace);
+        configurarOfertaBase(formacion, nombre, descripcion, cupos, costo, fechaInicio, fechaFin,
+                           fechaInicioInscripcion, fechaFinInscripcion, modalidad, lugar, enlace);
         
         // Campos específicos de la formación
         formacion.setPlan(plan);
@@ -1243,11 +1288,13 @@ public class AdminController {
     }
     
     private Charla crearCharla(String nombre, String descripcion, Integer cupos, Double costo,
-                             String fechaInicio, String fechaFin, String modalidad,
+                             String fechaInicio, String fechaFin, String fechaInicioInscripcion, String fechaFinInscripcion,
+                             String modalidad,
                              String lugar, String enlace, Integer duracionEstimada,
                              String disertantesStr, String publicoObjetivo) {
         Charla charla = new Charla();
-        configurarOfertaBase(charla, nombre, descripcion, cupos, costo, fechaInicio, fechaFin, modalidad, lugar, enlace);
+        configurarOfertaBase(charla, nombre, descripcion, cupos, costo, fechaInicio, fechaFin,
+                           fechaInicioInscripcion, fechaFinInscripcion, modalidad, lugar, enlace);
         
         // Campos específicos de la charla
         if (duracionEstimada != null) charla.setDuracionEstimada(duracionEstimada);
@@ -1270,11 +1317,13 @@ public class AdminController {
     }
     
     private Seminario crearSeminario(String nombre, String descripcion, Integer cupos, Double costo,
-                                   String fechaInicio, String fechaFin, String modalidad,
+                                   String fechaInicio, String fechaFin, String fechaInicioInscripcion, String fechaFinInscripcion,
+                                   String modalidad,
                                    String lugar, String enlace, Integer duracionMinutos,
                                    String disertantesStr, String publicoObjetivo) {
         Seminario seminario = new Seminario();
-        configurarOfertaBase(seminario, nombre, descripcion, cupos, costo, fechaInicio, fechaFin, modalidad, lugar, enlace);
+        configurarOfertaBase(seminario, nombre, descripcion, cupos, costo, fechaInicio, fechaFin,
+                           fechaInicioInscripcion, fechaFinInscripcion, modalidad, lugar, enlace);
         
         // Campos específicos del seminario
         if (duracionMinutos != null) seminario.setDuracionMinutos(duracionMinutos);
@@ -1298,7 +1347,8 @@ public class AdminController {
     
     private void configurarOfertaBase(OfertaAcademica oferta, String nombre, String descripcion,
                                     Integer cupos, Double costo, String fechaInicio, 
-                                    String fechaFin, String modalidad, String lugar, String enlace) {
+                                    String fechaFin, String fechaInicioInscripcion, String fechaFinInscripcion,
+                                    String modalidad, String lugar, String enlace) {
         oferta.setNombre(nombre);
         oferta.setDescripcion(descripcion);
         oferta.setLugar(lugar);
@@ -1313,6 +1363,14 @@ public class AdminController {
         
         if (fechaFin != null && !fechaFin.isEmpty()) {
             oferta.setFechaFin(LocalDate.parse(fechaFin));
+        }
+        
+        if (fechaInicioInscripcion != null && !fechaInicioInscripcion.isEmpty()) {
+            oferta.setFechaInicioInscripcion(LocalDate.parse(fechaInicioInscripcion));
+        }
+        
+        if (fechaFinInscripcion != null && !fechaFinInscripcion.isEmpty()) {
+            oferta.setFechaFinInscripcion(LocalDate.parse(fechaFinInscripcion));
         }
         
         // Configurar modalidad
@@ -1444,18 +1502,24 @@ public class AdminController {
                 return ResponseEntity.badRequest().body(errorResponse);
             }
             
-            // Validar lugar y enlace según modalidad para TODOS los tipos
+            // Validar lugar y enlace según modalidad
+            // IMPORTANTE: Enlace obligatorio SOLO para CHARLA y SEMINARIO en modalidad virtual/híbrida
             boolean esVirtual = "VIRTUAL".equalsIgnoreCase(modalidad) || "HIBRIDA".equalsIgnoreCase(modalidad);
             boolean esPresencial = "PRESENCIAL".equalsIgnoreCase(modalidad) || "HIBRIDA".equalsIgnoreCase(modalidad);
+            boolean esCharlaOSeminario = "CHARLA".equalsIgnoreCase(tipoOferta) || "SEMINARIO".equalsIgnoreCase(tipoOferta);
             
-            // Validar enlace si es virtual/híbrida
-            if (esVirtual) {
+            // Validar enlace si es virtual/híbrida SOLO para Charla y Seminario
+            if (esVirtual && esCharlaOSeminario) {
                 if (enlace == null || enlace.trim().isEmpty()) {
                     Map<String, Object> errorResponse = new HashMap<>();
                     errorResponse.put("success", false);
-                    errorResponse.put("message", "Para modalidad Virtual o Híbrida, el enlace es obligatorio");
+                    errorResponse.put("message", "Para modalidad Virtual o Híbrida en Charlas y Seminarios, el enlace es obligatorio");
                     return ResponseEntity.badRequest().body(errorResponse);
                 }
+            }
+            
+            // Validar URL si se proporciona enlace
+            if (enlace != null && !enlace.trim().isEmpty()) {
                 try {
                     new java.net.URL(enlace);
                 } catch (java.net.MalformedURLException e) {

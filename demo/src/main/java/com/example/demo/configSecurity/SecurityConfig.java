@@ -83,6 +83,7 @@ public class SecurityConfig {
                                 "/charla/videoconferencia/**")
                         .permitAll()
                         .requestMatchers("/admin/**").hasAuthority("ADMIN")
+                        .requestMatchers("/alumno/notificar-inscripcion/**").authenticated() // Permitir a cualquier usuario autenticado
                         .requestMatchers("/alumno/**", "/inscribirse/**").hasAnyAuthority("ALUMNO", "DOCENTE")
                         .requestMatchers("/docente/**").hasAuthority("DOCENTE")
                         .requestMatchers("/ia/chat/**", "/ia/status", "/ia/health").permitAll()

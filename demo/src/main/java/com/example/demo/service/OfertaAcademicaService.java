@@ -272,7 +272,9 @@ public class OfertaAcademicaService {
             0.0,
             datosNuevos.getCertificado(),
             datosNuevos.getLugar(),
-            datosNuevos.getEnlace()
+            datosNuevos.getEnlace(),
+            datosNuevos.getFechaInicioInscripcion(),
+            datosNuevos.getFechaFinInscripcion()
         );
         
         // Aplicar modificaciones específicas según el tipo

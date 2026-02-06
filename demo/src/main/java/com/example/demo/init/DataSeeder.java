@@ -192,68 +192,108 @@ public class DataSeeder implements CommandLineRunner {
         Random rand = new Random();
 
         // --- 3 CURSOS ---
-        crearCursoSiNoExiste(new Curso(
+        Curso curso1 = new Curso(
             "Java Spring Avanzado", "Dominando Spring Boot 3", Modalidad.VIRTUAL, 15000.0, true, 
             LocalDate.now().minusDays(30), LocalDate.now().plusMonths(3), 30, 3, 500.0, 10,
             Arrays.asList(docentes.get(0), docentes.get(1))
-        ));
+        );
+        // Inscripciones cerradas (terminaron hace 2 semanas)
+        curso1.setFechaInicioInscripcion(LocalDate.now().minusMonths(2));
+        curso1.setFechaFinInscripcion(LocalDate.now().minusDays(14));
+        crearCursoSiNoExiste(curso1);
 
-        crearCursoSiNoExiste(new Curso(
+        Curso curso2 = new Curso(
             "Introducción a Python", "Fundamentos de programación en Python", Modalidad.VIRTUAL, 12000.0, true, 
             LocalDate.now().minusDays(15), LocalDate.now().plusMonths(3), 30, 3, 500.0, 10,
             Arrays.asList(docentes.get(rand.nextInt(docentes.size())))
-        ));
+        );
+        // Inscripciones abiertas (empezaron hace 1 mes, cierran en 2 semanas)
+        curso2.setFechaInicioInscripcion(LocalDate.now().minusMonths(1));
+        curso2.setFechaFinInscripcion(LocalDate.now().plusDays(14));
+        crearCursoSiNoExiste(curso2);
 
-        crearCursoSiNoExiste(new Curso(
+        Curso curso3 = new Curso(
             "Desarrollo Web Fullstack", "De cero a experto en HTML, CSS, JS y Java", Modalidad.HIBRIDA, 20000.0, true, 
              LocalDate.now().plusDays(10), LocalDate.now().plusMonths(3), 30, 3, 500.0, 10,
             Arrays.asList(docentes.get(0), docentes.get(2))
-        ));
+        );
+        // Inscripciones próximas (abren en 5 días, cierran en 1 mes)
+        curso3.setFechaInicioInscripcion(LocalDate.now().plusDays(5));
+        curso3.setFechaFinInscripcion(LocalDate.now().plusMonths(1));
+        crearCursoSiNoExiste(curso3);
 
         // --- 2 FORMACIONES ---
-        crearFormacionSiNoExiste(new Formacion(
+        Formacion formacion1 = new Formacion(
             "Experto en Ciencia de Datos", "Formación completa en Data Science", "Data Engineer", Modalidad.VIRTUAL, 25000.0,
             LocalDate.now().plusDays(15), LocalDate.now().plusMonths(6), 20, 6, 600.0, 5,
             Arrays.asList(docentes.get(1), docentes.get(3))
-        ));
+        );
+        // Inscripciones abiertas (empezaron hace 2 semanas, cierran en 10 días)
+        formacion1.setFechaInicioInscripcion(LocalDate.now().minusDays(14));
+        formacion1.setFechaFinInscripcion(LocalDate.now().plusDays(10));
+        crearFormacionSiNoExiste(formacion1);
 
-        crearFormacionSiNoExiste(new Formacion(
+        Formacion formacion2 = new Formacion(
             "Gestión de Proyectos IT", "Metodologías ágiles y tradicionales", "Project Manager", Modalidad.PRESENCIAL, 18000.0,
             LocalDate.now().plusDays(15), LocalDate.now().plusMonths(6), 20, 6, 600.0, 5,
             Arrays.asList(docentes.get(2))
-        ));
+        );
+        // Inscripciones cerradas (terminaron hace 1 semana)
+        formacion2.setFechaInicioInscripcion(LocalDate.now().minusMonths(1));
+        formacion2.setFechaFinInscripcion(LocalDate.now().minusDays(7));
+        crearFormacionSiNoExiste(formacion2);
 
         // --- 3 CHARLAS ---
-        crearCharlaSiNoExiste(new Charla(
+        Charla charla1 = new Charla(
             "El Futuro de la IA", "Impacto de la IA generativa", "Público General", Modalidad.VIRTUAL,
             LocalDate.now().plusDays(5), "https://zoom.us/meet/123",
             Arrays.asList("Dr. Alan Turing", "Ada Lovelace")
-        ));
+        );
+        // Inscripciones abiertas (empezaron hace 5 días, cierran en 4 días)
+        charla1.setFechaInicioInscripcion(LocalDate.now().minusDays(5));
+        charla1.setFechaFinInscripcion(LocalDate.now().plusDays(4));
+        crearCharlaSiNoExiste(charla1);
 
-        crearCharlaSiNoExiste(new Charla(
+        Charla charla2 = new Charla(
             "Ciberseguridad en 2026", "Nuevos desafíos y amenazas", "Estudiantes IT", Modalidad.VIRTUAL,
             LocalDate.now().plusDays(5), "https://zoom.us/meet/123",
             Arrays.asList("Kevin Mitnick")
-        ));
+        );
+        // Inscripciones próximas (abren en 3 días, cierran en 2 semanas)
+        charla2.setFechaInicioInscripcion(LocalDate.now().plusDays(3));
+        charla2.setFechaFinInscripcion(LocalDate.now().plusDays(14));
+        crearCharlaSiNoExiste(charla2);
 
-        crearCharlaSiNoExiste(new Charla(
+        Charla charla3 = new Charla(
             "Bienestar Digital", "Equilibrio vida-trabajo", "Todo público", Modalidad.VIRTUAL,
             LocalDate.now().plusDays(5), "https://zoom.us/meet/123",
             Arrays.asList("Arianna Huffington")
-        ));
+        );
+        // Inscripciones abiertas (empezaron hace 1 semana, cierran en 3 días)
+        charla3.setFechaInicioInscripcion(LocalDate.now().minusDays(7));
+        charla3.setFechaFinInscripcion(LocalDate.now().plusDays(3));
+        crearCharlaSiNoExiste(charla3);
 
         // --- 2 SEMINARIOS ---
-        crearSeminarioSiNoExiste(new Seminario(
+        Seminario seminario1 = new Seminario(
             "Arquitectura de Microservicios", "Patrones y antipatrones", "Arquitectos de Software", Modalidad.PRESENCIAL, 5000.0,
             LocalDate.now().plusDays(20), LocalDate.now().plusDays(21), "Auditorio Central", 120,
             Arrays.asList("Martin Fowler", "Robert C. Martin")
-        ));
+        );
+        // Inscripciones abiertas (empezaron hace 10 días, cierran en 15 días)
+        seminario1.setFechaInicioInscripcion(LocalDate.now().minusDays(10));
+        seminario1.setFechaFinInscripcion(LocalDate.now().plusDays(15));
+        crearSeminarioSiNoExiste(seminario1);
 
-        crearSeminarioSiNoExiste(new Seminario(
+        Seminario seminario2 = new Seminario(
             "Marketing para Desarrolladores", "Marca personal y visibilidad", "Freelancers", Modalidad.PRESENCIAL, 5000.0,
             LocalDate.now().plusDays(20), LocalDate.now().plusDays(21), "Auditorio Central", 90,
             Arrays.asList("Seth Godin")
-        ));
+        );
+        // Inscripciones cerradas (terminaron hace 3 días)
+        seminario2.setFechaInicioInscripcion(LocalDate.now().minusDays(30));
+        seminario2.setFechaFinInscripcion(LocalDate.now().minusDays(3));
+        crearSeminarioSiNoExiste(seminario2);
         
         // --- Nuevo: Crear 2 Formaciones en curso con docente 12345678 y alumno 44444444 ---
         Docente docenteRoberto = docenteRepository.findAll().stream()
@@ -297,6 +337,9 @@ public class DataSeeder implements CommandLineRunner {
                     Arrays.asList(docenteRoberto)
                 );
                 f1.setEstado(EstadoOferta.ENCURSO);
+                // Fechas de inscripción (cerradas - terminaron hace 1 mes)
+                f1.setFechaInicioInscripcion(LocalDate.now().minusMonths(2));
+                f1.setFechaFinInscripcion(LocalDate.now().minusMonths(1));
                 // horarios L-V 09:00 - 10:30
                 for (Dias d : Arrays.asList(Dias.LUNES, Dias.MARTES, Dias.MIERCOLES, Dias.JUEVES, Dias.VIERNES)) {
                     Horario h = new Horario();
@@ -366,6 +409,10 @@ public class DataSeeder implements CommandLineRunner {
                         30, 3, 500.0, 10,
                         Arrays.asList(docenteRoberto)
                     );
+                    
+                    // Fechas de inscripción (cerradas - terminaron hace 1 mes)
+                    cursoRiesgo.setFechaInicioInscripcion(LocalDate.now().minusMonths(2));
+                    cursoRiesgo.setFechaFinInscripcion(LocalDate.now().minusMonths(1));
                     
                     // Agregar Modulo
                     Modulo mod = new Modulo();
@@ -470,6 +517,9 @@ public class DataSeeder implements CommandLineRunner {
                     Arrays.asList(docenteRoberto)
                 );
                 f2.setEstado(EstadoOferta.ENCURSO);
+                // Fechas de inscripción (cerradas - terminaron hace 1 mes)
+                f2.setFechaInicioInscripcion(LocalDate.now().minusMonths(2));
+                f2.setFechaFinInscripcion(LocalDate.now().minusMonths(1));
                 for (Dias d : Arrays.asList(Dias.LUNES, Dias.MARTES, Dias.MIERCOLES, Dias.JUEVES, Dias.VIERNES)) {
                     Horario h = new Horario();
                     h.setDia(d);
@@ -587,6 +637,9 @@ public class DataSeeder implements CommandLineRunner {
             Arrays.asList(docente)
         );
         curso.setEstado(EstadoOferta.FINALIZADA);
+        // Fechas de inscripción (cerradas - terminaron hace 3 meses)
+        curso.setFechaInicioInscripcion(LocalDate.now().minusMonths(4));
+        curso.setFechaFinInscripcion(LocalDate.now().minusMonths(3));
         asegurarHorarios(curso);
         curso = cursoRepository.save(curso);
 
