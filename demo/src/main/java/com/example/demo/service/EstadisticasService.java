@@ -12,9 +12,15 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import java.time.format.DateTimeFormatter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Service
 @Transactional(readOnly = true)
 public class EstadisticasService {
+    
+    private static final Logger logger = LoggerFactory.getLogger(EstadisticasService.class);
 
     @Autowired
     private OfertaAcademicaRepository ofertaRepository;
@@ -326,5 +332,165 @@ public class EstadisticasService {
         }
     }
 
+    /**
+     * 1.1 Oferta Académica (Estado y Rendimiento)
+     */
+    public Map<String, Object> obtenerEstadisticasOfertasDetalladas() {
+        Map<String, Object> stats = new HashMap<>();
+        try {
+            List<OfertaAcademica> todas = ofertaRepository.findAll();
+            
+            // Cantidad por estado
+            Map<EstadoOferta, Long> porEstado = todas.stream()
+                .collect(Collectors.groupingBy(OfertaAcademica::getEstado, Collectors.counting()));
+            
+            stats.put("porEstado", porEstado);
+            
+            // Tasa de ocupación promedio
+            double ocupacionPromedio = todas.stream()
+                .filter(o -> o.getCupos() != null && o.getCupos() > 0)
+                .mapToDouble(o -> {
+                    long inscritos = inscripcionRepository.findByOfertaIdOferta(o.getIdOferta()).size();
+                    return (double) inscritos / o.getCupos();
+                })
+                .average().orElse(0.0);
+            stats.put("ocupacionPromedio", ocupacionPromedio);
 
+            // Ofertas con alta demanda (> 80% ocupación)
+            List<Map<String, Object>> altaDemanda = todas.stream()
+                .map(o -> {
+                    long inscritos = inscripcionRepository.findByOfertaIdOferta(o.getIdOferta()).size();
+                    double ocupacion = (o.getCupos() != null && o.getCupos() > 0) ? (double) inscritos / o.getCupos() : 0;
+                    if (ocupacion > 0.8) {
+                        Map<String, Object> map = new HashMap<>();
+                        map.put("nombre", o.getNombre());
+                        map.put("ocupacion", ocupacion);
+                        map.put("inscritos", inscritos);
+                        return map;
+                    }
+                    return null;
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+            stats.put("altaDemanda", altaDemanda);
+
+             // Ofertas con baja demanda (< 10% ocupación)
+            List<Map<String, Object>> bajaDemanda = todas.stream()
+                .map(o -> {
+                    long inscritos = inscripcionRepository.findByOfertaIdOferta(o.getIdOferta()).size();
+                    double ocupacion = (o.getCupos() != null && o.getCupos() > 0) ? (double) inscritos / o.getCupos() : 0;
+                    if (ocupacion < 0.1) {
+                         Map<String, Object> map = new HashMap<>();
+                        map.put("nombre", o.getNombre());
+                        map.put("ocupacion", ocupacion);
+                        map.put("inscritos", inscritos);
+                        return map;
+                    }
+                    return null;
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+            stats.put("bajaDemanda", bajaDemanda);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return stats;
+    }
+
+    /**
+     * 1.2 Inscripciones y Alumnos (Evolución)
+     */
+    public Map<String, Object> obtenerEstadisticasInscripciones() {
+        Map<String, Object> stats = new HashMap<>();
+        try {
+            List<Inscripciones> todas = inscripcionRepository.findAll();
+            logger.info("obtenerEstadisticasInscripciones: total inscripciones = {}", todas.size());
+            // Evolución mensual (últimos 12 meses)
+            Map<String, Long> evolucionMensual = new TreeMap<>();
+            LocalDate hoy = LocalDate.now();
+            for (int i = 11; i >= 0; i--) {
+                LocalDate fecha = hoy.minusMonths(i);
+                String key = fecha.format(DateTimeFormatter.ofPattern("yyyy-MM"));
+                long count = todas.stream()
+                    .filter(ins -> ins.getFechaInscripcion() != null && 
+                                   ins.getFechaInscripcion().getMonth() == fecha.getMonth() && 
+                                   ins.getFechaInscripcion().getYear() == fecha.getYear())
+                    .count();
+                evolucionMensual.put(key, count);
+            }
+            stats.put("evolucionMensual", evolucionMensual);
+            logger.info("evolucionMensual: {}", evolucionMensual);
+
+            // Nuevos vs Recurrentes (Simplificado: si el alumno tiene > 1 inscripción es recurrente)
+            // Se usa Object para la clave para evitar problemas con UUID vs Long si cambia el modelo
+            Map<Object, Long> conteoPorAlumno = todas.stream()
+                .filter(i -> i.getAlumno() != null)
+                .collect(Collectors.groupingBy(i -> i.getAlumno().getId(), Collectors.counting()));
+            
+            long recurrentes = conteoPorAlumno.values().stream().filter(c -> c > 1).count();
+            long nuevos = conteoPorAlumno.values().stream().filter(c -> c == 1).count();
+            
+            stats.put("alumnosNuevos", nuevos);
+            stats.put("alumnosRecurrentes", recurrentes);
+            logger.info("alumnosNuevos = {}, alumnosRecurrentes = {}", nuevos, recurrentes);
+            
+            // Tasa de abandono (Inscripciones inactivas / Total)
+            long total = todas.size();
+            long inactivas = todas.stream().filter(i -> i.getEstadoInscripcion() != null && !i.getEstadoInscripcion()).count();
+            double tasaAbandono = total > 0 ? (double) inactivas / total : 0;
+            stats.put("tasaAbandonoGlobal", tasaAbandono);
+            logger.info("tasaAbandonoGlobal = {}", tasaAbandono);
+
+        } catch (Exception e) {
+            logger.error("Error en obtenerEstadisticasInscripciones", e);
+        }
+        return stats;
+    }
+
+    /**
+     * 1.6 Estadísticas Económicas
+     */
+    public Map<String, Object> obtenerEstadisticasEconomicas() {
+        Map<String, Object> stats = new HashMap<>();
+        try {
+            List<Pago> pagos = pagoRepository.findAll();
+            
+            // Ingresos totales
+            double ingresosTotales = pagos.stream()
+                .filter(p -> p.getMonto() != null)
+                .mapToDouble(p -> p.getMonto().doubleValue())
+                .sum();
+            stats.put("ingresosTotalesHist", ingresosTotales);
+
+            // Ingresos por Oferta
+            Map<String, Double> ingresosPorOferta = pagos.stream()
+                .filter(p -> p.getMonto() != null)
+                .map(p -> {
+                    // Intentar obtener oferta directamente o a través de inscripción
+                    String nombreOferta = "Desconocido";
+                    if (p.getOferta() != null) {
+                        nombreOferta = p.getOferta().getNombre();
+                    } else if (p.getInscripcion() != null && p.getInscripcion().getOferta() != null) {
+                        nombreOferta = p.getInscripcion().getOferta().getNombre();
+                    }
+                    return new AbstractMap.SimpleEntry<>(nombreOferta, p.getMonto().doubleValue());
+                })
+                .collect(Collectors.groupingBy(
+                    Map.Entry::getKey,
+                    Collectors.summingDouble(Map.Entry::getValue)
+                ));
+            stats.put("ingresosPorOferta", ingresosPorOferta);
+
+            // Estado de Pagos (Pendiente vs Aprobado)
+            Map<String, Long> estadoPagos = pagos.stream()
+                .filter(p -> p.getEstadoPago() != null)
+                .collect(Collectors.groupingBy(p -> p.getEstadoPago().toString(), Collectors.counting()));
+            stats.put("estadoPagos", estadoPagos);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return stats;
+    }
 }

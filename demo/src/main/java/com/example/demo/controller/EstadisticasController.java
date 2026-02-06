@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Controller
 @RequestMapping("/admin/estadisticas")
@@ -18,6 +20,7 @@ public class EstadisticasController {
     @Autowired
     private EstadisticasService estadisticasService;
 
+    private static final Logger logger = LoggerFactory.getLogger(EstadisticasController.class);
     /**
      * Página principal del módulo de estadísticas
      */
@@ -30,6 +33,11 @@ public class EstadisticasController {
             List<Map<String, Object>> demandaOfertas = estadisticasService.analizarDemandaOfertas();
             Map<String, Object> analisisDesercion = estadisticasService.analizarDesercion();
             Map<String, Object> proyeccionCrecimiento = estadisticasService.proyectarCrecimiento();
+
+            // Nuevas estadísticas detalladas
+            model.addAttribute("statsOfertas", estadisticasService.obtenerEstadisticasOfertasDetalladas());
+            model.addAttribute("statsInscripciones", estadisticasService.obtenerEstadisticasInscripciones());
+            model.addAttribute("statsEconomia", estadisticasService.obtenerEstadisticasEconomicas());
             
             // Agregar campos adicionales que necesita el template
             if (metricas != null && !metricas.containsKey("totalOfertas")) {
@@ -246,6 +254,26 @@ public class EstadisticasController {
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
         }
+    }
+
+    @GetMapping("/api/ofertas-detalladas")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> getOfertasDetalladas() {
+        return ResponseEntity.ok(estadisticasService.obtenerEstadisticasOfertasDetalladas());
+    }
+
+    @GetMapping("/api/inscripciones-detalladas")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> getInscripcionesDetalladas() {
+        Map<String, Object> stats = estadisticasService.obtenerEstadisticasInscripciones();
+        logger.info("GET /admin/estadisticas/api/inscripciones-detalladas -> keys: {}", stats.keySet());
+        return ResponseEntity.ok(stats);
+    }
+    
+    @GetMapping("/api/economia-detallada")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> getEconomiaDetallada() {
+        return ResponseEntity.ok(estadisticasService.obtenerEstadisticasEconomicas());
     }
 
     /**

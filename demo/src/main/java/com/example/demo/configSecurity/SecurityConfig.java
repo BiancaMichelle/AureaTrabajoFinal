@@ -73,7 +73,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session
                         .invalidSessionUrl("/login?timeout"))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/publico/**", "/login", "/register", "/register/**",
+                        .requestMatchers("/", "/publico/**", "/login", "/register", "/register/**", "/terminos",
                                 "/provincias/**", "/ciudades/**", "/api/ubicaciones/**",
                                 "/email/**", "/css/**", "/js/**", "/style/**", "/img/**",
                                 "/api/**", "/admin/configuracion/carrusel/**",

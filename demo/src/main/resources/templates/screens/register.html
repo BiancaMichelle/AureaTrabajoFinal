@@ -201,8 +201,18 @@
                 <small id="confirm-feedback" style="display:block; margin-top:6px; font-size:12px; color:#ef4444;"></small>
             </div>
             <div>
-                <label>
-                    <input type="checkbox" id="terms" name="terms" required /> Acepto los <a href="#" target="_blank">términos y condiciones</a>
+                <input type="checkbox" id="terms" name="terms"  required class="mt-1 h-4 w-4 text-indigo-600 rounded">
+                <label for="terms" class="text-sm text-slate-600 leading-tight">
+                    Acepto los 
+                    <!-- ESTE ES EL ENLACE QUE ABRE EN OTRA PESTAÑA -->
+                    <a th:href="@{/terminos}" 
+                       target="_blank" 
+                       rel="noopener noreferrer" 
+                       class="text-indigo-600 font-semibold hover:underline decoration-2">
+                       términos y condiciones
+                       <i class="fas fa-external-link-alt text-[10px] ml-1"></i>
+                    </a> 
+                    del instituto.
                 </label>
             </div>
             <div>

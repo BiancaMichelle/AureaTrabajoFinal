@@ -130,6 +130,11 @@ document.addEventListener('DOMContentLoaded', function () {
         // 1. Gráfico de Distribución de Ofertas (Dona)
         const ofertasCtx = document.getElementById('ofertasChart');
         if (ofertasCtx) {
+            // Check if chart instance exists and destroy it
+            const existingOffersChart = Chart.getChart(ofertasCtx);
+            if (existingOffersChart) {
+                existingOffersChart.destroy();
+            }
             new Chart(ofertasCtx, {
                 type: 'doughnut',
                 data: {
@@ -195,6 +200,10 @@ document.addEventListener('DOMContentLoaded', function () {
         // 2. Gráfico de Distribución de Usuarios (Barras)
         const usuariosCtx = document.getElementById('usuariosChart');
         if (usuariosCtx) {
+            const existingUsersChart = Chart.getChart(usuariosCtx);
+            if (existingUsersChart) {
+                existingUsersChart.destroy();
+            }
             new Chart(usuariosCtx, {
                 type: 'bar',
                 data: {

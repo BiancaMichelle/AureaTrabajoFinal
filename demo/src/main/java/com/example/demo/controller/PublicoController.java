@@ -45,6 +45,11 @@ public class PublicoController {
     @Autowired
     private FormacionRepository formacionRepository;
     
+    @GetMapping("/terminos")
+    public String terminos() {
+        return "screens/terminos";
+    }
+
     @GetMapping({"/", "/publico"})
     public String publico(Model model, Principal principal) {
         // Obtener datos del instituto

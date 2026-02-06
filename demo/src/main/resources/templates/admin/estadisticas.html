@@ -47,6 +47,7 @@
             transition: all 0.3s ease;
             overflow: hidden;
             box-shadow: var(--card-shadow);
+            color: white;
         }
 
         .stats-card:hover {
@@ -68,12 +69,13 @@
             opacity: 0.1;
             transform: rotate(-15deg);
             z-index: 0;
+            color: white;
         }
 
-        .bg-gradient-primary { background: var(--primary-gradient); color: white; }
-        .bg-gradient-success { background: var(--success-gradient); color: white; }
-        .bg-gradient-info { background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%); color: white; }
-        .bg-gradient-warning { background: var(--warning-gradient); color: white; }
+        .bg-gradient-primary { background: var(--primary-gradient); }
+        .bg-gradient-success { background: var(--success-gradient); }
+        .bg-gradient-info { background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%); }
+        .bg-gradient-warning { background: var(--warning-gradient); }
 
         .stats-value {
             font-size: 2.2rem;
@@ -118,6 +120,33 @@
             padding: 1rem;
         }
 
+        /* Tabs Styling */
+        .nav-tabs {
+            border-bottom: 2px solid #e2e8f0;
+            margin-bottom: 1.5rem;
+        }
+        
+        .nav-tabs .nav-link {
+            border: none;
+            color: #718096;
+            font-weight: 600;
+            padding: 1rem 1.5rem;
+            transition: all 0.2s;
+        }
+        
+        .nav-tabs .nav-link:hover {
+            color: #4a5568;
+            border: none; 
+            border-bottom: 2px solid #cbd5e0;
+        }
+        
+        .nav-tabs .nav-link.active {
+            color: #667eea;
+            border: none;
+            border-bottom: 2px solid #667eea;
+            background: transparent;
+        }
+
         /* Table Styling */
         .custom-table thead th {
             background-color: #f8fafc;
@@ -157,6 +186,7 @@
             background: var(--success-gradient);
             color: white;
             box-shadow: 0 4px 6px rgba(17, 153, 142, 0.3);
+            text-decoration: none;
         }
         
         .btn-generate-report:hover {
@@ -262,93 +292,176 @@
             </div>
         </div>
 
-        <!-- Charts Row -->
-        <div class="row mb-4">
-            <div class="col-lg-6 mb-4">
-                <div class="metric-card">
-                    <div class="card-header">
-                        <span>Ofertas Activas por Tipo</span>
-                        <select id="ofertasPeriodo" class="form-select form-select-sm w-auto">
-                            <option value="year">Este Año</option>
-                            <option value="all">Histórico</option>
-                        </select>
-                    </div>
-                    <div class="card-body">
-                        <div class="chart-container">
-                            <canvas id="chartOfertas"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-6 mb-4">
-                <div class="metric-card">
-                    <div class="card-header">
-                        <span>Distribución de Usuarios</span>
-                    </div>
-                    <div class="card-body">
-                        <div class="chart-container">
-                            <canvas id="chartUsuarios"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <!-- TABS NAVIGATION -->
+        <ul class="nav nav-tabs" id="statsTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="oferta-tab" data-bs-toggle="tab" data-bs-target="#oferta" type="button" role="tab" aria-selected="true"><i class="fas fa-book me-2"></i>Oferta Académica</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="inscripciones-tab" data-bs-toggle="tab" data-bs-target="#inscripciones" type="button" role="tab" aria-selected="false"><i class="fas fa-user-graduate me-2"></i>Inscripciones</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="economico-tab" data-bs-toggle="tab" data-bs-target="#economico" type="button" role="tab" aria-selected="false"><i class="fas fa-chart-pie me-2"></i>Económico</button>
+            </li>
+        </ul>
 
-        <!-- Detailed Analysis Row -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="metric-card">
-                    <div class="card-header">
-                        <span><i class="fas fa-fire me-2 text-danger"></i>Demanda Académica</span>
+        <div class="tab-content" id="statsTabsContent">
+            
+            <!-- TAB: OFERTA ACADÉMICA -->
+            <div class="tab-pane fade show active" id="oferta" role="tabpanel">
+                <div class="row mb-4">
+                    <div class="col-lg-6 mb-4">
+                        <div class="metric-card">
+                            <div class="card-header">
+                                <span>Estado de Ofertas</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="chartOfertasEstado"></canvas>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table custom-table table-hover mb-0">
-                                <thead>
-                                    <tr>
-                                        <th class="ps-4">Oferta Académica</th>
-                                        <th class="text-center">Inscritos</th>
-                                        <th class="text-center">Estado</th>
-                                        <th class="text-center">Tasa Ocupación</th>
-                                        <th class="text-center">Demanda</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr th:if="${demandaOfertas == null or #lists.isEmpty(demandaOfertas)}">
-                                        <td colspan="5" class="text-center py-4 text-muted">No hay datos de demanda disponibles</td>
-                                    </tr>
-                                    <tr th:each="oferta : ${demandaOfertas}">
-                                        <td class="ps-4 fw-bold" th:text="${oferta['tituloOferta']}">Nombre Oferta</td>
-                                        <td class="text-center" th:text="${oferta['cantidadInscritos']}">0</td>
-                                        <td class="text-center">
-                                            <span class="badge bg-light text-dark border">Activo</span>
-                                        </td>
-                                        <td class="text-center">
-                                            <div class="d-flex align-items-center justify-content-center">
-                                                <div class="progress w-50" style="height: 6px;">
-                                                    <div class="progress-bar" role="progressbar" 
-                                                        th:style="'width: ' + ${oferta['tasaOcupacion'] * 100} + '%'"
-                                                        th:classappend="${oferta['tasaOcupacion'] > 0.8 ? 'bg-danger' : (oferta['tasaOcupacion'] > 0.5 ? 'bg-info' : 'bg-success')}">
+                    <div class="col-lg-6 mb-4">
+                        <div class="metric-card">
+                            <div class="card-header">
+                                <span>Ofertas por Tipo</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="chartOfertasTipo"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-12">
+                         <div class="metric-card">
+                            <div class="card-header">
+                                <span><i class="fas fa-fire me-2 text-primary"></i>Demanda y Ocupación</span>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table custom-table table-hover mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th class="ps-4">Oferta Académica</th>
+                                                <th class="text-center">Inscritos</th>
+                                                <th class="text-center">Tasa Ocupación</th>
+                                                <th class="text-center">Demanda</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr th:if="${demandaOfertas == null or #lists.isEmpty(demandaOfertas)}">
+                                                <td colspan="4" class="text-center py-4 text-muted">No hay datos disponibles</td>
+                                            </tr>
+                                            <tr th:each="oferta : ${demandaOfertas}">
+                                                <td class="ps-4 fw-bold" th:text="${oferta['tituloOferta']}">Nombre</td>
+                                                <td class="text-center" th:text="${oferta['cantidadInscritos']}">0</td>
+                                                <td class="text-center">
+                                                    <div class="d-flex align-items-center justify-content-center">
+                                                        <div class="progress w-50 me-2" style="height: 6px;">
+                                                            <div class="progress-bar" 
+                                                                 th:style="'width: ' + ${oferta['tasaOcupacion'] * 100} + '%'"
+                                                                 th:classappend="${oferta['tasaOcupacion'] > 0.8 ? 'bg-danger' : (oferta['tasaOcupacion'] > 0.5 ? 'bg-info' : 'bg-success')}">
+                                                            </div>
+                                                        </div>
+                                                        <span class="small" th:text="${#numbers.formatPercent(oferta['tasaOcupacion'], 1, 0)}">0%</span>
                                                     </div>
-                                                </div>
-                                                <span class="ms-2 small" th:text="${#numbers.formatPercent(oferta['tasaOcupacion'], 1, 0)}">0%</span>
-                                            </div>
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="badge-demanda"
-                                                  th:classappend="${oferta['nivelDemanda'] == 'ALTA' ? 'bg-soft-success text-success' : 
-                                                                   (oferta['nivelDemanda'] == 'MEDIA' ? 'bg-soft-warning text-warning' : 'bg-soft-danger text-danger')}"
-                                                  th:text="${oferta['nivelDemanda']}">MEDIA
-                                            </span>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                                                </td>
+                                                <td class="text-center">
+                                                    <span class="badge" 
+                                                        th:classappend="${oferta['nivelDemanda'] == 'ALTA' ? 'bg-success' : 'bg-secondary'}"
+                                                        th:text="${oferta['nivelDemanda']}">MEDIA</span>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+
+            <!-- TAB: INSCRIPCIONES -->
+            <div class="tab-pane fade" id="inscripciones" role="tabpanel">
+                <div class="row mb-4">
+                    <div class="col-lg-8">
+                        <div class="metric-card">
+                            <div class="card-header">
+                                <span>Evolución Mensual de Inscripciones</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="chartInscripcionesEvol"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                         <div class="metric-card">
+                            <div class="card-header">
+                                <span>Ratios Clave</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-4 text-center">
+                                    <h6 class="text-muted text-uppercase mb-2">Tasa de Abandono</h6>
+                                    <h2 class="text-danger fw-bold" th:if="${statsInscripciones != null}" th:text="${#numbers.formatPercent(statsInscripciones['tasaAbandonoGlobal'], 1, 1)}">0%</h2>
+                                </div>
+                                <hr>
+                                <div class="mb-4 text-center">
+                                    <h6 class="text-muted text-uppercase mb-2">Nuevos vs Recurrentes</h6>
+                                    <div class="d-flex justify-content-center gap-4">
+                                        <div>
+                                            <span class="d-block text-success fw-bold h4" th:if="${statsInscripciones != null}" th:text="${statsInscripciones['alumnosNuevos']}">0</span>
+                                            <small class="text-muted">Nuevos</small>
+                                        </div>
+                                        <div>
+                                            <span class="d-block text-primary fw-bold h4" th:if="${statsInscripciones != null}" th:text="${statsInscripciones['alumnosRecurrentes']}">0</span>
+                                            <small class="text-muted">Recurrentes</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: ECONÓMICO -->
+            <div class="tab-pane fade" id="economico" role="tabpanel">
+                <div class="row mb-4">
+                    <div class="col-lg-6">
+                        <div class="metric-card">
+                            <div class="card-header">
+                                <span>Ingresos por Oferta Académica</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="chartIngresosOferta"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                     <div class="col-lg-6">
+                        <div class="metric-card">
+                            <div class="card-header">
+                                <span>Estado de Pagos</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="chartEstadoPagos"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div> <!-- End Tab Content -->
 
     </div>
 
@@ -363,6 +476,7 @@
                 <div class="modal-body p-4">
                     <form id="statsReportForm" action="/admin/reportes/ofertas/descargar" method="get">
                         <input type="hidden" name="tipoReporte" value="estadistico">
+                        <!-- Form fields preserved -->
                         <div class="mb-4">
                             <label class="form-section-label">Formato de Salida</label>
                             <div class="d-flex gap-2">
@@ -402,9 +516,9 @@
                                 </div>
                             </div>
                         </div>
-                        
-                        <div class="d-grid mt-4">
-                            <button type="submit" class="btn btn-primary btn-lg" style="width: 100%; padding: 0.5rem 1rem; background-color: #0d6efd; border-color: #0d6efd; color: white;">
+
+                         <div class="d-grid mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg" style="width: 100%; padding: 0.5rem 1rem;">
                                 <i class="fas fa-download me-2"></i>Descargar Reporte
                             </button>
                         </div>
@@ -419,8 +533,8 @@
     
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Chart Visualization
-            initCharts();
+            initGlobalCharts();
+            initTabListeners();
             
             // Modal Logic
             const modal = document.getElementById('statsReportModal');
@@ -442,76 +556,234 @@
                 if(e.target == modal) modal.style.display = 'none';
             };
 
-            // Refresh Button
             document.getElementById('btnRefreshCharts').onclick = () => window.location.reload();
         });
 
-        function initCharts() {
-            // Colors config
-            const colors = {
-                primary: ['#667eea', '#764ba2'],
-                info: ['#89f7fe', '#66a6ff'],
-                palette: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF']
-            };
+        const colors = {
+            palette: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40']
+        };
 
-            // Fetch Data for Charts
-            fetch('/admin/estadisticas/api/grafico-ofertas')
-                .then(r => r.json())
-                .then(data => {
-                    const ctx = document.getElementById('chartOfertas').getContext('2d');
-                    new Chart(ctx, {
-                        type: 'doughnut',
-                        data: {
-                            labels: data.labels || [],
-                            datasets: [{
-                                data: data.data || [],
-                                backgroundColor: colors.palette,
-                                borderWidth: 0
-                            }]
+        function initTabListeners() {
+            const tabs = document.querySelectorAll('button[data-bs-toggle="tab"]');
+            tabs.forEach(tab => {
+                tab.addEventListener('shown.bs.tab', event => {
+                    const targetId = event.target.getAttribute('data-bs-target');
+                    if(targetId === '#oferta') loadOfertaCharts();
+                    if(targetId === '#inscripciones') loadInscripcionCharts();
+                    if(targetId === '#economico') loadEconomicoCharts();
+                });
+            });
+            // Load initial active tab
+            loadOfertaCharts();
+        }
+
+        function initGlobalCharts() {
+            // Placeholder for global summary charts if any
+        }
+        
+        let charts = {};
+
+        function destroyChart(id) {
+            if (charts[id]) {
+                charts[id].destroy();
+                delete charts[id];
+            }
+        }
+
+        function loadOfertaCharts() {
+            fetch('/admin/estadisticas/api/ofertas-detalladas')
+            .then(r => r.json())
+            .then(data => {
+                // Estado
+                const porEstado = data.porEstado || {};
+                destroyChart('chartOfertasEstado');
+                charts['chartOfertasEstado'] = new Chart(document.getElementById('chartOfertasEstado'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(porEstado),
+                        datasets: [{
+                            data: Object.values(porEstado),
+                            backgroundColor: colors.palette
+                        }]
+                    }
+                });
+                
+                // Tipo (using same endpoint structure if added)
+                 const porTipo = data.porTipo || {}; // Assuming we added it back to the map in service
+                 // Fetch simple offers graph as fallback
+                 fetch('/admin/estadisticas/api/grafico-ofertas')
+                    .then(r => r.json())
+                    .then(d => {
+                        destroyChart('chartOfertasTipo');
+                         charts['chartOfertasTipo'] = new Chart(document.getElementById('chartOfertasTipo'), {
+                            type: 'bar',
+                            data: {
+                                labels: d.labels,
+                                datasets: [{
+                                    label: 'Cantidad',
+                                    data: d.data,
+                                    backgroundColor: '#667eea'
+                                }]
+                            }
+                        });
+                    });
+            });
+        }
+
+   function last12MonthsLabels() {
+    const labels = [];
+    const now = new Date();
+    for (let i = 11; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        labels.push(d.toISOString().slice(0,7)); // yyyy-MM
+    }
+    return labels;
+}
+function showStatsError(msg) {
+    const container = document.querySelector('#inscripciones .metric-card .card-body');
+    if (!container || container.querySelector('.stats-error')) return;
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-warning stats-error';
+    alert.style.marginTop = '0.5rem';
+    alert.textContent = msg;
+    container.prepend(alert);
+}
+function loadInscripcionCharts() {
+            fetch('/admin/estadisticas/api/inscripciones-detalladas')
+            .then(r => {
+                if (!r.ok) throw new Error('HTTP status ' + r.status);
+                const ct = r.headers.get('content-type') || '';
+                if (!ct.includes('application/json')) throw new Error('Unexpected content-type: ' + ct);
+                return r.json();
+            })
+            .then(data => {
+                console.log('Datos recibidos:', data);
+                const evol = data && data.evolucionMensual ? data.evolucionMensual : {};
+                
+                let labels = Object.keys(evol);
+                let values = labels.map(k => evol[k]);
+
+                if (labels.length === 0) {
+                    showStatsError('No hay datos de inscripciones disponibles.');
+                    labels = last12MonthsLabels();
+                    values = labels.map(() => 0);
+                }
+
+                destroyChart('chartInscripcionesEvol');
+                
+                const ctx = document.getElementById('chartInscripcionesEvol');
+                if (!ctx) {
+                     console.error('Canvas chartInscripcionesEvol no encontrado');
+                     return;
+                }
+
+                charts['chartInscripcionesEvol'] = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Inscripciones Mensuales',
+                            data: values,
+                            borderColor: '#38ef7d',
+                            backgroundColor: 'rgba(56, 239, 125, 0.15)',
+                            borderWidth: 2,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#fff',
+                            pointBorderColor: '#38ef7d',
+                            tension: 0.3,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: true, position: 'top' },
+                            tooltip: { mode: 'index', intersect: false }
                         },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            cutout: '70%',
-                            plugins: {
-                                legend: { position: 'right', labels: { usePointStyle: true } }
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { stepSize: 1 }
                             }
                         }
-                    });
+                    }
                 });
+            })
+            .catch(err => {
+                console.error('Error cargando inscripciones:', err);
+                showStatsError('Error visualizando grafico.');
+            });
+        }
 
-            fetch('/admin/estadisticas/api/grafico-usuarios')
-                .then(r => r.json())
-                .then(data => {
-                    const ctx = document.getElementById('chartUsuarios').getContext('2d');
-                    new Chart(ctx, {
+        function loadEconomicoCharts() {
+            console.log('Cargando charts económicos...');
+            fetch('/admin/estadisticas/api/economia-detallada')
+            .then(r => {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                const ct = r.headers.get('content-type');
+                if (!ct || !ct.includes('application/json')) throw new Error('Respuesta no es JSON');
+                return r.json();
+            })
+            .then(data => {
+                console.log('Datos económicos:', data);
+                
+                // 1. Ingresos por Oferta
+                const ing = data.ingresosPorOferta || {};
+                const labelsIng = Object.keys(ing);
+                const valuesIng = Object.values(ing);
+                
+                destroyChart('chartIngresosOferta');
+                const ctxIng = document.getElementById('chartIngresosOferta');
+                if (ctxIng) {
+                    charts['chartIngresosOferta'] = new Chart(ctxIng, {
                         type: 'bar',
                         data: {
-                            labels: data.labels || [],
+                            labels: labelsIng.length ? labelsIng : ['Sin datos'],
                             datasets: [{
-                                label: 'Usuarios',
-                                data: data.data || [],
-                                backgroundColor: '#667eea',
-                                borderRadius: 5
+                                label: 'Ingresos ($)',
+                                data: valuesIng.length ? valuesIng : [0],
+                                backgroundColor: '#f38181',
+                                borderRadius: 4
                             }]
                         },
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
                             plugins: { legend: { display: false } },
-                            scales: {
-                                y: { 
-                                    beginAtZero: true, 
-                                    grid: { borderDash: [2, 4] },
-                                    ticks: {
-                                        precision: 0 // Asegura números enteros
-                                    }
-                                },
-                                x: { grid: { display: false } }
+                            scales: { y: { beginAtZero: true } }
+                        }
+                    });
+                }
+
+                // 2. Estado de Pagos
+                const estado = data.estadoPagos || {};
+                const labelsEst = Object.keys(estado);
+                const valuesEst = Object.values(estado);
+                
+                destroyChart('chartEstadoPagos');
+                const ctxEst = document.getElementById('chartEstadoPagos');
+                if (ctxEst) {
+                    charts['chartEstadoPagos'] = new Chart(ctxEst, {
+                        type: 'doughnut',
+                        data: {
+                            labels: labelsEst.length ? labelsEst : ['Sin datos'],
+                            datasets: [{
+                                data: valuesEst.length ? valuesEst : [0],
+                                backgroundColor: ['#fce38a', '#11998e', '#ff5e62', '#e2e8f0']
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { 
+                                legend: { position: 'right' }
                             }
                         }
                     });
-                });
+                }
+            })
+            .catch(e => console.error('Error economía:', e));
         }
     </script>
 </div>
