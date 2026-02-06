@@ -59,10 +59,21 @@ import com.example.demo.model.Entrega;
 import com.example.demo.repository.*;
 import com.example.demo.service.MercadoPagoService;
 import com.example.demo.service.InstitutoService;
+import org.springframework.web.multipart.MultipartFile;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.UUID;
+import java.io.IOException;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import com.example.demo.model.CustomUsuarioDetails;
 import com.example.demo.service.ReporteService;
 import com.example.demo.service.EmailService;
 import com.example.demo.service.OfertaAcademicaService;
 import com.example.demo.service.AnalisisRendimientoService;
+import com.example.demo.service.RecuperarContraseñaService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
@@ -97,12 +108,16 @@ public class AlumnoController {
     private final ReporteService reporteService;
     private final EmailService emailService;
     private final EntregaRepository entregaRepository;
+    private final RecuperarContraseñaService passwordRecoveryService;
     
     @Autowired
     private OfertaAcademicaService ofertaAcademicaService;
 
     @Autowired
     private AnalisisRendimientoService analisisRendimientoService;
+    
+    @Autowired
+    private com.example.demo.service.NotificacionInscripcionService notificacionInscripcionService;
 
     public AlumnoController(TareaRepository tareaRepository,
                           ExamenRepository examenRepository,
@@ -119,7 +134,8 @@ public class AlumnoController {
                           InstitutoService institutoService,
                           ReporteService reporteService,
                           EmailService emailService,
-                          EntregaRepository entregaRepository) {
+                          EntregaRepository entregaRepository,
+                          RecuperarContraseñaService passwordRecoveryService) {
         this.tareaRepository = tareaRepository;
         this.examenRepository = examenRepository;
         this.inscripcionRepository = inscripcionRepository;
@@ -136,6 +152,7 @@ public class AlumnoController {
         this.reporteService = reporteService;
         this.emailService = emailService;
         this.entregaRepository = entregaRepository;
+        this.passwordRecoveryService = passwordRecoveryService;
     }
 
     @GetMapping("/alumno")
@@ -769,6 +786,25 @@ public class AlumnoController {
                 return "redirect:/publico";
             }
             
+            // ✅ Verificar si las inscripciones están abiertas
+            if (!oferta.getInscripcionesAbiertas()) {
+                String mensaje;
+                String estadoInscripcion = oferta.getEstadoInscripcion();
+                
+                // Si son próximas, mostrar modal de notificación
+                if ("Próximamente".equals(estadoInscripcion)) {
+                    redirectAttributes.addFlashAttribute("inscripcionProxima", true);
+                    redirectAttributes.addFlashAttribute("ofertaProxima", oferta);
+                    return "redirect:/publico";
+                } else {
+                    // Si ya cerraron, mostrar mensaje de error
+                    mensaje = "Las inscripciones para '" + oferta.getNombre() + "' ya han cerrado. " +
+                             "Finalizaron el " + oferta.getFechaFinInscripcion().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+                    redirectAttributes.addFlashAttribute("error", mensaje);
+                    return "redirect:/publico";
+                }
+            }
+            
             // ✅ Verificar cupos disponibles (Validación consistente con Frontend)
             // Usamos los datos de la entidad cargada para asegurar consistencia con lo que ve el usuario
             long inscritosReales = oferta.getCantidadAlumnosActivos();
@@ -1230,6 +1266,10 @@ public class AlumnoController {
             @RequestParam(required = false) String genero,
             @RequestParam String correo,
             @RequestParam("numTelefono") String numTelefono,
+            @RequestParam(required = false) String ultimosEstudios,
+            @RequestParam(required = false) String colegioEgreso,
+            @RequestParam(required = false) Integer añoEgreso,
+            @RequestParam(required = false) MultipartFile foto,
             RedirectAttributes redirectAttributes,
             Model model) {
         try {
@@ -1239,7 +1279,7 @@ public class AlumnoController {
             if (usuarioOpt.isEmpty()) {
                 redirectAttributes.addFlashAttribute("mensaje", "Usuario no encontrado");
                 redirectAttributes.addFlashAttribute("tipo", "error");
-                return "redirect:/perfil";
+                return "redirect:/alumno/perfil"; // Corregido redirección
             }
 
             Usuario usuario = usuarioOpt.get();
@@ -1254,13 +1294,42 @@ public class AlumnoController {
                 } catch (IllegalArgumentException ex) {
                     redirectAttributes.addFlashAttribute("mensaje", "Género inválido");
                     redirectAttributes.addFlashAttribute("tipo", "error");
-                    return "redirect:/perfil";
+                    return "redirect:/alumno/perfil";
                 }
             }
             usuario.setCorreo(correo);
             usuario.setNumTelefono(numTelefono);
 
+            // Actualizar foto de perfil
+            if (foto != null && !foto.isEmpty()) {
+                try {
+                    String urlFoto = guardarFotoPerfil(foto);
+                    usuario.setFoto(urlFoto);
+                } catch (IOException e) {
+                    System.err.println("Error al guardar la foto de perfil: " + e.getMessage());
+                    redirectAttributes.addFlashAttribute("mensaje", "Error al guardar la imagen de perfil");
+                    redirectAttributes.addFlashAttribute("tipo", "warning");
+                }
+            }
+
+            // Actualizar datos académicos si es Alumno
+            if (usuario instanceof Alumno) {
+                Alumno alumno = (Alumno) usuario;
+                if (ultimosEstudios != null) alumno.setUltimosEstudios(ultimosEstudios);
+                if (colegioEgreso != null) alumno.setColegioEgreso(colegioEgreso);
+                if (añoEgreso != null) alumno.setAñoEgreso(añoEgreso);
+            }
+
             usuarioRepository.save(usuario);
+
+            // Actualizar la sesión de seguridad con los nuevos datos del usuario
+            CustomUsuarioDetails userDetails = new CustomUsuarioDetails(usuario);
+            Authentication newAuth = new UsernamePasswordAuthenticationToken(
+                userDetails,
+                authentication.getCredentials(),
+                userDetails.getAuthorities()
+            );
+            SecurityContextHolder.getContext().setAuthentication(newAuth);
 
             redirectAttributes.addFlashAttribute("mensaje", "Perfil actualizado correctamente");
             redirectAttributes.addFlashAttribute("tipo", "success");
@@ -1268,13 +1337,72 @@ public class AlumnoController {
             redirectAttributes.addFlashAttribute("mensaje", "Error al actualizar el perfil: " + e.getMessage());
             redirectAttributes.addFlashAttribute("tipo", "error");
         }
-        return "redirect:/perfil";
+        return "redirect:/alumno/perfil"; // Corregido redirección
     }
 
-    // Evitar 404 si el navegador hace GET a /perfil/actualizar (p.ej., refresh después del POST)
+    private String guardarFotoPerfil(MultipartFile foto) throws IOException {
+        // Crear directorio si no existe
+        Path directorioUsuarios = Paths.get("src/main/resources/static/img/usuarios");
+        if (!Files.exists(directorioUsuarios)) {
+            Files.createDirectories(directorioUsuarios);
+        }
+        
+        // Generar nombre único
+        String nombreOriginal = foto.getOriginalFilename();
+        String extension = nombreOriginal != null && nombreOriginal.contains(".") ? nombreOriginal.substring(nombreOriginal.lastIndexOf(".")) : ".jpg";
+        String nombreArchivo = "usuario_" + UUID.randomUUID().toString() + extension;
+        
+        // Guardar archivo en src (persistencia)
+        Path rutaArchivo = directorioUsuarios.resolve(nombreArchivo);
+        try (var inputStream = foto.getInputStream()) {
+            Files.copy(inputStream, rutaArchivo, StandardCopyOption.REPLACE_EXISTING);
+        }
+
+        // Intento de copiar a target/classes para visualización inmediata en desarrollo
+        try {
+            Path directorioTarget = Paths.get("target/classes/static/img/usuarios");
+            if (!Files.exists(directorioTarget)) {
+                Files.createDirectories(directorioTarget);
+            }
+            Path rutaTarget = directorioTarget.resolve(nombreArchivo);
+            Files.copy(rutaArchivo, rutaTarget, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            System.out.println("Advertencia: No se pudo copiar la imagen al directorio target: " + e.getMessage());
+        }
+        
+        return "/img/usuarios/" + nombreArchivo;
+    }
+
+    @PostMapping("/perfil/seguridad/cambiar-password")
+    public String solicitarCambioPassword(
+            Authentication authentication,
+            @RequestParam String passwordActual,
+            @RequestParam String passwordNueva,
+            RedirectAttributes redirectAttributes) {
+        try {
+            String dni = authentication.getName();
+            Usuario usuario = usuarioRepository.findByDni(dni)
+                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+            passwordRecoveryService.solicitarCambioContraseña(usuario, passwordActual, passwordNueva);
+
+            redirectAttributes.addFlashAttribute("mensaje", "Solicitud iniciada. Revisa tu correo electrónico y haz clic en el enlace para CONFIRMAR el cambio.");
+            redirectAttributes.addFlashAttribute("tipo", "success");
+
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("mensaje", e.getMessage());
+            redirectAttributes.addFlashAttribute("tipo", "error");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("mensaje", "Error al procesar la solicitud: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("tipo", "error");
+        }
+        return "redirect:/alumno/perfil?tab=seguridad";
+    }
+
+    // Evitar 404 si el navegador hace GET a /perfil/actualizar
     @GetMapping("/perfil/actualizar")
     public String redirigirPerfilActualizar() {
-        return "redirect:/perfil";
+        return "redirect:/alumno/perfil";
     }
 
     // Endpoint para IA - Análisis Personal del Alumno
@@ -1341,6 +1469,36 @@ public class AlumnoController {
         }).collect(Collectors.toList());
 
         return ResponseEntity.ok(resultado);
+    }
+    
+    /**
+     * Solicitar notificación cuando se abran las inscripciones
+     */
+    @PostMapping("/notificar-inscripcion/{ofertaId}")
+    @ResponseBody
+    public ResponseEntity<?> solicitarNotificacionInscripcion(@PathVariable Long ofertaId, Authentication authentication) {
+        try {
+            String dni = authentication.getName();
+            
+            Usuario usuario = usuarioRepository.findByDni(dni)
+                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+            
+            OfertaAcademica oferta = ofertaAcademicaRepository.findById(ofertaId)
+                    .orElseThrow(() -> new RuntimeException("Oferta no encontrada"));
+            
+            notificacionInscripcionService.solicitarNotificacion(usuario, oferta);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Te notificaremos por email cuando se abran las inscripciones");
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Error al procesar tu solicitud: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
     }
 }
 

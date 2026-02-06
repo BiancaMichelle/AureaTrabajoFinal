@@ -187,6 +187,12 @@ public class MercadoPagoService {
                 return;
             }
 
+            // OPTIMIZACIÓN: Si el pago ya está completado y la notificación es de aprobación, no hacemos nada para evitar bloqueos
+            if (pagoLocal.getEstadoPago() == EstadoPago.COMPLETADO && "approved".equals(payment.getStatus())) {
+                log.info("✅ El pago ID {} ya está registrado como COMPLETADO. Omitiendo actualización.", paymentId);
+                return;
+            }
+
             log.info("✅ Pago encontrado en BD: ID={}, EstadoActual={}", pagoLocal.getIdPago(),
                     pagoLocal.getEstadoPago());
 

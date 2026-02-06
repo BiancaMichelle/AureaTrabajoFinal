@@ -48,11 +48,10 @@ public class UbicacionController {
             @RequestParam Long ciudadId,
             @RequestParam("_csrf") String csrfToken) { // ✅ Recibir el token CSRF
         
-        System.out.println("📍 Guardando ubicaciones:");
+        System.out.println("📍 Guardando ubicaciones (Improved):");
         System.out.println("   - País: " + paisCodigo);
         System.out.println("   - Provincia: " + provinciaCodigo);
         System.out.println("   - Ciudad ID: " + ciudadId);
-        System.out.println("   - CSRF Token: " + csrfToken);
         
         try {
             // 1. Buscar o crear País
@@ -60,27 +59,44 @@ public class UbicacionController {
             if (pais == null) {
                 System.out.println("🌎 Creando nuevo país: " + paisCodigo);
                 try {
-                    List<Pais> paises = locacionApiService.obtenerTodosPaises();
-                    for (Pais p : paises) {
-                        if (paisCodigo.equals(p.getCodigo())) {
-                            pais = p;
-                            break;
+                    // Intento 1: Obtención directa (Más eficiente)
+                    Pais paisApi = locacionApiService.obtenerPaisPorCodigo(paisCodigo);
+                    
+                    if (paisApi != null) {
+                        pais = new Pais();
+                        pais.setCodigo(paisApi.getCodigo());
+                        pais.setNombre(paisApi.getNombre());
+                        System.out.println("✅ País obtenido de API (directo): " + pais.getNombre());
+                    } else {
+                        // Intento 2: Búsqueda en lista (Fallback)
+                        List<Pais> paises = locacionApiService.obtenerTodosPaises();
+                        for (Pais p : paises) {
+                            if (paisCodigo.equalsIgnoreCase(p.getCodigo())) {
+                                pais = new Pais();
+                                pais.setCodigo(p.getCodigo());
+                                pais.setNombre(p.getNombre());
+                                System.out.println("✅ País encontrado en lista API: " + pais.getNombre());
+                                break;
+                            }
                         }
                     }
+
                     if (pais == null) {
-                        // Crear país básico si no se encuentra en la API
-                        pais = new Pais();
-                        pais.setCodigo(paisCodigo);
-                        pais.setNombre("País " + paisCodigo);
+                        throw new RuntimeException("País no encontrado en API");
                     }
+                    
+                    pais.setId(null); 
                     pais = paisRepository.save(pais);
+                    
                 } catch (Exception e) {
-                    // Si falla la API, crear país básico
+                    System.out.println("⚠️ Error obteniendo país de API (" + e.getMessage() + "). Usando fallback.");
                     pais = new Pais();
                     pais.setCodigo(paisCodigo);
                     pais.setNombre("País " + paisCodigo);
                     pais = paisRepository.save(pais);
                 }
+            } else {
+                System.out.println("✅ País ya existe en BD: " + pais.getNombre());
             }
 
             // 2. Buscar o crear Provincia
@@ -88,31 +104,52 @@ public class UbicacionController {
             if (provincia == null) {
                 System.out.println("🏙️ Creando nueva provincia: " + provinciaCodigo);
                 try {
-                    List<Provincia> provincias = locacionApiService.obtenerProvinciasPorPais(paisCodigo);
-                    for (Provincia p : provincias) {
-                        if (provinciaCodigo.equals(p.getCodigo())) {
-                            provincia = p;
-                            break;
+                    // Intento 1: Obtención directa
+                    Provincia provinciaApi = locacionApiService.obtenerProvinciaPorCodigo(paisCodigo, provinciaCodigo);
+                    
+                    if (provinciaApi != null) {
+                        provincia = new Provincia();
+                        provincia.setCodigo(provinciaApi.getCodigo());
+                        provincia.setNombre(provinciaApi.getNombre());
+                        provincia.setPais(pais);
+                        System.out.println("✅ Provincia obtenida de API (directo): " + provincia.getNombre());
+                    } else {
+                        // Intento 2: Búsqueda en lista
+                        List<Provincia> provincias = locacionApiService.obtenerProvinciasPorPais(paisCodigo);
+                        for (Provincia p : provincias) {
+                            if (provinciaCodigo.equalsIgnoreCase(p.getCodigo())) {
+                                provincia = new Provincia();
+                                provincia.setCodigo(p.getCodigo());
+                                provincia.setNombre(p.getNombre());
+                                provincia.setPais(pais);
+                                System.out.println("✅ Provincia encontrada en lista API: " + provincia.getNombre());
+                                break;
+                            }
                         }
                     }
+
                     if (provincia == null) {
-                        // Crear provincia básica si no se encuentra en la API
-                        provincia = new Provincia();
-                        provincia.setCodigo(provinciaCodigo);
-                        provincia.setNombre("Provincia " + provinciaCodigo);
-                        provincia.setPais(pais);
-                    } else {
-                        provincia.setPais(pais); // Asegurar la relación
+                        throw new RuntimeException("Provincia no encontrada en API");
                     }
+                    
+                    provincia.setId(null);
+                    provincia.setPais(pais);
                     provincia = provinciaRepository.save(provincia);
+                    
                 } catch (Exception e) {
-                    // Si falla la API, crear provincia básica
+                    System.out.println("⚠️ Error obteniendo provincia de API (" + e.getMessage() + "). Usando fallback.");
                     provincia = new Provincia();
                     provincia.setCodigo(provinciaCodigo);
                     provincia.setNombre("Provincia " + provinciaCodigo);
                     provincia.setPais(pais);
                     provincia = provinciaRepository.save(provincia);
                 }
+            } else {
+                if (provincia.getPais() == null) {
+                    provincia.setPais(pais);
+                    provincia = provinciaRepository.save(provincia);
+                }
+                System.out.println("✅ Provincia ya existe en BD: " + provincia.getNombre());
             }
 
             // 3. Buscar o crear Ciudad
@@ -123,28 +160,40 @@ public class UbicacionController {
                     List<Ciudad> ciudades = locacionApiService.obtenerCiudadesPorProvincia(paisCodigo, provinciaCodigo);
                     for (Ciudad c : ciudades) {
                         if (ciudadId.equals(c.getId())) {
-                            ciudad = c;
+                            ciudad = new Ciudad();
+                            ciudad.setId(c.getId());
+                            ciudad.setNombre(c.getNombre());
+                            ciudad.setProvincia(provincia);
+                            System.out.println("✅ Ciudad encontrada en API: " + ciudad.getNombre());
                             break;
                         }
                     }
+                    
                     if (ciudad == null) {
-                        // Crear ciudad básica si no se encuentra en la API
                         ciudad = new Ciudad();
                         ciudad.setId(ciudadId);
                         ciudad.setNombre("Ciudad " + ciudadId);
                         ciudad.setProvincia(provincia);
-                    } else {
-                        ciudad.setProvincia(provincia); // Asegurar la relación
+                        System.out.println("⚠️ Ciudad no encontrada en lista API. Creando con ID.");
                     }
+                    
+                    ciudad.setProvincia(provincia); // Asegurar relación
                     ciudad = ciudadRepository.save(ciudad);
+                    
                 } catch (Exception e) {
-                    // Si falla la API, crear ciudad básica
+                    System.out.println("⚠️ Error obteniendo ciudad de API (" + e.getMessage() + "). Usando fallback.");
                     ciudad = new Ciudad();
                     ciudad.setId(ciudadId);
                     ciudad.setNombre("Ciudad " + ciudadId);
                     ciudad.setProvincia(provincia);
                     ciudad = ciudadRepository.save(ciudad);
                 }
+            } else {
+                 if (ciudad.getProvincia() == null) {
+                    ciudad.setProvincia(provincia);
+                    ciudad = ciudadRepository.save(ciudad);
+                }
+                System.out.println("✅ Ciudad ya existe en BD: " + ciudad.getNombre());
             }
 
             String mensaje = String.format("Ubicaciones guardadas: %s - %s - %s", 
@@ -154,7 +203,7 @@ public class UbicacionController {
             return mensaje;
 
         } catch (Exception e) {
-            System.out.println("❌ Error guardando ubicaciones: " + e.getMessage());
+            System.out.println("❌ Error CRÍTICO guardando ubicaciones: " + e.getMessage());
             e.printStackTrace();
             return "Error: " + e.getMessage();
         }

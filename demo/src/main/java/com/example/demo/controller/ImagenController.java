@@ -25,6 +25,11 @@ import com.example.demo.model.CarruselImagen;
 import com.example.demo.model.Instituto;
 import com.example.demo.service.ImagenService;
 import com.example.demo.service.InstitutoService;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 @Controller
 public class ImagenController {
@@ -53,7 +58,48 @@ public class ImagenController {
         }
     }
 
+    /**
+     * Sirve las imágenes de perfil de los usuarios directamente desde el disco.
+     * Esto soluciona problemas de archivos que no se ven inmediatamente después de subirlos.
+     */
+    @GetMapping("/img/usuarios/{filename:.+}")
+    @ResponseBody
+    public ResponseEntity<Resource> servirImagenUsuario(@PathVariable String filename) {
+        try {
+            // Ruta consistente con AlumnoController
+            Path path = Paths.get("src/main/resources/static/img/usuarios").resolve(filename);
+            Resource resource = new UrlResource(path.toUri());
+
+            if (resource.exists() || resource.isReadable()) {
+                String contentType = Files.probeContentType(path);
+                if (contentType == null) {
+                    contentType = "image/jpeg"; // Fallback
+                }
+                
+                return ResponseEntity.ok()
+                        .header(HttpHeaders.CONTENT_TYPE, contentType)
+                        .body(resource);
+            } else {
+                // Intento fallback: buscar en target/classes por si acaso
+                Path pathTarget = Paths.get("target/classes/static/img/usuarios").resolve(filename);
+                Resource resourceTop = new UrlResource(pathTarget.toUri());
+                 if (resourceTop.exists() || resourceTop.isReadable()) {
+                    String contentType = Files.probeContentType(pathTarget);
+                    if (contentType == null) contentType = "image/jpeg";
+                    return ResponseEntity.ok()
+                        .header(HttpHeaders.CONTENT_TYPE, contentType)
+                        .body(resourceTop);
+                 }
+
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
     // Endpoint alternativo para compatibilidad
+
     @GetMapping("/imagen/carrusel/{id}")
     public ResponseEntity<byte[]> obtenerImagenCarruselAlt(@PathVariable Long id) {
         return obtenerImagenCarrusel(id);

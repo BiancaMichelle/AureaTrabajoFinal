@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/adminBase :: layout(~{::title}, ~{::main})}">
+<head>
+    <title>Certificaciones - Administración</title>
+</head>
+<body>
+<main class="main-content">
+        <div class="mb-6">
+            <h1 class="text-3xl font-bold text-gray-800">
+                <i class="fas fa-certificate mr-2 text-yellow-500"></i>
+                Gestión de Actas de Certificación
+            </h1>
+            <p class="text-gray-600 mt-2">Administración de actas cerradas y seguimiento de certificados</p>
+        </div>
+
+        <!-- Alerts -->
+        <div th:if="${success}" class="mb-4 p-4 bg-green-100 text-green-800 rounded-lg">
+            <i class="fas fa-check-circle mr-2"></i>
+            <span th:text="${success}"></span>
+        </div>
+        <div th:if="${error}" class="mb-4 p-4 bg-red-100 text-red-800 rounded-lg">
+            <i class="fas fa-exclamation-circle mr-2"></i>
+            <span th:text="${error}"></span>
+        </div>
+
+        <!-- Lista de Actas en Grid -->
+        <div th:if="${ofertas.empty}" class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center text-gray-500">
+            <i class="fas fa-inbox text-5xl mb-4"></i>
+            <p>No hay actas cerradas</p>
+        </div>
+
+        <div th:unless="${ofertas.empty}" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div th:each="oferta : ${ofertas}" class="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 flex flex-col overflow-hidden">
+                <!-- Card Header -->
+                <div class="p-6 flex-grow">
+                    <div class="flex justify-between items-start mb-3">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                            <i class="fas fa-graduation-cap mr-1"></i>
+                            <span th:text="${oferta.tipoOferta}"></span>
+                        </span>
+                        
+                         <!-- Estado Badge Small (Visual only) -->
+                        <span th:if="${oferta.estadoProcesoCertificacion.name() == 'EN_GESTION_CERTIFICACION'}" class="text-yellow-500" title="En Gestión">
+                            <i class="fas fa-cog fa-spin"></i>
+                        </span>
+                        <span th:if="${oferta.estadoProcesoCertificacion.name() == 'CERTIFICADO'}" class="text-green-500" title="Certificado">
+                            <i class="fas fa-award"></i>
+                        </span>
+                         <span th:if="${oferta.estadoProcesoCertificacion.name() == 'ENTREGADO_AL_ALUMNO'}" class="text-blue-500" title="Entregado">
+                            <i class="fas fa-check-double"></i>
+                        </span>
+                    </div>
+
+                    <h3 class="text-xl font-bold text-gray-800 mb-3 line-clamp-2 leading-tight" th:text="${oferta.nombre}"></h3>
+                    
+                    <div class="space-y-2 text-sm text-gray-600">
+                        <div class="flex items-center">
+                            <i class="fas fa-calendar-alt w-5 text-center text-gray-400 mr-2"></i> 
+                            <span th:if="${oferta.fechaInicio != null && oferta.fechaFin != null}" 
+                                  th:text="${#temporals.format(oferta.fechaInicio, 'dd/MM/yyyy')} + ' - ' + ${#temporals.format(oferta.fechaFin, 'dd/MM/yyyy')}">
+                            </span>
+                        </div>
+                        <div class="flex items-center">
+                             <i class="fas fa-users w-5 text-center text-gray-400 mr-2"></i>
+                             <span th:if="${oferta.tipoOferta == 'Curso'}" th:text="${oferta.docentes.size()} + ' docentes'"></span>
+                             <span th:if="${oferta.tipoOferta == 'Formación'}" th:text="${oferta.docentes.size()} + ' docentes'"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card Footer / Actions -->
+                <div class="bg-gray-50 px-6 py-4 border-t border-gray-100">
+                    <div class="mb-4">
+                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Estado del Proceso</label>
+                        <form th:action="@{/admin/certificaciones/{id}/estado(id=${oferta.idOferta})}"
+                              method="post">
+                            <div class="relative">
+                                <select name="estado" 
+                                        class="block w-full pl-3 pr-10 py-2 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-lg shadow-sm"
+                                        onchange="this.form.submit()">
+                                    <option value="EN_GESTION_CERTIFICACION" 
+                                            th:selected="${oferta.estadoProcesoCertificacion.name() == 'EN_GESTION_CERTIFICACION'}"
+                                            data-icon="⚙️">
+                                        ⚙️ En Gestión
+                                    </option>
+                                    <option value="CERTIFICADO" 
+                                            th:selected="${oferta.estadoProcesoCertificacion.name() == 'CERTIFICADO'}"
+                                            data-icon="📜">
+                                        📜 Certificado
+                                    </option>
+                                    <option value="ENTREGADO_AL_ALUMNO" 
+                                            th:selected="${oferta.estadoProcesoCertificacion.name() == 'ENTREGADO_AL_ALUMNO'}"
+                                            data-icon="✅">
+                                        ✅ Entregado
+                                    </option>
+                                </select>
+                            </div>
+                        </form>
+                    </div>
+
+                    <a th:href="@{/aula/oferta/{id}/certificaciones/acta-pdf(id=${oferta.idOferta})}"
+                       target="_blank"
+                       class="flex items-center justify-center w-full px-4 py-2.5 text-sm font-semibold text-blue-700 bg-blue-100 hover:bg-blue-200 rounded-lg transition-colors border border-blue-200">
+                        <i class="fas fa-file-pdf mr-2"></i>
+                        Descargar Acta
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>
+</html>

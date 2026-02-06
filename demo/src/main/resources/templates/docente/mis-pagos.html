@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mis Pagos - Docente - Aurea</title>
+    <title>Mis Pagos - Aurea</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .pagos-container {
@@ -15,7 +15,7 @@
         }
 
         .page-header {
-            background: linear-gradient(135deg, #2c5282 0%, #2d3748 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 40px;
             border-radius: 16px;
@@ -65,9 +65,14 @@
             color: #48bb78;
         }
 
+        .summary-icon.orange {
+            background: #fff3e6;
+            color: #ed8936;
+        }
+
         .summary-icon.blue {
-            background: #e6f2ff;
-            color: #2c5282;
+            background: #e6f0ff;
+            color: #667eea;
         }
 
         .summary-content h3 {
@@ -100,6 +105,28 @@
         .table-header h2 {
             margin: 0;
             color: #2d3748;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid #e2e8f0;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .filter-btn:hover,
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
         }
 
         table {
@@ -142,10 +169,36 @@
             color: #22543d;
         }
 
+        .status-badge.pendiente {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+
+        .status-badge.vencido {
+            background: #feebc8;
+            color: #7c2d12;
+        }
+
+        .btn-pagar {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-pagar:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
         .btn-ver {
             background: transparent;
-            color: #2c5282;
-            border: 1px solid #2c5282;
+            color: #667eea;
+            border: 1px solid #667eea;
             padding: 8px 16px;
             border-radius: 8px;
             cursor: pointer;
@@ -154,27 +207,74 @@
         }
 
         .btn-ver:hover {
-            background: #2c5282;
+            background: #667eea;
             color: white;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #a0aec0;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
         }
     </style>
 </head>
 
 <div layout:fragment="content">
     <div class="pagos-container">
+        <!-- Header -->
         <div class="page-header">
-            <h1><i class="fas fa-money-bill-wave"></i> Mis Honorarios</h1>
-            <p>Gestiona tus pagos y honorarios como docente</p>
+            <h1><i class="fas fa-wallet"></i> Mis Pagos</h1>
+            <p>Gestiona tus pagos y cuotas de cursos</p>
         </div>
 
+        <!-- Mensaje de éxito después de pago -->
+        <div th:if="${param.pagoExitoso}" class="alert alert-success" id="alertPagoExitoso" style="background: #e6f9f0; border: 2px solid #48bb78; color: #22543d; padding: 15px 20px; border-radius: 12px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px;">
+            <i class="fas fa-check-circle" style="font-size: 1.5rem; color: #48bb78;"></i>
+            <div>
+                <strong>¡Pago exitoso!</strong>
+                <p style="margin: 5px 0 0 0;">Pago aprobado.</p>
+            </div>
+            <button onclick="this.parentElement.style.display='none'" style="background: none; border: none; color: #48bb78; font-size: 1.2rem; cursor: pointer; margin-left: auto; padding: 0 10px;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <script th:if="${param.pagoExitoso}">
+            // Auto-ocultar el mensaje después de 8 segundos
+            setTimeout(function() {
+                const alert = document.getElementById('alertPagoExitoso');
+                if (alert) {
+                    alert.style.transition = 'opacity 0.5s';
+                    alert.style.opacity = '0';
+                    setTimeout(() => alert.style.display = 'none', 500);
+                }
+            }, 8000);
+        </script>
+
+        <!-- Resumen -->
         <div class="summary-cards">
             <div class="summary-card">
                 <div class="summary-icon green">
                     <i class="fas fa-check-circle"></i>
                 </div>
                 <div class="summary-content">
-                    <h3>Total Recibido (Mes)</h3>
-                    <p>$45,000</p>
+                    <h3>Total Pagado</h3>
+                    <p th:text="${totalPagadoTexto}">$0</p>
+                </div>
+            </div>
+
+            <div class="summary-card">
+                <div class="summary-icon orange">
+                    <i class="fas fa-exclamation-circle"></i>
+                </div>
+                <div class="summary-content">
+                    <h3>Pendiente</h3>
+                    <p th:text="${totalPendienteTexto}">$0</p>
                 </div>
             </div>
 
@@ -184,77 +284,152 @@
                 </div>
                 <div class="summary-content">
                     <h3>Próximo Pago</h3>
-                    <p>30 Nov</p>
-                </div>
-            </div>
-
-            <div class="summary-card">
-                <div class="summary-icon green">
-                    <i class="fas fa-chart-line"></i>
-                </div>
-                <div class="summary-content">
-                    <h3>Total Anual</h3>
-                    <p>$540,000</p>
+                    <p th:text="${proximoPagoTexto}">Sin cuotas pendientes</p>
                 </div>
             </div>
         </div>
 
+        <!-- Tabla de Pagos -->
         <div class="pagos-table-container">
             <div class="table-header">
                 <h2>Historial de Pagos</h2>
+                <div class="filter-buttons">
+                    <button class="filter-btn active">Todos</button>
+                    <button class="filter-btn">Pagados</button>
+                    <button class="filter-btn">Pendientes</button>
+                </div>
             </div>
 
             <table>
                 <thead>
                     <tr>
                         <th>Concepto</th>
-                        <th>Período</th>
-                        <th>Fecha de Pago</th>
+                        <th>Tipo</th>
+                        <th>Fecha Vencimiento</th>
                         <th>Monto</th>
                         <th>Estado</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td>Honorarios Docentes</td>
-                        <td>Noviembre 2025</td>
-                        <td>30 Nov 2025</td>
-                        <td>$45,000</td>
-                        <td><span class="status-badge pagado">Pagado</span></td>
+                    <!-- Cuotas (todas, con estados actualizados) -->
+                    <tr th:each="cuota : ${cuotas}">
                         <td>
-                            <button class="btn-ver">
-                                <i class="fas fa-receipt"></i> Comprobante
-                            </button>
+                            <span th:if="${cuota.numeroCuota != null and cuota.inscripcion != null and cuota.inscripcion.oferta != null}"
+                                  th:text="'Cuota ' + ${cuota.numeroCuota} + ' (' + ${cuota.inscripcion.oferta.nombre} + ')'">Cuota 1 (Nombre)</span>
+                            <span th:unless="${cuota.numeroCuota != null and cuota.inscripcion != null and cuota.inscripcion.oferta != null}"
+                                  th:text="${cuota.numeroCuota != null ? 'Cuota ' + cuota.numeroCuota : 'Cuota'}">Cuota</span>
+                        </td>
+                        <td th:text="${cuota.inscripcion != null and cuota.inscripcion.oferta != null ? cuota.inscripcion.oferta.tipoOferta : '-'}">Tipo</td>
+                        <td th:text="${cuota.fechaVencimiento != null ? #temporals.format(cuota.fechaVencimiento, 'dd MMM yyyy') : 'Sin fecha'}">15 Nov</td>
+                        <td th:text="${#numbers.formatCurrency(cuota.monto != null ? cuota.monto : T(java.math.BigDecimal).ZERO)}">$0</td>
+                        <td>
+                            <span class="status-badge"
+                                th:classappend="${cuota.estado.name() == 'PAGADA' ? ' pagado' : (cuota.estado.name() == 'VENCIDA' ? ' vencido' : ' pendiente')}"
+                                th:text="${cuota.estado.name() == 'VENCIDA' ? 'Mora' : cuota.estado.descripcion}">Estado</span>
+                        </td>
+                        <td>
+                            <!-- Botón de pagar si es la primera cuota pendiente de su inscripción -->
+                            <form th:if="${cuota.inscripcion != null and cuotasPendientesPorInscripcion != null and cuotasPendientesPorInscripcion.get(cuota.inscripcion.idInscripcion) != null and cuotasPendientesPorInscripcion.get(cuota.inscripcion.idInscripcion).idCuota == cuota.idCuota}"
+                                  th:action="@{'/docente/mis-pagos/cuotas/' + ${cuota.idCuota} + '/pagar'}" 
+                                  method="post"
+                                  style="display: inline;">
+                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                                <button class="btn-pagar" type="submit">
+                                    <i class="fas fa-credit-card"></i> Pagar
+                                </button>
+                            </form>
+                            <!-- Para cuotas ya pagadas, mostrar comprobante -->
+                            <a th:if="${cuota.estado.name() == 'PAGADA' and cuota.pago != null}" 
+                               class="btn-ver"
+                               th:href="@{'/docente/mis-pagos/comprobante/' + ${cuota.pago.idPago}}">
+                                <i class="fas fa-file-pdf"></i> Comprobante
+                            </a>
+                            <span th:if="${cuota.estado.name() == 'PAGADA' and cuota.pago == null}" style="color: #48bb78;">
+                                <i class="fas fa-check-circle"></i> Completado
+                            </span>
+                            <!-- Para otras cuotas, solo mostrar el estado -->
+                            <span th:if="${cuota.estado.name() != 'PAGADA' and (cuota.inscripcion == null or cuotasPendientesPorInscripcion == null or cuotasPendientesPorInscripcion.get(cuota.inscripcion.idInscripcion) == null or cuotasPendientesPorInscripcion.get(cuota.inscripcion.idInscripcion).idCuota != cuota.idCuota)}" 
+                                  style="color: #a0aec0;">
+                                -
+                            </span>
                         </td>
                     </tr>
-                    <tr>
-                        <td>Honorarios Docentes</td>
-                        <td>Octubre 2025</td>
-                        <td>31 Oct 2025</td>
-                        <td>$45,000</td>
-                        <td><span class="status-badge pagado">Pagado</span></td>
+                    
+                    <!-- Pagos de inscripción (solo los que tienen esCuotaMensual = false o es null) -->
+                    <tr th:each="pago : ${pagos}" th:if="${pago.esCuotaMensual == null or pago.esCuotaMensual == false}">
                         <td>
-                            <button class="btn-ver">
-                                <i class="fas fa-receipt"></i> Comprobante
-                            </button>
+                            <span th:if="${pago.oferta != null}"
+                                  th:text="'Inscripción (' + ${pago.oferta.nombre} + ')'">Inscripción (Nombre)</span>
+                            <span th:unless="${pago.oferta != null}"
+                                  th:text="${pago.descripcion != null ? pago.descripcion : 'Inscripción'}">Inscripción</span>
+                        </td>
+                        <td th:text="${pago.oferta != null ? pago.oferta.tipoOferta : '-'}">Tipo</td>
+                        <td th:text="${pago.fechaAprobacion != null ? #temporals.format(pago.fechaAprobacion, 'dd MMM yyyy HH:mm') : (pago.fechaPago != null ? #temporals.format(pago.fechaPago, 'dd MMM yyyy HH:mm') : 'Sin registro')}">01 Oct 2025</td>
+                        <td th:text="${#numbers.formatCurrency(pago.monto != null ? pago.monto : T(java.math.BigDecimal).ZERO)}">$0</td>
+                        <td>
+                            <span class="status-badge"
+                                th:classappend="${pago.estadoPago.name() == 'COMPLETADO' ? ' pagado' : (pago.estadoPago.name() == 'PENDIENTE' or pago.estadoPago.name() == 'EN_PROCESO' ? ' pendiente' : ' vencido')}"
+                                th:text="${pago.estadoPago.descripcion}">Pagado</span>
+                        </td>
+                        <td>
+                            <a class="btn-ver"
+                               th:if="${pago.estadoPago.name() == 'COMPLETADO'}"
+                               th:href="@{'/docente/mis-pagos/comprobante/' + ${pago.idPago}}">
+                                <i class="fas fa-file-pdf"></i> Comprobante
+                            </a>
+                            <a class="btn-ver"
+                               th:if="${pago.estadoPago.name() != 'COMPLETADO'}"
+                               th:href="@{'/pago-resultado'(payment_id=${pago.paymentId}, external_reference=${pago.externalReference})}">
+                                <i class="fas fa-search"></i>
+                                <span>Detalle</span>
+                            </a>
                         </td>
                     </tr>
-                    <tr>
-                        <td>Honorarios Docentes</td>
-                        <td>Septiembre 2025</td>
-                        <td>30 Sep 2025</td>
-                        <td>$45,000</td>
-                        <td><span class="status-badge pagado">Pagado</span></td>
-                        <td>
-                            <button class="btn-ver">
-                                <i class="fas fa-receipt"></i> Comprobante
-                            </button>
+                    
+                    <tr th:if="${#lists.isEmpty(cuotas) and #lists.isEmpty(pagos)}">
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <i class="fas fa-receipt"></i>
+                                <p>Aún no registramos pagos.</p>
+                            </div>
                         </td>
                     </tr>
                 </tbody>
             </table>
         </div>
     </div>
+
+    <script>
+        // Filtrado de tabla
+        const filterButtons = document.querySelectorAll('.filter-btn');
+        const tableRows = document.querySelectorAll('tbody tr');
+
+        filterButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Actualizar botón activo
+                filterButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                const filter = btn.textContent.toLowerCase();
+
+                // Filtrar filas
+                tableRows.forEach(row => {
+                    const badge = row.querySelector('.status-badge');
+                    const status = badge ? badge.textContent.toLowerCase() : '';
+
+                    if (filter === 'todos') {
+                        row.style.display = '';
+                    } else if (filter === 'pagados' && status.includes('pagado')) {
+                        row.style.display = '';
+                    } else if (filter === 'pendientes' && status.includes('pendiente')) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = badge ? 'none' : (filter === 'todos' ? '' : 'none');
+                    }
+                });
+            });
+        });
+    </script>
 </div>
 </html>

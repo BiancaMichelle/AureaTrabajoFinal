@@ -1,6 +1,5 @@
 package com.example.demo.service;
 
-import java.sql.Time;
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.ArrayList;
@@ -21,7 +20,6 @@ import com.example.demo.model.Alumno;
 import com.example.demo.model.Ciudad;
 import com.example.demo.model.Curso;
 import com.example.demo.model.Docente;
-import com.example.demo.model.Horario;
 import com.example.demo.model.Pais;
 import com.example.demo.model.Provincia;
 import com.example.demo.model.Rol;
@@ -29,6 +27,7 @@ import com.example.demo.model.Usuario;
 import com.example.demo.repository.AlumnoRepository;
 import com.example.demo.repository.CiudadRepository;
 import com.example.demo.repository.CursoRepository;
+import com.example.demo.repository.DisponibilidadDocenteRepository;
 import com.example.demo.repository.DocenteRepository;
 import com.example.demo.repository.HorarioRepository;
 import com.example.demo.repository.InscripcionRepository;
@@ -53,6 +52,8 @@ public class RegistroService {
     private final EmailService emailService; 
     private final LocacionAPIService locacionApiService;
     private final HorarioRepository horarioRepository;
+    private final DisponibilidadDocenteRepository disponibilidadDocenteRepository;
+    private final DisponibilidadDocenteService disponibilidadDocenteService;
     private final ObjectMapper objectMapper;
     private final InscripcionRepository inscripcionRepository;
     private final CursoRepository cursoRepository;
@@ -68,7 +69,9 @@ public class RegistroService {
                           RolRepository rolRepository,
                           EmailService emailService,
                           LocacionAPIService locacionApiService,
-                          HorarioRepository horarioRepository, 
+                          HorarioRepository horarioRepository,
+                          DisponibilidadDocenteRepository disponibilidadDocenteRepository,
+                          DisponibilidadDocenteService disponibilidadDocenteService,
                           ObjectMapper objectMapper,
                           InscripcionRepository inscripcionRepository,
                           CursoRepository cursoRepository) { 
@@ -83,7 +86,9 @@ public class RegistroService {
         this.emailService = emailService; 
         this.locacionApiService = locacionApiService;
         this.horarioRepository = horarioRepository;
-        this.objectMapper = objectMapper; 
+        this.disponibilidadDocenteRepository = disponibilidadDocenteRepository;
+        this.disponibilidadDocenteService = disponibilidadDocenteService;
+        this.objectMapper = objectMapper;
         this.inscripcionRepository = inscripcionRepository;
         this.cursoRepository = cursoRepository;
     }
@@ -664,38 +669,15 @@ public class RegistroService {
 
     private void guardarHorariosDocente(Docente docente, List<Map<String, String>> horarios) {
         try {
-            System.out.println("📅 Guardando " + horarios.size() + " horarios para docente ID: " + docente.getId());
-
-            for (Map<String, String> horarioData : horarios) {
-                Horario horario = new Horario();
-
-                // ✅ CONVERTIR STRING A ENUM DIAS
-                String diaString = horarioData.get("diaSemana");
-                Dias diaEnum = convertirStringADias(diaString);
-                horario.setDia(diaEnum);
-
-                // ✅ CONVERTIR STRING A TIME
-                String horaInicioStr = horarioData.get("horaInicio");
-                String horaFinStr = horarioData.get("horaFin");
-
-                if (horaInicioStr != null && horaFinStr != null) {
-                    Time horaInicio = Time.valueOf(horaInicioStr + ":00");
-                    Time horaFin = Time.valueOf(horaFinStr + ":00");
-
-                    horario.setHoraInicio(horaInicio);
-                    horario.setHoraFin(horaFin);
-                    horario.setDocente(docente);
-
-                    horarioRepository.save(horario);
-                    System.out.println("✅ Horario guardado: " + horario.getDia() + " " +
-                            horario.getHoraInicio() + " - " + horario.getHoraFin());
-                }
-            }
-
-            System.out.println("🎯 Total de " + horarios.size() + " horarios guardados exitosamente");
+            System.out.println("📅 Guardando " + horarios.size() + " horarios de disponibilidad para docente ID: " + docente.getId());
+            
+            // Usar el nuevo servicio de disponibilidad
+            disponibilidadDocenteService.actualizarDisponibilidades(docente, horarios);
+            
+            System.out.println("🎯 Total de " + horarios.size() + " disponibilidades guardadas exitosamente");
 
         } catch (Exception e) {
-            System.out.println("❌ Error guardando horarios: " + e.getMessage());
+            System.out.println("❌ Error guardando disponibilidades: " + e.getMessage());
             e.printStackTrace();
             // No lanzar excepción para no interrumpir el registro del usuario
         }
@@ -706,30 +688,11 @@ public class RegistroService {
             return;
         }
 
-        horarioRepository.deleteByDocente(docente);
+        // Eliminar disponibilidades anteriores y guardar las nuevas
+        disponibilidadDocenteRepository.deleteByDocente(docente);
 
         if (horarios != null && !horarios.isEmpty()) {
             guardarHorariosDocente(docente, horarios);
-        }
-    }
-
-    // ✅ MÉTODO AUXILIAR PARA CONVERTIR STRING A ENUM DIAS
-    private Dias convertirStringADias(String diaString) {
-        if (diaString == null) return null;
-        
-        switch (diaString.toUpperCase()) {
-            case "LUNES": return Dias.LUNES;
-            case "MARTES": return Dias.MARTES;
-            case "MIÉRCOLES": 
-            case "MIERCOLES": return Dias.MIERCOLES;
-            case "JUEVES": return Dias.JUEVES;
-            case "VIERNES": return Dias.VIERNES;
-            case "SÁBADO":
-            case "SABADO": return Dias.SABADO;
-            case "DOMINGO": return Dias.DOMINGO;
-            default: 
-                System.out.println("⚠️ Día no reconocido: " + diaString);
-                return Dias.LUNES; // Valor por defecto
         }
     }
 

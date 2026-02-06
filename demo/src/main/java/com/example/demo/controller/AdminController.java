@@ -36,9 +36,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.example.demo.enums.Dias;
 import com.example.demo.enums.EstadoOferta;
+import com.example.demo.enums.EstadoProcesoCertificacion;
 import com.example.demo.enums.Modalidad;
 import com.example.demo.enums.TipoGenero;
 import com.example.demo.model.Alumno;
@@ -47,6 +49,7 @@ import com.example.demo.model.CarruselImagen;
 import com.example.demo.model.Categoria;
 import com.example.demo.model.Charla;
 import com.example.demo.model.Curso;
+import com.example.demo.model.DisponibilidadDocente;
 import com.example.demo.model.Docente;
 import com.example.demo.model.Formacion;
 import com.example.demo.model.Horario;
@@ -73,8 +76,11 @@ import com.example.demo.service.ImagenService;
 import com.example.demo.service.InstitutoService;
 import com.example.demo.service.LocacionAPIService;
 import com.example.demo.service.OfertaAcademicaService;
+import com.example.demo.service.CertificacionService;
 import com.example.demo.service.RegistroService;
 import com.example.demo.service.AnalisisRendimientoService;
+import com.example.demo.service.DisponibilidadDocenteService;
+import com.example.demo.service.GeneradorHorariosService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Controller
@@ -134,10 +140,19 @@ public class AdminController {
     private HorarioRepository horarioRepository;
     
     @Autowired
+    private DisponibilidadDocenteService disponibilidadDocenteService;
+    
+    @Autowired
+    private GeneradorHorariosService generadorHorariosService;
+    
+    @Autowired
     private InscripcionRepository inscripcionRepository;
     
     @Autowired
     private AuditLogRepository auditLogRepository;
+
+    @Autowired
+    private CertificacionService certificacionService;
 
 
     public AdminController(LocacionAPIService locacionApiService,
@@ -235,6 +250,63 @@ public class AdminController {
         model.addAttribute("actividadesRecientes", actividadesRecientes);
         
         return "admin/panelAdmin";
+    }
+
+    @GetMapping("/admin/certificaciones")
+    public String adminCertificaciones(Model model) {
+        List<OfertaAcademica> ofertasCerradas = ofertaAcademicaRepository.findByEstado(EstadoOferta.CERRADA);
+        ofertasCerradas.forEach(o -> {
+            if (o.getEstadoProcesoCertificacion() == null) {
+                o.setEstadoProcesoCertificacion(EstadoProcesoCertificacion.EN_GESTION_CERTIFICACION);
+            }
+        });
+
+        model.addAttribute("ofertas", ofertasCerradas);
+        model.addAttribute("estadosCert", EstadoProcesoCertificacion.values());
+        return "admin/certificaciones";
+    }
+
+    @PostMapping("/admin/certificaciones/{id}/estado")
+    public String actualizarEstadoCertificacion(
+            @PathVariable Long id,
+            @RequestParam EstadoProcesoCertificacion estado,
+            RedirectAttributes redirectAttributes) {
+        OfertaAcademica oferta = ofertaAcademicaRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Oferta no encontrada"));
+
+        oferta.setEstadoProcesoCertificacion(estado);
+        ofertaAcademicaRepository.save(oferta);
+
+        redirectAttributes.addFlashAttribute("success", "Estado de certificación actualizado");
+        return "redirect:/admin/certificaciones";
+    }
+
+    @PostMapping("/admin/certificaciones/{id}/cerrar")
+    public String cerrarNotasYEmitirActaAdmin(
+            @PathVariable Long id,
+            RedirectAttributes redirectAttributes) {
+        try {
+            OfertaAcademica oferta = ofertaAcademicaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Oferta no encontrada"));
+
+            Docente docenteReferencia = obtenerDocenteReferencia(oferta);
+            certificacionService.cerrarNotasYEmitirCertificados(id, docenteReferencia);
+
+            redirectAttributes.addFlashAttribute("success", "Notas cerradas y acta emitida para la oferta " + oferta.getNombre());
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Error al cerrar notas: " + e.getMessage());
+        }
+        return "redirect:/admin/certificaciones";
+    }
+
+    private Docente obtenerDocenteReferencia(OfertaAcademica oferta) {
+        if (oferta instanceof Curso curso && curso.getDocentes() != null && !curso.getDocentes().isEmpty()) {
+            return curso.getDocentes().get(0);
+        }
+        if (oferta instanceof Formacion formacion && formacion.getDocentes() != null && !formacion.getDocentes().isEmpty()) {
+            return formacion.getDocentes().get(0);
+        }
+        throw new RuntimeException("La oferta no tiene docente asignado para registrar el cierre");
     }
 
     @GetMapping("/admin/gestion-ofertas")
@@ -786,6 +858,8 @@ public class AdminController {
             @RequestParam(required = false) Double costoInscripcion,
             @RequestParam(required = false) String fechaInicio,
             @RequestParam(required = false) String fechaFin,
+            @RequestParam(required = false) String fechaInicioInscripcion,
+            @RequestParam(required = false) String fechaFinInscripcion,
             @RequestParam(required = false) String modalidad,
             @RequestParam(required = false) String otorgaCertificado,
             @RequestParam(required = false) MultipartFile imagen,
@@ -808,12 +882,14 @@ public class AdminController {
             // Campos específicos para CHARLA
             @RequestParam(required = false) String lugarCharla,
             @RequestParam(required = false) String enlaceCharla,
+            @RequestParam(required = false) String horaCharla,
             @RequestParam(required = false) Integer duracionEstimada,
             @RequestParam(required = false) String disertantesCharla,
             @RequestParam(required = false) String publicoObjetivoCharla,
             // Campos específicos para SEMINARIO
             @RequestParam(required = false) String lugarSeminario,
             @RequestParam(required = false) String enlaceSeminario,
+            @RequestParam(required = false) String horaSeminario,
             @RequestParam(required = false) Integer duracionMinutos,
             @RequestParam(required = false) String disertantesSeminario,
             @RequestParam(required = false) String publicoObjetivoSeminario,
@@ -854,7 +930,7 @@ public class AdminController {
             }
             
             // Validar formato de fechas
-            LocalDate fechaInicioDate, fechaFinDate;
+            LocalDate fechaInicioDate, fechaFinDate, fechaInicioInscripcionDate, fechaFinInscripcionDate;
             try {
                 fechaInicioDate = LocalDate.parse(fechaInicio);
                 fechaFinDate = LocalDate.parse(fechaFin);
@@ -866,6 +942,35 @@ public class AdminController {
                     errorResponse.put("message", "La fecha de inicio no puede ser posterior a la fecha de fin");
                     return ResponseEntity.badRequest().body(errorResponse);
                 }
+                
+                // Validar fechas de inscripción
+                if (fechaInicioInscripcion == null || fechaInicioInscripcion.trim().isEmpty()) {
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("success", false);
+                    errorResponse.put("message", "La fecha de inicio de inscripción es obligatoria");
+                    return ResponseEntity.badRequest().body(errorResponse);
+                }
+                
+                if (fechaFinInscripcion == null || fechaFinInscripcion.trim().isEmpty()) {
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("success", false);
+                    errorResponse.put("message", "La fecha de fin de inscripción es obligatoria");
+                    return ResponseEntity.badRequest().body(errorResponse);
+                }
+                
+                fechaInicioInscripcionDate = LocalDate.parse(fechaInicioInscripcion);
+                fechaFinInscripcionDate = LocalDate.parse(fechaFinInscripcion);
+                
+                // Validar que fecha de inicio de inscripción no sea posterior a fecha de fin de inscripción
+                if (fechaInicioInscripcionDate.isAfter(fechaFinInscripcionDate)) {
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("success", false);
+                    errorResponse.put("message", "La fecha de inicio de inscripción no puede ser posterior a la fecha de fin de inscripción");
+                    return ResponseEntity.badRequest().body(errorResponse);
+                }
+                
+                // REMOVIDO: Validación que las inscripciones deben cerrar antes del inicio
+                // Las inscripciones pueden continuar incluso después del inicio de la oferta
             } catch (Exception e) {
                 Map<String, Object> errorResponse = new HashMap<>();
                 errorResponse.put("success", false);
@@ -873,18 +978,24 @@ public class AdminController {
                 return ResponseEntity.badRequest().body(errorResponse);
             }
             
-            // Validar lugar y enlace según modalidad para TODOS los tipos
+            // Validar lugar y enlace según modalidad
+            // IMPORTANTE: Enlace obligatorio SOLO para CHARLA y SEMINARIO en modalidad virtual/híbrida
             boolean esVirtual = "VIRTUAL".equalsIgnoreCase(modalidad) || "HIBRIDA".equalsIgnoreCase(modalidad);
             boolean esPresencial = "PRESENCIAL".equalsIgnoreCase(modalidad) || "HIBRIDA".equalsIgnoreCase(modalidad);
+            boolean esCharlaOSeminario = "CHARLA".equalsIgnoreCase(tipoOferta) || "SEMINARIO".equalsIgnoreCase(tipoOferta);
             
-            // Validar enlace si es virtual/híbrida
-            if (esVirtual) {
+            // Validar enlace si es virtual/híbrida SOLO para Charla y Seminario
+            if (esVirtual && esCharlaOSeminario) {
                 if (enlace == null || enlace.trim().isEmpty()) {
                     Map<String, Object> errorResponse = new HashMap<>();
                     errorResponse.put("success", false);
-                    errorResponse.put("message", "Para modalidad Virtual o Híbrida, el enlace es obligatorio");
+                    errorResponse.put("message", "Para modalidad Virtual o Híbrida en Charlas y Seminarios, el enlace es obligatorio");
                     return ResponseEntity.badRequest().body(errorResponse);
                 }
+            }
+            
+            // Validar URL si se proporciona enlace
+            if (enlace != null && !enlace.trim().isEmpty()) {
                 try {
                     new java.net.URL(enlace);
                 } catch (java.net.MalformedURLException e) {
@@ -947,22 +1058,26 @@ public class AdminController {
             // Crear la instancia específica según el tipo
             switch (tipoOferta.toUpperCase()) {
                 case "CURSO":
-                    oferta = crearCurso(nombre, descripcion, cupos, costoInscripcion, fechaInicio, fechaFin, modalidad, lugar, enlace,
+                    oferta = crearCurso(nombre, descripcion, cupos, costoInscripcion, fechaInicio, fechaFin, 
+                                      fechaInicioInscripcion, fechaFinInscripcion, modalidad, lugar, enlace,
                                       temario, docentesCurso, costoCuota, costoMora, nrCuotas, diaVencimiento);
                     break;
                 case "FORMACION":
-                    oferta = crearFormacion(nombre, descripcion, cupos, costoInscripcion, fechaInicio, fechaFin, modalidad, lugar, enlace,
+                    oferta = crearFormacion(nombre, descripcion, cupos, costoInscripcion, fechaInicio, fechaFin,
+                                          fechaInicioInscripcion, fechaFinInscripcion, modalidad, lugar, enlace,
                                           planFormacion, docentesFormacion, 
                                           costoCuotaFormacion, costoMoraFormacion, nrCuotasFormacion, diaVencimientoFormacion);
                     break;
                 case "CHARLA":
-                    oferta = crearCharla(nombre, descripcion, cupos, costoInscripcion, fechaInicio, fechaFin, modalidad,
-                                       lugar, enlace, duracionEstimada, disertantesCharla, 
+                    oferta = crearCharla(nombre, descripcion, cupos, costoInscripcion, fechaInicio, fechaFin,
+                                       fechaInicioInscripcion, fechaFinInscripcion, modalidad,
+                                       lugar, enlace, horaCharla, duracionEstimada, disertantesCharla, 
                                        publicoObjetivoCharla);
                     break;
                 case "SEMINARIO":
-                    oferta = crearSeminario(nombre, descripcion, cupos, costoInscripcion, fechaInicio, fechaFin, modalidad,
-                                          lugar, enlace, duracionMinutos, disertantesSeminario, publicoObjetivoSeminario);
+                    oferta = crearSeminario(nombre, descripcion, cupos, costoInscripcion, fechaInicio, fechaFin,
+                                          fechaInicioInscripcion, fechaFinInscripcion, modalidad,
+                                          lugar, enlace, horaSeminario, duracionMinutos, disertantesSeminario, publicoObjetivoSeminario);
                     break;
                 default:
                     throw new IllegalArgumentException("Tipo de oferta no válido: " + tipoOferta);
@@ -1092,11 +1207,13 @@ public class AdminController {
     // Métodos auxiliares para crear cada tipo de oferta específica
     
     private Curso crearCurso(String nombre, String descripcion, Integer cupos, Double costo,
-                           String fechaInicio, String fechaFin, String modalidad, String lugar, String enlace,
+                           String fechaInicio, String fechaFin, String fechaInicioInscripcion, String fechaFinInscripcion,
+                           String modalidad, String lugar, String enlace,
                            String temario, String docentesIds, Double costoCuota, Double costoMora, 
                            Integer nrCuotas, Integer diaVencimiento) {
         Curso curso = new Curso();
-        configurarOfertaBase(curso, nombre, descripcion, cupos, costo, fechaInicio, fechaFin, modalidad, lugar, enlace);
+        configurarOfertaBase(curso, nombre, descripcion, cupos, costo, fechaInicio, fechaFin, 
+                           fechaInicioInscripcion, fechaFinInscripcion, modalidad, lugar, enlace);
         
         // Campos específicos del curso
         curso.setTemario(temario);
@@ -1118,11 +1235,13 @@ public class AdminController {
     }
     
     private Formacion crearFormacion(String nombre, String descripcion, Integer cupos, Double costo,
-                                   String fechaInicio, String fechaFin, String modalidad, String lugar, String enlace,
+                                   String fechaInicio, String fechaFin, String fechaInicioInscripcion, String fechaFinInscripcion,
+                                   String modalidad, String lugar, String enlace,
                                    String plan, String docentesIds, Double costoCuota, Double costoMora,
                                    Integer nrCuotas, Integer diaVencimiento) {
         Formacion formacion = new Formacion();
-        configurarOfertaBase(formacion, nombre, descripcion, cupos, costo, fechaInicio, fechaFin, modalidad, lugar, enlace);
+        configurarOfertaBase(formacion, nombre, descripcion, cupos, costo, fechaInicio, fechaFin,
+                           fechaInicioInscripcion, fechaFinInscripcion, modalidad, lugar, enlace);
         
         // Campos específicos de la formación
         formacion.setPlan(plan);
@@ -1171,11 +1290,22 @@ public class AdminController {
     }
     
     private Charla crearCharla(String nombre, String descripcion, Integer cupos, Double costo,
-                             String fechaInicio, String fechaFin, String modalidad,
-                             String lugar, String enlace, Integer duracionEstimada,
+                             String fechaInicio, String fechaFin, String fechaInicioInscripcion, String fechaFinInscripcion,
+                             String modalidad,
+                             String lugar, String enlace, String horaCharla, Integer duracionEstimada,
                              String disertantesStr, String publicoObjetivo) {
         Charla charla = new Charla();
-        configurarOfertaBase(charla, nombre, descripcion, cupos, costo, fechaInicio, fechaFin, modalidad, lugar, enlace);
+        configurarOfertaBase(charla, nombre, descripcion, cupos, costo, fechaInicio, fechaFin,
+                           fechaInicioInscripcion, fechaFinInscripcion, modalidad, lugar, enlace);
+        
+        // Convertir y asignar hora de inicio
+        if (horaCharla != null && !horaCharla.trim().isEmpty()) {
+            try {
+                charla.setHoraInicio(java.sql.Time.valueOf(horaCharla + ":00"));
+            } catch (Exception e) {
+                System.err.println("Error al convertir hora de charla: " + e.getMessage());
+            }
+        }
         
         // Campos específicos de la charla
         if (duracionEstimada != null) charla.setDuracionEstimada(duracionEstimada);
@@ -1198,11 +1328,22 @@ public class AdminController {
     }
     
     private Seminario crearSeminario(String nombre, String descripcion, Integer cupos, Double costo,
-                                   String fechaInicio, String fechaFin, String modalidad,
-                                   String lugar, String enlace, Integer duracionMinutos,
+                                   String fechaInicio, String fechaFin, String fechaInicioInscripcion, String fechaFinInscripcion,
+                                   String modalidad,
+                                   String lugar, String enlace, String horaSeminario, Integer duracionMinutos,
                                    String disertantesStr, String publicoObjetivo) {
         Seminario seminario = new Seminario();
-        configurarOfertaBase(seminario, nombre, descripcion, cupos, costo, fechaInicio, fechaFin, modalidad, lugar, enlace);
+        configurarOfertaBase(seminario, nombre, descripcion, cupos, costo, fechaInicio, fechaFin,
+                           fechaInicioInscripcion, fechaFinInscripcion, modalidad, lugar, enlace);
+        
+        // Convertir y asignar hora de inicio
+        if (horaSeminario != null && !horaSeminario.trim().isEmpty()) {
+            try {
+                seminario.setHoraInicio(java.sql.Time.valueOf(horaSeminario + ":00"));
+            } catch (Exception e) {
+                System.err.println("Error al convertir hora de seminario: " + e.getMessage());
+            }
+        }
         
         // Campos específicos del seminario
         if (duracionMinutos != null) seminario.setDuracionMinutos(duracionMinutos);
@@ -1226,7 +1367,8 @@ public class AdminController {
     
     private void configurarOfertaBase(OfertaAcademica oferta, String nombre, String descripcion,
                                     Integer cupos, Double costo, String fechaInicio, 
-                                    String fechaFin, String modalidad, String lugar, String enlace) {
+                                    String fechaFin, String fechaInicioInscripcion, String fechaFinInscripcion,
+                                    String modalidad, String lugar, String enlace) {
         oferta.setNombre(nombre);
         oferta.setDescripcion(descripcion);
         oferta.setLugar(lugar);
@@ -1241,6 +1383,14 @@ public class AdminController {
         
         if (fechaFin != null && !fechaFin.isEmpty()) {
             oferta.setFechaFin(LocalDate.parse(fechaFin));
+        }
+        
+        if (fechaInicioInscripcion != null && !fechaInicioInscripcion.isEmpty()) {
+            oferta.setFechaInicioInscripcion(LocalDate.parse(fechaInicioInscripcion));
+        }
+        
+        if (fechaFinInscripcion != null && !fechaFinInscripcion.isEmpty()) {
+            oferta.setFechaFinInscripcion(LocalDate.parse(fechaFinInscripcion));
         }
         
         // Configurar modalidad
@@ -1290,12 +1440,14 @@ public class AdminController {
             // Campos específicos para CHARLA
             @RequestParam(required = false) String lugarCharla,
             @RequestParam(required = false) String enlaceCharla,
+            @RequestParam(required = false) String horaCharla,
             @RequestParam(required = false) Integer duracionEstimada,
             @RequestParam(required = false) String disertantesCharla,
             @RequestParam(required = false) String publicoObjetivoCharla,
             // Campos específicos para SEMINARIO
             @RequestParam(required = false) String lugarSeminario,
             @RequestParam(required = false) String enlaceSeminario,
+            @RequestParam(required = false) String horaSeminario,
             @RequestParam(required = false) Integer duracionMinutos,
             @RequestParam(required = false) String disertantesSeminario,
             @RequestParam(required = false) String publicoObjetivoSeminario,
@@ -1372,18 +1524,24 @@ public class AdminController {
                 return ResponseEntity.badRequest().body(errorResponse);
             }
             
-            // Validar lugar y enlace según modalidad para TODOS los tipos
+            // Validar lugar y enlace según modalidad
+            // IMPORTANTE: Enlace obligatorio SOLO para CHARLA y SEMINARIO en modalidad virtual/híbrida
             boolean esVirtual = "VIRTUAL".equalsIgnoreCase(modalidad) || "HIBRIDA".equalsIgnoreCase(modalidad);
             boolean esPresencial = "PRESENCIAL".equalsIgnoreCase(modalidad) || "HIBRIDA".equalsIgnoreCase(modalidad);
+            boolean esCharlaOSeminario = "CHARLA".equalsIgnoreCase(tipoOferta) || "SEMINARIO".equalsIgnoreCase(tipoOferta);
             
-            // Validar enlace si es virtual/híbrida
-            if (esVirtual) {
+            // Validar enlace si es virtual/híbrida SOLO para Charla y Seminario
+            if (esVirtual && esCharlaOSeminario) {
                 if (enlace == null || enlace.trim().isEmpty()) {
                     Map<String, Object> errorResponse = new HashMap<>();
                     errorResponse.put("success", false);
-                    errorResponse.put("message", "Para modalidad Virtual o Híbrida, el enlace es obligatorio");
+                    errorResponse.put("message", "Para modalidad Virtual o Híbrida en Charlas y Seminarios, el enlace es obligatorio");
                     return ResponseEntity.badRequest().body(errorResponse);
                 }
+            }
+            
+            // Validar URL si se proporciona enlace
+            if (enlace != null && !enlace.trim().isEmpty()) {
                 try {
                     new java.net.URL(enlace);
                 } catch (java.net.MalformedURLException e) {
@@ -1496,11 +1654,25 @@ public class AdminController {
                 if (duracionEstimada != null) datosActualizar.put("duracionEstimada", duracionEstimada);
                 if (publicoObjetivoCharla != null) datosActualizar.put("publicoObjetivo", publicoObjetivoCharla);
                 if (disertantesCharla != null) datosActualizar.put("disertantes", disertantesCharla);
+                if (horaCharla != null && !horaCharla.trim().isEmpty()) {
+                    try {
+                        datosActualizar.put("horaInicio", java.sql.Time.valueOf(horaCharla + ":00"));
+                    } catch (Exception e) {
+                        System.err.println("Error al convertir hora de charla: " + e.getMessage());
+                    }
+                }
                 
             } else if ("SEMINARIO".equals(tipoOfertaUpper)) {
                 if (duracionMinutos != null) datosActualizar.put("duracionMinutos", duracionMinutos);
                 if (publicoObjetivoSeminario != null) datosActualizar.put("publicoObjetivo", publicoObjetivoSeminario);
                 if (disertantesSeminario != null) datosActualizar.put("disertantes", disertantesSeminario);
+                if (horaSeminario != null && !horaSeminario.trim().isEmpty()) {
+                    try {
+                        datosActualizar.put("horaInicio", java.sql.Time.valueOf(horaSeminario + ":00"));
+                    } catch (Exception e) {
+                        System.err.println("Error al convertir hora de seminario: " + e.getMessage());
+                    }
+                }
             }
 
             // Ejecutar actualización en el modelo
@@ -1532,6 +1704,99 @@ public class AdminController {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("success", false);
             errorResponse.put("message", "Error al modificar oferta: " + e.toString()); // Usamos toString para ver el tipo de excepción si mensaje es null
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+    }
+
+    /**
+     * Endpoint para generar propuestas automáticas de horarios para una oferta académica
+     */
+    @PostMapping("/admin/ofertas/generar-horarios-automaticos")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> generarHorariosAutomaticos(
+            @RequestParam Long idOferta,
+            @RequestParam String idDocente,
+            @RequestParam Double horasSemanales) {
+        
+        try {
+            System.out.println("📅 Generando propuestas automáticas de horarios...");
+            System.out.println("   - Oferta ID: " + idOferta);
+            System.out.println("   - Docente ID: " + idDocente);
+            System.out.println("   - Horas semanales: " + horasSemanales);
+            
+            // Validaciones - idOferta es OPCIONAL (puede ser null o 0 para ofertas nuevas)
+            if (idDocente == null || horasSemanales == null || horasSemanales <= 0) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("success", false);
+                errorResponse.put("message", "Parámetros inválidos: docente y horas semanales son requeridos");
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+            
+            // Buscar docente
+            Docente docente = docenteRepository.findById(java.util.UUID.fromString(idDocente))
+                .orElseThrow(() -> new RuntimeException("Docente no encontrado"));
+            
+            // Buscar oferta (solo si existe - para ofertas existentes)
+            OfertaAcademica oferta = null;
+            if (idOferta != null && idOferta > 0) {
+                oferta = ofertaAcademicaRepository.findById(idOferta).orElse(null);
+            }
+            
+            // Generar propuestas (oferta puede ser null para ofertas nuevas)
+            List<GeneradorHorariosService.PropuestaHorario> propuestas = 
+                generadorHorariosService.generarPropuestas(oferta, docente, horasSemanales);
+            
+            if (propuestas.isEmpty()) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("success", false);
+                errorResponse.put("message", "No se pudieron generar propuestas. El docente no tiene suficiente disponibilidad.");
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+            
+            // Convertir propuestas a JSON
+            List<Map<String, Object>> propuestasJSON = new ArrayList<>();
+            for (GeneradorHorariosService.PropuestaHorario propuesta : propuestas) {
+                Map<String, Object> propuestaMap = new HashMap<>();
+                propuestaMap.put("nombre", propuesta.getNombre());
+                propuestaMap.put("descripcion", propuesta.getDescripcion());
+                propuestaMap.put("horarios", propuesta.toJSON());
+                propuestaMap.put("totalHorasSemana", Math.round(propuesta.getTotalHorasSemana() * 100.0) / 100.0);
+                propuestaMap.put("cantidadDias", propuesta.getCantidadDias());
+                propuestaMap.put("promedioHorasPorDia", Math.round(propuesta.getPromedioHorasPorDia() * 100.0) / 100.0);
+                propuestaMap.put("cargaAdicionalDocente", Math.round(propuesta.getCargaAdicionalDocente() * 100.0) / 100.0);
+                propuestaMap.put("porcentajeCargaTotal", Math.round(propuesta.getPorcentajeCargaTotal() * 100.0) / 100.0);
+                propuestaMap.put("score", Math.round(propuesta.getScore() * 100.0) / 100.0);
+                propuestasJSON.add(propuestaMap);
+            }
+            
+            // Información adicional del docente
+            double cargaActual = disponibilidadDocenteService.calcularCargaHorariaSemanal(docente);
+            double disponibilidadTotal = disponibilidadDocenteService.calcularDisponibilidadTotalSemanal(docente);
+            double porcentajeOcupacion = disponibilidadDocenteService.calcularPorcentajeOcupacion(docente);
+            
+            Map<String, Object> infoDocente = new HashMap<>();
+            infoDocente.put("nombre", docente.getNombre() + " " + docente.getApellido());
+            infoDocente.put("cargaActual", Math.round(cargaActual * 100.0) / 100.0);
+            infoDocente.put("disponibilidadTotal", Math.round(disponibilidadTotal * 100.0) / 100.0);
+            infoDocente.put("porcentajeOcupacion", Math.round(porcentajeOcupacion * 100.0) / 100.0);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Propuestas generadas exitosamente");
+            response.put("propuestas", propuestasJSON);
+            response.put("infoDocente", infoDocente);
+            
+            System.out.println("✅ " + propuestas.size() + " propuestas generadas exitosamente");
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error al generar propuestas: " + e.getMessage());
+            e.printStackTrace();
+            
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Error al generar propuestas: " + e.getMessage());
             return ResponseEntity.badRequest().body(errorResponse);
         }
     }
@@ -2130,12 +2395,14 @@ public class AdminController {
                 }
             }
 
-            if (docente.getHorario() != null) {
-                List<Map<String, Object>> horarios = docente.getHorario().stream().map(horario -> {
+            // Obtener las disponibilidades del docente (no los horarios de clases)
+            List<DisponibilidadDocente> disponibilidades = disponibilidadDocenteService.obtenerDisponibilidades(docente);
+            if (disponibilidades != null && !disponibilidades.isEmpty()) {
+                List<Map<String, Object>> horarios = disponibilidades.stream().map(disponibilidad -> {
                     Map<String, Object> horarioMap = new HashMap<>();
-                    horarioMap.put("diaSemana", horario.getDia() != null ? horario.getDia().name() : null);
-                    horarioMap.put("horaInicio", horario.getHoraInicio() != null ? horario.getHoraInicio().toString().substring(0, 5) : null);
-                    horarioMap.put("horaFin", horario.getHoraFin() != null ? horario.getHoraFin().toString().substring(0, 5) : null);
+                    horarioMap.put("diaSemana", disponibilidad.getDia() != null ? disponibilidad.getDia().name() : null);
+                    horarioMap.put("horaInicio", disponibilidad.getHoraInicio() != null ? disponibilidad.getHoraInicio().toString().substring(0, 5) : null);
+                    horarioMap.put("horaFin", disponibilidad.getHoraFin() != null ? disponibilidad.getHoraFin().toString().substring(0, 5) : null);
                     return horarioMap;
                 }).collect(Collectors.toList());
                 data.put("horariosDisponibilidad", horarios);
@@ -2186,12 +2453,14 @@ public class AdminController {
             data.put("matricula", docente.getMatricula());
             data.put("experiencia", docente.getAñosExperiencia());
 
-            if (docente.getHorario() != null) {
-                List<Map<String, Object>> horarios = docente.getHorario().stream().map(horario -> {
+            // Obtener las disponibilidades del docente (no los horarios de clases)
+            List<DisponibilidadDocente> disponibilidades = disponibilidadDocenteService.obtenerDisponibilidades(docente);
+            if (disponibilidades != null && !disponibilidades.isEmpty()) {
+                List<Map<String, Object>> horarios = disponibilidades.stream().map(disponibilidad -> {
                     Map<String, Object> horarioMap = new HashMap<>();
-                    horarioMap.put("diaSemana", horario.getDia() != null ? horario.getDia().name() : null);
-                    horarioMap.put("horaInicio", horario.getHoraInicio() != null ? horario.getHoraInicio().toString().substring(0, 5) : null);
-                    horarioMap.put("horaFin", horario.getHoraFin() != null ? horario.getHoraFin().toString().substring(0, 5) : null);
+                    horarioMap.put("diaSemana", disponibilidad.getDia() != null ? disponibilidad.getDia().name() : null);
+                    horarioMap.put("horaInicio", disponibilidad.getHoraInicio() != null ? disponibilidad.getHoraInicio().toString().substring(0, 5) : null);
+                    horarioMap.put("horaFin", disponibilidad.getHoraFin() != null ? disponibilidad.getHoraFin().toString().substring(0, 5) : null);
                     return horarioMap;
                 }).collect(Collectors.toList());
                 data.put("horariosDisponibilidad", horarios);

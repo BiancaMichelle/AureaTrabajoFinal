@@ -45,7 +45,11 @@ public class PagoResultadoController {
         // Forzar la verificación del pago y creación de inscripción inmediatamente
         if (payment_id != null) {
             log.info("🔄 Forzando verificación de pago inmediata...");
-            mercadoPagoService.procesarNotificacionPago(payment_id);
+            try {
+                mercadoPagoService.procesarNotificacionPago(payment_id);
+            } catch (Exception e) {
+                log.warn("⚠️ Advertencia al sincronizar pago (posible concurrencia): {}", e.getMessage());
+            }
         }
 
         // REDIRECCIÓN INTELIGENTE AL AULA O MIS-PAGOS

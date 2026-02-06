@@ -704,6 +704,56 @@ main {
     animation: fadeIn 0.3s ease-out;
 }
 
+/* Refuerzos para el modal global (evita overrides locales en aula/mis ofertas) */
+#globalConfirmationModal.modal-overlay,
+#modalRequisitosIngreso.modal-overlay {
+    background-color: rgba(0, 0, 0, 0.6);
+    justify-content: center;
+    align-items: center;
+    display: none;
+}
+
+#globalConfirmationModal .modal-content,
+#modalRequisitosIngreso .modal-content {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    overflow: hidden;
+}
+
+#globalConfirmationModal .btn-danger,
+#globalConfirmationModal .btn-secondary,
+#modalRequisitosIngreso .btn-danger,
+#modalRequisitosIngreso .btn-secondary {
+    border-radius: 8px;
+}
+
+#globalConfirmationModal .modal-header,
+#modalRequisitosIngreso .modal-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8fafc;
+}
+
+#globalConfirmationModal .modal-body,
+#modalRequisitosIngreso .modal-body {
+    padding: 1rem 1.25rem;
+    color: #1f2937;
+}
+
+#globalConfirmationModal .modal-footer,
+#modalRequisitosIngreso .modal-footer {
+    padding: 0.85rem 1.25rem;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    background: #f9fafb;
+}
+
 .modal-overlay.fade-out {
     animation: fadeOut 0.3s ease-out;
 }

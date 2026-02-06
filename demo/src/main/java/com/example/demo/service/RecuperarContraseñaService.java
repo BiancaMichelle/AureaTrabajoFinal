@@ -99,6 +99,76 @@ public class RecuperarContraseñaService {
     }
     
     /**
+     * Inicia el proceso de cambio de contraseña iniciado por el usuario
+     * NO actualiza la contraseña inmediatamente, sino que sigue un flujo de confirmación por email
+     */
+    public boolean solicitarCambioContraseña(Usuario usuario, String passwordActual, String passwordNueva) {
+        // 1. Verificar contraseña actual
+        if (!passwordEncoder.matches(passwordActual, usuario.getContraseña())) {
+            throw new IllegalArgumentException("La contraseña actual es incorrecta");
+        }
+
+        // 2. Validar complejidad de nueva contraseña
+        if (!validarComplejidadPassword(passwordNueva)) {
+            throw new IllegalArgumentException("La nueva contraseña no cumple con los requisitos: Mínimo 8 caracteres, una mayúscula, un número y un carácter especial.");
+        }
+
+        // 3. Generar token y guardar "password temporal" (la nueva propuesta)
+        String token = UUID.randomUUID().toString();
+        LocalDateTime expiracion = LocalDateTime.now().plusHours(24);
+
+        // AQUÍ está la clave: guardamos la nueva contraseña codificada en Temporal
+        // Y NO tocamos la contraseña actual todavía.
+        usuario.setPasswordTemporal(passwordEncoder.encode(passwordNueva));
+        usuario.setTokenRecuperacion(token);
+        usuario.setExpiracionToken(expiracion);
+
+        usuarioRepository.save(usuario);
+
+        // 4. Enviar email con el LINK de confirmación
+        enviarEmailCambioPassword(usuario, token);
+
+        return true;
+    }
+
+    private boolean validarComplejidadPassword(String password) {
+        if (password == null || password.length() < 8) return false;
+        boolean tieneNumero = password.matches(".*\\d.*");
+        boolean tieneMayuscula = password.matches(".*[A-Z].*");
+        boolean tieneEspecial = password.matches(".*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?].*");
+        return tieneNumero && tieneMayuscula && tieneEspecial;
+    }
+
+    private void enviarEmailCambioPassword(Usuario usuario, String token) {
+        try {
+            String subject = "Valida tu nueva contraseña - Aurea";
+            // Ajustar dominio en producción si es necesario
+            String enlaceConfirmacion = "http://localhost:8080/recuperacion/confirmar?token=" + token;
+
+            String body = String.format(
+                "Estimado/a %s %s,\n\n" +
+                "Has solicitado cambiar tu contraseña de acceso desde tu perfil.\n\n" +
+                "IMPORTANTE: Tu contraseña NO cambiará hasta que hagas clic en el siguiente enlace:\n" +
+                "%s\n\n" +
+                "Si haces clic, tu nueva contraseña quedará activa inmediatamente.\n" +
+                "Este enlace expira en 24 horas.\n\n" +
+                "Si no fuiste tú, simplemente ignora este correo y tu contraseña actual seguirá funcionando.\n\n" +
+                "Saludos,\n" +
+                "Equipo Aurea",
+                usuario.getNombre(), usuario.getApellido(), enlaceConfirmacion
+            );
+
+            emailService.sendEmail(usuario.getCorreo(), subject, body);
+            System.out.println("📧 Email de cambio de contraseña enviado a: " + usuario.getCorreo());
+        } catch (Exception e) {
+            System.out.println("❌ Error enviando email de cambio: " + e.getMessage());
+            throw new RuntimeException("Error enviando email de confirmación", e);
+        }
+    }
+
+
+
+    /**
      * Genera una contraseña temporal segura
      */
     private String generarPasswordTemporal() {

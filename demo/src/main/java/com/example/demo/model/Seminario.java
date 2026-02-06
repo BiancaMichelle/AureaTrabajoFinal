@@ -25,6 +25,7 @@ import lombok.Setter;
 public class Seminario extends OfertaAcademica {
     
     // lugar y enlace movidos a OfertaAcademica
+    private java.sql.Time horaInicio; // Hora de inicio del seminario
     
     @NotBlank(message = "El público objetivo no puede estar vacío")
     private String publicoObjetivo;
@@ -380,12 +381,28 @@ public class Seminario extends OfertaAcademica {
         if (datos.containsKey("publicoObjetivo")) {
             this.setPublicoObjetivo((String) datos.get("publicoObjetivo"));
         }
+        if (datos.containsKey("horaInicio")) {
+            Object horaObj = datos.get("horaInicio");
+            if (horaObj instanceof java.sql.Time) {
+                this.setHoraInicio((java.sql.Time) horaObj);
+            }
+        }
         if (datos.containsKey("disertantes")) {
              Object obj = datos.get("disertantes");
              if (obj instanceof List) {
                  this.setDisertantes(new ArrayList<>((List<String>) obj));
-             } else if (obj instanceof String && !((String)obj).trim().isEmpty()) {
-                 this.setDisertantes(new ArrayList<>(java.util.Arrays.asList(((String)obj).split(","))));
+             } else if (obj instanceof String) {
+                 String strDisertantes = ((String)obj).trim();
+                 if (!strDisertantes.isEmpty()) {
+                     // Si viene como array JSON ["Nico"], limpiarlo
+                     if (strDisertantes.startsWith("[") && strDisertantes.endsWith("]")) {
+                         strDisertantes = strDisertantes.substring(1, strDisertantes.length() - 1)
+                             .replaceAll("\"", "")
+                             .trim();
+                     }
+                     // Dividir por comas y limpiar espacios
+                     this.setDisertantes(new ArrayList<>(java.util.Arrays.asList(strDisertantes.split(","))));
+                 }
              }
         }
     }

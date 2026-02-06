@@ -277,7 +277,9 @@ public class CursoService {
                 datosNuevos.getCostoMora() != null ? datosNuevos.getCostoMora() : 0.0,
                 datosNuevos.getCertificado(),
                 datosNuevos.getLugar(),
-                datosNuevos.getEnlace());
+                datosNuevos.getEnlace(),
+                datosNuevos.getFechaInicioInscripcion(),
+                datosNuevos.getFechaFinInscripcion());
 
         cursoExistente.modificarDatosCurso(
                 datosNuevos.getTemario(),
