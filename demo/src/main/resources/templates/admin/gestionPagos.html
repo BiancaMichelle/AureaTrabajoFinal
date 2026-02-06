@@ -44,61 +44,102 @@
 
         <div class="admin-card mt-4">
             <div class="card-header">
-                <h2>Lista de Pagos</h2>
+                <h2>Pagos por Alumno</h2>
+                <p style="color: #cec0fc; font-size: 0.9rem; margin: 5px 0 0 0;">Haz clic en un alumno para ver sus pagos</p>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="data-table">
+                    <table class="data-table" style="cursor: pointer;">
                         <thead>
                             <tr>
-                                <th>ID</th>
-                                <th>Fecha</th>
+                                <th>DNI</th>
                                 <th>Alumno</th>
-                                <th>Concepto</th>
-                                <th>Monto</th>
-                                <th>Método</th>
-                                <th>Estado</th>
-                                <th>Acciones</th>
+                                <th style="text-align: center;">Total Pagos</th>
+                                <th style="text-align: right;">Monto Total Pagado</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr th:each="pago : ${pagos}">
-                                <td th:text="${pago.idPago}">1</td>
-                                <td th:text="${#temporals.format(pago.fechaPago, 'dd/MM/yyyy HH:mm')}">01/01/2026</td>
-                                <td>
-                                    <div style="display: flex; flex-direction: column;">
-                                        <span style="font-weight: bold;" th:text="${pago.usuario.nombre + ' ' + pago.usuario.apellido}">Nombre</span>
-                                        <span style="font-size: 0.85em; color: #666;" th:text="${pago.usuario.dni}">DNI</span>
-                                    </div>
-                                </td>
-                                <td>
-                                    <span th:if="${pago.oferta != null}" th:text="${pago.oferta.nombre}">Curso</span>
-                                    <span th:unless="${pago.oferta != null}" th:text="${pago.descripcion}">Descripción</span>
-                                    <span th:if="${!#lists.isEmpty(pago.cuotas)}" class="badge bg-info" style="font-size: 0.7em; margin-left: 5px;">Cuota</span>
-                                </td>
-                                <td style="font-weight: bold;" th:text="${#numbers.formatCurrency(pago.monto)}">$100.00</td>
-                                <td th:text="${pago.metodoPago}">TC</td>
-                                <td>
-                                    <span th:if="${pago.estadoPago.name() == 'COMPLETADO'}" class="status-badge status-active">Completado</span>
-                                    <span th:if="${pago.estadoPago.name() == 'PENDIENTE'}" class="status-badge status-pending">Pendiente</span>
-                                    <span th:if="${pago.estadoPago.name() == 'RECHAZADO'}" class="status-badge status-inactive">Rechazado</span>
-                                </td>
-                                <td>
-                                    <a th:if="${pago.estadoPago.name() == 'COMPLETADO'}" 
-                                       th:href="@{'/admin/pagos/comprobante/' + ${pago.idPago}}" 
-                                       class="btn-icon" title="Descargar Comprobante">
-                                        <i class="fas fa-file-pdf"></i>
-                                    </a>
-                                </td>
-                            </tr>
-                            <tr th:if="${#lists.isEmpty(pagos)}">
-                                <td colspan="8" class="text-center">No se encontraron pagos con los filtros seleccionados.</td>
+                            <th:block th:each="entry : ${pagosPorAlumno}">
+                                <tr class="alumno-row" th:data-alumno="${entry.key}" onclick="togglePagos(this)" style="background-color: #2a1a4d; cursor: pointer;">
+                                    <td th:text="${entry.value.dni}">12345678</td>
+                                    <td style="font-weight: bold;">
+                                        <span th:text="${entry.value.nombre}">Juan Pérez</span>
+                                    </td>
+                                    <td style="text-align: center;">
+                                        <span class="badge bg-success" th:text="${entry.value.totalPagos}">5</span>
+                                    </td>
+                                    <td style="text-align: right; font-weight: bold;" th:text="${#numbers.formatCurrency(entry.value.montoTotal)}">$5000.00</td>
+                                </tr>
+                                <!-- Pagos detallados (ocultos por defecto) -->
+                                <tr th:each="pago : ${entry.value.pagos}" 
+                                    class="pago-detail" 
+                                    th:data-alumno="${entry.key}" 
+                                    style="display: none; background-color: #1a0d33;">
+                                    <td colspan="4" style="padding: 12px 20px;">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                                            <div style="flex: 0 0 160px;">
+                                                <small style="color: #cec0fc; display: block; margin-bottom: 4px;">Fecha:</small>
+                                                <strong th:text="${#temporals.format(pago.fechaPago, 'dd/MM/yyyy HH:mm')}">01/01/2026</strong>
+                                            </div>
+                                            <div style="flex: 0 0 110px;">
+                                                <small style="color: #cec0fc; display: block; margin-bottom: 4px;">Tipo:</small>
+                                                <span th:if="${!#lists.isEmpty(pago.cuotas)}" class="badge bg-info">Cuota</span>
+                                                <span th:unless="${!#lists.isEmpty(pago.cuotas)}" class="badge bg-primary">Inscripción</span>
+                                            </div>
+                                            <div style="flex: 1 1 auto; min-width: 180px; max-width: 300px; overflow: hidden; text-overflow: ellipsis;">
+                                                <small style="color: #cec0fc; display: block; margin-bottom: 4px;">Oferta:</small>
+                                                <strong style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;" 
+                                                        th:if="${pago.oferta != null}" 
+                                                        th:text="${pago.oferta.nombre}" 
+                                                        th:title="${pago.oferta.nombre}">Curso</strong>
+                                                <strong style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;" 
+                                                        th:unless="${pago.oferta != null}" 
+                                                        th:text="${pago.descripcion}" 
+                                                        th:title="${pago.descripcion}">Descripción</strong>
+                                            </div>
+                                            <div style="flex: 0 0 120px; text-align: right;">
+                                                <small style="color: #cec0fc; display: block; margin-bottom: 4px;">Monto:</small>
+                                                <strong style="font-size: 1.1em;" th:text="${#numbers.formatCurrency(pago.monto)}">$100.00</strong>
+                                            </div>
+                                            <div style="flex: 0 0 120px; text-align: center;">
+                                                <small style="color: #cec0fc; display: block; margin-bottom: 4px;">Método:</small>
+                                                <strong th:text="${pago.metodoPago}">TC</strong>
+                                            </div>
+                                            <div style="flex: 0 0 140px; text-align: right;">
+                                                <a th:href="@{'/admin/pagos/comprobante/' + ${pago.idPago}}" 
+                                                   class="btn btn-sm btn-primary" 
+                                                   title="Descargar Comprobante"
+                                                   style="font-size: 0.85rem; padding: 6px 12px; white-space: nowrap;">
+                                                    <i class="fas fa-file-pdf"></i> Comprobante
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </th:block>
+                            <tr th:if="${#maps.isEmpty(pagosPorAlumno)}">
+                                <td colspan="4" class="text-center">No se encontraron pagos completados con los filtros seleccionados.</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
+
+        <script th:inline="javascript">
+            window.togglePagos = function(row) {
+                const alumnoDni = row.getAttribute('data-alumno');
+                const pagoRows = document.querySelectorAll(`.pago-detail[data-alumno="${alumnoDni}"]`);
+                
+                pagoRows.forEach(pagoRow => {
+                    if (pagoRow.style.display === 'none' || pagoRow.style.display === '') {
+                        pagoRow.style.display = 'table-row';
+                    } else {
+                        pagoRow.style.display = 'none';
+                    }
+                });
+            };
+        </script>
 
     </main>
 

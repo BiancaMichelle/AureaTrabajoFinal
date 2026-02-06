@@ -268,6 +268,8 @@ public class Formacion extends OfertaAcademica {
         detalle.setEstado(this.getEstado() != null ? this.getEstado().toString() : "");
         detalle.setFechaInicio(this.getFechaInicio());
         detalle.setFechaFin(this.getFechaFin());
+        detalle.setFechaInicioInscripcion(this.getFechaInicioInscripcion());
+        detalle.setFechaFinInscripcion(this.getFechaFinInscripcion());
         detalle.setCupos(this.getCupos());
         detalle.setCostoInscripcion(this.getCostoInscripcion());
         detalle.setCertificado(this.getCertificado() != null ? this.getCertificado().toString() : "");
@@ -462,6 +464,8 @@ public class Formacion extends OfertaAcademica {
         private String estado;
         private LocalDate fechaInicio;
         private LocalDate fechaFin;
+        private LocalDate fechaInicioInscripcion;
+        private LocalDate fechaFinInscripcion;
         private Integer cupos;
         private Double costoInscripcion;
         private String certificado;
@@ -509,6 +513,12 @@ public class Formacion extends OfertaAcademica {
         
         public LocalDate getFechaFin() { return fechaFin; }
         public void setFechaFin(LocalDate fechaFin) { this.fechaFin = fechaFin; }
+        
+        public LocalDate getFechaInicioInscripcion() { return fechaInicioInscripcion; }
+        public void setFechaInicioInscripcion(LocalDate fechaInicioInscripcion) { this.fechaInicioInscripcion = fechaInicioInscripcion; }
+        
+        public LocalDate getFechaFinInscripcion() { return fechaFinInscripcion; }
+        public void setFechaFinInscripcion(LocalDate fechaFinInscripcion) { this.fechaFinInscripcion = fechaFinInscripcion; }
         
         public Integer getCupos() { return cupos; }
         public void setCupos(Integer cupos) { this.cupos = cupos; }

@@ -918,7 +918,14 @@ document.addEventListener('DOMContentLoaded', function () {
         const provinciaCodigoValor = detalleUsuario.provincia?.codigo || '';
         const ciudadIdValor = detalleUsuario.ciudad?.id != null ? String(detalleUsuario.ciudad.id) : '';
 
+        console.log('📍 Cargando ubicación del usuario:', {
+            pais: paisCodigoValor,
+            provincia: provinciaCodigoValor,
+            ciudad: ciudadIdValor
+        });
+
         try {
+            // 1. Primero seleccionar y cargar país
             if (paisCodigoValor) {
                 const paisOption = Array.from(paisSelect.options).find(option => option.getAttribute('data-codigo') === paisCodigoValor);
                 if (paisOption) {
@@ -926,34 +933,52 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (paisHidden) {
                         paisHidden.value = paisCodigoValor;
                     }
+                    console.log('✅ País seleccionado:', paisOption.textContent);
+                    
+                    // Cargar provincias y ESPERAR a que terminen de cargar
                     await cargarProvinciasAdmin(paisCodigoValor);
+                } else {
+                    console.warn('⚠️ No se encontró la opción de país con código:', paisCodigoValor);
                 }
             }
 
+            // 2. DESPUÉS de cargar provincias, seleccionar provincia
             if (provinciaCodigoValor) {
+                // Ahora sí buscar la provincia DESPUÉS de que se cargaron
                 const provinciaOption = Array.from(provinciaSelect.options).find(option => option.getAttribute('data-code') === provinciaCodigoValor);
                 if (provinciaOption) {
                     provinciaSelect.value = provinciaOption.value;
                     if (provinciaHidden) {
                         provinciaHidden.value = provinciaCodigoValor;
                     }
+                    console.log('✅ Provincia seleccionada:', provinciaOption.textContent);
 
                     const paisCodigoActual = paisHidden ? paisHidden.value : paisCodigoValor;
                     if (paisCodigoActual) {
+                        // Cargar ciudades y ESPERAR a que terminen de cargar
                         await cargarCiudadesAdmin(paisCodigoActual, provinciaCodigoValor);
                     }
+                } else {
+                    console.warn('⚠️ No se encontró la opción de provincia con código:', provinciaCodigoValor);
                 }
             }
 
+            // 3. DESPUÉS de cargar ciudades, seleccionar ciudad
             if (ciudadIdValor) {
+                // Ahora sí buscar la ciudad DESPUÉS de que se cargaron
                 const ciudadOption = Array.from(ciudadSelect.options).find(option => `${option.getAttribute('data-id')}` === ciudadIdValor);
                 if (ciudadOption) {
                     ciudadSelect.value = ciudadOption.value;
                     if (ciudadHidden) {
                         ciudadHidden.value = ciudadIdValor;
                     }
+                    console.log('✅ Ciudad seleccionada:', ciudadOption.textContent);
+                } else {
+                    console.warn('⚠️ No se encontró la opción de ciudad con ID:', ciudadIdValor);
                 }
             }
+
+            console.log('✅ Ubicación cargada correctamente');
         } catch (error) {
             console.error('❌ Error asignando ubicación del usuario:', error);
         }
@@ -1787,7 +1812,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
 
-            resetForm();
+            // ✅ NO resetear el formulario completo si estamos en modo edición
+            // Solo limpiamos errores y reseteamos algunos campos específicos
+            if (mode === 'create') {
+                resetForm();
+            } else {
+                // En modo edición/view, solo limpiar errores y preparar el formulario
+                clearFieldErrors();
+                clearHorariosDocenteTable();
+                setFormReadOnly(false);
+            }
 
             if (!locationSystemInitialized) {
                 initializeLocationSystem();
@@ -1858,11 +1892,23 @@ document.addEventListener('DOMContentLoaded', function () {
             const rolPrincipal = (detalle?.rolPrincipal || (Array.isArray(detalle?.rolesRaw) ? detalle.rolesRaw[0] : '') || '').toUpperCase();
             applyRoleSelection(rolPrincipal);
 
+            console.log('👤 Rol principal del usuario:', rolPrincipal);
+
             if (rolPrincipal === 'ALUMNO') {
+                console.log('📚 Cargando datos de alumno:', {
+                    colegioEgreso: detalle?.colegioEgreso,
+                    añoEgreso: detalle?.añoEgreso,
+                    ultimosEstudios: detalle?.ultimosEstudios
+                });
                 setValue('colegioEgreso', detalle?.colegioEgreso);
                 setValue('añoEgreso', detalle?.añoEgreso);
                 setSelectValue('ultimosEstudios', detalle?.ultimosEstudios);
             } else if (rolPrincipal === 'DOCENTE') {
+                console.log('👨‍🏫 Cargando datos de docente:', {
+                    matricula: detalle?.matricula,
+                    experiencia: detalle?.experiencia,
+                    horariosDisponibilidad: detalle?.horariosDisponibilidad
+                });
                 setValue('matricula', detalle?.matricula);
                 setValue('experiencia', detalle?.experiencia);
                 populateHorariosDocente(detalle?.horariosDisponibilidad || []);
@@ -2134,12 +2180,25 @@ document.addEventListener('DOMContentLoaded', function () {
                 formData.set('rol', selectedRoles[0]);
             }
             
+            // ✅ LOG: Verificar datos de ubicación
+            console.log('📍 Datos de ubicación enviados:', {
+                paisCodigo: formData.get('paisCodigo'),
+                provinciaCodigo: formData.get('provinciaCodigo'),
+                ciudadId: formData.get('ciudadId')
+            });
+            
             if (selectedRoles.includes('DOCENTE')) {
                 const horarios = obtenerHorariosDeTabla();
                 if (horarios.length > 0) {
                     formData.set('horariosDisponibilidad', JSON.stringify(horarios));
                     console.log('📅 Enviando horarios como JSON:', horarios);
                 }
+                // ✅ LOG: Verificar datos de docente
+                console.log('👨‍🏫 Datos de docente enviados:', {
+                    matricula: formData.get('matricula'),
+                    experiencia: formData.get('experiencia'),
+                    horariosDisponibilidad: formData.get('horariosDisponibilidad')
+                });
             } else {
                 formData.delete('horariosDisponibilidad');
             }

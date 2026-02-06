@@ -14,7 +14,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -1132,6 +1134,12 @@ public class AdminController {
             // Guardar en la base de datos
             OfertaAcademica nuevaOferta = ofertaAcademicaRepository.save(oferta);
             
+            // ✅ Asociar categorías si se proporcionaron
+            if (categorias != null && !categorias.trim().isEmpty()) {
+                System.out.println("🏷️ Procesando categorías: " + categorias);
+                asociarCategoriasAOferta(nuevaOferta, categorias);
+            }
+            
             // ✅ Si es una Formación con docentes, guardar los docentes para persistir la relación ManyToMany
             if (nuevaOferta instanceof Formacion) {
                 Formacion formacion = (Formacion) nuevaOferta;
@@ -1681,6 +1689,11 @@ public class AdminController {
             // Guardar la oferta modificada
             ofertaModificada = ofertaAcademicaRepository.save(ofertaExistente);
             
+            // Asociar categorías si se proporcionaron
+            if (categorias != null && !categorias.trim().isEmpty()) {
+                asociarCategoriasAOferta(ofertaModificada, categorias);
+            }
+            
             if (ofertaModificada != null) {
                 System.out.println("Oferta modificada exitosamente: " + ofertaModificada.getNombre());
                 
@@ -2016,6 +2029,12 @@ public class AdminController {
         Map<String, Object> response = new HashMap<>();
 
         try {
+            System.out.println("📝 Actualizando usuario: " + identificador);
+            System.out.println("📍 Datos de ubicación recibidos: paisCodigo=" + paisCodigo + ", provinciaCodigo=" + provinciaCodigo + ", ciudadId=" + ciudadId);
+            if ("DOCENTE".equalsIgnoreCase(rol)) {
+                System.out.println("👨‍🏫 Datos de docente recibidos: matricula=" + matricula + ", experiencia=" + experiencia + ", horarios=" + (horariosDisponibilidad != null ? horariosDisponibilidad.substring(0, Math.min(100, horariosDisponibilidad.length())) : "null"));
+            }
+            
             Optional<Usuario> usuarioOpt = buscarUsuarioPorIdentificador(identificador);
             if (usuarioOpt.isEmpty()) {
                 response.put("success", false);
@@ -2352,6 +2371,7 @@ public class AdminController {
             warnings.add("Este usuario es ADMINISTRADOR. Tenga cuidado al darlo de baja.");
         }
 
+        // ===== DATOS ESPECÍFICOS DE ALUMNO =====
         if (usuario instanceof Alumno) {
             Alumno alumno = (Alumno) usuario;
             data.put("colegioEgreso", alumno.getColegioEgreso());
@@ -2379,6 +2399,7 @@ public class AdminController {
             data.put("inscripciones", inscripcionesDetalle);
         }
 
+        // ===== DATOS ESPECÍFICOS DE DOCENTE =====
         if (usuario instanceof Docente) {
             Docente docente = (Docente) usuario;
             data.put("matricula", docente.getMatricula());
@@ -2409,10 +2430,12 @@ public class AdminController {
             }
         }
         
+        // ===== DATOS DE VALIDACIÓN =====
         data.put("canBeDeleted", canBeDeleted);
         data.put("warnings", warnings);
         data.put("blockingReason", blockingReason);
 
+        // ===== ROLES =====
         List<String> rolesRaw = usuario.getRoles().stream()
                 .map(Rol::getNombre)
                 .collect(Collectors.toList());
@@ -2420,6 +2443,7 @@ public class AdminController {
         data.put("rolesRaw", rolesRaw);
         data.put("rolPrincipal", rolesRaw.isEmpty() ? null : rolesRaw.get(0));
 
+        // ===== DATOS DE UBICACIÓN =====
         if (usuario.getPais() != null) {
             Map<String, Object> pais = new HashMap<>();
             pais.put("codigo", usuario.getPais().getCodigo());
@@ -2439,32 +2463,6 @@ public class AdminController {
             ciudad.put("id", usuario.getCiudad().getId());
             ciudad.put("nombre", usuario.getCiudad().getNombre());
             data.put("ciudad", ciudad);
-        }
-
-        if (usuario instanceof Alumno) {
-            Alumno alumno = (Alumno) usuario;
-            data.put("colegioEgreso", alumno.getColegioEgreso());
-            data.put("añoEgreso", alumno.getAñoEgreso());
-            data.put("ultimosEstudios", alumno.getUltimosEstudios());
-        }
-
-        if (usuario instanceof Docente) {
-            Docente docente = (Docente) usuario;
-            data.put("matricula", docente.getMatricula());
-            data.put("experiencia", docente.getAñosExperiencia());
-
-            // Obtener las disponibilidades del docente (no los horarios de clases)
-            List<DisponibilidadDocente> disponibilidades = disponibilidadDocenteService.obtenerDisponibilidades(docente);
-            if (disponibilidades != null && !disponibilidades.isEmpty()) {
-                List<Map<String, Object>> horarios = disponibilidades.stream().map(disponibilidad -> {
-                    Map<String, Object> horarioMap = new HashMap<>();
-                    horarioMap.put("diaSemana", disponibilidad.getDia() != null ? disponibilidad.getDia().name() : null);
-                    horarioMap.put("horaInicio", disponibilidad.getHoraInicio() != null ? disponibilidad.getHoraInicio().toString().substring(0, 5) : null);
-                    horarioMap.put("horaFin", disponibilidad.getHoraFin() != null ? disponibilidad.getHoraFin().toString().substring(0, 5) : null);
-                    return horarioMap;
-                }).collect(Collectors.toList());
-                data.put("horariosDisponibilidad", horarios);
-            }
         }
 
         return data;
@@ -2951,6 +2949,58 @@ public class AdminController {
         }
         
         return horarios;
+    }
+    
+    /**
+     * Asocia categorías a una oferta académica
+     */
+    private void asociarCategoriasAOferta(OfertaAcademica oferta, String categoriasIds) {
+        if (categoriasIds == null || categoriasIds.trim().isEmpty()) {
+            System.out.println("⚠️ No se proporcionaron categorías");
+            return;
+        }
+        
+        try {
+            System.out.println("🏷️ Asociando categorías a oferta: " + oferta.getNombre());
+            System.out.println("   IDs recibidos: " + categoriasIds);
+            
+            // Dividir por comas
+            String[] ids = categoriasIds.split(",");
+            List<Categoria> categorias = new ArrayList<>();
+            
+            for (String idStr : ids) {
+                idStr = idStr.trim();
+                if (!idStr.isEmpty()) {
+                    try {
+                        Long id = Long.parseLong(idStr);
+                        Optional<Categoria> categoriaOpt = categoriaRepository.findById(id);
+                        
+                        if (categoriaOpt.isPresent()) {
+                            Categoria categoria = categoriaOpt.get();
+                            categorias.add(categoria);
+                            System.out.println("   ✅ Categoría agregada: " + categoria.getNombre());
+                        } else {
+                            System.out.println("   ⚠️ Categoría no encontrada con ID: " + id);
+                        }
+                    } catch (NumberFormatException e) {
+                        System.err.println("   ❌ ID inválido: " + idStr);
+                    }
+                }
+            }
+            
+            // Asignar categorías a la oferta
+            if (!categorias.isEmpty()) {
+                oferta.setCategorias(categorias);
+                ofertaAcademicaRepository.save(oferta);
+                System.out.println("   💾 " + categorias.size() + " categoría(s) asociada(s) y guardada(s)");
+            } else {
+                System.out.println("   ⚠️ No se encontraron categorías válidas para asociar");
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error al asociar categorías: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
     
 }

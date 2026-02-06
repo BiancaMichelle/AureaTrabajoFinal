@@ -232,7 +232,18 @@
                         </div>
 
                         <div class="course-meta">
-                            <span><i class="fas fa-calendar"></i> Inicio: <strong th:text="${oferta.fechaInicio != null ? #temporals.format(oferta.fechaInicio, 'dd MMM yyyy') : 'Fecha a confirmar'}">01 Ene 2025</strong></span>
+                            <!-- Para CURSO y FORMACION: mostrar inicio y fin -->
+                            <span th:if="${oferta.tipoOferta == 'Curso' or oferta.tipoOferta == 'Formación'}">
+                                <i class="fas fa-calendar"></i> 
+                                <strong th:text="${oferta.fechaInicio != null ? #temporals.format(oferta.fechaInicio, 'dd MMM yyyy') : 'Fecha a confirmar'}">01 Ene 2025</strong>
+                                <span th:if="${oferta.fechaFin != null}">
+                                    - <strong th:text="${#temporals.format(oferta.fechaFin, 'dd MMM yyyy')}">31 Mar 2025</strong>
+                                </span>
+                            </span>
+                            <!-- Para CHARLA y SEMINARIO: solo inicio -->
+                            <span th:if="${oferta.tipoOferta == 'Charla' or oferta.tipoOferta == 'Seminario'}">
+                                <i class="fas fa-calendar"></i> Inicio: <strong th:text="${oferta.fechaInicio != null ? #temporals.format(oferta.fechaInicio, 'dd MMM yyyy') : 'Fecha a confirmar'}">01 Ene 2025</strong>
+                            </span>
                             <span><i class="fas fa-globe"></i> <span th:text="${oferta.modalidad}">Online</span></span>
                             <!-- Mostrar hora para Charlas y Seminarios -->
                             <span th:if="${(oferta.tipoOferta == 'Charla' or oferta.tipoOferta == 'Seminario') and oferta.horaInicio != null}">

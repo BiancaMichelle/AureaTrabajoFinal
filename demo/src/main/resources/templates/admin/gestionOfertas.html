@@ -4828,6 +4828,16 @@ if (typeof window.mostrarNotificacion !== 'function') {
                             document.getElementById('diaVencimiento').value = oferta.diaVencimiento || '';
                         }
                         
+                        // Fechas de inscripción para CURSO
+                        if (document.getElementById('fechaInicioInscripcion')) {
+                            document.getElementById('fechaInicioInscripcion').value = oferta.fechaInicioInscripcion || '';
+                            console.log('✅ Fecha inicio inscripción cargada:', oferta.fechaInicioInscripcion);
+                        }
+                        if (document.getElementById('fechaFinInscripcion')) {
+                            document.getElementById('fechaFinInscripcion').value = oferta.fechaFinInscripcion || '';
+                            console.log('✅ Fecha fin inscripción cargada:', oferta.fechaFinInscripcion);
+                        }
+                        
                         // Cargar docentes de CURSO
                         if (oferta.docentes && Array.isArray(oferta.docentes)) {
                             console.log('👨‍🏫 Cargando docentes de CURSO:', oferta.docentes.length);
@@ -4879,6 +4889,16 @@ if (typeof window.mostrarNotificacion !== 'function') {
                             console.log('✅ Día vencimiento cargado:', oferta.diaVencimiento);
                         }
                         
+                        // Fechas de inscripción para FORMACION
+                        if (document.getElementById('fechaInicioInscripcionFormacion')) {
+                            document.getElementById('fechaInicioInscripcionFormacion').value = oferta.fechaInicioInscripcion || '';
+                            console.log('✅ Fecha inicio inscripción cargada:', oferta.fechaInicioInscripcion);
+                        }
+                        if (document.getElementById('fechaFinInscripcionFormacion')) {
+                            document.getElementById('fechaFinInscripcionFormacion').value = oferta.fechaFinInscripcion || '';
+                            console.log('✅ Fecha fin inscripción cargada:', oferta.fechaFinInscripcion);
+                        }
+                        
                         // Cargar docentes si existen
                         if (oferta.docentes && Array.isArray(oferta.docentes)) {
                             console.log('👨‍🏫 Cargando docentes:', oferta.docentes.length);
@@ -4913,34 +4933,96 @@ if (typeof window.mostrarNotificacion !== 'function') {
                         
                     } else if (tipoOferta === 'CHARLA') {
                         console.log('🎤 Cargando datos de CHARLA');
+                        
+                        // Fecha de la charla
+                        if (document.getElementById('fechaCharla')) {
+                            document.getElementById('fechaCharla').value = oferta.fechaInicio || '';
+                            console.log('✅ Fecha charla cargada:', oferta.fechaInicio);
+                        }
+                        
+                        // Hora de inicio
+                        if (document.getElementById('horaCharla') && oferta.horaInicio) {
+                            const horaStr = oferta.horaInicio.toString().substring(0, 5);
+                            document.getElementById('horaCharla').value = horaStr;
+                            console.log('✅ Hora charla cargada:', horaStr);
+                        }
+                        
+                        // Fechas de inscripción
+                        if (document.getElementById('fechaInicioInscripcion')) {
+                            document.getElementById('fechaInicioInscripcion').value = oferta.fechaInicioInscripcion || '';
+                            console.log('✅ Fecha inicio inscripción cargada:', oferta.fechaInicioInscripcion);
+                        }
+                        if (document.getElementById('fechaFinInscripcion')) {
+                            document.getElementById('fechaFinInscripcion').value = oferta.fechaFinInscripcion || '';
+                            console.log('✅ Fecha fin inscripción cargada:', oferta.fechaFinInscripcion);
+                        }
+                        
                         if (document.getElementById('duracionEstimada')) {
                             document.getElementById('duracionEstimada').value = oferta.duracionEstimada || '';
                         }
-                        if (document.getElementById('publicoObjetivoCharla')) {
-                            document.getElementById('publicoObjetivoCharla').value = oferta.publicoObjetivo || '';
+                        if (document.getElementById('publicoObjetivo')) {
+                            document.getElementById('publicoObjetivo').value = oferta.publicoObjetivo || '';
+                            console.log('✅ Público objetivo cargado:', oferta.publicoObjetivo);
                         }
                         
                         // Cargar disertantes
                         if (oferta.disertantes && Array.isArray(oferta.disertantes)) {
-                            disertantesCharla = [...oferta.disertantes];
+                            // Limpiar disertantes de formato anidado [[...]]
+                            disertantesCharla = oferta.disertantes.map(d => {
+                                if (Array.isArray(d)) {
+                                    return d[0]; // Extraer el primer elemento si es un array
+                                }
+                                return d;
+                            }).filter(d => d); // Filtrar valores vacíos
                             actualizarDisertantesChips('charla');
-                            console.log('✅ Disertantes charla cargados:', disertantesCharla.length);
+                            console.log('✅ Disertantes charla cargados:', disertantesCharla);
                         }
                         
                     } else if (tipoOferta === 'SEMINARIO') {
                         console.log('🏛️ Cargando datos de SEMINARIO');
+                        
+                        // Fecha del seminario
+                        if (document.getElementById('fechaSeminario')) {
+                            document.getElementById('fechaSeminario').value = oferta.fechaInicio || '';
+                            console.log('✅ Fecha seminario cargada:', oferta.fechaInicio);
+                        }
+                        
+                        // Hora de inicio
+                        if (document.getElementById('horaSeminario') && oferta.horaInicio) {
+                            const horaStr = oferta.horaInicio.toString().substring(0, 5);
+                            document.getElementById('horaSeminario').value = horaStr;
+                            console.log('✅ Hora seminario cargada:', horaStr);
+                        }
+                        
+                        // Fechas de inscripción
+                        if (document.getElementById('fechaInicioInscripcion')) {
+                            document.getElementById('fechaInicioInscripcion').value = oferta.fechaInicioInscripcion || '';
+                            console.log('✅ Fecha inicio inscripción cargada:', oferta.fechaInicioInscripcion);
+                        }
+                        if (document.getElementById('fechaFinInscripcion')) {
+                            document.getElementById('fechaFinInscripcion').value = oferta.fechaFinInscripcion || '';
+                            console.log('✅ Fecha fin inscripción cargada:', oferta.fechaFinInscripcion);
+                        }
+                        
                         if (document.getElementById('duracionMinutos')) {
                             document.getElementById('duracionMinutos').value = oferta.duracionMinutos || '';
                         }
                         if (document.getElementById('publicoObjetivoSeminario')) {
                             document.getElementById('publicoObjetivoSeminario').value = oferta.publicoObjetivo || '';
+                            console.log('✅ Público objetivo cargado:', oferta.publicoObjetivo);
                         }
                         
                         // Cargar disertantes
                         if (oferta.disertantes && Array.isArray(oferta.disertantes)) {
-                            disertantesSeminario = [...oferta.disertantes];
+                            // Limpiar disertantes de formato anidado [[...]]
+                            disertantesSeminario = oferta.disertantes.map(d => {
+                                if (Array.isArray(d)) {
+                                    return d[0]; // Extraer el primer elemento si es un array
+                                }
+                                return d;
+                            }).filter(d => d); // Filtrar valores vacíos
                             actualizarDisertantesChips('seminario');
-                            console.log('✅ Disertantes seminario cargados:', disertantesSeminario.length);
+                            console.log('✅ Disertantes seminario cargados:', disertantesSeminario);
                         }
                     }
                     

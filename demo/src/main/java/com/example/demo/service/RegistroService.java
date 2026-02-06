@@ -519,6 +519,9 @@ public class RegistroService {
         }
 
         try {
+            System.out.println("🔄 RegistroService.actualizarUsuarioAdministrativo - Iniciando actualización");
+            System.out.println("📍 Ubicación a guardar: pais=" + paisCodigo + ", provincia=" + provinciaCodigo + ", ciudad=" + ciudadId);
+            
             String rolActual = usuarioExistente.getRoles().stream()
                     .findFirst()
                     .map(Rol::getNombre)
@@ -528,6 +531,8 @@ public class RegistroService {
             String rolDestino = (rolPrincipal != null && !rolPrincipal.isBlank())
                     ? rolPrincipal.toUpperCase()
                     : rolActual;
+
+            System.out.println("👤 Rol: " + rolDestino);
 
             if (!rolActual.equalsIgnoreCase(rolDestino)) {
                 throw new RuntimeException("No se permite cambiar el rol principal del usuario desde la edición");
@@ -553,6 +558,8 @@ public class RegistroService {
             Provincia provincia = buscarOCrearProvincia(provinciaCodigo, pais);
             Ciudad ciudad = buscarOCrearCiudad(ciudadId, provincia, paisCodigo, provinciaCodigo);
 
+            System.out.println("✅ Entidades de ubicación encontradas: pais=" + pais.getNombre() + ", provincia=" + provincia.getNombre() + ", ciudad=" + ciudad.getNombre());
+
             usuarioExistente.setDni(nuevoDni);
             usuarioExistente.setNombre(nombre);
             usuarioExistente.setApellido(apellido);
@@ -568,6 +575,8 @@ public class RegistroService {
             usuarioExistente.setPais(pais);
             usuarioExistente.setProvincia(provincia);
             usuarioExistente.setCiudad(ciudad);
+
+            System.out.println("✅ Ubicación asignada al usuario: pais=" + usuarioExistente.getPais().getNombre() + ", provincia=" + usuarioExistente.getProvincia().getNombre() + ", ciudad=" + usuarioExistente.getCiudad().getNombre());
 
             boolean estadoActivo = estadoLiteral == null || estadoLiteral.isBlank() || !"INACTIVO".equalsIgnoreCase(estadoLiteral);
             usuarioExistente.setEstado(estadoActivo);
@@ -600,10 +609,13 @@ public class RegistroService {
                         throw new RuntimeException("El usuario seleccionado no es un docente");
                     }
                     Docente docente = (Docente) usuarioExistente;
+                    System.out.println("👨‍🏫 Guardando datos de docente: matricula=" + matricula + ", experiencia=" + experiencia);
                     docente.setMatricula(matricula);
                     docente.setAñosExperiencia(experiencia);
                     Docente docenteGuardado = docenteRepository.save(docente);
+                    System.out.println("✅ Docente guardado. Actualizando horarios...");
                     actualizarHorariosDocente(docenteGuardado, horariosList);
+                    System.out.println("✅ Horarios actualizados. Total horarios: " + horariosList.size());
                     return docenteGuardado;
 
                 default:

@@ -298,6 +298,9 @@ public class Charla extends OfertaAcademica {
         detalle.setDuracionEstimada(this.duracionEstimada);
         detalle.setDisertantes(this.disertantes != null ? this.disertantes : new ArrayList<>());
         detalle.setPublicoObjetivo(this.publicoObjetivo);
+        detalle.setFechaInicioInscripcion(this.getFechaInicioInscripcion());
+        detalle.setFechaFinInscripcion(this.getFechaFinInscripcion());
+        detalle.setHoraInicio(this.horaInicio);
         
         // Convertir categorías a DTO simple
         List<CategoriaSimple> categoriasSimples = new ArrayList<>();
@@ -402,6 +405,9 @@ public class Charla extends OfertaAcademica {
         private List<String> disertantes;
         private String publicoObjetivo;
         private List<CategoriaSimple> categorias;
+        private LocalDate fechaInicioInscripcion;
+        private LocalDate fechaFinInscripcion;
+        private java.sql.Time horaInicio;
         
         // Información adicional
         private int totalInscripciones;
@@ -474,5 +480,14 @@ public class Charla extends OfertaAcademica {
         
         public boolean isCuposDisponibles() { return cuposDisponibles; }
         public void setCuposDisponibles(boolean cuposDisponibles) { this.cuposDisponibles = cuposDisponibles; }
+        
+        public LocalDate getFechaInicioInscripcion() { return fechaInicioInscripcion; }
+        public void setFechaInicioInscripcion(LocalDate fechaInicioInscripcion) { this.fechaInicioInscripcion = fechaInicioInscripcion; }
+        
+        public LocalDate getFechaFinInscripcion() { return fechaFinInscripcion; }
+        public void setFechaFinInscripcion(LocalDate fechaFinInscripcion) { this.fechaFinInscripcion = fechaFinInscripcion; }
+        
+        public java.sql.Time getHoraInicio() { return horaInicio; }
+        public void setHoraInicio(java.sql.Time horaInicio) { this.horaInicio = horaInicio; }
     }
 }

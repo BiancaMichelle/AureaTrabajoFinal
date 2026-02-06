@@ -3,6 +3,9 @@ package com.example.demo.controller;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -51,23 +54,59 @@ public class AdminPagoController {
                               @RequestParam(required = false) String estado,
                               @RequestParam(required = false) String dni) {
         
+        // Obtener todos los pagos ordenados por fecha descendente
         List<Pago> pagos = pagoRepository.findAll(Sort.by(Sort.Direction.DESC, "fechaPago"));
 
-        // Filtrado básico en memoria (para evitar complejidad en queries por ahora)
-        // Idealmente, esto debería moverse a Specifications o Query Methods si crece mucho
+        // Filtrar solo pagos COMPLETADOS
+        pagos = pagos.stream()
+            .filter(p -> p.getEstadoPago() == EstadoPago.COMPLETADO)
+            .collect(Collectors.toList());
+
+        // Filtrado por estado (si se especifica)
         if (estado != null && !estado.isEmpty()) {
             pagos = pagos.stream()
                 .filter(p -> p.getEstadoPago().name().equals(estado))
                 .collect(Collectors.toList());
         }
 
+        // Filtrado por DNI (si se especifica)
         if (dni != null && !dni.isEmpty()) {
             pagos = pagos.stream()
                 .filter(p -> p.getUsuario() != null && p.getUsuario().getDni().contains(dni))
                 .collect(Collectors.toList());
         }
 
-        model.addAttribute("pagos", pagos);
+        // Agrupar pagos por alumno
+        Map<String, Map<String, Object>> pagosPorAlumno = new LinkedHashMap<>();
+        
+        for (Pago pago : pagos) {
+            if (pago.getUsuario() == null) continue;
+            
+            String alumnoKey = pago.getUsuario().getDni();
+            
+            if (!pagosPorAlumno.containsKey(alumnoKey)) {
+                Map<String, Object> alumnoData = new LinkedHashMap<>();
+                alumnoData.put("nombre", pago.getUsuario().getNombre() + " " + pago.getUsuario().getApellido());
+                alumnoData.put("dni", pago.getUsuario().getDni());
+                alumnoData.put("pagos", new ArrayList<Pago>());
+                alumnoData.put("totalPagos", 0);
+                alumnoData.put("montoTotal", 0.0);
+                pagosPorAlumno.put(alumnoKey, alumnoData);
+            }
+            
+            Map<String, Object> alumnoData = pagosPorAlumno.get(alumnoKey);
+            @SuppressWarnings("unchecked")
+            List<Pago> alumnoPagos = (List<Pago>) alumnoData.get("pagos");
+            alumnoPagos.add(pago);
+            
+            // Actualizar contadores (solo completados)
+            alumnoData.put("totalPagos", (int) alumnoData.get("totalPagos") + 1);
+            double montoActual = (double) alumnoData.get("montoTotal");
+            double montoPago = pago.getMonto() != null ? pago.getMonto().doubleValue() : 0.0;
+            alumnoData.put("montoTotal", montoActual + montoPago);
+        }
+
+        model.addAttribute("pagosPorAlumno", pagosPorAlumno);
         model.addAttribute("estados", EstadoPago.values());
         model.addAttribute("estadoSeleccionado", estado);
         model.addAttribute("dniBusqueda", dni);
