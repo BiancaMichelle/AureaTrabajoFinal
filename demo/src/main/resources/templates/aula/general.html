@@ -91,12 +91,24 @@
                                 <i class="fas fa-clock text-warning mt-1 me-3"></i>
                                 <div>
                                     <strong>Horario:</strong>
-                                    <div th:if="${not #lists.isEmpty(oferta.horarios)}">
+                                    <!-- Para CHARLA: mostrar horaInicio -->
+                                    <div th:if="${oferta.tipoOferta == 'Charla' and oferta.horaInicio != null}">
+                                        <span th:text="${#strings.substring(oferta.horaInicio.toString(), 0, 5)}">10:00</span>
+                                    </div>
+                                    <!-- Para SEMINARIO: mostrar horaInicio -->
+                                    <div th:if="${oferta.tipoOferta == 'Seminario' and oferta.horaInicio != null}">
+                                        <span th:text="${#strings.substring(oferta.horaInicio.toString(), 0, 5)}">10:00</span>
+                                    </div>
+                                    <!-- Para CURSO/FORMACION: mostrar horarios regulares -->
+                                    <div th:if="${(oferta.tipoOferta == 'Curso' or oferta.tipoOferta == 'Formación') and not #lists.isEmpty(oferta.horarios)}">
                                         <div th:each="h : ${oferta.horarios}">
-                                            <span th:text="${h.dia} + ' ' + ${h.horaInicio} + ' - ' + ${h.horaFin}">Lun 10:00 - 12:00</span>
+                                            <span th:text="${h.dia} + ' ' + ${#strings.substring(h.horaInicio.toString(), 0, 5)} + ' - ' + ${#strings.substring(h.horaFin.toString(), 0, 5)}">Lun 10:00 - 12:00</span>
                                         </div>
                                     </div>
-                                    <span th:if="${#lists.isEmpty(oferta.horarios)}">A confirmar</span>
+                                    <!-- Si no hay horarios definidos -->
+                                    <span th:if="${(oferta.tipoOferta == 'Charla' and oferta.horaInicio == null) or 
+                                                   (oferta.tipoOferta == 'Seminario' and oferta.horaInicio == null) or
+                                                   ((oferta.tipoOferta == 'Curso' or oferta.tipoOferta == 'Formación') and #lists.isEmpty(oferta.horarios))}">A confirmar</span>
                                 </div>
                             </li>
                             <li class="mb-3 d-flex" th:if="${oferta.certificado}">

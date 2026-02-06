@@ -1008,6 +1008,58 @@
                 });
             });
 
+            // Función para mostrar notificaciones toast (definir primero para usar en otras funciones)
+            function mostrarToast(mensaje, tipo = 'success') {
+                // Crear elemento toast
+                const toast = document.createElement('div');
+                toast.className = `toast-notification toast-${tipo}`;
+                
+                const iconClass = tipo === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-circle-fill';
+                const bgColor = tipo === 'success' ? '#d4edda' : '#f8d7da';
+                const borderColor = tipo === 'success' ? '#28a745' : '#dc3545';
+                const textColor = tipo === 'success' ? '#155724' : '#721c24';
+                
+                toast.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <i class="bi ${iconClass}" style="font-size: 1.5rem;"></i>
+                        <span style="flex: 1;">${mensaje}</span>
+                        <button onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; color: inherit; cursor: pointer; font-size: 1.2rem; padding: 0; opacity: 0.7;">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
+                `;
+                
+                toast.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    min-width: 300px;
+                    max-width: 500px;
+                    background: ${bgColor};
+                    color: ${textColor};
+                    border-left: 4px solid ${borderColor};
+                    padding: 16px;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                    z-index: 10000;
+                    animation: slideInRight 0.3s ease-out;
+                    font-weight: 500;
+                `;
+                
+                // Agregar al DOM
+                document.body.appendChild(toast);
+                
+                // Auto-remover después de 5 segundos
+                setTimeout(() => {
+                    toast.style.animation = 'slideOutRight 0.3s ease-out';
+                    setTimeout(() => {
+                        if (toast.parentElement) {
+                            toast.remove();
+                        }
+                    }, 300);
+                }, 5000);
+            }
+
             // Función para mostrar el modal de notificación
             function mostrarModalNotificacion(ofertaId, ofertaNombre, fechaInicio) {
                 // Remover modal anterior si existe
@@ -1229,58 +1281,6 @@
                     });
                 }
             });
-            
-            // Función para mostrar notificaciones toast
-            function mostrarToast(mensaje, tipo = 'success') {
-                // Crear elemento toast
-                const toast = document.createElement('div');
-                toast.className = `toast-notification toast-${tipo}`;
-                
-                const iconClass = tipo === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-circle-fill';
-                const bgColor = tipo === 'success' ? '#d4edda' : '#f8d7da';
-                const borderColor = tipo === 'success' ? '#28a745' : '#dc3545';
-                const textColor = tipo === 'success' ? '#155724' : '#721c24';
-                
-                toast.innerHTML = `
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <i class="bi ${iconClass}" style="font-size: 1.5rem;"></i>
-                        <span style="flex: 1;">${mensaje}</span>
-                        <button onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; color: inherit; cursor: pointer; font-size: 1.2rem; padding: 0; opacity: 0.7;">
-                            <i class="bi bi-x"></i>
-                        </button>
-                    </div>
-                `;
-                
-                toast.style.cssText = `
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    min-width: 300px;
-                    max-width: 500px;
-                    background: ${bgColor};
-                    color: ${textColor};
-                    border-left: 4px solid ${borderColor};
-                    padding: 16px;
-                    border-radius: 8px;
-                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-                    z-index: 10000;
-                    animation: slideInRight 0.3s ease-out;
-                    font-weight: 500;
-                `;
-                
-                // Agregar al DOM
-                document.body.appendChild(toast);
-                
-                // Auto-remover después de 5 segundos
-                setTimeout(() => {
-                    toast.style.animation = 'slideOutRight 0.3s ease-out';
-                    setTimeout(() => {
-                        if (toast.parentElement) {
-                            toast.remove();
-                        }
-                    }, 300);
-                }, 5000);
-            }
         </script>
     </th:block>
 

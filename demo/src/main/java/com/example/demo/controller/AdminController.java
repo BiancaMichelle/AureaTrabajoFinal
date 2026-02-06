@@ -882,12 +882,14 @@ public class AdminController {
             // Campos específicos para CHARLA
             @RequestParam(required = false) String lugarCharla,
             @RequestParam(required = false) String enlaceCharla,
+            @RequestParam(required = false) String horaCharla,
             @RequestParam(required = false) Integer duracionEstimada,
             @RequestParam(required = false) String disertantesCharla,
             @RequestParam(required = false) String publicoObjetivoCharla,
             // Campos específicos para SEMINARIO
             @RequestParam(required = false) String lugarSeminario,
             @RequestParam(required = false) String enlaceSeminario,
+            @RequestParam(required = false) String horaSeminario,
             @RequestParam(required = false) Integer duracionMinutos,
             @RequestParam(required = false) String disertantesSeminario,
             @RequestParam(required = false) String publicoObjetivoSeminario,
@@ -1069,13 +1071,13 @@ public class AdminController {
                 case "CHARLA":
                     oferta = crearCharla(nombre, descripcion, cupos, costoInscripcion, fechaInicio, fechaFin,
                                        fechaInicioInscripcion, fechaFinInscripcion, modalidad,
-                                       lugar, enlace, duracionEstimada, disertantesCharla, 
+                                       lugar, enlace, horaCharla, duracionEstimada, disertantesCharla, 
                                        publicoObjetivoCharla);
                     break;
                 case "SEMINARIO":
                     oferta = crearSeminario(nombre, descripcion, cupos, costoInscripcion, fechaInicio, fechaFin,
                                           fechaInicioInscripcion, fechaFinInscripcion, modalidad,
-                                          lugar, enlace, duracionMinutos, disertantesSeminario, publicoObjetivoSeminario);
+                                          lugar, enlace, horaSeminario, duracionMinutos, disertantesSeminario, publicoObjetivoSeminario);
                     break;
                 default:
                     throw new IllegalArgumentException("Tipo de oferta no válido: " + tipoOferta);
@@ -1290,11 +1292,20 @@ public class AdminController {
     private Charla crearCharla(String nombre, String descripcion, Integer cupos, Double costo,
                              String fechaInicio, String fechaFin, String fechaInicioInscripcion, String fechaFinInscripcion,
                              String modalidad,
-                             String lugar, String enlace, Integer duracionEstimada,
+                             String lugar, String enlace, String horaCharla, Integer duracionEstimada,
                              String disertantesStr, String publicoObjetivo) {
         Charla charla = new Charla();
         configurarOfertaBase(charla, nombre, descripcion, cupos, costo, fechaInicio, fechaFin,
                            fechaInicioInscripcion, fechaFinInscripcion, modalidad, lugar, enlace);
+        
+        // Convertir y asignar hora de inicio
+        if (horaCharla != null && !horaCharla.trim().isEmpty()) {
+            try {
+                charla.setHoraInicio(java.sql.Time.valueOf(horaCharla + ":00"));
+            } catch (Exception e) {
+                System.err.println("Error al convertir hora de charla: " + e.getMessage());
+            }
+        }
         
         // Campos específicos de la charla
         if (duracionEstimada != null) charla.setDuracionEstimada(duracionEstimada);
@@ -1319,11 +1330,20 @@ public class AdminController {
     private Seminario crearSeminario(String nombre, String descripcion, Integer cupos, Double costo,
                                    String fechaInicio, String fechaFin, String fechaInicioInscripcion, String fechaFinInscripcion,
                                    String modalidad,
-                                   String lugar, String enlace, Integer duracionMinutos,
+                                   String lugar, String enlace, String horaSeminario, Integer duracionMinutos,
                                    String disertantesStr, String publicoObjetivo) {
         Seminario seminario = new Seminario();
         configurarOfertaBase(seminario, nombre, descripcion, cupos, costo, fechaInicio, fechaFin,
                            fechaInicioInscripcion, fechaFinInscripcion, modalidad, lugar, enlace);
+        
+        // Convertir y asignar hora de inicio
+        if (horaSeminario != null && !horaSeminario.trim().isEmpty()) {
+            try {
+                seminario.setHoraInicio(java.sql.Time.valueOf(horaSeminario + ":00"));
+            } catch (Exception e) {
+                System.err.println("Error al convertir hora de seminario: " + e.getMessage());
+            }
+        }
         
         // Campos específicos del seminario
         if (duracionMinutos != null) seminario.setDuracionMinutos(duracionMinutos);
@@ -1420,12 +1440,14 @@ public class AdminController {
             // Campos específicos para CHARLA
             @RequestParam(required = false) String lugarCharla,
             @RequestParam(required = false) String enlaceCharla,
+            @RequestParam(required = false) String horaCharla,
             @RequestParam(required = false) Integer duracionEstimada,
             @RequestParam(required = false) String disertantesCharla,
             @RequestParam(required = false) String publicoObjetivoCharla,
             // Campos específicos para SEMINARIO
             @RequestParam(required = false) String lugarSeminario,
             @RequestParam(required = false) String enlaceSeminario,
+            @RequestParam(required = false) String horaSeminario,
             @RequestParam(required = false) Integer duracionMinutos,
             @RequestParam(required = false) String disertantesSeminario,
             @RequestParam(required = false) String publicoObjetivoSeminario,
@@ -1632,11 +1654,25 @@ public class AdminController {
                 if (duracionEstimada != null) datosActualizar.put("duracionEstimada", duracionEstimada);
                 if (publicoObjetivoCharla != null) datosActualizar.put("publicoObjetivo", publicoObjetivoCharla);
                 if (disertantesCharla != null) datosActualizar.put("disertantes", disertantesCharla);
+                if (horaCharla != null && !horaCharla.trim().isEmpty()) {
+                    try {
+                        datosActualizar.put("horaInicio", java.sql.Time.valueOf(horaCharla + ":00"));
+                    } catch (Exception e) {
+                        System.err.println("Error al convertir hora de charla: " + e.getMessage());
+                    }
+                }
                 
             } else if ("SEMINARIO".equals(tipoOfertaUpper)) {
                 if (duracionMinutos != null) datosActualizar.put("duracionMinutos", duracionMinutos);
                 if (publicoObjetivoSeminario != null) datosActualizar.put("publicoObjetivo", publicoObjetivoSeminario);
                 if (disertantesSeminario != null) datosActualizar.put("disertantes", disertantesSeminario);
+                if (horaSeminario != null && !horaSeminario.trim().isEmpty()) {
+                    try {
+                        datosActualizar.put("horaInicio", java.sql.Time.valueOf(horaSeminario + ":00"));
+                    } catch (Exception e) {
+                        System.err.println("Error al convertir hora de seminario: " + e.getMessage());
+                    }
+                }
             }
 
             // Ejecutar actualización en el modelo

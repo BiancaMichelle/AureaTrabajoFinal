@@ -234,7 +234,14 @@
                         <div class="course-meta">
                             <span><i class="fas fa-calendar"></i> Inicio: <strong th:text="${oferta.fechaInicio != null ? #temporals.format(oferta.fechaInicio, 'dd MMM yyyy') : 'Fecha a confirmar'}">01 Ene 2025</strong></span>
                             <span><i class="fas fa-globe"></i> <span th:text="${oferta.modalidad}">Online</span></span>
-                            <span><i class="fas fa-clock"></i> <span th:text="${oferta.duracionMeses != null ? oferta.duracionMeses + ' Meses' : 'Duración a confirmar'}">3 Meses</span></span>
+                            <!-- Mostrar hora para Charlas y Seminarios -->
+                            <span th:if="${(oferta.tipoOferta == 'Charla' or oferta.tipoOferta == 'Seminario') and oferta.horaInicio != null}">
+                                <i class="fas fa-clock"></i> <span th:text="${#strings.substring(oferta.horaInicio.toString(), 0, 5)}">10:00</span>
+                            </span>
+                            <!-- Mostrar duración para Cursos y Formaciones -->
+                            <span th:if="${oferta.tipoOferta == 'Curso' or oferta.tipoOferta == 'Formación'}">
+                                <i class="fas fa-clock"></i> <span th:text="${oferta.duracionMeses != null ? oferta.duracionMeses + ' Meses' : 'Duración a confirmar'}">3 Meses</span>
+                            </span>
                         </div>
                         
                         <div class="course-meta" style="font-size: 0.85rem; color: #cec0fc;">
@@ -346,7 +353,8 @@
                                             <i class="fas fa-microphone-alt fa-lg text-secondary"></i>
                                         </div>
                                         <div class="instructor-info">
-                                            <h4 th:text="${disertante}">Nombre Disertante</h4>
+                                            <!-- Limpiar posibles brackets si vienen en el string -->
+                                            <h4 th:text="${#strings.replace(#strings.replace(disertante, '[', ''), ']', '')}">Nombre Disertante</h4>
                                             <p class="small text-muted mb-0">Expositor invitado</p>
                                         </div>
                                     </div>
@@ -424,6 +432,18 @@
                                         <strong th:text="${horario.dia}">DIA</strong>: 
                                         <span th:text="${horario.horaInicio}">00:00:00</span> - 
                                         <span th:text="${horario.horaFin}">00:00:00</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            
+                            <!-- Horario para Charlas y Seminarios -->
+                            <div th:if="${(oferta.tipoOferta == 'Charla' or oferta.tipoOferta == 'Seminario') and oferta.horaInicio != null}" class="mt-4">
+                                <h5 class="fw-bold mb-2">Horario del evento:</h5>
+                                <ul class="sidebar-list">
+                                    <li>
+                                        <i class="far fa-clock"></i>
+                                        <strong th:text="${#temporals.format(oferta.fechaInicio, 'dd MMM yyyy')}">01 Ene 2025</strong> a las 
+                                        <span th:text="${#strings.substring(oferta.horaInicio.toString(), 0, 5)}">10:00</span>
                                     </li>
                                 </ul>
                             </div>

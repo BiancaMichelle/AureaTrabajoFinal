@@ -472,14 +472,14 @@ input:checked + .slider:before {
                                     <input type="number" id="cupos" name="cupos" class="form-control" min="1" 
                                            placeholder="Número máximo de estudiantes">
                                 </div>
-                                <div class="form-group">
+                                <div class="form-group" id="grupo-fecha-inicio">
                                     <label for="fechaInicio">Fecha de Inicio *</label>
                                     <input type="date" id="fechaInicio" name="fechaInicio" class="form-control" required>
                                     <small class="form-text text-muted">
                                         <i class="fas fa-info-circle"></i> La fecha debe ser desde hoy en adelante
                                     </small>
                                 </div>
-                                <div class="form-group">
+                                <div class="form-group" id="grupo-fecha-fin">
                                     <label for="fechaFin">Fecha de Fin *</label>
                                     <input type="date" id="fechaFin" name="fechaFin" class="form-control" required disabled>
                                     <small class="form-text text-muted">
@@ -1724,12 +1724,16 @@ input:checked + .slider:before {
             
             if (fechaInicio) {
                 fechaInicio.addEventListener('change', function() {
-                    // Habilitar fechaFin cuando se selecciona fechaInicio
-                    if (fechaFin && this.value) {
-                        fechaFin.disabled = false;
-                        fechaFin.setAttribute('min', this.value);
+                    // Solo aplicar lógica si es CURSO o FORMACION
+                    const tipoOferta = document.getElementById('tipoOferta')?.value;
+                    if (tipoOferta === 'CURSO' || tipoOferta === 'FORMACION') {
+                        // Habilitar fechaFin cuando se selecciona fechaInicio
+                        if (fechaFin && this.value) {
+                            fechaFin.disabled = false;
+                            fechaFin.setAttribute('min', this.value);
+                        }
+                        calcularNumeroCuotas();
                     }
-                    calcularNumeroCuotas();
                 });
             }
             if (fechaFin) {
@@ -1819,6 +1823,27 @@ input:checked + .slider:before {
             if (grupoCostoCuota) grupoCostoCuota.style.display = mostrarCamposCuotas ? 'block' : 'none';
             if (grupoNroCuotas) grupoNroCuotas.style.display = mostrarCamposCuotas ? 'block' : 'none';
             if (grupoDiaVencimiento) grupoDiaVencimiento.style.display = mostrarCamposCuotas ? 'block' : 'none';
+            
+            // Ocultar fechaInicio y fechaFin para CHARLA y SEMINARIO (usan sus propios campos específicos)
+            const grupoFechaInicio = document.getElementById('grupo-fecha-inicio');
+            const grupoFechaFin = document.getElementById('grupo-fecha-fin');
+            const mostrarFechasGenerales = tipoOferta === 'CURSO' || tipoOferta === 'FORMACION';
+            
+            if (grupoFechaInicio) {
+                grupoFechaInicio.style.display = mostrarFechasGenerales ? 'block' : 'none';
+                const inputFechaInicio = document.getElementById('fechaInicio');
+                if (inputFechaInicio) {
+                    inputFechaInicio.required = mostrarFechasGenerales;
+                }
+            }
+            
+            if (grupoFechaFin) {
+                grupoFechaFin.style.display = mostrarFechasGenerales ? 'block' : 'none';
+                const inputFechaFin = document.getElementById('fechaFin');
+                if (inputFechaFin) {
+                    inputFechaFin.required = mostrarFechasGenerales;
+                }
+            }
             
             // Mostrar la sección correspondiente al tipo seleccionado
             let seccionMostrar = null;
@@ -3276,6 +3301,26 @@ if (typeof window.mostrarNotificacion !== 'function') {
 
             case 'CHARLA':
             case 'SEMINARIO': {
+                // Validar que la fecha de inscripción termine ANTES de la fecha del evento
+                const fechaFinInscripcion = document.getElementById('fechaFinInscripcion')?.value;
+                const fechaEvento = tipoOferta === 'CHARLA' 
+                    ? document.getElementById('fechaCharla')?.value 
+                    : document.getElementById('fechaSeminario')?.value;
+                
+                if (fechaFinInscripcion && fechaEvento) {
+                    const fechaFinInscripcionObj = new Date(fechaFinInscripcion + 'T00:00:00');
+                    const fechaEventoObj = new Date(fechaEvento + 'T00:00:00');
+                    
+                    if (fechaFinInscripcionObj >= fechaEventoObj) {
+                        mostrarNotificacion(
+                            'La fecha de fin de inscripción debe ser ANTES de la fecha de la ' + 
+                            (tipoOferta === 'CHARLA' ? 'charla' : 'seminario'), 
+                            'error'
+                        );
+                        return false;
+                    }
+                }
+                
                 // IDs genéricos para lugar y enlace
                 const enlaceEl = document.getElementById('enlace');
                 const lugarEl = document.getElementById('lugar');
@@ -4988,6 +5033,46 @@ if (typeof window.mostrarNotificacion !== 'function') {
                 
                 // Sincronizar campos calculados antes de validar/enviar
                 const tipoOferta = document.getElementById('tipoOferta') ? document.getElementById('tipoOferta').value : '';
+                
+                console.log('🔍 Tipo de oferta:', tipoOferta);
+                
+                // Para CHARLA y SEMINARIO: copiar fechas específicas a campos generales PRIMERO
+                if (tipoOferta === 'CHARLA') {
+                    const fechaCharla = document.getElementById('fechaCharla')?.value;
+                    console.log('📅 Fecha Charla:', fechaCharla);
+                    if (fechaCharla) {
+                        const inputFechaInicio = document.getElementById('fechaInicio');
+                        const inputFechaFin = document.getElementById('fechaFin');
+                        
+                        // Habilitar campos antes de asignar valores (para que se envíen en FormData)
+                        inputFechaInicio.disabled = false;
+                        inputFechaFin.disabled = false;
+                        
+                        inputFechaInicio.value = fechaCharla;
+                        inputFechaFin.value = fechaCharla;
+                        console.log('✅ Copiado fechaCharla a fechaInicio y fechaFin:', fechaCharla);
+                    } else {
+                        console.error('❌ No se encontró fechaCharla');
+                    }
+                } else if (tipoOferta === 'SEMINARIO') {
+                    const fechaSeminario = document.getElementById('fechaSeminario')?.value;
+                    console.log('📅 Fecha Seminario:', fechaSeminario);
+                    if (fechaSeminario) {
+                        const inputFechaInicio = document.getElementById('fechaInicio');
+                        const inputFechaFin = document.getElementById('fechaFin');
+                        
+                        // Habilitar campos antes de asignar valores (para que se envíen en FormData)
+                        inputFechaInicio.disabled = false;
+                        inputFechaFin.disabled = false;
+                        
+                        inputFechaInicio.value = fechaSeminario;
+                        inputFechaFin.value = fechaSeminario;
+                        console.log('✅ Copiado fechaSeminario a fechaInicio y fechaFin:', fechaSeminario);
+                    } else {
+                        console.error('❌ No se encontró fechaSeminario');
+                    }
+                }
+                
                 actualizarHorariosHidden();
                 actualizarDocentesHidden('curso');
                 actualizarDocentesHidden('formacion');
@@ -5030,6 +5115,38 @@ if (typeof window.mostrarNotificacion !== 'function') {
          */
         function enviarActualizacionOferta() {
             console.log('Iniciando actualización de oferta');
+            
+            // Sincronizar fechas para CHARLA y SEMINARIO antes de crear FormData
+            const tipoOferta = document.getElementById('tipoOferta')?.value;
+            if (tipoOferta === 'CHARLA') {
+                const fechaCharla = document.getElementById('fechaCharla')?.value;
+                if (fechaCharla) {
+                    const inputFechaInicio = document.getElementById('fechaInicio');
+                    const inputFechaFin = document.getElementById('fechaFin');
+                    
+                    // Habilitar campos antes de asignar valores
+                    inputFechaInicio.disabled = false;
+                    inputFechaFin.disabled = false;
+                    
+                    inputFechaInicio.value = fechaCharla;
+                    inputFechaFin.value = fechaCharla;
+                    console.log('✅ [EDICIÓN] Copiado fechaCharla:', fechaCharla);
+                }
+            } else if (tipoOferta === 'SEMINARIO') {
+                const fechaSeminario = document.getElementById('fechaSeminario')?.value;
+                if (fechaSeminario) {
+                    const inputFechaInicio = document.getElementById('fechaInicio');
+                    const inputFechaFin = document.getElementById('fechaFin');
+                    
+                    // Habilitar campos antes de asignar valores
+                    inputFechaInicio.disabled = false;
+                    inputFechaFin.disabled = false;
+                    
+                    inputFechaInicio.value = fechaSeminario;
+                    inputFechaFin.value = fechaSeminario;
+                    console.log('✅ [EDICIÓN] Copiado fechaSeminario:', fechaSeminario);
+                }
+            }
             
             const formulario = document.getElementById('oferta-form');
             const formData = new FormData(formulario);
