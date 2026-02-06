@@ -164,25 +164,31 @@
         </div>
         <div class="footer-social">
             <h4>Síguenos</h4>
-            <div class="social-icons">
-                <a th:if="${instituto != null and instituto.facebook != null and !#strings.isEmpty(instituto.facebook)}" 
-                   th:href="${instituto.facebook}" target="_blank" title="Facebook">
+            <!-- Agregamos verificación robusta de nulidad usando el operador seguro de navegación ? -->
+            <div class="social-icons" th:if="${instituto != null}">
+                <a th:if="${instituto.facebook != null and !#strings.isEmpty(instituto.facebook)}"
+                th:href="${instituto.facebook}"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Facebook">
                     <i class="fab fa-facebook-f"></i>
                 </a>
-                <a th:if="${instituto != null and instituto.x != null and !#strings.isEmpty(instituto.x)}" 
-                   th:href="${instituto.x}" target="_blank" title="X (Twitter)">
+
+                <a th:if="${instituto.x != null and !#strings.isEmpty(instituto.x)}"
+                th:href="${instituto.x}"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="X (Twitter)">
                     <i class="fab fa-x-twitter"></i>
                 </a>
-                <a th:if="${instituto != null and instituto.instagram != null and !#strings.isEmpty(instituto.instagram)}" 
-                   th:href="${instituto.instagram}" target="_blank" title="Instagram">
+
+                <a th:if="${instituto.instagram != null and !#strings.isEmpty(instituto.instagram)}"
+                th:href="${instituto.instagram}"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Instagram">
                     <i class="fab fa-instagram"></i>
                 </a>
-                <!-- Enlaces por defecto si no hay redes sociales configuradas -->
-                <div th:if="${instituto == null or (instituto.facebook == null or #strings.isEmpty(instituto.facebook)) and (instituto.x == null or #strings.isEmpty(instituto.x)) and (instituto.instagram == null or #strings.isEmpty(instituto.instagram))}">
-                    <a href="#"><i class="fab fa-facebook-f"></i></a>
-                    <a href="#"><i class="fab fa-x-twitter"></i></a>
-                    <a href="#"><i class="fab fa-instagram"></i></a>
-                </div>
             </div>
         </div>
         <div class="footer-bottom">

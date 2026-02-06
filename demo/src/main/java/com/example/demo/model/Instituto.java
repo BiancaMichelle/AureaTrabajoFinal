@@ -15,6 +15,8 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.util.StringUtils;
+
 
 @Entity
 @Getter
@@ -87,4 +89,11 @@ public class Instituto {
     
     @OneToMany(mappedBy = "instituto", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<CarruselImagen> imagenesCarrusel;
+
+    public boolean hasSocialMedia() {
+    return StringUtils.hasText(facebook) ||
+           StringUtils.hasText(x) ||
+           StringUtils.hasText(instagram);
+    }
+
 }
