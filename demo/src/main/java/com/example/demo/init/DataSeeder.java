@@ -785,6 +785,9 @@ public class DataSeeder implements CommandLineRunner {
             instituto.setMoneda("ARS");
             instituto.setCuentaBancaria("0000000000000000000000");
             instituto.setPoliticaPagos("Los pagos deben realizarse del 1 al 10 de cada mes. Pasada esa fecha se aplicará un recargo por mora.");
+            instituto.setRazonSocial("ICEP Instituto de Capacitación y Educación Profesional");
+            instituto.setCuil("30-00000000-0");
+            instituto.setInicioActividad(java.time.LocalDateTime.now().minusYears(5));
             
             // Configuración de bloqueos
             instituto.setDiasMoraBloqueoExamen(15);

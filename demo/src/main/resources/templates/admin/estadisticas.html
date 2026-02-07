@@ -468,12 +468,7 @@
                                         <i class="fas fa-file-pdf fa-2x mb-2"></i><br>PDF
                                     </label>
                                 </div>
-                                <div class="w-50">
-                                    <input type="radio" class="btn-check visually-hidden" name="formato" id="fmtExcel" value="excel">
-                                    <label class="btn btn-outline-success w-100 py-3" for="fmtExcel" style="display: block; text-align: center; border: 1px solid #198754; border-radius: 0.375rem; color: #198754; cursor: pointer;">
-                                        <i class="fas fa-file-excel fa-2x mb-2"></i><br>Excel
-                                    </label>
-                                </div>
+                                <div class="w-50" style="display: none;"></div>
                             </div>
                         </div>
 
@@ -490,11 +485,13 @@
                             <div class="row g-2" style="display: flex; gap: 0.5rem;">
                                 <div class="col-6" style="flex: 1;">
                                     <label class="small text-muted">Desde</label>
-                                    <input type="date" name="fechaInicio" class="form-control" style="width: 100%;">
+                                    <input type="date" name="fechaInicio" class="form-control" style="width: 100%;"
+                                           th:attr="max=${#temporals.format(maxFechaHoy, 'yyyy-MM-dd')}">
                                 </div>
                                 <div class="col-6" style="flex: 1;">
                                     <label class="small text-muted">Hasta</label>
-                                    <input type="date" name="fechaFin" class="form-control" style="width: 100%;">
+                                     <input type="date" name="fechaFin" class="form-control" style="width: 100%;"
+                                         th:attr="max=${#temporals.format(maxFechaHoy, 'yyyy-MM-dd')}">
                                 </div>
                             </div>
                         </div>

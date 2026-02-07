@@ -2670,6 +2670,17 @@ public class AdminController {
             instituto.setMoneda(params.get("moneda"));
             instituto.setCuentaBancaria(params.get("cuentaBancaria"));
             instituto.setPoliticaPagos(params.get("politicaPagos"));
+            instituto.setRazonSocial(params.get("razonSocial"));
+            instituto.setCuil(params.get("cuil"));
+            if (params.get("inicioActividad") != null && !params.get("inicioActividad").trim().isEmpty()) {
+                try {
+                    instituto.setInicioActividad(java.time.LocalDateTime.parse(params.get("inicioActividad").trim()));
+                } catch (Exception e) {
+                    System.out.println("Error parseando inicioActividad: " + params.get("inicioActividad"));
+                }
+            } else {
+                instituto.setInicioActividad(null);
+            }
             
             // Configuraciones automáticas - Los checkboxes solo envían valor si están marcados
             instituto.setPermisoBajaAutomatica("on".equals(params.get("permisoBajaAutomatica")));

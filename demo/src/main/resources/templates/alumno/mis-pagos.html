@@ -322,7 +322,7 @@
                         </td>
                         <td th:text="${cuota.inscripcion != null and cuota.inscripcion.oferta != null ? cuota.inscripcion.oferta.tipoOferta : '-'}">Tipo</td>
                         <td th:text="${cuota.fechaVencimiento != null ? #temporals.format(cuota.fechaVencimiento, 'dd MMM yyyy') : 'Sin fecha'}">15 Nov</td>
-                        <td th:text="${#numbers.formatCurrency(cuota.monto != null ? cuota.monto : T(java.math.BigDecimal).ZERO)}">$0</td>
+                        <td th:text="'$ ' + ${#numbers.formatDecimal(cuota.monto != null ? cuota.monto : T(java.math.BigDecimal).ZERO, 1, 'POINT', 2, 'COMMA')}">$ 0,00</td>
                         <td>
                             <span class="status-badge"
                                 th:classappend="${cuota.estado.name() == 'PAGADA' ? ' pagado' : (cuota.estado.name() == 'VENCIDA' ? ' vencido' : ' pendiente')}"
@@ -366,7 +366,7 @@
                         </td>
                         <td th:text="${pago.oferta != null ? pago.oferta.tipoOferta : '-'}">Tipo</td>
                         <td th:text="${pago.fechaAprobacion != null ? #temporals.format(pago.fechaAprobacion, 'dd MMM yyyy HH:mm') : (pago.fechaPago != null ? #temporals.format(pago.fechaPago, 'dd MMM yyyy HH:mm') : 'Sin registro')}">01 Oct 2025</td>
-                        <td th:text="${#numbers.formatCurrency(pago.monto != null ? pago.monto : T(java.math.BigDecimal).ZERO)}">$0</td>
+                        <td th:text="'$ ' + ${#numbers.formatDecimal(pago.monto != null ? pago.monto : T(java.math.BigDecimal).ZERO, 1, 'POINT', 2, 'COMMA')}">$ 0,00</td>
                         <td>
                             <span class="status-badge"
                                 th:classappend="${pago.estadoPago.name() == 'COMPLETADO' ? ' pagado' : (pago.estadoPago.name() == 'PENDIENTE' or pago.estadoPago.name() == 'EN_PROCESO' ? ' pendiente' : ' vencido')}"
