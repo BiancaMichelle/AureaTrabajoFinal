@@ -1,8 +1,15 @@
 package com.example.demo.service;
 
+import java.text.Normalizer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
@@ -94,7 +101,7 @@ public class IaPoolGeneratorService {
                 }
             }
 
-            // SIMULACION DE GENERACIÓN DE PREGUNTAS
+            // SIMULACION DE GENERACIÓN DE PREGUNTAS (con deduplicación y variedad)
             int cantidad = pool.getCantidadPreguntas() != null ? pool.getCantidadPreguntas() : 3;
             if (cantidad <= 0) cantidad = 3;
             
@@ -105,65 +112,48 @@ public class IaPoolGeneratorService {
                 pool.setPreguntas(new ArrayList<>());
             }
             
+            Set<String> enunciadosUsados = new HashSet<>();
+            List<TipoPregunta> tiposDisponibles = new ArrayList<>(Arrays.asList(
+                TipoPregunta.MULTIPLE_CHOICE,
+                TipoPregunta.VERDADERO_FALSO,
+                TipoPregunta.RESPUESTA_CORTA,
+                TipoPregunta.DESCRIPCION_LARGA,
+                TipoPregunta.UNICA_RESPUESTA,
+                TipoPregunta.AUTOCOMPLETADO
+            ));
+            Collections.shuffle(tiposDisponibles);
+
             for (int i = 0; i < cantidad; i++) {
+                TipoPregunta tipoSeleccionado = tiposDisponibles.get(i % tiposDisponibles.size());
+                PreguntaGenerada generada = null;
+
+                for (int intento = 0; intento < 10 && generada == null; intento++) {
+                    generada = construirPregunta(tipoSeleccionado, i, temas, contextoMateriales, nombresMateriales, intento);
+                    if (generada == null || generada.enunciado == null || generada.enunciado.isBlank()) {
+                        generada = null;
+                        continue;
+                    }
+                    String clave = normalizarEnunciado(generada.enunciado);
+                    if (enunciadosUsados.contains(clave)) {
+                        generada = null;
+                    } else {
+                        enunciadosUsados.add(clave);
+                    }
+                }
+
+                if (generada == null) {
+                    generada = construirPreguntaFallback(tipoSeleccionado, i, temas, contextoMateriales);
+                }
+
                 Pregunta p = new Pregunta();
                 p.setIdPregunta(UUID.randomUUID());
-                
-                // Seleccionar tipo de pregunta aleatorio
-                TipoPregunta[] tiposDisponibles = {
-                    TipoPregunta.UNICA_RESPUESTA, 
-                    TipoPregunta.VERDADERO_FALSO, 
-                    TipoPregunta.DESCRIPCION_LARGA,
-                    TipoPregunta.AUTOCOMPLETADO
-                };
-                TipoPregunta tipoSeleccionado = tiposDisponibles[(int)(Math.random() * tiposDisponibles.length)];
-                
                 p.setTipoPregunta(tipoSeleccionado);
                 p.setPool(pool);
                 p.setPuntaje(1.0f);
-                
-                String enunciado = "";
-                java.util.List<java.util.Map<String, Object>> opciones = new ArrayList<>();
-                
-                switch (tipoSeleccionado) {
-                    case VERDADERO_FALSO:
-                        // Generar afirmación
-                        boolean esVerdadera = Math.random() < 0.5;
-                        enunciado = generarAfirmacion(i, temas, esVerdadera);
-                        opciones.add(java.util.Map.of("desc", "Verdadero", "val", esVerdadera));
-                        opciones.add(java.util.Map.of("desc", "Falso", "val", !esVerdadera));
-                        break;
-                        
-                    case DESCRIPCION_LARGA:
-                        enunciado = "Describa detalladamente el impacto de " + temas + " según lo estudiado en el material.";
-                        // Para preguntas abiertas, a veces no hay opciones, o se guarda una respuesta modelo.
-                        opciones.add(java.util.Map.of("desc", "Respuesta modelo: El estudiante debe explicar las relaciones causales...", "val", true));
-                        break;
-                        
-                    case AUTOCOMPLETADO:
-                        enunciado = "Complete la siguiente frase: El concepto de " + temas + " se define como un proceso ________ que permite la integración de sistemas.";
-                        opciones.add(java.util.Map.of("desc", "dinámico", "val", true)); // Palabra correcta
-                        // En autocompletado a veces se usan distractores o solo se valida texto exacto.
-                        break;
-                        
-                    case UNICA_RESPUESTA:
-                    default:
-                        // Lógica existente de múltiple opción
-                        enunciado = generarEnunciadoContextual(i, temas);
-                        opciones.add(java.util.Map.of("desc", generarRespuestaSimulada(temas, true), "val", true));
-                        opciones.add(java.util.Map.of("desc", generarRespuestaSimulada(temas, false), "val", false));
-                        opciones.add(java.util.Map.of("desc", generarRespuestaSimulada(temas, false), "val", false));
-                        opciones.add(java.util.Map.of("desc", "Ninguna de las opciones describe adecuadamente el concepto.", "val", false));
-                        Collections.shuffle(opciones);
-                        // Limitar a 4
-                        if (opciones.size() > 4) opciones = opciones.subList(0, 4);
-                        break;
-                }
-                
-                p.setEnunciado(enunciado);
+                p.setEnunciado(generada.enunciado);
+
                 Pregunta pGuardada = preguntaRepository.save(p);
-                
-                for (java.util.Map<String, Object> map : opciones) {
+                for (Map<String, Object> map : generada.opciones) {
                     crearOpcion(pGuardada, (String) map.get("desc"), (Boolean) map.get("val"));
                 }
             }
@@ -188,6 +178,154 @@ public class IaPoolGeneratorService {
             "El material sugiere que un aspecto crítico de este tema es:"
         };
         return templates[index % templates.length];
+    }
+
+    private PreguntaGenerada construirPregunta(TipoPregunta tipo, int index, String temaRaw, String contextoMateriales, List<String> materiales, int intento) {
+        String tema = (temaRaw == null || temaRaw.isBlank()) ? "el tema principal" : temaRaw.trim();
+        String materialHint = "";
+        String contexto = "";
+
+        List<Map<String, Object>> opciones = new ArrayList<>();
+        Set<String> opcionesUsadas = new HashSet<>();
+        String enunciado;
+
+        switch (tipo) {
+            case MULTIPLE_CHOICE: {
+                String[] templates = {
+                    "Selecciona TODAS las afirmaciones correctas sobre " + tema + "." + materialHint,
+                    "¿Cuáles enunciados son verdaderos respecto a " + tema + "?" + materialHint,
+                    "Marca las opciones correctas según el material sobre " + tema + "." + materialHint
+                };
+                enunciado = templates[(index + intento) % templates.length];
+
+                // 2 correctas y 2 incorrectas
+                agregarOpcionUnica(opciones, opcionesUsadas, generarRespuestaSimulada(tema, true), true);
+                agregarOpcionUnica(opciones, opcionesUsadas, generarRespuestaSimulada(tema, true), true);
+                agregarOpcionUnica(opciones, opcionesUsadas, generarRespuestaSimulada(tema, false), false);
+                agregarOpcionUnica(opciones, opcionesUsadas, generarRespuestaSimulada(tema, false), false);
+                Collections.shuffle(opciones);
+                break;
+            }
+            case VERDADERO_FALSO: {
+                boolean esVerdadera = ThreadLocalRandom.current().nextBoolean();
+                enunciado = generarAfirmacion(index + intento, tema, esVerdadera);
+                opciones.add(Map.of("desc", "Verdadero", "val", esVerdadera));
+                opciones.add(Map.of("desc", "Falso", "val", !esVerdadera));
+                break;
+            }
+            case RESPUESTA_CORTA: {
+                String[] templates = {
+                    "En una frase, define " + tema + " según el material." + materialHint,
+                    "Resume brevemente qué es " + tema + "." + materialHint,
+                    "Explica en una oración el concepto de " + tema + "." + materialHint
+                };
+                enunciado = templates[(index + intento) % templates.length];
+                agregarOpcionUnica(opciones, opcionesUsadas,
+                    "Respuesta esperada: definición clara y precisa del concepto.", true);
+                break;
+            }
+            case DESCRIPCION_LARGA: {
+                String[] templates = {
+                    "Describa detalladamente el impacto de " + tema + " en el contexto estudiado." + materialHint,
+                    "Desarrolle con ejemplos cómo se aplica " + tema + " según el material." + materialHint,
+                    "Analice críticamente el rol de " + tema + " en el marco del contenido visto." + materialHint
+                };
+                enunciado = templates[(index + intento) % templates.length];
+                agregarOpcionUnica(opciones, opcionesUsadas,
+                    "Respuesta modelo: desarrollo coherente con ejemplos y conceptos del material.", true);
+                break;
+            }
+            case EMPAREJAMIENTO: {
+                enunciado = "Relaciona conceptos con sus definiciones principales sobre " + tema + ".";
+                String a = "Concepto A";
+                String b = "Concepto B";
+                String c = "Concepto C";
+                String correcta = "A→1, B→2, C→3";
+                String incorrecta1 = "A→2, B→1, C→3";
+                String incorrecta2 = "A→3, B→2, C→1";
+
+                agregarOpcionUnica(opciones, opcionesUsadas,
+                    "Emparejamiento correcto: " + correcta + " (" + a + ", " + b + ", " + c + ")", true);
+                agregarOpcionUnica(opciones, opcionesUsadas,
+                    "Emparejamiento alternativo: " + incorrecta1, false);
+                agregarOpcionUnica(opciones, opcionesUsadas,
+                    "Emparejamiento alternativo: " + incorrecta2, false);
+                Collections.shuffle(opciones);
+                break;
+            }
+            case AUTOCOMPLETADO: {
+                String[] templates = {
+                    "Complete la siguiente frase: El concepto de " + tema + " se define como ________." + materialHint,
+                    "Complete: " + tema + " es un proceso ________ que permite la integración de sistemas." + materialHint
+                };
+                enunciado = templates[(index + intento) % templates.length];
+                agregarOpcionUnica(opciones, opcionesUsadas, "dinámico", true);
+                agregarOpcionUnica(opciones, opcionesUsadas, "aislado", false);
+                agregarOpcionUnica(opciones, opcionesUsadas, "irrelevante", false);
+                Collections.shuffle(opciones);
+                break;
+            }
+            case UNICA_RESPUESTA:
+            default: {
+                String[] templates = {
+                    generarEnunciadoContextual(index + intento, tema),
+                    "Según el material, ¿cuál es la idea central de " + tema + "?" + materialHint,
+                    "¿Qué afirmación describe mejor " + tema + " en el contexto visto?" + materialHint,
+                    "Seleccione la opción correcta sobre " + tema + "." + materialHint
+                };
+                enunciado = templates[(index + intento) % templates.length];
+                agregarOpcionUnica(opciones, opcionesUsadas, generarRespuestaSimulada(tema, true), true);
+                agregarOpcionUnica(opciones, opcionesUsadas, generarRespuestaSimulada(tema, false), false);
+                agregarOpcionUnica(opciones, opcionesUsadas, generarRespuestaSimulada(tema, false), false);
+                agregarOpcionUnica(opciones, opcionesUsadas, "Ninguna de las opciones describe adecuadamente el concepto.", false);
+                Collections.shuffle(opciones);
+                if (opciones.size() > 4) opciones = opciones.subList(0, 4);
+                break;
+            }
+        }
+
+        if (opciones.isEmpty()) {
+            agregarOpcionUnica(opciones, opcionesUsadas, "Respuesta esperada según el material.", true);
+        }
+
+        return new PreguntaGenerada(enunciado, opciones);
+    }
+
+    private PreguntaGenerada construirPreguntaFallback(TipoPregunta tipo, int index, String temaRaw, String contextoMateriales) {
+        String tema = (temaRaw == null || temaRaw.isBlank()) ? "el tema principal" : temaRaw.trim();
+        String enunciado = "Explique brevemente " + tema + " (variante " + (index + 1) + ").";
+        if (contextoMateriales != null && !contextoMateriales.isBlank()) {
+            enunciado += " " + contextoMateriales;
+        }
+        List<Map<String, Object>> opciones = new ArrayList<>();
+        opciones.add(Map.of("desc", "Respuesta esperada coherente con el material.", "val", true));
+        return new PreguntaGenerada(enunciado, opciones);
+    }
+
+    private void agregarOpcionUnica(List<Map<String, Object>> opciones, Set<String> usados, String desc, boolean val) {
+        if (desc == null || desc.isBlank()) return;
+        String clave = normalizarEnunciado(desc);
+        if (usados.add(clave)) {
+            opciones.add(Map.of("desc", desc, "val", val));
+        }
+    }
+
+    private String normalizarEnunciado(String texto) {
+        if (texto == null) return "";
+        String norm = Normalizer.normalize(texto, Normalizer.Form.NFD)
+            .replaceAll("\\p{InCombiningDiacriticalMarks}+", "")
+            .toLowerCase();
+        return norm.replaceAll("[^a-z0-9]+", " ").trim();
+    }
+
+    private static class PreguntaGenerada {
+        private final String enunciado;
+        private final List<Map<String, Object>> opciones;
+
+        private PreguntaGenerada(String enunciado, List<Map<String, Object>> opciones) {
+            this.enunciado = enunciado;
+            this.opciones = opciones;
+        }
     }
     
     private String generarRespuestaSimulada(String tema, boolean esCorrecta) {
