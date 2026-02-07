@@ -352,7 +352,7 @@
             </div>
             <div class="resumen-item">
                 <div class="numero" style="color: #10b981;" th:text="${resumen.propuestas}">18</div>
-                <div class="label">✅ Propuestos (automático)</div>
+                <div class="label">✅ Cumplen (automático)</div>
             </div>
             <div class="resumen-item">
                 <div class="numero" style="color: #3b82f6;" th:text="${resumen.aprobadosDocente}">2</div>
@@ -395,7 +395,7 @@
             <a th:href="@{/aula/oferta/{id}/certificaciones(id=${oferta.idOferta}, filtro='propuestos')}" 
                class="filtro-btn" 
                th:classappend="${filtroActual == 'propuestos' ? 'activo' : ''}">
-                ✅ Propuestos (<span th:text="${resumen.propuestas}">18</span>)
+                ✅ Cumplen (<span th:text="${resumen.propuestas}">18</span>)
             </a>
             <a th:href="@{/aula/oferta/{id}/certificaciones(id=${oferta.idOferta}, filtro='aprobados')}" 
                class="filtro-btn" 
@@ -481,7 +481,7 @@
                                                        cert.estado.name() == 'APROBADO_DOCENTE' ? 'badge-aprobado' :
                                                        cert.estado.name() == 'RECHAZADO_DOCENTE' ? 'badge-rechazado' :
                                                        cert.estado.name() == 'CERTIFICADO_EMITIDO' ? 'badge-emitido' : 'badge-no-cumple'}">
-                                    <span th:text="${cert.estado.name() == 'PROPUESTA' ? '✅ Propuesto' :
+                                    <span th:text="${cert.estado.name() == 'PROPUESTA' ? '✅ Cumple' :
                                                     cert.estado.name() == 'APROBADO_DOCENTE' ? '➕ Aprobado Manual' :
                                                     cert.estado.name() == 'RECHAZADO_DOCENTE' ? '❌ Rechazado' :
                                                     cert.estado.name() == 'CERTIFICADO_EMITIDO' ? '📜 En Acta' :
