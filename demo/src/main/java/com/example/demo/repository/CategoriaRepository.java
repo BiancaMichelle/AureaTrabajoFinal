@@ -15,10 +15,14 @@ public interface CategoriaRepository extends JpaRepository<Categoria, Long> {
     
     boolean existsByNombreIgnoreCase(String nombre);
     
+    boolean existsByDescripcionIgnoreCase(String descripcion);
+    
     // Opcional: Para contar ofertas por categoría
     @Query("SELECT COUNT(o) FROM OfertaAcademica o JOIN o.categorias c WHERE c.idCategoria = :categoriaId")
     Optional<Long> countOfertasByCategoriaId(@Param("categoriaId") Long categoriaId);
     
     // Encontrar categorías por nombre exacto (case insensitive)
     Optional<Categoria> findByNombreIgnoreCase(String nombre);
+
+    Optional<Categoria> findByDescripcionIgnoreCase(String descripcion);
 }

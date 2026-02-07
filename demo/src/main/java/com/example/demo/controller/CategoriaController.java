@@ -32,15 +32,51 @@ public class CategoriaController {
         return categoriaService.findAll();
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getCategoria(@PathVariable Long id) {
+        return categoriaService.findById(id)
+            .<ResponseEntity<?>>map(ResponseEntity::ok)
+            .orElseGet(() -> {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "Categoria no encontrada");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            });
+    }
+
     @PostMapping
-    public Categoria createCategoria(@RequestBody Categoria categoria) {
-        return categoriaService.save(categoria);
+    public ResponseEntity<?> createCategoria(@RequestBody Categoria categoria) {
+        try {
+            return ResponseEntity.ok(categoriaService.save(categoria));
+        } catch (IllegalArgumentException e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Error en la respuesta del servidor");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
     }
 
     @PutMapping("/{id}")
-    public Categoria updateCategoria(@PathVariable Long id, @RequestBody Categoria categoria) {
-        categoria.setIdCategoria(id);
-        return categoriaService.save(categoria);
+    public ResponseEntity<?> updateCategoria(@PathVariable Long id, @RequestBody Categoria categoria) {
+        try {
+            categoria.setIdCategoria(id);
+            return ResponseEntity.ok(categoriaService.save(categoria));
+        } catch (IllegalArgumentException e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Error en la respuesta del servidor");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
     }
 
     @DeleteMapping("/{id}")
@@ -50,18 +86,21 @@ public class CategoriaController {
         try {
             categoriaService.deleteById(id);
             response.put("success", true);
-            response.put("message", "Categoría eliminada exitosamente");
+            response.put("message", "Categoria eliminada exitosamente");
             return ResponseEntity.ok(response);
             
         } catch (DataIntegrityViolationException e) {
             response.put("success", false);
-            response.put("message", "No se puede eliminar la categoría porque está siendo utilizada en uno o más cursos/ofertas académicas. Primero debe remover la categoría de todas las ofertas.");
+            response.put("message", "No se puede eliminar la categoria porque esta siendo utilizada en uno o mas cursos/ofertas academicas. Primero debe remover la categoria de todas las ofertas.");
             return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
             
         } catch (Exception e) {
             response.put("success", false);
-            response.put("message", "Error al eliminar la categoría: " + e.getMessage());
+            response.put("message", "Error al eliminar la categoria: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 }
+
+
+

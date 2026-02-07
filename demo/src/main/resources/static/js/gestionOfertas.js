@@ -4,7 +4,120 @@
 
 console.log('🔥 SCRIPT GESTION OFERTAS CARGADO');
 
-document.addEventListener('DOMContentLoaded', function () {
+// Fallback de loading si no existe implementacion global
+if (typeof window.mostrarLoading !== 'function') {
+    window.mostrarLoading = function(mensaje) {
+        console.log('[LOADING] ' + (mensaje || 'Cargando...'));
+        const overlayId = 'loading-overlay-horarios';
+        if (!document.getElementById(overlayId)) {
+            const div = document.createElement('div');
+            div.id = overlayId;
+            div.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:9999;color:#fff;font-size:1rem;';
+            div.textContent = mensaje || 'Cargando...';
+            document.body.appendChild(div);
+        } else {
+            document.getElementById(overlayId).textContent = mensaje || 'Cargando...';
+            document.getElementById(overlayId).style.display = 'flex';
+        }
+    };
+}
+if (typeof window.ocultarLoading !== 'function') {
+    window.ocultarLoading = function() {
+        const overlay = document.getElementById('loading-overlay-horarios');
+        if (overlay) overlay.style.display = 'none';
+    };
+}
+
+// Helpers CSRF (meta/input/cookie)
+function getCsrfToken() {
+    const metaToken = document.querySelector('meta[name="_csrf"]');
+    if (metaToken) return metaToken.getAttribute('content');
+    const inputToken = document.querySelector('input[name="_csrf"]');
+    if (inputToken) return inputToken.value;
+    const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : null;
+}
+function getCsrfHeaderName() {
+    const metaHeader = document.querySelector('meta[name="_csrf_header"]');
+    return metaHeader ? metaHeader.getAttribute('content') : 'X-XSRF-TOKEN';
+}
+function normalizeNumber(value) {
+    if (value == null) return NaN;
+    const v = String(value).trim().replace(',', '.');
+    return parseFloat(v);
+}
+function isUuid(value) {
+    return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(value);
+}
+
+
+
+function showGlobalAlertModal(title, message) {
+    const modal = document.getElementById('globalConfirmationModal');
+    if (!modal) return false;
+
+    const titleEl = document.getElementById('confTitle');
+    const msgEl = document.getElementById('confirmationMessage');
+    const btnConfirm = document.getElementById('btnAcceptConfirm');
+    const btnCancel = modal.querySelector('.modal-footer .btn-secondary');
+    const btnClose = modal.querySelector('.btn-close');
+
+    if (titleEl) titleEl.textContent = title;
+    if (msgEl) msgEl.textContent = message;
+
+    // Guardar estado previo
+    const prevCancelDisplay = btnCancel ? btnCancel.style.display : '';
+    const prevConfirmText = btnConfirm ? btnConfirm.textContent : '';
+
+    if (btnCancel) btnCancel.style.display = 'none';
+    if (btnConfirm) btnConfirm.textContent = 'Aceptar';
+
+    const restore = () => {
+        if (btnCancel) btnCancel.style.display = prevCancelDisplay;
+        if (btnConfirm) btnConfirm.textContent = prevConfirmText || 'Confirmar';
+    };
+
+    if (btnConfirm) {
+        const newBtn = btnConfirm.cloneNode(true);
+        btnConfirm.parentNode.replaceChild(newBtn, btnConfirm);
+        newBtn.addEventListener('click', () => {
+            restore();
+            if (typeof ModalConfirmacion !== 'undefined' && ModalConfirmacion.close) {
+                ModalConfirmacion.close();
+            } else {
+                modal.style.display = 'none';
+            }
+        });
+    }
+
+    if (btnClose) {
+        btnClose.addEventListener('click', restore, { once: true });
+    }
+
+    modal.classList.remove('fade-out');
+    modal.style.display = 'flex';
+    return true;
+}
+
+// Fallback de alertas para el modulo de horarios automaticos
+if (typeof window.mostrarAlerta !== 'function') {
+    window.mostrarAlerta = function(mensaje, tipo) {
+        const title = tipo === 'error' ? 'Error' : tipo === 'warning' ? 'Advertencia' : 'Aviso';
+        if (showGlobalAlertModal(title, mensaje)) {
+            return;
+        }
+        if (typeof window.mostrarNotificacion === 'function') {
+            return window.mostrarNotificacion(mensaje, tipo);
+        }
+        if (typeof window.showNotification === 'function') {
+            return window.showNotification(mensaje, tipo);
+        }
+        alert((tipo === 'error' ? '[ERROR] ' : tipo === 'warning' ? '[WARN] ' : '[OK] ') + mensaje);
+    };
+}
+
+if (!window.__skipGestionOfertasInit) {
+    document.addEventListener('DOMContentLoaded', function () {
     console.log('✅ DOM CARGADO - Iniciando gestión de ofertas');
     
     // Referencias a elementos principales
@@ -969,6 +1082,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 });
 
+}
+
 // ================================================
 // FUNCIONES PARA MODO AUTOMÁTICO DE HORARIOS
 // ================================================
@@ -982,6 +1097,46 @@ window.toggleModoHorario = function() {
     const modoDescripcion = document.getElementById('modo-descripcion');
     const manualContainer = document.getElementById('horarios-manual-container');
     const automaticoContainer = document.getElementById('horarios-automatico-container');
+    const limpiarHorarios = () => {
+        if (typeof window.horariosSeleccionados !== 'undefined') {
+            window.horariosSeleccionados = [];
+        }
+        if (typeof horariosArray !== 'undefined') {
+            horariosArray = [];
+        }
+        if (typeof actualizarHorariosChips === 'function') {
+            actualizarHorariosChips();
+        }
+        if (typeof actualizarListaHorarios === 'function') {
+            actualizarListaHorarios();
+        }
+    };
+    const cargarHorariosSeleccionadosEnManual = () => {
+        if (!Array.isArray(window.horariosSeleccionados)) return;
+        const normalizar = (valor) => {
+            if (!valor) return '';
+            return valor.length > 5 ? valor.substring(0, 5) : valor;
+        };
+        if (typeof horariosSeleccionados !== 'undefined') {
+            const manualActual = Array.isArray(horariosSeleccionados) ? horariosSeleccionados : [];
+            const autoActual = window.horariosSeleccionados.map(h => ({
+                ...h,
+                horaInicio: normalizar(h.horaInicio),
+                horaFin: normalizar(h.horaFin)
+            }));
+            const key = (h) => `${h.dia}|${normalizar(h.horaInicio)}|${normalizar(h.horaFin)}|${h.docentesIds || ''}|${h.docenteId || ''}`;
+            const map = new Map();
+            manualActual.forEach(h => map.set(key(h), h));
+            autoActual.forEach(h => map.set(key(h), h));
+            horariosSeleccionados = Array.from(map.values());
+        }
+        if (typeof actualizarHorariosChips === 'function') {
+            actualizarHorariosChips();
+        }
+        if (typeof actualizarListaHorarios === 'function') {
+            actualizarListaHorarios();
+        }
+    };
     
     if (modoSwitch.checked) {
         // Modo Automático activado
@@ -993,9 +1148,7 @@ window.toggleModoHorario = function() {
         manualContainer.style.display = 'none';
         automaticoContainer.style.display = 'block';
         
-        // Limpiar horarios manuales
-        horariosArray = [];
-        actualizarListaHorarios();
+        // Mantener horarios manuales/autom??ticos existentes (no limpiar)
     } else {
         // Modo Manual activado
         console.log('✋ Cambiando a modo MANUAL');
@@ -1015,31 +1168,105 @@ window.toggleModoHorario = function() {
         if (previewContainer) previewContainer.style.display = 'none';
         if (infoDocenteContainer) infoDocenteContainer.style.display = 'none';
         
-        // Limpiar horarios automáticos si los hubiera
-        horariosArray = [];
-        actualizarListaHorarios();
+        // Combinar horarios manuales con los seleccionados del modo automático
+        cargarHorariosSeleccionadosEnManual();
     }
 }
 
 /**
  * Genera propuestas automáticas de horarios
  */
-async function generarPropuestasAutomaticas() {
-    console.log('🤖 Generando propuestas automáticas...');
+
+
+function syncPinStyles(container = document) {
+    container.querySelectorAll('.pin-check').forEach(chk => {
+        const chip = chk.closest('.horario-chip-editable');
+        if (!chip) return;
+        if (chk.checked) {
+            chip.classList.add('pinned');
+        } else {
+            chip.classList.remove('pinned');
+        }
+    });
+}
+
+function marcarPinsUI(pinnedList) {
+    if (!Array.isArray(pinnedList) || pinnedList.length === 0) return;
+    const norm = (v) => (v && v.length > 5 ? v.substring(0, 5) : v || '00:00');
+    const key = (h) => `${h.dia}|${norm(h.horaInicio)}|${norm(h.horaFin)}`;
+    const set = new Set(pinnedList.map(key));
+
+    document.querySelectorAll('.pin-check').forEach(chk => {
+        const k = `${chk.dataset.dia}|${norm(chk.dataset.inicio)}|${norm(chk.dataset.fin)}`;
+        if (set.has(k)) {
+            chk.checked = true;
+        }
+    });
+    syncPinStyles();
+}
+
+function buildPinnedFromSelected() {
+    const normalizar = (valor) => {
+        if (!valor) return '00:00';
+        return valor.length > 5 ? valor.substring(0, 5) : valor;
+    };
+
+    const idx = window.propuestaSeleccionadaIndex;
+    if (idx != null && window.propuestasGeneradas && window.propuestasGeneradas[idx]) {
+        return window.propuestasGeneradas[idx].horarios.map(h => ({
+            dia: h.dia,
+            horaInicio: normalizar(h.horaInicio),
+            horaFin: normalizar(h.horaFin),
+            docenteId: h.docenteId || h.docenteUUID || '',
+            docentesIds: Array.isArray(h.docentesIds) ? h.docentesIds.join(',') : (h.docentesIds || '')
+        }));
+    }
+
+    if (Array.isArray(window.horariosSeleccionados) && window.horariosSeleccionados.length > 0) {
+        return window.horariosSeleccionados.map(h => ({
+            dia: h.dia,
+            horaInicio: normalizar(h.horaInicio),
+            horaFin: normalizar(h.horaFin),
+            docenteId: h.docenteId || '',
+            docentesIds: h.docentesIds || ''
+        }));
+    }
+
+    return [];
+}
+
+async function generarPropuestasAutomaticas(pinnedSchedules = []) {
+    // Si viene del evento onclick del bot?n, pinnedSchedules ser? un evento o undefined, lo normalizamos
+    const pinnedFromSelected = buildPinnedFromSelected();
+    const hasExplicitPinned = Array.isArray(pinnedSchedules) && pinnedSchedules.length > 0;
+    const isRegeneration = hasExplicitPinned || pinnedFromSelected.length > 0;
+    const finalPinned = hasExplicitPinned ? pinnedSchedules : pinnedFromSelected;
+
+    console.log('?? Generando propuestas autom?ticas...', finalPinned);
     
     // Validaciones
     const idOferta = document.getElementById('idOferta')?.value;
-    const horasSemanales = document.getElementById('horas-semanales').value;
+    const horasSemanalesRaw = document.getElementById('horas-semanales').value;
+    const horasSemanales = normalizeNumber(horasSemanalesRaw);
+    const maxHorasRaw = document.getElementById('max-horas-diarias')?.value || 4;
+    const maxHoras = parseInt(maxHorasRaw, 10);
     
     // Obtener docente seleccionado (del campo de docentes)
     let idDocente = null;
-    const docentesCurso = document.getElementById('docentesCursoSelect');
-    const docentesFormacion = document.getElementById('docentesFormacionSelect');
+    const docentesCurso = document.getElementById('docentesCursoSelect') || document.getElementById('docentesCurso');
+    const docentesFormacion = document.getElementById('docentesFormacionSelect') || document.getElementById('docentesFormacion');
+    const docentesIdsRaw = (docentesCurso && docentesCurso.value) ? docentesCurso.value : (docentesFormacion && docentesFormacion.value) ? docentesFormacion.value : '';
     
+    const pickFirstId = (val) => {
+        if (!val) return null;
+        const parts = val.split(',').map(v => v.trim()).filter(Boolean);
+        return parts.length > 0 ? parts[0] : null;
+    };
+
     if (docentesCurso && docentesCurso.value) {
-        idDocente = docentesCurso.value;
+        idDocente = pickFirstId(docentesCurso.value);
     } else if (docentesFormacion && docentesFormacion.value) {
-        idDocente = docentesFormacion.value;
+        idDocente = pickFirstId(docentesFormacion.value);
     }
     
     // Validar campos
@@ -1047,36 +1274,88 @@ async function generarPropuestasAutomaticas() {
         mostrarAlerta('Por favor, selecciona un docente primero', 'warning');
         return;
     }
+    if (!isUuid(idDocente)) {
+        mostrarAlerta('El docente seleccionado no tiene un ID v??lido. Re-selecciona el docente.', 'error');
+        console.error('ID docente inv??lido:', idDocente);
+        return;
+    }
     
-    if (!horasSemanales || horasSemanales <= 0) {
-        mostrarAlerta('Por favor, ingresa las horas semanales requeridas', 'warning');
+    if (!horasSemanales || isNaN(horasSemanales) || horasSemanales <= 0) {
+        mostrarAlerta('Por favor, ingresa las horas semanales requeridas (ej: 6 o 6.5)', 'warning');
+        return;
+    }
+
+    if (isNaN(maxHoras) || maxHoras < 2) {
+        mostrarAlerta('El m??nimo de horas diarias es 2', 'warning');
+        return;
+    }
+
+    if (maxHoras < 2) {
+        mostrarAlerta('El mínimo de horas diarias es 2', 'warning');
         return;
     }
     
     // Mostrar loading
-    mostrarLoading('Generando propuestas optimizadas...');
+    mostrarLoading(isRegeneration ? 'Refinando propuesta...' : 'Generando propuestas optimizadas...');
     
     try {
         const formData = new FormData();
         formData.append('idOferta', idOferta || 0); // Si es nueva oferta, enviar 0
         formData.append('idDocente', idDocente);
-        formData.append('horasSemanales', horasSemanales);
+        if (docentesIdsRaw) formData.append('docentesIds', docentesIdsRaw);
+        formData.append('horasSemanales', String(horasSemanales));
+        formData.append('maxHorasDiarias', String(maxHoras));
+
+        if (isRegeneration) {
+            formData.append('horariosFijadosJson', JSON.stringify(finalPinned));
+            formData.append('buscarAlternativas', 'true');
+        } else {
+             const container = document.getElementById('propuestas-container');
+             if (container && container.style.display !== 'none' && window.propuestasGeneradas && window.propuestasGeneradas.length > 0) {
+                 formData.append('buscarAlternativas', 'true');
+             }
+        }
         
+        const csrfToken = getCsrfToken();
+        const csrfHeader = getCsrfHeaderName();
+        const headers = {};
+        if (csrfToken) headers[csrfHeader] = csrfToken;
+
         const response = await fetch('/admin/ofertas/generar-horarios-automaticos', {
             method: 'POST',
+            headers,
             body: formData
         });
         
-        const data = await response.json();
-        
-        if (data.success) {
-            console.log('✅ Propuestas generadas:', data);
+        let data = null;
+        let rawText = '';
+        if (response.ok) {
+            data = await response.json();
+        } else {
+            const contentType = response.headers.get('content-type') || '';
+            if (contentType.includes('application/json')) {
+                data = await response.json();
+            } else {
+                rawText = await response.text();
+                data = { success: false, message: rawText || ('HTTP ' + response.status) };
+            }
+        }
+
+        if (data && data.success) {
+            console.log('??? Propuestas generadas:', data);
             mostrarPropuestas(data.propuestas, data.infoDocente);
             ocultarLoading();
             mostrarAlerta('Propuestas generadas exitosamente', 'success');
         } else {
             ocultarLoading();
-            mostrarAlerta(data.message || 'Error al generar propuestas', 'error');
+            let msg = data && data.message ? data.message : ('Error al generar propuestas (HTTP ' + response.status + ')');
+            if (data && data.debug) {
+                const d = data.debug;
+                msg += ` Disponibilidad libre: ${d.disponibilidadLibre}h (total ${d.disponibilidadTotal}h). ` +
+                       `Carga actual: ${d.cargaActual}h. Requeridas: ${d.horasRequeridas}h.`;
+            }
+            mostrarAlerta(msg, 'error');
+            console.error('??? Respuesta error:', { status: response.status, data, rawText });
         }
     } catch (error) {
         console.error('❌ Error:', error);
@@ -1093,13 +1372,32 @@ function mostrarPropuestas(propuestas, infoDocente) {
     const propuestasContainer = document.getElementById('propuestas-container');
     const infoDocenteDiv = document.getElementById('info-docente-carga');
     
+    // Guardar info docente global para validaciones
+    window.infoDocenteActual = infoDocente;
+    window.infoDocentesMap = null;
+    if (infoDocente && infoDocente.docentes) {
+        window.infoDocentesMap = {};
+        infoDocente.docentes.forEach(d => {
+            window.infoDocentesMap[d.id] = d;
+        });
+    }
+    window.propuestaSeleccionadaIndex = null;
+    
     // Mostrar información del docente
     if (infoDocente) {
-        document.getElementById('docente-nombre').textContent = infoDocente.nombre;
-        document.getElementById('docente-carga-actual').textContent = infoDocente.cargaActual;
-        document.getElementById('docente-disponibilidad-total').textContent = infoDocente.disponibilidadTotal;
-        document.getElementById('docente-porcentaje-ocupacion').textContent = infoDocente.porcentajeOcupacion;
-        infoDocenteDiv.style.display = 'block';
+        const grid = document.getElementById('docentes-info-grid');
+        if (grid && infoDocente.docentes && Array.isArray(infoDocente.docentes)) {
+            grid.innerHTML = infoDocente.docentes.map(d => `
+                <div class="docente-card">
+                    <h6>${d.nombre || '-'}</h6>
+                    <div class="docente-metrics">
+                        <span>Carga: ${d.cargaActual || 0}h</span>
+                        <span>Disp: ${d.disponibilidadTotal || 0}h</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+        if (infoDocenteDiv) infoDocenteDiv.style.display = 'block';
     }
     
     // Limpiar propuestas anteriores
@@ -1108,6 +1406,7 @@ function mostrarPropuestas(propuestas, infoDocente) {
     // Crear cards de propuestas
     propuestas.forEach((propuesta, index) => {
         const card = document.createElement('div');
+        card.id = `propuesta-card-${index}`;
         card.className = 'propuesta-card';
         card.innerHTML = `
             <div class="propuesta-header">
@@ -1138,17 +1437,53 @@ function mostrarPropuestas(propuestas, infoDocente) {
             </div>
             
             <div class="propuesta-horarios">
-                ${propuesta.horarios.map(h => `
-                    <span class="horario-chip">
-                        <i class="fas fa-circle" style="font-size: 6px;"></i>
-                        ${formatearDia(h.dia)}: ${h.horaInicio} - ${h.horaFin}
-                    </span>
-                `).join('')}
+                <div style="margin-bottom:8px; font-size:0.8rem; color:#6c757d;">
+                    <i class="fas fa-thumbtack"></i> Edita horarios manualmente si lo deseas. Marca casillas para mantener al regenerar:
+                </div>
+                <div style="display:flex; flex-wrap:wrap;">
+                ${propuesta.horarios.map((h, hIdx) => {
+                    // Asegurar formato HH:mm para input type="time"
+                    const inicio = h.horaInicio.length > 5 ? h.horaInicio.substring(0, 5) : h.horaInicio;
+                    const fin = h.horaFin.length > 5 ? h.horaFin.substring(0, 5) : h.horaFin;
+                    
+                    return `
+                    <div class="horario-chip-editable" data-prop-index="${index}" data-h-index="${hIdx}" style="display:inline-flex; flex-direction:column; gap:4px; margin:4px; background:#f8f9fa; border-radius:8px; padding:6px 10px; border:1px solid #dee2e6;">
+                        <div style="display:flex; align-items:center; gap:6px; margin-bottom:2px;">
+                             <input type="checkbox" class="pin-check"
+                                   data-dia="${h.dia}" data-inicio="${inicio}" data-fin="${fin}" data-docente-id="${h.docenteId || ''}" data-docentes-ids="${Array.isArray(h.docentesIds) ? h.docentesIds.join(',') : (h.docentesIds || '')}"
+                                   title="Mantener este horario">
+                             <span style="font-weight:600; font-size:0.85rem; color:#495057;">${formatearDia(h.dia)}</span>
+                             ${(h.docentesNombres || h.docenteNombre) ? `<span style=\"font-size:0.75rem;color:#6b7280;\">(${h.docentesNombres || h.docenteNombre})</span>` : ''}
+                        </div>
+                        <div style="display:flex; align-items:center; gap:4px;">
+                            <input type="time" value="${inicio}"
+                                   data-field="inicio"
+                                   onchange="actualizarHorarioPropuesta(${index}, ${hIdx}, 'inicio', this)"
+                                   style="border:1px solid #ced4da; border-radius:4px; font-size:0.85rem; padding:2px; color:#495057; width:65px;">
+                            <span style="color:#6c757d;">-</span>
+                            <input type="time" value="${fin}"
+                                   data-field="fin"
+                                   onchange="actualizarHorarioPropuesta(${index}, ${hIdx}, 'fin', this)"
+                                   style="border:1px solid #ced4da; border-radius:4px; font-size:0.85rem; padding:2px; color:#495057; width:65px;">
+                        </div>
+                    </div>
+                    `;
+                }).join('')}
+                </div>
             </div>
             
-            <button class="btn-seleccionar-propuesta" onclick="seleccionarPropuesta(${index})">
-                <i class="fas fa-check"></i> Seleccionar
-            </button>
+            <div class="propuesta-actions" style="margin-top:15px; display:flex; gap:10px;">
+                <button type="button" class="btn-seleccionar-propuesta" onclick="seleccionarPropuesta(${index})" style="flex:2;">
+                    <i class="fas fa-check"></i> Seleccionar
+                </button>
+                <button type="button" class="btn-regenerar-propuesta" onclick="regenerarConFijados(${index})" 
+                        style="flex:1; background:white; color:#6c757d; border:1px solid #dee2e6; border-radius:8px; cursor:pointer;" 
+                        title="Buscar alternativas manteniendo seleccionados"
+                        onmouseover="this.style.background='#f8f9fa'"
+                        onmouseout="this.style.background='white'">
+                    <i class="fas fa-sync-alt"></i> Refinar
+                </button>
+            </div>
         `;
         listaPropuestas.appendChild(card);
     });
@@ -1158,6 +1493,30 @@ function mostrarPropuestas(propuestas, infoDocente) {
     
     // Guardar propuestas en variable global para uso posterior
     window.propuestasGeneradas = propuestas;
+
+    // Marcar autom?ticamente los horarios fijados en la UI
+    try {
+        marcarPinsUI(buildPinnedFromSelected());
+    } catch (e) {
+        console.warn('No se pudo marcar pins:', e);
+    }
+
+    // Delegaci?n para mantener estilos de pin
+    if (!listaPropuestas.dataset.pinListener) {
+        listaPropuestas.addEventListener('change', function(e) {
+            if (e.target && e.target.classList.contains('pin-check')) {
+                syncPinStyles(listaPropuestas);
+            }
+        });
+        listaPropuestas.dataset.pinListener = '1';
+    }
+
+    // Marcar autom?ticamente los horarios fijados en la UI
+    try {
+        marcarPinsUI(buildPinnedFromSelected());
+    } catch (e) {
+        console.warn('No se pudo marcar pins:', e);
+    }
 }
 
 /**
@@ -1165,52 +1524,182 @@ function mostrarPropuestas(propuestas, infoDocente) {
  */
 function seleccionarPropuesta(index) {
     const propuesta = window.propuestasGeneradas[index];
-    console.log('✅ Propuesta seleccionada:', propuesta);
-    
-    // Limpiar horarios anteriores
-    horariosArray = [];
-    
-    // Agregar horarios de la propuesta al array global
-    propuesta.horarios.forEach(h => {
-        horariosArray.push({
-            dia: h.dia,
-            horaInicio: h.horaInicio,
-            horaFin: h.horaFin
-        });
-    });
-    
-    // Actualizar vista previa
-    mostrarPreviewHorariosAutomaticos(propuesta);
-    
-    // Marcar visualmente la propuesta seleccionada
-    document.querySelectorAll('.propuesta-card').forEach((card, i) => {
-        if (i === index) {
-            card.style.border = '2px solid #28a745';
-            card.style.background = '#f0fff4';
-        } else {
+    console.log('? Propuesta seleccionada:', propuesta);
+
+    // Toggle: si se vuelve a seleccionar la misma propuesta, deseleccionar
+    if (window.propuestaSeleccionadaIndex === index) {
+        window.propuestaSeleccionadaIndex = null;
+        // Rehabilitar edici?n en la propuesta que se deselecciona
+        habilitarEdicionPropuesta(true, index);
+        // Desmarcar estilos de selecci?n
+        document.querySelectorAll('.propuesta-card').forEach((card) => {
             card.style.border = '1px solid #dee2e6';
             card.style.background = 'white';
+        });
+        mostrarAlerta('Propuesta deseleccionada', 'info');
+        return;
+    }
+
+    window.propuestaSeleccionadaIndex = index;
+
+    const card = document.querySelectorAll('.propuesta-card')[index];
+    const checks = card ? card.querySelectorAll('.pin-check:checked') : [];
+
+    if (!checks || checks.length === 0) {
+        mostrarAlerta('Debes marcar con el check los horarios que deseas seleccionar', 'warning');
+        return;
+    }
+
+    const normalizar = (valor) => {
+        if (!valor) return '00:00';
+        return valor.length > 5 ? valor.substring(0, 5) : valor;
+    };
+
+    // Validar disponibilidad antes de seleccionar
+    for (const c of checks) {
+        const dia = c.dataset.dia;
+        const inicio = normalizar(c.dataset.inicio);
+        const fin = normalizar(c.dataset.fin);
+        let dispoDia = window.infoDocenteActual?.disponibilidadDetallada?.[dia];
+        const docenteId = c.dataset.docenteId || '';
+        const docentesIds = (c.dataset.docentesIds || '').split(',').map(s => s.trim()).filter(Boolean);
+        const idsToCheck = docentesIds.length > 0 ? docentesIds : (docenteId ? [docenteId] : []);
+        let ok = true;
+        if (idsToCheck.length > 0 && window.infoDocentesMap) {
+            for (const id of idsToCheck) {
+                const map = window.infoDocentesMap[id];
+                if (!map) continue;
+                const dd = map.disponibilidadDetallada?.[dia];
+                if (dd && !dd.some(r => inicio >= normalizar(r.inicio) && fin <= normalizar(r.fin))) {
+                    const rangos = dd.map(r => `${normalizar(r.inicio)}-${normalizar(r.fin)}`).join(', ');
+                    mostrarAlerta(`El rango ${inicio}-${fin} no est? dentro de la disponibilidad del docente ${map.nombre || ''} para ${formatearDia(dia)}. Disponibilidad: ${rangos}`, 'error');
+                    ok = false;
+                    break;
+                }
+            }
+        } else if (dispoDia) {
+            const dentro = dispoDia.some(r => inicio >= normalizar(r.inicio) && fin <= normalizar(r.fin));
+            if (!dentro) {
+                const rangos = dispoDia.map(r => `${normalizar(r.inicio)}-${normalizar(r.fin)}`).join(', ');
+                mostrarAlerta(`El rango ${inicio}-${fin} no est? dentro de la disponibilidad del docente para ${formatearDia(dia)}. Disponibilidad: ${rangos}`, 'error');
+                ok = false;
+            }
+        }
+        if (!ok) return;
+        if (dispoDia) {
+            const dentro = dispoDia.some(r => inicio >= normalizar(r.inicio) && fin <= normalizar(r.fin));
+            if (!dentro) {
+                const rangos = dispoDia.map(r => `${normalizar(r.inicio)}-${normalizar(r.fin)}`).join(', ');
+                mostrarAlerta(`El rango ${inicio}-${fin} no est? dentro de la disponibilidad del docente para ${formatearDia(dia)}. Disponibilidad: ${rangos}`, 'error');
+                return;
+            }
+        }
+    }
+    
+
+    // Limpiar horarios anteriores
+    if (typeof window.horariosSeleccionados !== 'undefined') {
+        window.horariosSeleccionados = [];
+    }
+    if (typeof horariosArray !== 'undefined') {
+        horariosArray = [];
+    }
+
+    // Agregar solo horarios marcados
+    checks.forEach(c => {
+        const item = {
+            dia: c.dataset.dia,
+            horaInicio: normalizar(c.dataset.inicio) + ':00',
+            horaFin: normalizar(c.dataset.fin) + ':00',
+            docenteId: c.dataset.docenteId || '',
+            docentesIds: c.dataset.docentesIds || ''
+        };
+        if (typeof window.horariosSeleccionados !== 'undefined') {
+            window.horariosSeleccionados.push(item);
+        }
+        if (typeof horariosArray !== 'undefined') {
+            horariosArray.push(item);
         }
     });
-    
+    const hidden = document.getElementById('horarios');
+    if (hidden && typeof window.horariosSeleccionados !== 'undefined') {
+        hidden.value = JSON.stringify(window.horariosSeleccionados);
+    }
+
+    // Actualizar vista previa
+    mostrarPreviewHorariosAutomaticos(propuesta, index);
+
+    // Marcar visualmente la propuesta seleccionada
+    document.querySelectorAll('.propuesta-card').forEach((cardEl, i) => {
+        if (i === index) {
+            cardEl.style.border = '2px solid #28a745';
+            cardEl.style.background = '#f0fff4';
+        } else {
+            cardEl.style.border = '1px solid #dee2e6';
+            cardEl.style.background = 'white';
+        }
+    });
+
+    // Bloquear edici?n hasta deseleccionar
+    habilitarEdicionPropuesta(false);
+
     mostrarAlerta(`Propuesta "${propuesta.nombre}" seleccionada`, 'success');
 }
 
-/**
- * Muestra preview de los horarios seleccionados automáticamente
- */
-function mostrarPreviewHorariosAutomaticos(propuesta) {
+function habilitarEdicionPropuesta(enabled, indexOverride = null) {
+    const idx = indexOverride != null ? indexOverride : window.propuestaSeleccionadaIndex;
+    const card = idx != null ? document.querySelectorAll('.propuesta-card')[idx] : null;
+    const preview = document.getElementById('preview-horarios-automaticos');
+
+    if (card) {
+        card.querySelectorAll('input[type="time"]').forEach(inp => inp.disabled = !enabled);
+        card.querySelectorAll('.pin-check').forEach(chk => chk.disabled = !enabled);
+    }
+    if (preview) {
+        preview.querySelectorAll('input[type="time"]').forEach(inp => inp.disabled = !enabled);
+    }
+}
+
+function mostrarPreviewHorariosAutomaticos(propuesta, propIndex) {
     const previewContainer = document.getElementById('preview-horarios-automaticos');
     const previewChips = document.getElementById('preview-horarios-chips');
     
     previewChips.innerHTML = '';
-    
-    propuesta.horarios.forEach(h => {
-        const chip = document.createElement('span');
-        chip.className = 'horario-chip';
+
+    let horariosPreview = propuesta.horarios || [];
+    if (propIndex != null) {
+        const card = document.querySelectorAll('.propuesta-card')[propIndex];
+        const checks = card ? card.querySelectorAll('.pin-check:checked') : [];
+        if (checks && checks.length > 0) {
+            horariosPreview = Array.from(checks).map(c => ({
+                dia: c.dataset.dia,
+                horaInicio: (c.dataset.inicio || '') + ':00',
+                horaFin: (c.dataset.fin || '') + ':00',
+                docenteId: c.dataset.docenteId || '',
+                docentesIds: c.dataset.docentesIds || ''
+            }));
+        }
+    }
+
+    horariosPreview.forEach((h, hIdx) => {
+        const inicio = h.horaInicio.length > 5 ? h.horaInicio.substring(0, 5) : h.horaInicio;
+        const fin = h.horaFin.length > 5 ? h.horaFin.substring(0, 5) : h.horaFin;
+
+        const chip = document.createElement('div');
+        chip.className = 'horario-chip-editable preview';
+        chip.dataset.propIndex = propIndex;
+        chip.dataset.hIndex = hIdx;
         chip.innerHTML = `
-            <i class="fas fa-clock"></i>
-            ${formatearDia(h.dia)}: ${h.horaInicio} - ${h.horaFin}
+            <div style="font-weight:600; font-size:0.85rem; color:#004085;">${formatearDia(h.dia)}${(h.docentesNombres || h.docenteNombre) ? ` <span style=\"font-size:0.75rem;color:#6b7280;\">(${h.docentesNombres || h.docenteNombre})</span>` : ''}</div>
+            <div style="display:flex; align-items:center; gap:4px;">
+                <input type="time" value="${inicio}" data-field="inicio"
+                       onchange="actualizarHorarioPropuesta(${propIndex}, ${hIdx}, 'inicio', this, true)"
+                       style="border:1px solid #b3d7ff; border-radius:4px; font-size:0.85rem; padding:2px; color:#004085; width:70px;">
+                <span style="color:#6c757d;">-</span>
+                <input type="time" value="${fin}" data-field="fin"
+                       onchange="actualizarHorarioPropuesta(${propIndex}, ${hIdx}, 'fin', this, true)"
+                       style="border:1px solid #b3d7ff; border-radius:4px; font-size:0.85rem; padding:2px; color:#004085; width:70px;">
+            </div>
         `;
         previewChips.appendChild(chip);
     });
@@ -1242,4 +1731,189 @@ function getScoreColor(score) {
     if (score >= 75) return 'linear-gradient(135deg, #00b4db 0%, #0083b0 100%)';
     return 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
 }
+
+
+/**
+ * Regenera propuestas manteniendo los horarios fijados (checkboxes)
+ */
+function regenerarConFijados(index) {
+    const card = document.querySelectorAll('.propuesta-card')[index];
+    const checks = card.querySelectorAll('.pin-check:checked');
+    const pinned = [];
+    
+    checks.forEach(c => {
+        pinned.push({
+            dia: c.dataset.dia,
+            horaInicio: c.dataset.inicio,
+            horaFin: c.dataset.fin,
+            docenteId: c.dataset.docenteId || '',
+            docentesIds: c.dataset.docentesIds || ''
+        });
+    });
+    
+    // Si no hay nada seleccionado, es como un 'shuffle' normal
+    // Pero si hay seleccionados, la logica de backend excluye esos dias/horas y busca otros.
+    generarPropuestasAutomaticas(pinned);
+}
+
+
+/**
+ * Actualiza y valida el horario modificado manualmente en una propuesta
+ */
+function actualizarHorarioPropuesta(propIndex, horarioIndex, tipo, input, fromPreview = false) {
+    const propuesta = window.propuestasGeneradas?.[propIndex];
+    if (!propuesta) return;
+
+    const horario = propuesta.horarios?.[horarioIndex];
+    if (!horario) return;
+
+    const normalizar = (valor) => {
+        if (!valor) return '00:00';
+        return valor.length > 5 ? valor.substring(0, 5) : valor;
+    };
+
+    const nuevoValor = normalizar(input.value);
+    const inicioActual = normalizar(tipo === 'inicio' ? nuevoValor : horario.horaInicio);
+    const finActual = normalizar(tipo === 'fin' ? nuevoValor : horario.horaFin);
+
+    if (inicioActual >= finActual) {
+        alert('La hora de inicio debe ser anterior a la de fin');
+        input.value = tipo === 'inicio' ? normalizar(horario.horaInicio) : normalizar(horario.horaFin);
+        return;
+    }
+
+    let dispoDia = window.infoDocenteActual?.disponibilidadDetallada?.[horario.dia];
+    const docentesIds = (horario.docentesIds || '').split(',').map(s => s.trim()).filter(Boolean);
+    const idsToCheck = docentesIds.length > 0 ? docentesIds : (horario.docenteId ? [horario.docenteId] : []);
+    if (idsToCheck.length > 0 && window.infoDocentesMap) {
+        for (const id of idsToCheck) {
+            const map = window.infoDocentesMap[id];
+            if (!map) continue;
+            const dd = map.disponibilidadDetallada?.[horario.dia];
+            if (dd && !dd.some(r => {
+                const inicioR = normalizar(r.inicio);
+                const finR = normalizar(r.fin);
+                return inicioActual >= inicioR && finActual <= finR;
+            })) {
+                const rangos = dd.map(r => `${normalizar(r.inicio)}-${normalizar(r.fin)}`).join(', ');
+                mostrarAlerta(`El rango ${inicioActual}-${finActual} no est? dentro de la disponibilidad del docente ${map.nombre || ''} para el ${formatearDia(horario.dia)}.\nDisponibilidad: ${rangos}`, 'error');
+                input.value = tipo === 'inicio' ? normalizar(horario.horaInicio) : normalizar(horario.horaFin);
+                return;
+            }
+        }
+    } else if (dispoDia) {
+        const dentroDeRango = dispoDia.some(r => {
+            const inicioR = normalizar(r.inicio);
+            const finR = normalizar(r.fin);
+            return inicioActual >= inicioR && finActual <= finR;
+        });
+        if (!dentroDeRango) {
+            const rangos = dispoDia.map(r => `${normalizar(r.inicio)}-${normalizar(r.fin)}`).join(', ');
+            mostrarAlerta(`El rango ${inicioActual}-${finActual} no est? dentro de la disponibilidad del docente para el ${formatearDia(horario.dia)}.\nDisponibilidad: ${rangos}`, 'error');
+            input.value = tipo === 'inicio' ? normalizar(horario.horaInicio) : normalizar(horario.horaFin);
+            return;
+        }
+    }
+    if (dispoDia) {
+        const dentroDeRango = dispoDia.some(r => {
+            const inicioR = normalizar(r.inicio);
+            const finR = normalizar(r.fin);
+            return inicioActual >= inicioR && finActual <= finR;
+        });
+        if (!dentroDeRango) {
+            const rangos = dispoDia.map(r => `${normalizar(r.inicio)}-${normalizar(r.fin)}`).join(', ');
+            mostrarAlerta(`El rango ${inicioActual}-${finActual} no est? dentro de la disponibilidad del docente para el ${formatearDia(horario.dia)}.
+            Disponibilidad: ${rangos}`, 'error');
+            input.value = tipo === 'inicio' ? normalizar(horario.horaInicio) : normalizar(horario.horaFin);
+            return;
+        }
+    }
+
+    if (tipo === 'inicio') {
+        horario.horaInicio = `${nuevoValor}:00`;
+    } else {
+        horario.horaFin = `${nuevoValor}:00`;
+    }
+
+    const card = document.querySelectorAll('.propuesta-card')[propIndex];
+    const cardWrapper = card?.querySelector(`.horario-chip-editable[data-h-index="${horarioIndex}"]`);
+    const cardInput = cardWrapper?.querySelector(`input[data-field="${tipo}"]`);
+
+    if (fromPreview && cardInput) {
+        cardInput.value = nuevoValor;
+    }
+
+    if (!fromPreview && window.propuestaSeleccionadaIndex === propIndex) {
+        const previewInput = document.querySelector(`.horario-chip-editable.preview[data-prop-index="${propIndex}"][data-h-index="${horarioIndex}"] input[data-field="${tipo}"]`);
+        if (previewInput) {
+            previewInput.value = nuevoValor;
+        }
+    }
+
+    if (window.propuestaSeleccionadaIndex === propIndex) {
+        const cardSel = document.querySelectorAll('.propuesta-card')[propIndex];
+        const checksSel = cardSel ? cardSel.querySelectorAll('.pin-check:checked') : [];
+        const normalizarSel = (valor) => {
+            if (!valor) return '00:00';
+            return valor.length > 5 ? valor.substring(0, 5) : valor;
+        };
+        const seleccionados = Array.from(checksSel).map(c => ({
+            dia: c.dataset.dia,
+            horaInicio: normalizarSel(c.dataset.inicio) + ':00',
+            horaFin: normalizarSel(c.dataset.fin) + ':00',
+            docenteId: c.dataset.docenteId || '',
+            docentesIds: c.dataset.docentesIds || ''
+        }));
+        if (typeof horariosArray !== 'undefined') {
+            horariosArray = seleccionados;
+        }
+        if (typeof window.horariosSeleccionados !== 'undefined') {
+            window.horariosSeleccionados = seleccionados;
+        }
+        const hidden = document.getElementById('horarios');
+        if (hidden && typeof window.horariosSeleccionados !== 'undefined') {
+            hidden.value = JSON.stringify(window.horariosSeleccionados);
+        }
+        if (typeof actualizarHorariosChips === 'function') {
+            actualizarHorariosChips();
+        }
+    }
+
+    const check = cardWrapper?.querySelector('.pin-check');
+    if (check) {
+        check.dataset.inicio = inicioActual;
+        check.dataset.fin = finActual;
+    }
+
+    console.log('✅ Horario actualizado manualmente:', horario);
+}
+
+/**
+ * Aplica la propuesta seleccionada (o la propuesta indicada) a los horarios manuales
+ */
+function aplicarPropuestaSeleccionada(propIndex) {
+    if (propIndex == null) {
+        mostrarAlerta('No hay propuesta seleccionada', 'warning');
+        return;
+    }
+
+    const propuesta = window.propuestasGeneradas?.[propIndex];
+    if (!propuesta) {
+        mostrarAlerta('Propuesta no encontrada', 'error');
+        return;
+    }
+
+    if (!Array.isArray(window.horariosSeleccionados) || window.horariosSeleccionados.length === 0) {
+        mostrarAlerta('Debes marcar con el check los horarios que deseas seleccionar', 'warning');
+        return;
+    }
+
+    // Sincronizar con la estructura que usa el template (solo seleccionados)
+    const hidden = document.getElementById('horarios');
+    if (hidden) hidden.value = JSON.stringify(window.horariosSeleccionados);
+    if (typeof actualizarHorariosChips === 'function') actualizarHorariosChips();
+
+    mostrarAlerta('Horarios aplicados al formulario', 'success');
+}
+
 

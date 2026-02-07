@@ -79,8 +79,6 @@ public class Curso extends OfertaAcademica {
     @OneToMany(mappedBy = "curso")
     private List<Modulo> modulos;
     
-    @OneToMany(mappedBy = "curso", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Clase> clases;
 
     /**
      * Información de docentes para la tabla

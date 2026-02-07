@@ -32,8 +32,36 @@ public class CategoriaService {
             throw new IllegalArgumentException("El nombre de la categoría es requerido");
         }
         
-        // Limpiar y capitalizar el nombre
-        categoria.setNombre(categoria.getNombre().trim());
+        // Limpiar nombre y descripciÃ³n
+        String nombreLimpio = categoria.getNombre().trim();
+        categoria.setNombre(nombreLimpio);
+        
+        String descripcionLimpia = categoria.getDescripcion();
+        if (descripcionLimpia != null) {
+            descripcionLimpia = descripcionLimpia.trim();
+            if (descripcionLimpia.isEmpty()) {
+                descripcionLimpia = null;
+            }
+            categoria.setDescripcion(descripcionLimpia);
+        }
+        
+        Long idActual = categoria.getIdCategoria();
+        
+        // Validar nombre Ãºnico (case-insensitive)
+        categoriaRepository.findByNombreIgnoreCase(nombreLimpio).ifPresent(existing -> {
+            if (idActual == null || !existing.getIdCategoria().equals(idActual)) {
+                throw new IllegalArgumentException("Ya existe una categorÃ­a con ese nombre");
+            }
+        });
+        
+        // Validar descripciÃ³n Ãºnica (case-insensitive) si se proporcionÃ³
+        if (descripcionLimpia != null) {
+            categoriaRepository.findByDescripcionIgnoreCase(descripcionLimpia).ifPresent(existing -> {
+                if (idActual == null || !existing.getIdCategoria().equals(idActual)) {
+                    throw new IllegalArgumentException("Ya existe una categorÃ­a con esa descripciÃ³n");
+                }
+            });
+        }
         
         return categoriaRepository.save(categoria);
     }
@@ -61,3 +89,4 @@ public class CategoriaService {
         return categoriaRepository.existsByNombreIgnoreCase(nombre);
     }
 }
+

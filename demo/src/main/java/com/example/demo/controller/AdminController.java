@@ -1727,17 +1727,23 @@ public class AdminController {
     @PostMapping("/admin/ofertas/generar-horarios-automaticos")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> generarHorariosAutomaticos(
-            @RequestParam Long idOferta,
+            @RequestParam(required = false) Long idOferta,
             @RequestParam String idDocente,
-            @RequestParam Double horasSemanales) {
+            @RequestParam(required = false) String docentesIds,
+            @RequestParam Double horasSemanales,
+            @RequestParam(defaultValue = "4") int maxHorasDiarias,
+            @RequestParam(required = false) String horariosFijadosJson,
+            @RequestParam(defaultValue = "false") boolean buscarAlternativas) {
         
         try {
             System.out.println("📅 Generando propuestas automáticas de horarios...");
             System.out.println("   - Oferta ID: " + idOferta);
             System.out.println("   - Docente ID: " + idDocente);
             System.out.println("   - Horas semanales: " + horasSemanales);
+            System.out.println("   - Max Horas/Día: " + maxHorasDiarias);
+            System.out.println("   - Buscar Alternativas: " + buscarAlternativas);
             
-            // Validaciones - idOferta es OPCIONAL (puede ser null o 0 para ofertas nuevas)
+            // Validaciones
             if (idDocente == null || horasSemanales == null || horasSemanales <= 0) {
                 Map<String, Object> errorResponse = new HashMap<>();
                 errorResponse.put("success", false);
@@ -1748,6 +1754,22 @@ public class AdminController {
             // Buscar docente
             Docente docente = docenteRepository.findById(java.util.UUID.fromString(idDocente))
                 .orElseThrow(() -> new RuntimeException("Docente no encontrado"));
+
+            List<Docente> docentes = new ArrayList<>();
+            if (docentesIds != null && !docentesIds.isBlank()) {
+                String[] ids = docentesIds.split(",");
+                for (String s : ids) {
+                    try {
+                        UUID did = UUID.fromString(s.trim());
+                        docenteRepository.findById(did).ifPresent(docentes::add);
+                    } catch (Exception e) {
+                        // ignore invalid id
+                    }
+                }
+            }
+            if (docentes.isEmpty()) {
+                docentes.add(docente);
+            }
             
             // Buscar oferta (solo si existe - para ofertas existentes)
             OfertaAcademica oferta = null;
@@ -1755,17 +1777,77 @@ public class AdminController {
                 oferta = ofertaAcademicaRepository.findById(idOferta).orElse(null);
             }
             
-            // Generar propuestas (oferta puede ser null para ofertas nuevas)
+            // Procesar horarios fijados (pinned)
+            List<GeneradorHorariosService.HorarioAsignado> pinned = new ArrayList<>();
+            if (horariosFijadosJson != null && !horariosFijadosJson.isEmpty()) {
+                try {
+                    ObjectMapper mapper = new ObjectMapper();
+                    List<Map<String, String>> rawList = mapper.readValue(horariosFijadosJson, new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, String>>>(){});
+                    
+                    for (Map<String, String> m : rawList) {
+                        try {
+                            String horaInicioStr = m.get("horaInicio");
+                            String horaFinStr = m.get("horaFin");
+                            
+                            // Unificar formato a HH:mm:ss para Time.valueOf
+                            if (horaInicioStr.length() == 5) horaInicioStr += ":00"; // HH:mm -> HH:mm:ss
+                            if (horaFinStr.length() == 5) horaFinStr += ":00";
+                            
+                            GeneradorHorariosService.HorarioAsignado ha = new GeneradorHorariosService.HorarioAsignado(
+                                Dias.valueOf(m.get("dia")),
+                                Time.valueOf(horaInicioStr),
+                                Time.valueOf(horaFinStr)
+                            );
+                            if (m.get("docenteId") != null) {
+                                ha.setDocenteId(m.get("docenteId"));
+                            }
+                            if (m.get("docentesIds") != null) {
+                                ha.setDocenteId(null);
+                                ha.setDocentesIds(m.get("docentesIds"));
+                            }
+                            pinned.add(ha);
+                        } catch (Exception e) {
+                            System.err.println("   ! Error al procesar horario fijado individual: " + m + " - " + e.getMessage());
+                        }
+                    }
+                    System.out.println("   - Horarios fijados procesados correctamente: " + pinned.size());
+                } catch (Exception e) {
+                    System.err.println("Error parseando JSON de horarios fijados: " + e.getMessage());
+                }
+            }
+            
+            // Generar propuestas
             List<GeneradorHorariosService.PropuestaHorario> propuestas = 
-                generadorHorariosService.generarPropuestas(oferta, docente, horasSemanales);
+                (docentes.size() > 1)
+                    ? generadorHorariosService.generarPropuestasMulti(oferta, docentes, horasSemanales, maxHorasDiarias, pinned, buscarAlternativas)
+                    : generadorHorariosService.generarPropuestas(oferta, docente, horasSemanales, maxHorasDiarias, pinned, buscarAlternativas);
             
             if (propuestas.isEmpty()) {
                 Map<String, Object> errorResponse = new HashMap<>();
                 errorResponse.put("success", false);
-                errorResponse.put("message", "No se pudieron generar propuestas. El docente no tiene suficiente disponibilidad.");
+                // Mensaje especifico si no hay opciones
+                String msg = pinned.isEmpty() 
+                    ? "No se pudieron generar propuestas. El docente no tiene suficiente disponibilidad." 
+                    : "No se encontraron otras alternativas con las restricciones y horarios fijados seleccionados.";
+                errorResponse.put("message", msg);
+
+                // Info diagnostico de disponibilidad
+                double cargaActual = disponibilidadDocenteService.calcularCargaHorariaSemanal(docente);
+                double disponibilidadTotal = disponibilidadDocenteService.calcularDisponibilidadTotalSemanal(docente);
+                double disponibilidadLibre = disponibilidadDocenteService.calcularDisponibilidadLibreSemanal(docente);
+
+                Map<String, Object> debug = new HashMap<>();
+                debug.put("horasRequeridas", horasSemanales);
+                debug.put("maxHorasDiarias", maxHorasDiarias);
+                debug.put("cargaActual", Math.round(cargaActual * 100.0) / 100.0);
+                debug.put("disponibilidadTotal", Math.round(disponibilidadTotal * 100.0) / 100.0);
+                debug.put("disponibilidadLibre", Math.round(disponibilidadLibre * 100.0) / 100.0);
+                debug.put("disponibilidadLibrePorDia", disponibilidadDocenteService.calcularDisponibilidadLibrePorDia(docente));
+                errorResponse.put("debug", debug);
+
                 return ResponseEntity.badRequest().body(errorResponse);
             }
-            
+
             // Convertir propuestas a JSON
             List<Map<String, Object>> propuestasJSON = new ArrayList<>();
             for (GeneradorHorariosService.PropuestaHorario propuesta : propuestas) {
@@ -1792,6 +1874,71 @@ public class AdminController {
             infoDocente.put("cargaActual", Math.round(cargaActual * 100.0) / 100.0);
             infoDocente.put("disponibilidadTotal", Math.round(disponibilidadTotal * 100.0) / 100.0);
             infoDocente.put("porcentajeOcupacion", Math.round(porcentajeOcupacion * 100.0) / 100.0);
+
+            // Agregar detalle de disponibilidad para validación en frontend
+            try {
+                // Mapa DIA -> Lista de rangos [{start: "08:00", end: "12:00"}]
+                Map<String, List<Map<String, String>>> disponibilidadDetallada = new HashMap<>();
+                List<DisponibilidadDocente> dispoList = disponibilidadDocenteService.obtenerDisponibilidades(docente);
+                
+                for (DisponibilidadDocente d : dispoList) {
+                    String dia = d.getDia().toString();
+                    if (!disponibilidadDetallada.containsKey(dia)) {
+                        disponibilidadDetallada.put(dia, new ArrayList<>());
+                    }
+                    Map<String, String> rango = new HashMap<>();
+                    String inicio = d.getHoraInicio().toString();
+                    String fin = d.getHoraFin().toString();
+                    if (inicio.length() == 8) inicio = inicio.substring(0, 5); // 08:00:00 -> 08:00
+                    if (fin.length() == 8) fin = fin.substring(0, 5);
+                    rango.put("inicio", inicio);
+                    rango.put("fin", fin);
+                    disponibilidadDetallada.get(dia).add(rango);
+                }
+                infoDocente.put("disponibilidadDetallada", disponibilidadDetallada);
+            } catch (Exception e) {
+                System.err.println("Error procesando disponibilidad detallada: " + e.getMessage());
+            }
+
+            List<Map<String, Object>> docentesInfo = new ArrayList<>();
+            for (Docente dref : docentes) {
+                try {
+                    double carga = disponibilidadDocenteService.calcularCargaHorariaSemanal(dref);
+                    double dispoTotal = disponibilidadDocenteService.calcularDisponibilidadTotalSemanal(dref);
+                    double porc = disponibilidadDocenteService.calcularPorcentajeOcupacion(dref);
+
+                    Map<String, Object> dMap = new HashMap<>();
+                    dMap.put("id", dref.getId().toString());
+                    dMap.put("nombre", dref.getNombre() + " " + dref.getApellido());
+                    dMap.put("cargaActual", Math.round(carga * 100.0) / 100.0);
+                    dMap.put("disponibilidadTotal", Math.round(dispoTotal * 100.0) / 100.0);
+                    dMap.put("porcentajeOcupacion", Math.round(porc * 100.0) / 100.0);
+
+                    Map<String, List<Map<String, String>>> disponibilidadDetallada = new HashMap<>();
+                    List<DisponibilidadDocente> dispoList = disponibilidadDocenteService.obtenerDisponibilidades(dref);
+                    
+                    for (DisponibilidadDocente dd : dispoList) {
+                        String dia = dd.getDia().toString();
+                        if (!disponibilidadDetallada.containsKey(dia)) {
+                            disponibilidadDetallada.put(dia, new ArrayList<>());
+                        }
+                        Map<String, String> rango = new HashMap<>();
+                        String inicio = dd.getHoraInicio().toString();
+                        String fin = dd.getHoraFin().toString();
+                        if (inicio.length() == 8) inicio = inicio.substring(0, 5); // 08:00:00 -> 08:00
+                        if (fin.length() == 8) fin = fin.substring(0, 5);
+                        rango.put("inicio", inicio);
+                        rango.put("fin", fin);
+                        disponibilidadDetallada.get(dia).add(rango);
+                    }
+                    dMap.put("disponibilidadDetallada", disponibilidadDetallada);
+
+                    docentesInfo.add(dMap);
+                } catch (Exception e) {
+                    System.err.println("Error procesando disponibilidad detallada docente: " + e.getMessage());
+                }
+            }
+            infoDocente.put("docentes", docentesInfo);
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -2805,89 +2952,117 @@ public class AdminController {
      * @param oferta La oferta académica guardada
      * @param horariosJson JSON con los horarios en formato: [{"dia":"LUNES","horaInicio":"09:00","horaFin":"11:00","docenteId":"1"}]
      */
+
+    /**
+     * Asocia horarios a una oferta academica
+     * @param oferta La oferta academica guardada
+     * @param horariosJson JSON con los horarios en formato: [{"dia":"LUNES","horaInicio":"09:00","horaFin":"11:00","docenteId":"1"}]
+     */
+
+    /**
+     * Asocia horarios a una oferta academica
+     * @param oferta La oferta academica guardada
+     * @param horariosJson JSON con los horarios en formato: [{"dia":"LUNES","horaInicio":"09:00","horaFin":"11:00","docenteId":"1"}]
+     */
     private void asociarHorarios(OfertaAcademica oferta, String horariosJson) {
-        try {
-            System.out.println("🕒 ASOCIANDO HORARIOS - JSON recibido: " + horariosJson);
-            
-            // Parsear JSON manualmente (implementación simple)
-            List<Map<String, String>> horariosData = parseHorariosJson(horariosJson);
-            System.out.println("🕒 HORARIOS PARSEADOS: " + horariosData.size() + " horarios");
-            
-            for (Map<String, String> horarioData : horariosData) {
-                System.out.println("  📅 Procesando horario: " + horarioData);
-                Horario horario = new Horario();
-                
-                // Configurar día
-                String diaStr = horarioData.get("dia");
-                System.out.println("    - Día: " + diaStr);
+    try {
+        System.out.println("?? ASOCIANDO HORARIOS - JSON recibido: " + horariosJson);
+        List<Map<String, String>> horariosData = parseHorariosJson(horariosJson);
+
+        for (Map<String, String> horarioData : horariosData) {
+            // 1. Configurar día
+            String diaStr = horarioData.get("dia");
+            Dias dia = null;
+            try {
                 if (diaStr != null && !diaStr.isEmpty()) {
-                    horario.setDia(Dias.valueOf(diaStr.toUpperCase()));
+                    dia = Dias.valueOf(diaStr.trim().toUpperCase());
                 }
-                
-                // Configurar horas
-                String horaInicioStr = horarioData.get("horaInicio");
-                String horaFinStr = horarioData.get("horaFin");
-                System.out.println("    - Hora inicio (string): " + horaInicioStr);
-                System.out.println("    - Hora fin (string): " + horaFinStr);
-                
-                if (horaInicioStr != null && !horaInicioStr.isEmpty()) {
-                    try {
-                        Time horaInicio = Time.valueOf(horaInicioStr + ":00");
-                        horario.setHoraInicio(horaInicio);
-                        System.out.println("    - ✅ Hora inicio guardada: " + horaInicio);
-                    } catch (Exception e) {
-                        System.err.println("    - ❌ Error al parsear hora inicio: " + e.getMessage());
-                    }
-                }
-                
-                if (horaFinStr != null && !horaFinStr.isEmpty()) {
-                    try {
-                        Time horaFin = Time.valueOf(horaFinStr + ":00");
-                        horario.setHoraFin(horaFin);
-                        System.out.println("    - ✅ Hora fin guardada: " + horaFin);
-                    } catch (Exception e) {
-                        System.err.println("    - ❌ Error al parsear hora fin: " + e.getMessage());
-                    }
-                }
-                
-                // Asociar docente si se especifica
-                String docenteIdStr = horarioData.get("docenteId");
-                if (docenteIdStr != null && !docenteIdStr.isEmpty()) {
-                    try {
-                        UUID docenteId = UUID.fromString(docenteIdStr);
-                        Optional<Docente> docente = docenteRepository.findById(docenteId);
-                        if (docente.isPresent()) {
-                            horario.setDocente(docente.get());
-                        }
-                    } catch (IllegalArgumentException e) {
-                        System.err.println("Error al parsear UUID de docente: " + docenteIdStr);
-                    }
-                }
-                
-                // Asociar oferta
-                oferta.addHorario(horario);
-                
-                // Debug: mostrar estado antes de guardar
-                System.out.println("    🔍 ESTADO (Agregado a lista):");
-                System.out.println("       - Día: " + horario.getDia());
-                System.out.println("       - Hora inicio: " + horario.getHoraInicio());
-                System.out.println("       - Hora fin: " + horario.getHoraFin());
-                System.out.println("       - Docente: " + (horario.getDocente() != null ? horario.getDocente().getNombre() : "null"));
-                System.out.println("       - Oferta: " + (horario.getOfertaAcademica() != null ? horario.getOfertaAcademica().getNombre() : "null"));
-                
-                // No guardamos individualmente, dejamos que CascadeType.ALL lo haga al guardar la oferta
-                System.out.println("    ✅ Horario agregado a la lista de la oferta para persistencia en cascada.");
+            } catch (IllegalArgumentException e) {
+                System.err.println("Día inválido: " + diaStr);
             }
-            
-        } catch (Exception e) {
-            System.err.println("Error al procesar horarios: " + e.getMessage());
-            e.printStackTrace();
+
+            // 2. Configurar horas
+            Time horaInicio = null;
+            Time horaFin = null;
+            String hIStr = horarioData.get("horaInicio");
+            String hFStr = horarioData.get("horaFin");
+
+            if (hIStr != null) horaInicio = parseFlexibleTime(hIStr);
+            if (hFStr != null) horaFin = parseFlexibleTime(hFStr);
+
+            // 3. Procesar Docentes (Maneja múltiples o uno solo)
+            List<UUID> docentesIdsList = obtenerListaDeIds(horarioData);
+
+            if (docentesIdsList.isEmpty()) {
+                // Crear horario sin docente
+                crearYAñadirHorario(oferta, dia, horaInicio, horaFin, null);
+            } else {
+                // Crear un horario por cada docente
+                for (UUID docenteId : docentesIdsList) {
+                    Docente docente = docenteRepository.findById(docenteId).orElse(null);
+                    crearYAñadirHorario(oferta, dia, horaInicio, horaFin, docente);
+                }
+            }
+        }
+        System.out.println("? Proceso completado. Los horarios se guardarán en cascada con la oferta.");
+
+    } catch (Exception e) {
+        System.err.println("Error crítico al procesar horarios: " + e.getMessage());
+        e.printStackTrace();
+    }
+}
+private List<UUID> obtenerListaDeIds(Map<String, String> horarioData) {
+    List<UUID> listaIds = new ArrayList<>();
+    
+    // 1. Intentar obtener múltiples IDs (separados por coma)
+    String docentesIdsStr = horarioData.get("docentesIds");
+    if (docentesIdsStr != null && !docentesIdsStr.isEmpty()) {
+        for (String s : docentesIdsStr.split(",")) {
+            try {
+                listaIds.add(UUID.fromString(s.trim()));
+            } catch (IllegalArgumentException e) {
+                System.err.println("UUID inválido en lista: " + s);
+            }
+        }
+    }
+
+    // 2. Si no hubo múltiples, intentar obtener el ID único
+    String docenteIdStr = horarioData.get("docenteId");
+    if (listaIds.isEmpty() && docenteIdStr != null && !docenteIdStr.isEmpty()) {
+        try {
+            listaIds.add(UUID.fromString(docenteIdStr.trim()));
+        } catch (IllegalArgumentException e) {
+            System.err.println("UUID único inválido: " + docenteIdStr);
         }
     }
     
-    /**
-     * Parsea JSON de horarios de forma simple
-     */
+    return listaIds;
+}
+// Método auxiliar para evitar repetir código
+private void crearYAñadirHorario(OfertaAcademica oferta, Dias dia, Time inicio, Time fin, Docente docente) {
+    Horario h = new Horario();
+    h.setDia(dia);
+    h.setHoraInicio(inicio);
+    h.setHoraFin(fin);
+    h.setDocente(docente);
+    oferta.addHorario(h); // Asumo que este método también hace h.setOfertaAcademica(this)
+}
+
+    private Time parseFlexibleTime(String value) {
+        String v = value.trim();
+        if (v.length() > 8) {
+            v = v.substring(0, 8);
+        }
+        java.time.format.DateTimeFormatter fmt = new java.time.format.DateTimeFormatterBuilder()
+            .appendPattern("H:mm")
+            .optionalStart()
+            .appendPattern(":ss")
+            .optionalEnd()
+            .toFormatter();
+        java.time.LocalTime lt = java.time.LocalTime.parse(v, fmt);
+        return java.sql.Time.valueOf(lt);
+    }
+
     private List<Map<String, String>> parseHorariosJson(String json) {
         List<Map<String, String>> horarios = new ArrayList<>();
         

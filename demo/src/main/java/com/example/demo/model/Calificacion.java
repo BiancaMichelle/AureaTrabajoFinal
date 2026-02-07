@@ -9,7 +9,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-
+//ESTE METODO TAMPOCO SE ESTA USANDO SE USAN ATRIBUTOS EN ENTREGA Y INTENTO
 @Entity
 public class Calificacion {
     @Id

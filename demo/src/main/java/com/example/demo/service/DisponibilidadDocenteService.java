@@ -1,5 +1,7 @@
 package com.example.demo.service;
 
+
+
 import java.sql.Time;
 import java.util.ArrayList;
 import java.util.List;
@@ -197,15 +199,22 @@ public class DisponibilidadDocenteService {
         
         Time inicioDisp = disponibilidad.getHoraInicio();
         Time finDisp = disponibilidad.getHoraFin();
+        if (inicioDisp == null || finDisp == null) {
+            return libres;
+        }
         
         // Ordenar horarios ocupados por hora de inicio
         List<Horario> ocupadosOrdenados = ocupados.stream()
+            .filter(h -> h.getHoraInicio() != null && h.getHoraFin() != null)
             .sorted((h1, h2) -> h1.getHoraInicio().compareTo(h2.getHoraInicio()))
             .collect(Collectors.toList());
         
         Time inicioActual = inicioDisp;
         
         for (Horario ocupado : ocupadosOrdenados) {
+            if (ocupado.getHoraInicio() == null || ocupado.getHoraFin() == null) {
+                continue;
+            }
             // Si el horario ocupado está completamente fuera de la disponibilidad, ignorar
             if (ocupado.getHoraFin().before(inicioDisp) || ocupado.getHoraInicio().after(finDisp)) {
                 continue;
@@ -231,6 +240,9 @@ public class DisponibilidadDocenteService {
     }
     
     private boolean seSuperponen(Time inicio1, Time fin1, Time inicio2, Time fin2) {
+        if (inicio1 == null || fin1 == null || inicio2 == null || fin2 == null) {
+            return false;
+        }
         return !(fin1.before(inicio2) || inicio1.after(fin2));
     }
     
@@ -281,5 +293,31 @@ public class DisponibilidadDocenteService {
         public String toString() {
             return String.format("%s: %s - %s (%.1fh)", dia, horaInicio, horaFin, getDuracionHoras());
         }
+    }
+
+        /**
+     * Calcula la disponibilidad libre semanal del docente (disponibilidad menos ocupados)
+     */
+    public double calcularDisponibilidadLibreSemanal(Docente docente) {
+        Map<Dias, List<BloqueHorario>> libres = calcularHorariosLibresSemana(docente);
+        double total = 0.0;
+        for (List<BloqueHorario> bloques : libres.values()) {
+            for (BloqueHorario b : bloques) {
+                total += b.getDuracionHoras();
+            }
+        }
+        return Math.round(total * 100.0) / 100.0;
+    }
+
+    /**
+     * Calcula la disponibilidad libre por dia (horas)
+     */
+    public Map<Dias, Double> calcularDisponibilidadLibrePorDia(Docente docente) {
+        Map<Dias, List<BloqueHorario>> libres = calcularHorariosLibresSemana(docente);
+        return libres.entrySet().stream()
+            .collect(Collectors.toMap(
+                Map.Entry::getKey,
+                e -> Math.round(e.getValue().stream().mapToDouble(BloqueHorario::getDuracionHoras).sum() * 100.0) / 100.0
+            ));
     }
 }

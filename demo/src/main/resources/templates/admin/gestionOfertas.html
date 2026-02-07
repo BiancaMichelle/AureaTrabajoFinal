@@ -3,6 +3,15 @@
 <head>
     <title>Gestión de Ofertas Académicas</title>
     <style>
+
+    .horario-chip-editable.pinned {
+        border: 2px solid #f59e0b !important;
+        box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25);
+    }
+    .horario-chip-editable.pinned .pin-check {
+        accent-color: #f59e0b;
+    }
+
         /* Estilos para el modal de error */
         .error-content {
             display: flex;
@@ -80,19 +89,20 @@
     align-items: center;
     gap: 20px;
     margin-bottom: 25px;
-    padding: 20px;
-    background: #f8f9fa; /* Fondo gris claro */
-    border-radius: 12px;
-    border: 1px solid #e9ecef;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    padding: 18px 20px;
+    background: linear-gradient(135deg, #f8fafc 0%, #eef2f7 100%);
+    border-radius: 14px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
 }
+
 
 /* El contenedor del toggle */
 .switch-toggle {
     position: relative;
     display: inline-block;
-    width: 60px;
-    height: 34px;
+    width: 74px;
+    height: 40px;
     flex-shrink: 0;
 }
 
@@ -111,31 +121,59 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: #ccc;
-    transition: .4s;
-    border-radius: 34px;
+    background: #e5e7eb;
+    transition: all 0.25s ease;
+    border-radius: 999px;
+    border: 1px solid #d1d5db;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.06);
 }
 
 .slider:before {
     position: absolute;
     content: "";
-    height: 26px;
-    width: 26px;
+    height: 30px;
+    width: 30px;
     left: 4px;
     bottom: 4px;
-    background-color: white;
-    transition: .4s;
+    background: #ffffff;
+    transition: all 0.25s ease;
     border-radius: 50%;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.18);
 }
 
 /* Estado Activo (Automático) */
 input:checked + .slider {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+    border-color: #16a34a;
 }
 
 input:checked + .slider:before {
-    transform: translateX(26px);
+    transform: translateX(34px);
+}
+
+/* Etiqueta dentro del toggle */
+.slider:after {
+    content: "MAN";
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .5px;
+    color: #6b7280;
+}
+
+input:checked + .slider:after {
+    content: "AUTO";
+    left: 10px;
+    right: auto;
+    color: #ffffff;
+}
+
+/* Focus */
+.switch-toggle input:focus + .slider {
+    box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2);
 }
 
 /* Textos del Switch */
@@ -789,7 +827,7 @@ input:checked + .slider:before {
     <div class="switch-wrapper">
         <label class="switch-toggle">
             <!-- Input checkbox oculto con evento onchange -->
-            <input type="checkbox" id="modo-horario-switch" onchange="toggleModoHorario()">
+            <input type="checkbox" id="modo-horario-switch" onchange="window.toggleModoHorario && window.toggleModoHorario()">
             <span class="slider"></span>
         </label>
         <div class="switch-labels">
@@ -841,38 +879,63 @@ input:checked + .slider:before {
 
     <!-- CONTENEDOR MODO AUTOMÁTICO (Rediseñado) -->
     <div id="horarios-automatico-container" style="display: none;">
-        
-        <!-- Barra de Control (Inputs) -->
-        <div class="control-panel">
-            <div class="input-group-modern">
-                <label for="horas-semanales">
-                    <i class="fas fa-hourglass-half" style="color: #667eea;"></i> Horas semanales requeridas
-                </label>
-                <input type="number" id="horas-semanales" class="input-modern" 
-                       placeholder="Ej: 6" min="1" step="0.5">
+        <div class="auto-horarios-shell">
+            <div class="auto-horarios-header">
+                <div class="auto-horarios-title">
+                    <i class="fas fa-robot"></i>
+                    <span>Generador Inteligente de Horarios</span>
+                </div>
             </div>
-            
-            <button type="button" class="btn-generate" onclick="generarPropuestasAutomaticas()">
-                <i class="fas fa-magic"></i> Generar Propuestas
-            </button>
-        </div>
 
-        <!-- Información del docente (Banner informativo) -->
-        <div id="info-docente-carga" style="display: none; margin-bottom: 25px;">
-            <div style="background: #eef2ff; border: 1px solid #c7d2fe; padding: 15px 20px; border-radius: 12px; display: flex; gap: 25px; align-items: center; flex-wrap: wrap;">
-                <div><i class="fas fa-user-tie" style="color:#4f46e5"></i> <strong>Docente:</strong> <span id="docente-nombre">-</span></div>
-                <div><i class="fas fa-weight-hanging" style="color:#4f46e5"></i> <strong>Carga Actual:</strong> <span id="docente-carga-actual">0</span>h</div>
-                <div><i class="fas fa-percentage" style="color:#4f46e5"></i> <strong>Ocupación:</strong> <span id="docente-porcentaje-ocupacion">0</span>%</div>
+            <!-- Barra de Control (Inputs) -->
+            <div class="auto-horarios-controls">
+                <div class="auto-input">
+                    <label for="horas-semanales">Horas semanales requeridas</label>
+                    <input type="number" id="horas-semanales" placeholder="Ej: 6" min="1" step="0.5">
+                </div>
+
+                <div class="auto-input">
+                    <label for="max-horas-diarias">Máx horas por día</label>
+                    <input type="number" id="max-horas-diarias" placeholder="Ej: 4" min="1" max="12" value="4">
+                </div>
+                
+                <button type="button" class="btn-generate" onclick="generarPropuestasAutomaticas()">
+                    <i class="fas fa-magic"></i> Generar Propuestas
+                </button>
+            </div>
+
+            <!-- Información del/los docentes -->
+            <div id="info-docente-carga" class="auto-docentes-panel" style="display: none;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <i class="fas fa-user-tie" style="color:#93c5fd;"></i>
+                    <strong>Resumen de docentes</strong>
+                </div>
+                <div id="docentes-info-grid" class="auto-docentes-grid"></div>
             </div>
         </div>
 
         <!-- Grid de Propuestas -->
         <div id="propuestas-container" style="display: none;">
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
-                <i class="fas fa-lightbulb" style="color: #fbbf24; font-size: 1.2rem;"></i>
-                <h5 style="margin: 0; color: #374151;">Propuestas Disponibles</h5>
+            <div class="propuestas-header">
+                <i class="fas fa-lightbulb" style="color: #f59e0b; font-size: 1.2rem;"></i>
+                <h5 style="margin: 0;">Propuestas Disponibles</h5>
             </div>
             
+            <div id="preview-horarios-automaticos" style="display:none; margin-bottom:18px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <i class="fas fa-eye" style="color:#2563eb"></i>
+                        <strong style="color:#374151">Vista previa de la propuesta</strong>
+                        <small style="color:#6b7280;">(puedes editar y luego aplicar)</small>
+                    </div>
+                    <div>
+                        <button type="button" class="btn-apply-preview" onclick="aplicarPropuestaSeleccionada(window.propuestaSeleccionadaIndex)">\n                            <i class="fas fa-check-circle"></i> Aplicar horarios seleccionados
+                        </button>
+                    </div>
+                </div>
+                <div id="preview-horarios-chips" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+            </div>
+
             <div id="lista-propuestas" class="propuestas-grid">
                 <!-- Aquí se inyectan las cartas vía JS -->
             </div>
@@ -2514,6 +2577,14 @@ input:checked + .slider:before {
         
         // Controlador de categorías
         window.categoriaController = {
+            _parseJsonResponse: function(response) {
+                if (response.ok) return response.json();
+                return response.json()
+                    .catch(() => ({}))
+                    .then(err => {
+                        throw new Error(err.message || 'Error en la respuesta del servidor');
+                    });
+            },
             guardarCategoria: function() {
                 console.log('💾 Guardando categoría...');
                 
@@ -2533,7 +2604,7 @@ input:checked + .slider:before {
                 }
                 
                 if (!categoria.descripcion || categoria.descripcion.trim().length < 5) {
-                    mostrarNotificacion('La descripción debe tener al menos 5 caracteres', 'error');
+                    mostrarNotificacion('La descripcion debe tener al menos 5 caracteres', 'error');
                     return;
                 }
                 
@@ -2552,13 +2623,7 @@ input:checked + .slider:before {
                     },
                     body: JSON.stringify(categoria)
                 })
-                .then(response => {
-                    if (response.ok) {
-                        return response.json();
-                    } else {
-                        throw new Error('Error en la respuesta del servidor');
-                    }
-                })
+                .then(response => this._parseJsonResponse(response))
                 .then(data => {
                     console.log('✅ Categoría guardada:', data);
                     form.reset();
@@ -2590,11 +2655,12 @@ input:checked + .slider:before {
             console.log('✏️ Editando categoría:', id);
             
             fetch(`/api/categorias/${id}`)
-                .then(response => response.json())
+                .then(response => window.categoriaController._parseJsonResponse(response))
                 .then(categoria => {
-                    document.getElementById('categoriaId').value = categoria.id;
-                    document.getElementById('categoriaNombre').value = categoria.nombre;
-                    document.getElementById('categoriaDescripcion').value = categoria.descripcion;
+                    const categoriaId = categoria.idCategoria || categoria.id;
+                    document.getElementById('categoriaId').value = categoriaId;
+                    document.getElementById('categoriaNombre').value = categoria.nombre || '';
+                    document.getElementById('categoriaDescripcion').value = categoria.descripcion || '';
                     document.getElementById('btnGuardarText').textContent = 'Actualizar Categoría';
                     
                     // Scroll al formulario
@@ -2602,7 +2668,7 @@ input:checked + .slider:before {
                 })
                 .catch(error => {
                     console.error('Error al cargar categoría:', error);
-                    mostrarNotificacion('Error al cargar la categoría para editar', 'error');
+                    mostrarNotificacion(error.message || 'Error al cargar la categoría para editar', 'error');
                 });
         };
         
@@ -2616,7 +2682,7 @@ input:checked + .slider:before {
                     fetch(`/api/categorias/${id}`, {
                         method: 'DELETE'
                     })
-                    .then(response => response.json())
+                    .then(response => window.categoriaController._parseJsonResponse(response))
                     .then(data => {
                         if (data.success) {
                             console.log('✅ Categoría eliminada');
@@ -2630,7 +2696,7 @@ input:checked + .slider:before {
                     })
                     .catch(error => {
                         console.error('❌ Error:', error);
-                        mostrarNotificacion('Error al eliminar categoría: ' + error.message, 'error');
+                        mostrarNotificacion(error.message || 'Error al eliminar categoría', 'error');
                     });
                 }
             );
@@ -2914,308 +2980,7 @@ input:checked + .slider:before {
             console.log('❌ Horario removido');
         };
 
-        // ================================================
-        // GENERAR PROPUESTAS AUTOMÁTICAS (REST)
-        // ================================================
-
-        window.generarPropuestasAutomaticas = async function() {
-            console.log('🤖 Generando propuestas automáticas...');
-
-            const idOferta = document.getElementById('idOferta')?.value;
-            const horasSemanales = parseFloat(document.getElementById('horas-semanales')?.value || '0');
-
-            // Obtener docente seleccionado (curso o formación)
-            let idDocente = null;
-            const docentesCurso = document.getElementById('docentesCurso');
-            const docentesFormacion = document.getElementById('docentesFormacion');
-            if (docentesCurso && docentesCurso.value) idDocente = docentesCurso.value;
-            if (!idDocente && docentesFormacion && docentesFormacion.value) idDocente = docentesFormacion.value;
-
-            // Validaciones básicas
-            if (!idDocente) {
-                if (typeof mostrarNotificacion === 'function') mostrarNotificacion('Selecciona un docente primero', 'warning');
-                else alert('Selecciona un docente primero');
-                return;
-            }
-            if (!horasSemanales || horasSemanales <= 0) {
-                if (typeof mostrarNotificacion === 'function') mostrarNotificacion('Ingresa las horas semanales requeridas', 'warning');
-                else alert('Ingresa las horas semanales requeridas');
-                return;
-            }
-
-            try {
-                const formData = new FormData();
-                formData.append('idOferta', idOferta || 0);
-                formData.append('idDocente', idDocente);
-                formData.append('horasSemanales', horasSemanales);
-
-                // CSRF
-                const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
-                const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content') || 'X-CSRF-TOKEN';
-                const headers = {};
-                if (csrfToken) headers[csrfHeader] = csrfToken;
-
-                const response = await fetch('/admin/ofertas/generar-horarios-automaticos', {
-                    method: 'POST',
-                    headers,
-                    body: formData
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    console.log('✅ Propuestas generadas:', data);
-                    mostrarPropuestas(data.propuestas, data.infoDocente);
-                    if (typeof mostrarNotificacion === 'function') mostrarNotificacion('Propuestas generadas exitosamente', 'success');
-                } else {
-                    const msg = data.message || 'No se pudieron generar propuestas';
-                    if (typeof mostrarNotificacion === 'function') mostrarNotificacion(msg, 'error');
-                    else alert(msg);
-                }
-            } catch (err) {
-                console.error('❌ Error al generar propuestas', err);
-                const msg = 'Error al generar propuestas: ' + err.message;
-                if (typeof mostrarNotificacion === 'function') mostrarNotificacion(msg, 'error');
-                else alert(msg);
-            }
-        };
-
-// ================================================
-// FUNCIÓN PARA MODO AUTOMÁTICO DE HORARIOS
-// ================================================
-
-/**
- * Toggle entre modo manual y automático de horarios
- */
-window.toggleModoHorario = function() {
-    const modoSwitch = document.getElementById('modo-horario-switch');
-    const modoLabel = document.getElementById('modo-label');
-    const modoDescripcion = document.getElementById('modo-descripcion');
-    
-    // Contenedores
-    const manualContainer = document.getElementById('horarios-manual-container');
-    const automaticoContainer = document.getElementById('horarios-automatico-container');
-    
-    if (modoSwitch && modoSwitch.checked) {
-        // --- MODO AUTOMÁTICO ACTIVADO ---
-        console.log('🤖 Cambiando a modo AUTOMÁTICO');
-        
-        // Actualizar textos
-        if (modoLabel) modoLabel.textContent = 'Modo Automático';
-        if (modoDescripcion) modoDescripcion.textContent = 'El sistema generará propuestas optimizadas';
-        
-        // Mostrar/ocultar contenedores con animación simple
-        if (manualContainer) manualContainer.style.display = 'none';
-        if (automaticoContainer) {
-            automaticoContainer.style.display = 'block';
-            automaticoContainer.style.animation = 'fadeIn 0.5s';
-        }
-        
-        // Limpiar horarios manuales previos para evitar conflictos
-        horariosSeleccionados = [];
-        
-    } else {
-        // --- MODO MANUAL ACTIVADO ---
-        console.log('✋ Cambiando a modo MANUAL');
-        
-        // Actualizar textos
-        if (modoLabel) modoLabel.textContent = 'Modo Manual';
-        if (modoDescripcion) modoDescripcion.textContent = 'Selecciona días y horarios manualmente';
-        
-        // Mostrar/ocultar contenedores
-        if (manualContainer) {
-            manualContainer.style.display = 'block';
-            manualContainer.style.animation = 'fadeIn 0.5s';
-        }
-        if (automaticoContainer) automaticoContainer.style.display = 'none';
-        
-        // Opcional: Limpiar interfaz automática pero mantener datos si se vuelve
-        const propuestasContainer = document.getElementById('propuestas-container');
-        if (propuestasContainer) propuestasContainer.style.display = 'none';
-        
-        horariosSeleccionados = [];
-    }
-    
-    // Actualizar visualización global de chips (si existe la función)
-    if (typeof actualizarHorariosChips === 'function') {
-        actualizarHorariosChips();
-    }
-};
-
-/**
- * Renderiza las tarjetas de propuestas en el HTML (Nueva Versión)
- */
-function mostrarPropuestas(propuestas, infoDocente) {
-    const listaPropuestas = document.getElementById('lista-propuestas');
-    const propuestasContainer = document.getElementById('propuestas-container');
-    const infoDocenteDiv = document.getElementById('info-docente-carga');
-    
-    // 1. Mostrar Banner de Información del Docente
-    if (infoDocente && infoDocenteDiv) {
-        const nombreSpan = document.getElementById('docente-nombre');
-        const cargaSpan = document.getElementById('docente-carga-actual');
-        const porcentajeSpan = document.getElementById('docente-porcentaje-ocupacion');
-        
-        if (nombreSpan) nombreSpan.textContent = infoDocente.nombre;
-        if (cargaSpan) cargaSpan.textContent = infoDocente.cargaActual;
-        if (porcentajeSpan) porcentajeSpan.textContent = infoDocente.porcentajeOcupacion;
-        
-        infoDocenteDiv.style.display = 'block';
-    }
-    
-    // 2. Generar Tarjetas
-    if (listaPropuestas) {
-        listaPropuestas.innerHTML = ''; // Limpiar anteriores
-        
-        if (!propuestas || propuestas.length === 0) {
-            listaPropuestas.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #666;">No se encontraron propuestas viables con los parámetros indicados.</div>';
-            propuestasContainer.style.display = 'block';
-            return;
-        }
-
-        propuestas.forEach((propuesta, index) => {
-            // Crear elemento contenedor
-            const card = document.createElement('div');
-            card.className = 'propuesta-card'; // Clase CSS principal
-            card.id = `propuesta-card-${index}`; // ID único para selección
-            
-            // Generar HTML de los horarios (chips pequeños dentro de la card)
-            const horariosHTML = propuesta.horarios.map(h => 
-                `<span class="horario-chip">
-                    <i class="fas fa-clock" style="margin-right:4px; font-size: 0.8em;"></i>
-                    ${formatearDia(h.dia)} ${h.horaInicio}-${h.horaFin}
-                </span>`
-            ).join('');
-            
-            // Construir el HTML interno de la tarjeta (NUEVO DISEÑO)
-            card.innerHTML = `
-                <div class="card-body">
-                    <div class="propuesta-header">
-                        <div>
-                            <h6 class="propuesta-title">${propuesta.nombre}</h6>
-                            <span class="propuesta-subtitle">Opción generada automáticamente</span>
-                        </div>
-                        <div class="score-badge" style="background: ${getScoreColor(propuesta.score)};">
-                            ${propuesta.score} pts
-                        </div>
-                    </div>
-                    
-                    <div class="stats-grid">
-                        <div class="stat-item">
-                            <i class="fas fa-layer-group"></i> ${propuesta.totalHorasSemana}h semanales
-                        </div>
-                        <div class="stat-item">
-                            <i class="fas fa-calendar-alt"></i> ${propuesta.cantidadDias} días/sem
-                        </div>
-                        <div class="stat-item" style="grid-column: 1 / -1;">
-                            <i class="fas fa-hourglass-half"></i> Promedio: ${propuesta.promedioHorasPorDia}h por día
-                        </div>
-                    </div>
-                    
-                    <div class="horarios-list">
-                        ${horariosHTML}
-                    </div>
-                </div>
-                
-                <div class="btn-select-area">
-                    <button class="btn-seleccionar-propuesta" type="button" onclick="seleccionarPropuesta(${index})">
-                        <i class="fas fa-check"></i> Seleccionar esta opción
-                    </button>
-                </div>
-            `;
-            
-            listaPropuestas.appendChild(card);
-        });
-        
-        // Hacer visible el contenedor grid
-        propuestasContainer.style.display = 'block';
-        
-        // Scroll suave hacia las propuestas
-        propuestasContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-    
-    // Guardar en global para acceder luego al seleccionar
-    window.propuestasGeneradas = propuestas;
-}
-
-/**
- * Selecciona una propuesta, marca la tarjeta visualmente y asigna horarios
- */
-window.seleccionarPropuesta = function(index) {
-    const propuesta = window.propuestasGeneradas[index];
-    console.log('✅ Propuesta seleccionada:', propuesta);
-    
-    // 1. Lógica de Datos: Asignar horarios al array global
-    horariosSeleccionados = [];
-    propuesta.horarios.forEach(h => {
-        horariosSeleccionados.push({
-            dia: h.dia,
-            horaInicio: h.horaInicio,
-            horaFin: h.horaFin
-        });
-    });
-    // Mantener referencia global también
-    window.horariosSeleccionados = horariosSeleccionados;
-    
-    // 2. Actualizar UI externa (chips ocultos del modo manual si quieres que se vean en algún lado, o el input hidden)
-    const hiddenInput = document.getElementById('horarios');
-    if (hiddenInput) {
-        hiddenInput.value = JSON.stringify(window.horariosSeleccionados);
-    }
-    
-    // 3. Lógica Visual: Marcar la tarjeta activa
-    
-    // A) Quitar clase 'card-selected' de TODAS las tarjetas
-    const allCards = document.querySelectorAll('.propuesta-card');
-    allCards.forEach(card => {
-        card.classList.remove('card-selected');
-        
-        // Resetear botón a estado normal
-        const btn = card.querySelector('.btn-seleccionar-propuesta');
-        if(btn) {
-            btn.innerHTML = '<i class="fas fa-check"></i> Seleccionar esta opción';
-        }
-    });
-
-    // B) Añadir clase 'card-selected' a la tarjeta ELEGIDA
-    const selectedCard = document.getElementById(`propuesta-card-${index}`);
-    if (selectedCard) {
-        selectedCard.classList.add('card-selected');
-        
-        // Cambiar texto del botón para feedback
-        const btn = selectedCard.querySelector('.btn-seleccionar-propuesta');
-        if(btn) {
-            btn.innerHTML = '<i class="fas fa-check-double"></i> Seleccionado';
-        }
-    }
-    
-    mostrarNotificacion('Propuesta seleccionada correctamente', 'success');
-};
-
-/**
- * UTILIDAD: Formatea el nombre del día (LUNES -> Lun)
- */
-function formatearDia(dia) {
-    const dias = {
-        'LUNES': 'Lun',
-        'MARTES': 'Mar',
-        'MIERCOLES': 'Mié',
-        'JUEVES': 'Jue',
-        'VIERNES': 'Vie',
-        'SABADO': 'Sáb',
-        'DOMINGO': 'Dom'
-    };
-    return dias[dia] || dia;
-}
-
-/**
- * UTILIDAD: Obtiene color del badge según el puntaje (score)
- */
-function getScoreColor(score) {
-    if (score >= 80) return 'linear-gradient(135deg, #28a745 0%, #20c997 100%)'; // Verde
-    if (score >= 60) return 'linear-gradient(135deg, #17a2b8 0%, #138496 100%)'; // Azul cyan
-    return 'linear-gradient(135deg, #ffc107 0%, #ff9800 100%)'; // Naranja/Amarillo
-}
+        // (Bloque de propuestas automáticas movido a static/js/gestionOfertas.js)
 
 /**
  * UTILIDAD: Wrapper para notificaciones (por si no tienes Toastr/Swal)
@@ -5448,6 +5213,11 @@ if (typeof window.mostrarNotificacion !== 'function') {
         }
     });
 </script>
+
+<script>
+    window.__skipGestionOfertasInit = true;
+</script>
+<script src="/js/gestionOfertas.js"></script>
 
 </body>
 </html>
