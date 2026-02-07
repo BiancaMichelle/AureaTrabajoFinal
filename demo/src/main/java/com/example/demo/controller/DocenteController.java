@@ -115,6 +115,18 @@ public class DocenteController {
             
             Usuario docente = usuarioRepository.findByDni(dni)
                     .orElseThrow(() -> new RuntimeException("Docente no encontrado"));
+
+            // Ofertas en las que está inscripto como alumno
+            List<Inscripciones> inscripcionesComoAlumno = inscripcionRepository.findByAlumnoId(docente.getId());
+            List<OfertaAcademica> ofertasComoAlumno = inscripcionesComoAlumno.stream()
+                .filter(i -> Boolean.TRUE.equals(i.getEstadoInscripcion()))
+                .map(Inscripciones::getOferta)
+                .filter(Objects::nonNull)
+                .filter(o -> o.getEstado() == EstadoOferta.ACTIVA || o.getEstado() == EstadoOferta.ENCURSO)
+                .collect(Collectors.collectingAndThen(
+                    Collectors.toMap(OfertaAcademica::getIdOferta, o -> o, (a, b) -> a),
+                    m -> new ArrayList<>(m.values())
+                ));
             
             // 1. Obtener Cursos y Formaciones donde es docente
             List<Curso> cursosDocente = cursoRepository.findByDocentesId(docente.getId()).stream()
@@ -239,6 +251,8 @@ public class DocenteController {
 
             model.addAttribute("docente", docente);
             model.addAttribute("esDocente", true);
+            model.addAttribute("inscripcionesComoAlumno", inscripcionesComoAlumno);
+            model.addAttribute("ofertasComoAlumno", ofertasComoAlumno);
             
             // Datos Estadísticos
             model.addAttribute("cursosActivos", totalcursosActivos);

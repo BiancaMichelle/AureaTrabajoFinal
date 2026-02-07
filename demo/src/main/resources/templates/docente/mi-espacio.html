@@ -411,6 +411,27 @@
                         </div>
                     </div>
                 </div>    
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <i class="fas fa-user-graduate"></i>
+                        <h3>Mis inscripciones como alumno</h3>
+                    </div>
+                    <div th:if="${#lists.isEmpty(ofertasComoAlumno)}" class="event-description">
+                        No tenés inscripciones activas como alumno.
+                    </div>
+                    <div th:each="oferta : ${ofertasComoAlumno}" class="event-item">
+                        <div class="event-title">
+                            <i th:class="${oferta.iconoTipo}"></i>
+                            <span th:text="${oferta.nombre}">Oferta</span>
+                        </div>
+                        <div class="event-description">
+                            <span th:text="${oferta.tipoOferta}">Tipo</span>
+                            <span> • </span>
+                            <span th:text="${#temporals.format(oferta.fechaInicio, 'dd/MM/yyyy')}">Inicio</span>
+                        </div>
+                    </div>
+                </div>
     
                 <div class="panel">
                     <div class="panel-header">
