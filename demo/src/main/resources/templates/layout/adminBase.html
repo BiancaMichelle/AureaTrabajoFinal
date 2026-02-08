@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org" th:fragment="layout(title, content)">
+
 <head>
     <meta charset="UTF-8">
     <meta name="_csrf" th:content="${_csrf.token}">
@@ -7,166 +8,174 @@
     <title th:replace="${title}">Panel de Administrador</title>
     <link rel="stylesheet" th:href="@{/style/styleBase.css}">
     <link rel="stylesheet" th:href="@{/style/admin.css}">
-    
+
     <!-- Estilos Dinámicos -->
     <th:block th:replace="~{fragments/dynamic-styles :: styles}"></th:block>
 
     <link rel="stylesheet" th:href="@{/style/gestionOfertas.css}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
+
 <body>
-<div class="dashboard-container dashboard-left-sidebar">
-    <!-- Professional Admin Sidebar -->
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <a href="#" class="sidebar-logo" id="sidebar-toggle">A</a>
-            <span class="sidebar-logo-text">Aurea</span>
-        </div>
-        <nav class="sidebar-nav">
-            <ul>
-                <li>
-                    <a th:href="@{/admin/dashboard}" href="#kpi-section">
-                        <i class="fas fa-tachometer-alt"></i> 
-                        <span>Panel Administrativo</span>
-                    </a>
-                </li>
-                <li>
-                    <a th:href="@{/admin/gestion-usuarios}">
-                        <i class="fas fa-users"></i> 
-                        <span>Gestión de Usuarios</span>
-                    </a>
-                </li>
-                <li>
-                    <a th:href="@{/admin/gestion-ofertas}">
-                        <i class="fas fa-graduation-cap"></i> 
-                        <span>Gestión de Ofertas</span>
-                    </a>
-                </li>
-                <li>
-                    <a th:href="@{/admin/estadisticas}">
-                        <i class="fas fa-chart-line"></i> 
-                        <span>Estadísticas</span>
-                    </a>
-                </li>
-                <li>
-                    <a th:href="@{/admin/certificaciones}">
-                        <i class="fas fa-certificate"></i> 
-                        <span>Certificaciones</span>
-                    </a>
-                </li>
-                <li>
-                    <a th:href="@{/auditoria}">
-                        <i class="fas fa-shield-alt"></i> 
-                        <span>Auditoría</span>
-                    </a>
-                </li>
-                <li>
-                    <a th:href="@{/admin/pagos}">
-                        <i class="fas fa-credit-card"></i> 
-                        <span>Gestión de Pagos</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="#activity-section">
-                        <i class="fas fa-clock"></i> 
-                        <span>Actividad Reciente</span>
-                    </a>
-                </li>
-                <li>
-                    <a th:href="@{/admin/reportes}">
-                        <i class="fas fa-file-alt"></i> 
-                        <span>Reportes</span>
-                    </a>
-                </li>
-                <li>
-                    <a th:href="@{/admin/configuracion}">
-                        <i class="fas fa-cogs"></i> 
-                        <span>Configuración</span>
-                    </a>
-                </li>
-                <li>
-                    <a th:href="@{/}">
-                        <i class="fas fa-home"></i> 
-                        <span>Vista Pública</span>
-                    </a>
-                </li>
-                <li>
-                    <a>
-                        <form th:action="@{/logout}" id="logoutFormAdmin" method="post" style="display: inline;">
-                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-                                <button type="button" class="btn-link" onclick="confirmarSalidaAdmin()">Cerrar Sesión</button>
+    <div class="dashboard-container dashboard-left-sidebar">
+        <!-- Professional Admin Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="#" class="sidebar-logo" id="sidebar-toggle">A</a>
+                <span class="sidebar-logo-text">Aurea</span>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li>
+                        <a th:href="@{/admin/dashboard}" href="#kpi-section">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <span>Panel Administrativo</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a th:href="@{/admin/gestion-usuarios}">
+                            <i class="fas fa-users"></i>
+                            <span>Gestión de Usuarios</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a th:href="@{/admin/gestion-ofertas}">
+                            <i class="fas fa-graduation-cap"></i>
+                            <span>Gestión de Ofertas</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a th:href="@{/admin/estadisticas}">
+                            <i class="fas fa-chart-line"></i>
+                            <span>Estadísticas</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a th:href="@{/admin/certificaciones}">
+                            <i class="fas fa-certificate"></i>
+                            <span>Certificaciones</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a th:href="@{/auditoria}">
+                            <i class="fas fa-shield-alt"></i>
+                            <span>Auditoría</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a th:href="@{/admin/pagos}">
+                            <i class="fas fa-credit-card"></i>
+                            <span>Gestión de Pagos</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#activity-section">
+                            <i class="fas fa-clock"></i>
+                            <span>Actividad Reciente</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a th:href="@{/admin/reportes}">
+                            <i class="fas fa-file-alt"></i>
+                            <span>Reportes</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a th:href="@{/admin/configuracion}">
+                            <i class="fas fa-cogs"></i>
+                            <span>Configuración</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a th:href="@{/}">
+                            <i class="fas fa-home"></i>
+                            <span>Vista Pública</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a onclick="confirmarSalidaAdmin()" style="cursor: pointer;">
+                            <i class="fas fa-sign-out-alt"></i>
+                            <span>Cerrar Sesión</span>
+                        </a>
+                        <form th:action="@{/logout}" id="logoutFormAdmin" method="post" style="display: none;">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                         </form>
-                    </a>
-                </li>
-            </ul>
-        </nav>
-        
-        <!-- User Info Section -->
-        <div class="sidebar-footer">
-            <div class="user-info">
-                <div class="user-avatar">
-                    <i class="fas fa-user-shield"></i>
-                </div>
-                <div class="user-details">
-                    <span class="user-name">Administrador</span>
-                    <span class="user-role">Sistema</span>
+                    </li>
+                </ul>
+            </nav>
+
+            <!-- User Info Section -->
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar">
+                        <i class="fas fa-user-shield"></i>
+                    </div>
+                    <div class="user-details">
+                        <span class="user-name">Administrador</span>
+                        <span class="user-role">Sistema</span>
+                    </div>
                 </div>
             </div>
-        </div>
-    </aside>
-    
-    <!-- Main Content Area -->
-    <div th:replace="${content}">
-        <!-- El contenido específico de cada página se insertará aquí -->
-    </div>
+        </aside>
 
-    <!-- Global Notification Area -->
-    <div id="notification-area" class="notification-area" style="display: none;">
-        <div id="notification" class="notification">
-            <i id="notification-icon" class="fas fa-check-circle"></i>
-            <span id="notification-message">Mensaje de notificación</span>
-            <button type="button" id="notification-close" class="notification-close" onclick="ocultarNotificacion()">
-                <i class="fas fa-times"></i>
-            </button>
+        <!-- Main Content Area -->
+        <div th:replace="${content}">
+            <!-- El contenido específico de cada página se insertará aquí -->
         </div>
-    </div>
 
-    <!-- Global Confirmation Modal -->
-    <div id="globalConfirmationModal" class="modal-overlay" style="display: none;">
-        <div class="modal-content modal-confirmation">
-            <div class="modal-header">
-                <h3><i class="fas fa-exclamation-circle" style="color: var(--warning-color, #f59e0b);"></i> <span id="confTitle">Confirmación</span></h3>
-                <button type="button" class="btn-close" onclick="closeConfirmModal()">
+        <!-- Global Notification Area -->
+        <div id="notification-area" class="notification-area" style="display: none;">
+            <div id="notification" class="notification">
+                <i id="notification-icon" class="fas fa-check-circle"></i>
+                <span id="notification-message">Mensaje de notificación</span>
+                <button type="button" id="notification-close" class="notification-close"
+                    onclick="ocultarNotificacion()">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            <div class="modal-body" style="padding: 20px;">
-                <p id="confirmationMessage" style="font-size: 1.1em; color: var(--text-color);">¿Está seguro de realizar esta acción?</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn-secondary" onclick="closeConfirmModal()" style="padding: 8px 16px; border-radius: 6px; cursor: pointer;">Cancelar</button>
-                <button type="button" class="btn-danger" id="btnAcceptConfirm" style="padding: 8px 16px; border-radius: 6px; cursor: pointer; background-color: #ef4444; color: white; border: none;">Confirmar</button>
+        </div>
+
+        <!-- Global Confirmation Modal -->
+        <div id="globalConfirmationModal" class="modal-overlay" style="display: none;">
+            <div class="modal-content modal-confirmation">
+                <div class="modal-header">
+                    <h3><i class="fas fa-exclamation-circle" style="color: var(--warning-color, #f59e0b);"></i> <span
+                            id="confTitle">Confirmación</span></h3>
+                    <button type="button" class="btn-close" onclick="closeConfirmModal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body" style="padding: 20px;">
+                    <p id="confirmationMessage" style="font-size: 1.1em; color: var(--text-color);">¿Está seguro de
+                        realizar esta acción?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="closeConfirmModal()"
+                        style="padding: 8px 16px; border-radius: 6px; cursor: pointer;">Cancelar</button>
+                    <button type="button" class="btn-danger" id="btnAcceptConfirm"
+                        style="padding: 8px 16px; border-radius: 6px; cursor: pointer; background-color: #ef4444; color: white; border: none;">Confirmar</button>
+                </div>
             </div>
         </div>
+
     </div>
 
-</div>
+    <!-- Scripts comunes -->
+    <script th:src="@{/js/modal-global.js}"></script>
+    <script th:src="@{/js/panelAdmin.js}"></script>
 
-<!-- Scripts comunes -->
-<script th:src="@{/js/modal-global.js}"></script>
-<script th:src="@{/js/panelAdmin.js}"></script>
-
-<script>
-    function confirmarSalidaAdmin() {
-        ModalConfirmacion.show(
-            'Cerrar Sesión',
-            '¿Estás seguro que deseas cerrar la sesión de administración?',
-            () => {
-                document.getElementById('logoutFormAdmin').submit();
-            }
-        );
-    }
-</script>
+    <script>
+        function confirmarSalidaAdmin() {
+            ModalConfirmacion.show(
+                'Cerrar Sesión',
+                '¿Estás seguro que deseas cerrar la sesión de administración?',
+                () => {
+                    document.getElementById('logoutFormAdmin').submit();
+                }
+            );
+        }
+    </script>
 
 </body>
+
 </html>
