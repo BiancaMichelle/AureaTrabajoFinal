@@ -5,7 +5,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +14,7 @@ import java.util.stream.Collectors;
 import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -34,6 +34,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import com.example.demo.enums.EstadoCuota;
 import com.example.demo.enums.EstadoIntento;
 import com.example.demo.enums.TipoPregunta;
+import com.example.demo.ia.service.ChatServiceSimple;
 import com.example.demo.model.Alumno;
 import com.example.demo.model.Cuota;
 import com.example.demo.model.Curso;
@@ -56,10 +57,8 @@ import com.example.demo.repository.IntentoRepository;
 import com.example.demo.repository.PoolRepository;
 import com.example.demo.repository.PreguntaRepository;
 import com.example.demo.repository.UsuarioRepository;
-import com.example.demo.service.InstitutoService;
-import com.example.demo.ia.service.ChatServiceSimple;
-import com.example.demo.model.Modulo;
 import com.example.demo.service.ExamenFeedbackService;
+import com.example.demo.service.InstitutoService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -100,12 +99,14 @@ public class ExamenController {
     @Autowired
     private ChatServiceSimple chatServiceSimple;
 
-
     @Autowired
     private ExamenFeedbackService examenFeedbackService;
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
 
     /**
      * Muestra la vista del examen
@@ -114,7 +115,8 @@ public class ExamenController {
     public String realizarExamen(@PathVariable Long examenId, Principal principal, Model model,
             Authentication authentication) {
         System.out.println("🎯 =================  ACCESO A EXAMEN =================");
-        System.out.println("🎯 Usuario: " + (principal != null ? principal.getName() : "N/A") + " intenta acceder al examen ID: " + examenId);
+        System.out.println("🎯 Usuario: " + (principal != null ? principal.getName() : "N/A")
+                + " intenta acceder al examen ID: " + examenId);
         try {
             Examen examen = examenRepository.findById(examenId)
                     .orElseThrow(() -> new RuntimeException("Examen no encontrado"));
@@ -155,7 +157,7 @@ public class ExamenController {
 
                 // 1. Validar Inscripción Activa
                 List<Inscripciones> inscripciones = inscripcionRepository.findByAlumnoDniAndOfertaId(
-                    dniAlumno, examen.getModulo().getCurso().getIdOferta());
+                        dniAlumno, examen.getModulo().getCurso().getIdOferta());
 
                 Inscripciones inscripcionActiva = inscripciones.stream()
                         .filter(i -> Boolean.TRUE.equals(i.getEstadoInscripcion()))
@@ -195,7 +197,8 @@ public class ExamenController {
                             + (maxDiasMora > diasMoraPermitidos));
 
                     if (maxDiasMora > diasMoraPermitidos) {
-                        System.out.println("🚫 BLOQUEANDO EXAMEN - Mora excesiva (" + maxDiasMora + " días, límite: " + diasMoraPermitidos + ")");
+                        System.out.println("🚫 BLOQUEANDO EXAMEN - Mora excesiva (" + maxDiasMora + " días, límite: "
+                                + diasMoraPermitidos + ")");
                         // Solo bloqueamos el examen, NO damos de baja la inscripción
                         // El alumno puede seguir accediendo al curso, solo no puede rendir exámenes
                         model.addAttribute("diasMora", Integer.valueOf((int) maxDiasMora));
@@ -296,7 +299,7 @@ public class ExamenController {
 
                 // 1. Validar Inscripción
                 List<Inscripciones> inscripciones = inscripcionRepository.findByAlumnoDniAndOfertaId(
-                    dniAlumno, examen.getModulo().getCurso().getIdOferta());
+                        dniAlumno, examen.getModulo().getCurso().getIdOferta());
 
                 Inscripciones inscripcionActiva = inscripciones.stream()
                         .filter(i -> Boolean.TRUE.equals(i.getEstadoInscripcion()))
@@ -332,8 +335,8 @@ public class ExamenController {
                         // Solo bloqueamos el examen, NO damos de baja la inscripción
                         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                                 .body(Map.of("error", "Acceso bloqueado. Debe regularizar sus pagos.",
-                                            "diasMora", maxDiasMora,
-                                            "limiteMora", diasMoraPermitidos));
+                                        "diasMora", maxDiasMora,
+                                        "limiteMora", diasMoraPermitidos));
                     }
                 }
 
@@ -418,8 +421,8 @@ public class ExamenController {
             Examen examen = examenRepository.findById(examenId)
                     .orElseThrow(() -> new RuntimeException("Examen no encontrado"));
 
-                String dniAlumno = obtenerDniDesdePrincipal(principal);
-                Alumno alumno = alumnoRepository.findByDni(dniAlumno)
+            String dniAlumno = obtenerDniDesdePrincipal(principal);
+            Alumno alumno = alumnoRepository.findByDni(dniAlumno)
                     .orElseThrow(() -> new RuntimeException("Alumno no encontrado"));
 
             Intento intento = new Intento();
@@ -608,21 +611,22 @@ public class ExamenController {
         System.out.println("IntentoId: " + intentoId);
         System.out.println("Principal name: " + (principal != null ? principal.getName() : "NULL"));
         System.out.println("Authentication: " + (authentication != null ? authentication.getName() : "NULL"));
-        
+
         Examen examen = examenRepository.findById(examenId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Examen no encontrado"));
         System.out.println("Examen encontrado: " + examen.getTitulo());
 
         String dni = obtenerDniDesdePrincipal(principal);
         System.out.println("DNI obtenido: " + dni);
-        
+
         var usuario = usuarioRepository.findByDni(dni)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
-        System.out.println("Usuario encontrado: " + usuario.getNombre() + " (Tipo: " + usuario.getClass().getSimpleName() + ")");
+        System.out.println(
+                "Usuario encontrado: " + usuario.getNombre() + " (Tipo: " + usuario.getClass().getSimpleName() + ")");
 
         boolean puede = puedeGestionarExamen(authentication, usuario, examen);
         System.out.println("Puede gestionar examen: " + puede);
-        
+
         if (!puede) {
             System.out.println("ERROR: No tiene permisos para gestionar este examen");
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
@@ -820,7 +824,7 @@ public class ExamenController {
             Examen examen) {
         System.out.println("--- VERIFICANDO PERMISOS ---");
         System.out.println("Usuario: " + usuario.getNombre() + " (Tipo: " + usuario.getClass().getSimpleName() + ")");
-        
+
         boolean esAdmin = authentication.getAuthorities().stream()
                 .anyMatch(auth -> {
                     String nombre = auth.getAuthority();
@@ -838,17 +842,19 @@ public class ExamenController {
         System.out.println("Usuario ES Docente (ID: " + docente.getId() + ")");
 
         OfertaAcademica oferta = examen.getModulo() != null ? examen.getModulo().getCurso() : null;
-        System.out.println("Oferta obtenida: " + (oferta != null ? oferta.getNombre() + " (Tipo: " + oferta.getClass().getSimpleName() + ")" : "NULL"));
-        
+        System.out.println("Oferta obtenida: "
+                + (oferta != null ? oferta.getNombre() + " (Tipo: " + oferta.getClass().getSimpleName() + ")"
+                        : "NULL"));
+
         if (oferta == null) {
             System.out.println("Oferta es NULL");
             return false;
         }
-        
+
         // Desempaquetar el proxy de Hibernate para obtener la clase real
         OfertaAcademica ofertaReal = (OfertaAcademica) Hibernate.unproxy(oferta);
         System.out.println("Oferta real (desempaquetada): " + ofertaReal.getClass().getSimpleName());
-        
+
         if (ofertaReal instanceof Curso curso) {
             System.out.println("Es Curso. Docentes: " + (curso.getDocentes() != null ? curso.getDocentes().size() : 0));
             if (curso.getDocentes() != null) {
@@ -860,7 +866,8 @@ public class ExamenController {
             return resultado;
         }
         if (ofertaReal instanceof Formacion formacion) {
-            System.out.println("Es Formación. Docentes: " + (formacion.getDocentes() != null ? formacion.getDocentes().size() : 0));
+            System.out.println("Es Formación. Docentes: "
+                    + (formacion.getDocentes() != null ? formacion.getDocentes().size() : 0));
             if (formacion.getDocentes() != null) {
                 formacion.getDocentes().forEach(d -> System.out.println("  - Docente ID: " + d.getId()));
             }
@@ -915,5 +922,95 @@ public class ExamenController {
         }
 
         return valor;
+    }
+
+    /**
+     * Lista pre-exámenes ocultos generados automáticamente para una oferta
+     */
+    @GetMapping("/pre-examenes/oferta/{ofertaId}")
+    @PreAuthorize("hasAnyAuthority('DOCENTE', 'ADMIN')")
+    public ResponseEntity<?> listarPreExamenes(@PathVariable Long ofertaId) {
+        try {
+            List<Examen> preExamenes = examenRepository
+                    .findByModulo_Curso_IdOfertaAndVisibilidadAndGenerarPreExamen(
+                            ofertaId, false, true);
+
+            List<Map<String, Object>> preExamenesDTO = preExamenes.stream()
+                    .map(preExamen -> {
+                        Map<String, Object> dto = new HashMap<>();
+                        dto.put("id", preExamen.getIdActividad());
+                        dto.put("titulo", preExamen.getTitulo());
+                        dto.put("descripcion", preExamen.getDescripcion());
+                        dto.put("fechaCreacion", preExamen.getFechaCreacion());
+                        dto.put("fechaApertura", preExamen.getFechaApertura());
+                        dto.put("fechaCierre", preExamen.getFechaCierre());
+                        dto.put("cantidadPools",
+                                preExamen.getPoolPreguntas() != null ? preExamen.getPoolPreguntas().size() : 0);
+                        dto.put("moduloNombre", preExamen.getModulo() != null ? preExamen.getModulo().getNombre() : "");
+                        return dto;
+                    })
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "preExamenes", preExamenesDTO));
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Error al cargar pre-exámenes: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Publica un pre-examen (lo hace visible a los alumnos)
+     */
+    @PostMapping("/pre-examenes/{id}/publicar")
+    @PreAuthorize("hasAnyAuthority('DOCENTE', 'ADMIN')")
+    public ResponseEntity<?> publicarPreExamen(@PathVariable Long id,
+            Authentication authentication,
+            Principal principal) {
+        try {
+            Examen preExamen = examenRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Pre-examen no encontrado"));
+
+            // Verificar que es un pre-examen oculto
+            if (!Boolean.TRUE.equals(preExamen.getGenerarPreExamen()) ||
+                    Boolean.TRUE.equals(preExamen.getVisibilidad())) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "Este examen no es un pre-examen oculto"));
+            }
+
+            // Verificar permisos
+            String dni = obtenerDniDesdePrincipal(principal);
+            var usuario = usuarioRepository.findByDni(dni).orElse(null);
+            if (usuario == null || !puedeGestionarExamen(authentication, usuario, preExamen)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                        "success", false,
+                        "message", "No tiene permisos para publicar este pre-examen"));
+            }
+
+            // Publicar: hacer visible
+            preExamen.setVisibilidad(true);
+            examenRepository.save(preExamen);
+
+            // Publicar evento para notificar a alumnos
+            eventPublisher.publishEvent(new com.example.demo.event.ActivityCreatedEvent(
+                    preExamen.getModulo().getCurso().getIdOferta(),
+                    preExamen.getIdActividad(),
+                    "EXAMEN",
+                    preExamen.getFechaCierre(),
+                    preExamen.getTitulo()));
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Pre-examen publicado exitosamente"));
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Error al publicar pre-examen: " + e.getMessage()));
+        }
     }
 }
