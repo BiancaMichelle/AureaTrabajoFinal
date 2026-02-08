@@ -46,6 +46,7 @@ import com.example.demo.model.Opcion;
 import com.example.demo.model.Pool;
 import com.example.demo.model.Pregunta;
 import com.example.demo.model.RespuestaIntento;
+import com.example.demo.model.Usuario;
 import com.example.demo.repository.AlumnoRepository;
 import com.example.demo.repository.CuotaRepository;
 import com.example.demo.repository.ExamenRepository;
@@ -54,8 +55,10 @@ import com.example.demo.repository.IntentoRepository;
 import com.example.demo.repository.PoolRepository;
 import com.example.demo.repository.PreguntaRepository;
 import com.example.demo.repository.UsuarioRepository;
-import com.example.demo.service.EmailService;
 import com.example.demo.service.InstitutoService;
+import com.example.demo.ia.service.ChatServiceSimple;
+import com.example.demo.model.Modulo;
+import com.example.demo.service.ExamenFeedbackService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -94,7 +97,11 @@ public class ExamenController {
     private InstitutoService institutoService;
 
     @Autowired
-    private EmailService emailService;
+    private ChatServiceSimple chatServiceSimple;
+
+
+    @Autowired
+    private ExamenFeedbackService examenFeedbackService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -121,8 +128,6 @@ public class ExamenController {
                 System.out.println("🎯 Iniciando validaciones para alumno...");
                 // 0. Validar si ya lo rindió y está corregido
                 try {
-                    com.example.demo.model.Usuario usuario = usuarioRepository.findByDni(principal.getName())
-                            .orElse(null);
                     // Fix: Find Alumno ID properly (Assuming Usuario extends or finding Alumno by
                     // DNI)
                     // Using AlumnoRepository directly if ID needed, or just casting if Usuario
@@ -397,7 +402,7 @@ public class ExamenController {
     public ResponseEntity<?> entregarExamen(@RequestBody Map<String, Object> payload, Principal principal) {
         try {
             Long examenId = Long.valueOf(payload.get("examenId").toString());
-            List<Map<String, Object>> respuestas = (List<Map<String, Object>>) payload.get("respuestas");
+            List<Map<String, Object>> respuestas = obtenerRespuestasComoLista(payload.get("respuestas"));
 
             Examen examen = examenRepository.findById(examenId)
                     .orElseThrow(() -> new RuntimeException("Examen no encontrado"));
@@ -470,6 +475,10 @@ public class ExamenController {
 
             intentoRepository.save(intento);
 
+            if (Boolean.TRUE.equals(examen.getCalificacionAutomatica())) {
+                enviarFeedbackIA(alumno, examen, intento, respuestasIntento);
+            }
+
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             // Redirigir al aula del alumno asociado a la oferta del módulo
@@ -511,7 +520,9 @@ public class ExamenController {
                     .anyMatch(op -> op.getDescripcion().equalsIgnoreCase(respuesta));
         } else if (tipo == TipoPregunta.MULTIPLE_CHOICE) {
             if (respuestaUsuarioObj instanceof List) {
-                List<String> respuestas = (List<String>) respuestaUsuarioObj;
+                List<String> respuestas = ((List<?>) respuestaUsuarioObj).stream()
+                        .map(Object::toString)
+                        .collect(Collectors.toList());
                 // Verificar que todas las respuestas seleccionadas sean correctas y que no
                 // falte ninguna
                 // (Criterio estricto)
@@ -527,6 +538,59 @@ public class ExamenController {
         }
 
         return false;
+    }
+
+    private List<Map<String, Object>> obtenerRespuestasComoLista(Object raw) {
+        if (!(raw instanceof List<?> rawList)) {
+            return new ArrayList<>();
+        }
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Object item : rawList) {
+            if (item instanceof Map<?, ?> map) {
+                Map<String, Object> casted = new HashMap<>();
+                for (Map.Entry<?, ?> entry : map.entrySet()) {
+                    if (entry.getKey() != null) {
+                        casted.put(entry.getKey().toString(), entry.getValue());
+                    }
+                }
+                result.add(casted);
+            }
+        }
+
+        return result;
+    }
+
+    private void enviarFeedbackIA(Usuario alumno, Examen examen, Intento intento, List<RespuestaIntento> respuestasIntento) {
+        List<RespuestaIntento> incorrectas = respuestasIntento.stream()
+                .filter(r -> Boolean.FALSE.equals(r.getEsCorrecta()))
+                .limit(3)
+                .collect(Collectors.toList());
+
+        if (incorrectas.isEmpty()) {
+            return;
+        }
+
+        List<Modulo> modulosRelacionados = examen.getModulosRelacionados();
+        if (modulosRelacionados == null || modulosRelacionados.isEmpty()) {
+            modulosRelacionados = examen.getModulo() != null ? List.of(examen.getModulo()) : List.of();
+        }
+
+        String feedback = chatServiceSimple.generarFeedbackExamen(alumno, examen, incorrectas, modulosRelacionados);
+        if (feedback == null || feedback.isBlank()) {
+            return;
+        }
+
+        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime cierre = examen.getFechaCierre();
+        if (cierre == null || !ahora.isBefore(cierre)) {
+            examenFeedbackService.enviarFeedbackInmediato(alumno, examen, feedback);
+        } else {
+            examenFeedbackService.programarFeedback(alumno, examen,
+                    intento != null ? intento.getIdIntento() : null,
+                    feedback,
+                    cierre);
+        }
     }
 
     @GetMapping("/{examenId}/intentos")

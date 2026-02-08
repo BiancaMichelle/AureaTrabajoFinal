@@ -103,7 +103,8 @@ public class ActividadController {
             @RequestParam(value = "calificacionAutomatica", required = false, defaultValue = "false") Boolean calificacionAutomatica,
             @RequestParam(value = "publicarNota", required = false, defaultValue = "false") Boolean publicarNota,
             @RequestParam(value = "visibilidad", required = false, defaultValue = "false") Boolean visibilidad,
-            @RequestParam(value = "poolsData", required = false) String poolsData) {
+            @RequestParam(value = "poolsData", required = false) String poolsData,
+            @RequestParam(value = "modulosRelacionados", required = false) List<String> modulosRelacionados) {
         
         try {
             // Crear el examen
@@ -130,8 +131,18 @@ public class ActividadController {
                 pools = poolsRequest.stream().map(this::convertirAPoolDTO).toList();
             }
             
+            // Convertir módulos relacionados
+            List<UUID> modulosRelacionadosIds = new ArrayList<>();
+            if (modulosRelacionados != null && !modulosRelacionados.isEmpty()) {
+                for (String id : modulosRelacionados) {
+                    if (id != null && !id.isBlank()) {
+                        modulosRelacionadosIds.add(UUID.fromString(id));
+                    }
+                }
+            }
+
             // Guardar el examen
-            Examen examenGuardado = examenService.crearExamen(examen, UUID.fromString(moduloId), pools);
+            Examen examenGuardado = examenService.crearExamen(examen, UUID.fromString(moduloId), pools, modulosRelacionadosIds);
             
             return ResponseEntity.ok().body("{\"success\": true, \"message\": \"Examen creado exitosamente\", \"idExamen\": " + examenGuardado.getIdActividad() + "}");
             

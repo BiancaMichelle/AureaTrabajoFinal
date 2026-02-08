@@ -40,7 +40,7 @@ public class ExamenService {
     private PreguntaRepository preguntaRepository;
 
     @Transactional
-    public Examen crearExamen(Examen examen, UUID moduloId, List<PoolDTO> poolsDTO) {
+    public Examen crearExamen(Examen examen, UUID moduloId, List<PoolDTO> poolsDTO, List<UUID> modulosRelacionadosIds) {
         // Buscar el módulo
         Modulo modulo = moduloRepository.findById(moduloId)
                 .orElseThrow(() -> new RuntimeException("Módulo no encontrado"));
@@ -58,6 +58,17 @@ public class ExamenService {
 
         // Guardar el examen primero
         Examen examenGuardado = examenRepository.save(examen);
+
+        // Asociar módulos relacionados para contexto IA
+        List<Modulo> modulosRelacionados = new ArrayList<>();
+        if (modulosRelacionadosIds != null && !modulosRelacionadosIds.isEmpty()) {
+            modulosRelacionados = moduloRepository.findAllById(modulosRelacionadosIds);
+        }
+        if (!modulosRelacionados.contains(modulo)) {
+            modulosRelacionados.add(modulo);
+        }
+        examenGuardado.setModulosRelacionados(modulosRelacionados);
+        examenRepository.save(examenGuardado);
 
         // Procesar los pools
         if (poolsDTO != null && !poolsDTO.isEmpty()) {

@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import com.example.demo.enums.EstadoExamen;
+import com.example.demo.model.Modulo;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -42,4 +43,12 @@ public class Examen extends Actividad {
         inverseJoinColumns = @JoinColumn(name = "pool_id")
     )
     private List<Pool> poolPreguntas;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+        name = "examen_modulo_rel",
+        joinColumns = @JoinColumn(name = "examen_id"),
+        inverseJoinColumns = @JoinColumn(name = "modulo_id")
+    )
+    private List<Modulo> modulosRelacionados;
 }

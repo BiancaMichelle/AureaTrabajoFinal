@@ -116,10 +116,7 @@ public class IaPoolGeneratorService {
             List<TipoPregunta> tiposDisponibles = new ArrayList<>(Arrays.asList(
                 TipoPregunta.MULTIPLE_CHOICE,
                 TipoPregunta.VERDADERO_FALSO,
-                TipoPregunta.RESPUESTA_CORTA,
-                TipoPregunta.DESCRIPCION_LARGA,
-                TipoPregunta.UNICA_RESPUESTA,
-                TipoPregunta.AUTOCOMPLETADO
+                TipoPregunta.UNICA_RESPUESTA
             ));
             Collections.shuffle(tiposDisponibles);
 

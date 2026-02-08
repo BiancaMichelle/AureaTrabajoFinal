@@ -2379,6 +2379,7 @@
         // FORMULARIO DE EXAMEN
         // ========================================
         function crearFormularioExamen(moduloId, moduloNombre) {
+            const modulosRelacionadosHtml = construirOpcionesModulos(moduloId);
             return `
                 <div id="formularioExamenModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div class="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[70vh] overflow-y-auto">
@@ -2486,6 +2487,19 @@
                                     <strong>Total de preguntas:</strong> <span id="totalPreguntas">0</span>
                                 </div>
                             </div>
+
+                            <!-- Módulos relacionados para IA -->
+                            <div class="border-b pb-3">
+                                <h4 class="font-semibold text-gray-700 mb-3">
+                                    <i class="fas fa-book-open me-1"></i>Módulos relacionados para la IA
+                                </h4>
+                                <div class="space-y-2">
+                                    ${modulosRelacionadosHtml}
+                                </div>
+                                <p class="text-xs text-gray-500 mt-2">
+                                    Estos módulos se usarán como contexto para la retroalimentación automática del examen.
+                                </p>
+                            </div>
                             
                             <!-- Opciones -->
                             <div class="space-y-2">
@@ -2519,6 +2533,51 @@
                     </div>
                 </div>
             `;
+        }
+
+        function obtenerModulosDesdeDOM() {
+            const cards = document.querySelectorAll('.moodle-module[data-modulo-id]');
+            const modulos = [];
+            const seen = new Set();
+            cards.forEach(card => {
+                const id = card.dataset.moduloId;
+                if (!id || seen.has(id)) return;
+                seen.add(id);
+                const nombre = card.dataset.moduloNombre || card.querySelector('.module-title')?.textContent?.trim() || 'Módulo';
+                modulos.push({ id, nombre });
+            });
+            return modulos;
+        }
+
+        function escapeHtml(text) {
+            return (text || '').replace(/[&<>"']/g, function (ch) {
+                switch (ch) {
+                    case '&': return '&amp;';
+                    case '<': return '&lt;';
+                    case '>': return '&gt;';
+                    case '"': return '&quot;';
+                    case "'": return '&#39;';
+                    default: return ch;
+                }
+            });
+        }
+
+        function construirOpcionesModulos(moduloIdActual) {
+            const modulos = obtenerModulosDesdeDOM();
+            if (modulos.length === 0) {
+                return '<p class="text-sm text-gray-500 italic">No hay módulos disponibles.</p>';
+            }
+            return modulos.map(m => {
+                const checked = m.id === moduloIdActual ? 'checked' : '';
+                const badge = m.id === moduloIdActual ? '<span class="text-xs text-gray-500">(módulo principal)</span>' : '';
+                return `
+                    <label class="flex items-start gap-2 text-sm">
+                        <input type="checkbox" name="modulosRelacionados" value="${m.id}" ${checked}
+                               class="h-4 w-4 text-purple-600 border-gray-300 rounded">
+                        <span class="text-gray-700"><strong>${escapeHtml(m.nombre)}</strong> ${badge}</span>
+                    </label>
+                `;
+            }).join('');
         }
 
         // Variable global para almacenar los pools del examen actual
@@ -3936,6 +3995,12 @@
                 // Validar que haya al menos un pool
                 if (examenPools.length === 0) {
                     alert('⚠️ Debes agregar al menos un pool de preguntas antes de crear el examen.');
+                    return;
+                }
+
+                const modulosSeleccionados = formData.getAll('modulosRelacionados');
+                if (!modulosSeleccionados || modulosSeleccionados.length === 0) {
+                    alert('⚠️ Debes seleccionar al menos un módulo relacionado para el examen.');
                     return;
                 }
 
