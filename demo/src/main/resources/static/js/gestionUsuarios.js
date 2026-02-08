@@ -534,12 +534,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function updateDocumentacionLabel(entregada) {
         const label = modalDetalleRefs.alumnoDocLabel;
-        if(entregada) {
-            label.textContent = 'Documentación Completada';
+        label.textContent = 'Documentación Entregada';
+        if (entregada) {
             label.className = 'form-check-label text-success fw-bold';
         } else {
-             label.textContent = 'Documentación Pendiente';
-             label.className = 'form-check-label text-warning fw-bold';
+            label.className = 'form-check-label';
         }
     }
 
@@ -1906,11 +1905,13 @@ document.addEventListener('DOMContentLoaded', function () {
             } else if (rolPrincipal === 'DOCENTE') {
                 console.log('👨‍🏫 Cargando datos de docente:', {
                     matricula: detalle?.matricula,
-                    experiencia: detalle?.experiencia,
+                    experienciaActualizada: detalle?.experiencia,
+                    experienciaBase: detalle?.experienciaBase,
                     horariosDisponibilidad: detalle?.horariosDisponibilidad
                 });
                 setValue('matricula', detalle?.matricula);
-                setValue('experiencia', detalle?.experiencia);
+                const experienciaBase = detalle?.experienciaBase ?? detalle?.experiencia;
+                setValue('experiencia', experienciaBase);
                 populateHorariosDocente(detalle?.horariosDisponibilidad || []);
             } else {
                 populateHorariosDocente([]);

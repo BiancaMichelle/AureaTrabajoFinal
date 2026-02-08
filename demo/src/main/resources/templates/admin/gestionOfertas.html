@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/adminBase :: layout(~{::title}, ~{::main})}">
 <head>
     <title>Gestión de Ofertas Académicas</title>
@@ -1168,6 +1168,16 @@ input:checked + .slider:after {
                             <span id="contadorCategorias">Total: 0 categorías</span>
                         </div>
                     </div>
+
+                    <div class="categoria-filtros" style="display: flex; gap: 10px; align-items: flex-end; margin: 10px 0 15px;">
+                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                            <label for="categorias-filter-input"><i class="fas fa-search"></i> Filtro</label>
+                            <input type="text" id="categorias-filter-input" class="form-control" placeholder="Filtrar por nombre o descripcion">
+                        </div>
+                        <button type="button" id="categorias-filter-clear" class="btn btn-outline" style="height: 38px;">
+                            <i class="fas fa-times"></i> Limpiar
+                        </button>
+                    </div>
                     
                     <!-- Loading y error messages -->
                     <div id="categoriasLoading" class="text-center">
@@ -1623,6 +1633,8 @@ input:checked + .slider:after {
             const btnCloseForm = document.getElementById('btn-close-form');
             const btnCancelForm = document.getElementById('btn-cancel-form');
             const btnGestionarCategorias = document.getElementById('btn-gestionar-categorias');
+            const categoriasFilterInput = document.getElementById('categorias-filter-input');
+            const categoriasFilterClear = document.getElementById('categorias-filter-clear');
             
             console.log('Elementos encontrados:', {
                 btnShowForm: !!btnShowForm,
@@ -1631,6 +1643,20 @@ input:checked + .slider:after {
                 btnCancelForm: !!btnCancelForm,
                 btnGestionarCategorias: !!btnGestionarCategorias
             });
+
+            if (categoriasFilterInput) {
+                categoriasFilterInput.addEventListener('input', aplicarFiltroCategorias);
+            }
+
+            if (categoriasFilterClear) {
+                categoriasFilterClear.addEventListener('click', function() {
+                    if (categoriasFilterInput) {
+                        categoriasFilterInput.value = '';
+                        aplicarFiltroCategorias();
+                        categoriasFilterInput.focus();
+                    }
+                });
+            }
             
             // Manejador del botón mostrar formulario
             if (btnShowForm && formContainer) {
@@ -1750,6 +1776,9 @@ input:checked + .slider:after {
                     const modal = document.getElementById('categoriaModal');
                     if (modal) {
                         modal.style.display = 'flex';
+                        if (categoriasFilterInput) {
+                            categoriasFilterInput.value = '';
+                        }
                         cargarCategorias();
                     }
                 });
@@ -2462,6 +2491,35 @@ input:checked + .slider:after {
         }
         
         // Funciones para gestión de categorías
+        let categoriasCache = [];
+
+        function aplicarFiltroCategorias() {
+            const input = document.getElementById('categorias-filter-input');
+            const termino = input ? input.value.trim().toLowerCase() : '';
+
+            if (!termino) {
+                mostrarCategorias(categoriasCache);
+                return;
+            }
+
+            const coincideNombre = categoriasCache.filter(categoria => {
+                const nombre = (categoria.nombre || '').toLowerCase();
+                return nombre.includes(termino);
+            });
+
+            if (coincideNombre.length > 0) {
+                mostrarCategorias(coincideNombre, categoriasCache.length, 'nombre');
+                return;
+            }
+
+            const coincideDescripcion = categoriasCache.filter(categoria => {
+                const descripcion = (categoria.descripcion || '').toLowerCase();
+                return descripcion.includes(termino);
+            });
+
+            mostrarCategorias(coincideDescripcion, categoriasCache.length, 'descripcion');
+        }
+
         function cargarCategorias() {
             console.log('🔄 Cargando categorías...');
             
@@ -2480,7 +2538,8 @@ input:checked + .slider:after {
                     
                     if (loadingDiv) loadingDiv.style.display = 'none';
                     
-                    mostrarCategorias(categorias);
+                    categoriasCache = Array.isArray(categorias) ? categorias : [];
+                    aplicarFiltroCategorias();
                     if (table) table.style.display = 'table';
                 })
                 .catch(error => {
@@ -2517,14 +2576,14 @@ input:checked + .slider:after {
                 });
         }
         
-        function mostrarCategorias(categorias) {
+        function mostrarCategorias(categorias, totalCategorias = null, filtroLabel = '') {
             const tbody = document.getElementById('categoriasTableBody');
             const contador = document.getElementById('contadorCategorias');
-            
+
             if (!tbody) return;
-            
+
             tbody.innerHTML = '';
-            
+
             if (categorias && categorias.length > 0) {
                 categorias.forEach(categoria => {
                     const row = document.createElement('tr');
@@ -2542,21 +2601,30 @@ input:checked + .slider:after {
                     `;
                     tbody.appendChild(row);
                 });
-                
+
                 if (contador) {
-                    contador.textContent = `Total: ${categorias.length} categorías`;
+                    if (typeof totalCategorias === 'number' && totalCategorias !== categorias.length) {
+                        const sufijo = filtroLabel ? ` (filtro por ${filtroLabel})` : '';
+                        contador.textContent = `Mostrando ${categorias.length} de ${totalCategorias} categorías${sufijo}`;
+                    } else {
+                        contador.textContent = `Total: ${categorias.length} categorías`;
+                    }
                 }
             } else {
                 const row = document.createElement('tr');
                 row.innerHTML = '<td colspan="3" class="text-center text-muted">No hay categorías registradas</td>';
                 tbody.appendChild(row);
-                
+
                 if (contador) {
-                    contador.textContent = 'Total: 0 categorías';
+                    if (typeof totalCategorias === 'number') {
+                        contador.textContent = `Mostrando 0 de ${totalCategorias} categorías`;
+                    } else {
+                        contador.textContent = 'Total: 0 categorías';
+                    }
                 }
             }
         }
-        
+
         function mostrarError(mensaje) {
             const errorDiv = document.getElementById('categoriasError');
             if (errorDiv) {
@@ -4489,7 +4557,7 @@ if (typeof window.mostrarNotificacion !== 'function') {
                     mostrarNotificacion('Error de conexión al cargar los datos de la oferta', 'error');
                 });
         }
-        
+
         /**
          * Función para poblar el formulario con los datos de la oferta
          */
@@ -4497,6 +4565,12 @@ if (typeof window.mostrarNotificacion !== 'function') {
             console.log('📝 Poblando formulario con datos:', oferta);
             
             try {
+                const normalizarFecha = (valor) => {
+                    if (!valor) return '';
+                    const texto = valor.toString();
+                    return texto.includes('T') ? texto.split('T')[0] : texto;
+                };
+
                 // Establecer ID de la oferta para modificar
                 if (document.getElementById('idOfertaModificar')) {
                     document.getElementById('idOfertaModificar').value = oferta.id || oferta.idOferta || '';
@@ -4516,10 +4590,17 @@ if (typeof window.mostrarNotificacion !== 'function') {
                     document.getElementById('modalidad').value = oferta.modalidad || '';
                 }
                 if (document.getElementById('fechaInicio')) {
-                    document.getElementById('fechaInicio').value = oferta.fechaInicio || '';
+                    document.getElementById('fechaInicio').value = normalizarFecha(oferta.fechaInicio);
                 }
                 if (document.getElementById('fechaFin')) {
-                    document.getElementById('fechaFin').value = oferta.fechaFin || '';
+                    const fechaInicioInput = document.getElementById('fechaInicio');
+                    const fechaFinInput = document.getElementById('fechaFin');
+                    const fechaInicioVal = fechaInicioInput ? fechaInicioInput.value : '';
+                    fechaFinInput.value = normalizarFecha(oferta.fechaFin);
+                    if (fechaInicioVal) {
+                        fechaFinInput.disabled = false;
+                        fechaFinInput.setAttribute('min', fechaInicioVal);
+                    }
                 }
                 if (document.getElementById('cupos')) {
                     const cuposVal = oferta.cupos;

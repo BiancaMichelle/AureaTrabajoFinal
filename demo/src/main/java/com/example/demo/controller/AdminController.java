@@ -1,4 +1,4 @@
-package com.example.demo.controller;
+﻿package com.example.demo.controller;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -366,14 +366,14 @@ public class AdminController {
             Optional<OfertaAcademica> ofertaOpt = ofertaAcademicaRepository.findById(id);
             
             if (ofertaOpt.isEmpty()) {
-                System.out.println("❌ Oferta no encontrada con ID: " + id);
-                Map<String, Object> response = new HashMap<>();
+                System.out.println("❌ Oferta no encontrada con ID: " + id);            Map<String, Object> response = new HashMap<>();
                 response.put("success", false);
                 response.put("message", "Oferta no encontrada");
                 return ResponseEntity.notFound().build();
             }
             
             OfertaAcademica oferta = ofertaOpt.get();
+            EstadoOferta estadoAnterior = oferta.getEstado();
             System.out.println("✅ Oferta encontrada: " + oferta.getNombre() + " (Tipo: " + oferta.getClass().getSimpleName() + ")");
             
             Map<String, Object> detalleOferta = obtenerDetalleOfertaCompleto(oferta);
@@ -407,6 +407,7 @@ public class AdminController {
             }
             
             OfertaAcademica oferta = ofertaOpt.get();
+            EstadoOferta estadoAnterior = oferta.getEstado();
             
             // Agregar la oferta al modelo para pre-poblar el formulario
             model.addAttribute("ofertaEditar", oferta);
@@ -456,6 +457,7 @@ public class AdminController {
             }
             
             OfertaAcademica oferta = ofertaOpt.get();
+            EstadoOferta estadoAnterior = oferta.getEstado();
             
             // Verificar si puede ser eliminada (lógica de negocio: sin inscripciones, no finalizada)
             if (!oferta.puedeSerEliminada()) {
@@ -471,6 +473,8 @@ public class AdminController {
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "Oferta eliminada correctamente (Baja lógica)");
+            response.put("auditDetails",
+                    "Eliminacion de oferta " + oferta.getTipoOferta() + ": " + trunc(oferta.getNombre(), 80) + " (ID " + oferta.getIdOferta() + ")");
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -493,8 +497,7 @@ public class AdminController {
             Optional<OfertaAcademica> ofertaOpt = ofertaAcademicaRepository.findById(id);
             
             if (ofertaOpt.isEmpty()) {
-                System.out.println("❌ Oferta no encontrada con ID: " + id);
-                Map<String, Object> response = new HashMap<>();
+                System.out.println("❌ Oferta no encontrada con ID: " + id);            Map<String, Object> response = new HashMap<>();
                 response.put("success", false);
                 response.put("message", "Oferta no encontrada");
                 response.put("motivo", "OFERTA_NO_ENCONTRADA");
@@ -502,14 +505,13 @@ public class AdminController {
             }
             
             OfertaAcademica oferta = ofertaOpt.get();
+            EstadoOferta estadoAnterior = oferta.getEstado();
             System.out.println("📋 Estado actual: " + oferta.getEstado());
             
             // Validar si se puede cambiar el estado (no FINALIZADA)
             if (!oferta.puedeCambiarEstado()) {
                 String motivo = "No se puede cambiar el estado de una oferta finalizada";
-                System.out.println("❌ No se puede cambiar estado: " + motivo);
-                
-                Map<String, Object> response = new HashMap<>();
+                System.out.println("❌ No se puede cambiar estado: " + motivo);            Map<String, Object> response = new HashMap<>();
                 response.put("success", false);
                 response.put("message", motivo);
                 response.put("motivo", "ESTADO_FINAL");
@@ -543,8 +545,7 @@ public class AdminController {
             }
             
             if (!exito) {
-                System.out.println("❌ Operación rechazada: " + mensajeError);
-                Map<String, Object> response = new HashMap<>();
+                System.out.println("❌ Operación rechazada: " + mensajeError);            Map<String, Object> response = new HashMap<>();
                 response.put("success", false);
                 response.put("message", mensajeError);
                 response.put("motivo", motivoCodigo);
@@ -559,6 +560,8 @@ public class AdminController {
             response.put("success", true);
             response.put("nuevoEstado", oferta.getEstado().toString());
             response.put("message", "Estado de la oferta cambiado exitosamente");
+            response.put("auditDetails",
+                    "Cambio de estado oferta " + oferta.getTipoOferta() + ": " + trunc(oferta.getNombre(), 80) + " (ID " + oferta.getIdOferta() + ") " + estadoAnterior + " -> " + oferta.getEstado());
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -747,6 +750,22 @@ public class AdminController {
         return map;
     }
 
+    private String trunc(Object value, int max) {
+        if (value == null) return "";
+        String text = value.toString();
+        if (text.length() <= max) return text;
+        if (max <= 3) return text.substring(0, max);
+        return text.substring(0, max - 3) + "...";
+    }
+
+    private void addCambio(List<String> cambios, String campo, Object anterior, Object nuevo) {
+        if (!Objects.equals(anterior, nuevo)) {
+            String antes = anterior == null ? "-" : trunc(anterior, 60);
+            String despues = nuevo == null ? "-" : trunc(nuevo, 60);
+            cambios.add(campo + ": '" + antes + "' -> '" + despues + "'");
+        }
+    }
+
     // =================== ENDPOINTS PARA DOCENTES ===================
     
     @GetMapping("/admin/docentes/buscar")
@@ -838,6 +857,14 @@ public class AdminController {
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "Oferta creada exitosamente");
+            response.put("auditDetails",
+                    "Creacion de oferta: " + trunc(oferta.getNombre(), 80) + " (ID " + nuevaOferta.getIdOferta() + ")" +
+                    (oferta.getDescripcion() != null ? " | descripcion: " + trunc(oferta.getDescripcion(), 120) : "") + 
+                    (oferta.getCupos() != null ? " | cupos: " + oferta.getCupos() : "") + 
+                    (oferta.getCostoInscripcion() != null ? " | costo: " + oferta.getCostoInscripcion() : "") + 
+                    (oferta.getFechaInicio() != null ? " | inicio: " + oferta.getFechaInicio() : "") + 
+                    (oferta.getFechaFin() != null ? " | fin: " + oferta.getFechaFin() : "") + 
+                    (oferta.getModalidad() != null ? " | modalidad: " + oferta.getModalidad() : ""));
             response.put("id", nuevaOferta.getIdOferta());
             
             return ResponseEntity.ok(response);
@@ -1155,6 +1182,14 @@ public class AdminController {
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "Oferta académica registrada exitosamente");
+            response.put("auditDetails",
+                    "Creacion de oferta " + tipoOferta + ": " + trunc(nombre, 80) + " (ID " + oferta.getIdOferta() + ")" +
+                    (descripcion != null ? " | descripcion: " + trunc(descripcion, 120) : "") + 
+                    (cupos != null ? " | cupos: " + cupos : "") + 
+                    (costoInscripcion != null ? " | costo: " + costoInscripcion : "") + 
+                    (fechaInicio != null ? " | inicio: " + fechaInicio : "") + 
+                    (fechaFin != null ? " | fin: " + fechaFin : "") + 
+                    (modalidad != null ? " | modalidad: " + modalidad : ""));
             response.put("id", nuevaOferta.getIdOferta());
             response.put("tipo", tipoOferta);
             
@@ -1489,6 +1524,13 @@ public class AdminController {
             }
             
             OfertaAcademica ofertaExistente = ofertaOpt.get();
+            String nombreAnterior = ofertaExistente.getNombre();
+            String descripcionAnterior = ofertaExistente.getDescripcion();
+            Integer cuposAnterior = ofertaExistente.getCupos();
+            Double costoAnterior = ofertaExistente.getCostoInscripcion();
+            LocalDate fechaInicioAnterior = ofertaExistente.getFechaInicio();
+            LocalDate fechaFinAnterior = ofertaExistente.getFechaFin();
+            Modalidad modalidadAnterior = ofertaExistente.getModalidad();
             
             // Verificar si se puede modificar
             if (!ofertaExistente.puedeSerEditada()) {
@@ -1696,10 +1738,24 @@ public class AdminController {
             
             if (ofertaModificada != null) {
                 System.out.println("Oferta modificada exitosamente: " + ofertaModificada.getNombre());
-                
+
+                List<String> cambios = new ArrayList<>();
+                addCambio(cambios, "nombre", nombreAnterior, ofertaModificada.getNombre());
+                addCambio(cambios, "descripcion", descripcionAnterior, ofertaModificada.getDescripcion());
+                addCambio(cambios, "cupos", cuposAnterior, ofertaModificada.getCupos());
+                addCambio(cambios, "costo", costoAnterior, ofertaModificada.getCostoInscripcion());
+                addCambio(cambios, "fechaInicio", fechaInicioAnterior, ofertaModificada.getFechaInicio());
+                addCambio(cambios, "fechaFin", fechaFinAnterior, ofertaModificada.getFechaFin());
+                addCambio(cambios, "modalidad", modalidadAnterior, ofertaModificada.getModalidad());
+
+                String detalleCambios = "Modificacion de oferta " + ofertaModificada.getTipoOferta() + ": " +
+                        trunc(ofertaModificada.getNombre(), 80) + " (ID " + ofertaModificada.getIdOferta() + ")" +
+                        (cambios.isEmpty() ? " | sin cambios detectados" : " | " + String.join("; ", cambios));
+
                 Map<String, Object> response = new HashMap<>();
                 response.put("success", true);
                 response.put("message", "Oferta modificada exitosamente");
+                response.put("auditDetails", detalleCambios);
                 response.put("oferta", mapearOfertaAResponse(ofertaModificada));
                 
                 return ResponseEntity.ok(response);
@@ -2110,6 +2166,12 @@ public class AdminController {
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "Usuario registrado exitosamente. Las credenciales han sido enviadas al correo electrónico.");
+            response.put("auditDetails",
+                    "Creacion de usuario: " + nombre + " " + apellido + " (DNI " + dni + ")" +
+                    (correo != null ? " | correo: " + correo : "") + 
+                    (telefono != null ? " | telefono: " + telefono : "") + 
+                    (rol != null ? " | rol: " + rol : "") + 
+                    (estado != null ? " | estado: " + estado : ""));
             response.put("id", nuevoUsuario.getId());
             response.put("dni", nuevoUsuario.getDni());
             response.put("nombre", nuevoUsuario.getNombre() + " " + nuevoUsuario.getApellido());
@@ -2189,10 +2251,16 @@ public class AdminController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
             }
 
+            Usuario usuarioPrevio = usuarioOpt.get();
+            String rolAnterior = usuarioPrevio.getRoles() != null && !usuarioPrevio.getRoles().isEmpty()
+                    ? usuarioPrevio.getRoles().iterator().next().getNombre()
+                    : "";
+            String estadoAnterior = usuarioPrevio.getEstado();
+
             Long ciudadIdLong = Long.valueOf(ciudadId);
 
             Usuario actualizado = registroService.actualizarUsuarioAdministrativo(
-                    usuarioOpt.get(),
+                    usuarioPrevio,
                     dni,
                     nombre,
                     apellido,
@@ -2213,8 +2281,26 @@ public class AdminController {
                     estado
             );
 
+            List<String> cambios = new ArrayList<>();
+            addCambio(cambios, "dni", usuarioPrevio.getDni(), dni);
+            addCambio(cambios, "nombre", usuarioPrevio.getNombre(), nombre);
+            addCambio(cambios, "apellido", usuarioPrevio.getApellido(), apellido);
+            addCambio(cambios, "fechaNacimiento", usuarioPrevio.getFechaNacimiento(), fechaNacimiento);
+            addCambio(cambios, "genero", usuarioPrevio.getGenero(), genero);
+            addCambio(cambios, "correo", usuarioPrevio.getCorreo(), correo);
+            addCambio(cambios, "telefono", usuarioPrevio.getNumTelefono(), telefono);
+            addCambio(cambios, "rol", rolAnterior, rol);
+            if (estado != null) {
+                addCambio(cambios, "estado", estadoAnterior, estado);
+            }
+
+            String detalleCambios = "Modificacion de usuario: " + nombre + " " + apellido +
+                    " (DNI " + dni + ", ident " + identificador + ")" +
+                    (cambios.isEmpty() ? " | sin cambios detectados" : " | " + String.join("; ", cambios));
+
             response.put("success", true);
             response.put("message", "Usuario actualizado correctamente");
+            response.put("auditDetails", detalleCambios);
             response.put("data", mapearDetalleUsuario(actualizado));
             return ResponseEntity.ok(response);
 
@@ -2308,6 +2394,9 @@ public class AdminController {
 
             response.put("success", true);
             response.put("message", "Usuario dado de baja correctamente");
+            response.put("auditDetails",
+                    "Baja de usuario: " + usuarioOpt.get().getNombre() + " " + usuarioOpt.get().getApellido() +
+                    " (DNI " + usuarioOpt.get().getDni() + ", ident " + identificador + ")");
             return ResponseEntity.ok(response);
         } catch (IllegalStateException ex) {
             response.put("success", false);
@@ -2342,6 +2431,9 @@ public class AdminController {
 
             response.put("success", true);
             response.put("message", "Usuario reactivado correctamente");
+            response.put("auditDetails",
+                    "Reactivacion de usuario: " + usuarioOpt.get().getNombre() + " " + usuarioOpt.get().getApellido() +
+                    " (DNI " + usuarioOpt.get().getDni() + ", ident " + identificador + ")");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             response.put("success", false);
@@ -2550,7 +2642,8 @@ public class AdminController {
         if (usuario instanceof Docente) {
             Docente docente = (Docente) usuario;
             data.put("matricula", docente.getMatricula());
-            data.put("experiencia", docente.getAñosExperiencia());
+            data.put("experiencia", docente.getExperienciaActualizada());
+            data.put("experienciaBase", docente.getAñosExperiencia());
 
             // Validar cursos activos
             List<Curso> cursos = cursoRepository.findByDocentesId(docente.getId());
