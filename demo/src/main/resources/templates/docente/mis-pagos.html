@@ -417,12 +417,13 @@
                 tableRows.forEach(row => {
                     const badge = row.querySelector('.status-badge');
                     const status = badge ? badge.textContent.toLowerCase() : '';
+                    const isMora = badge ? badge.classList.contains('vencido') || status.includes('mora') : false;
 
                     if (filter === 'todos') {
                         row.style.display = '';
                     } else if (filter === 'pagados' && status.includes('pagado')) {
                         row.style.display = '';
-                    } else if (filter === 'pendientes' && status.includes('pendiente')) {
+                    } else if (filter === 'pendientes' && (status.includes('pendiente') || isMora)) {
                         row.style.display = '';
                     } else {
                         row.style.display = badge ? 'none' : (filter === 'todos' ? '' : 'none');
