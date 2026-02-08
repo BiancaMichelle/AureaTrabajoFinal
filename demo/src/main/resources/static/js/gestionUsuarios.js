@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const fotoInput = document.getElementById('foto');
     const fotoPreview = document.getElementById('foto-preview');
     const uploadPlaceholder = document.querySelector('.upload-placeholder');
+    const btnBorrarFotoForm = document.getElementById('btn-borrar-foto-form');
 
     // Elementos para horarios de docente
     const btnAddHorarioDocente = document.getElementById('btn-add-horario-docente');
@@ -34,6 +35,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const modalDetalleUsuario = document.getElementById('modalDetalleUsuario');
     const btnDarBajaUsuario = document.getElementById('btn-dar-baja-usuario'); // Cambiado a botón de baja
+    const btnBorrarFotoUsuario = document.getElementById('btn-borrar-foto-usuario');
     const modalDetalleRefs = {
         foto: document.getElementById('detalle-usuario-foto'),
         sinFoto: document.getElementById('detalle-usuario-sin-foto'),
@@ -89,6 +91,8 @@ document.addEventListener('DOMContentLoaded', function () {
     let currentPage = 1;
     let totalPages = 1;
     let pageSize = 10;
+    const defaultPageSize = 10;
+    let ciudadesDisponibles = false;
 
     // Inicialización
     initializeFormHandlers();
@@ -99,6 +103,7 @@ document.addEventListener('DOMContentLoaded', function () {
     initializeTable();
     initializeDateInput(); // ✅ Nueva función para configurar el input de fecha
     initializeDetalleUsuarioModal();
+    initializeFotoDeleteForm();
 
     // ✅ Configurar fecha máxima para el input de fecha (16 años atrás desde hoy)
     function initializeDateInput() {
@@ -112,6 +117,16 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    function confirmAction(title, message, onConfirm) {
+        if (typeof ModalConfirmacion !== 'undefined' && ModalConfirmacion.show) {
+            ModalConfirmacion.show(title, message, onConfirm);
+            return;
+        }
+        if (confirm(message)) {
+            onConfirm();
+        }
+    }
+
     function initializeDetalleUsuarioModal() {
         if (!modalDetalleUsuario) {
             return;
@@ -122,6 +137,41 @@ document.addEventListener('DOMContentLoaded', function () {
                 cerrarModalDetalleUsuario();
             }
         });
+
+        if (btnBorrarFotoUsuario) {
+            btnBorrarFotoUsuario.addEventListener('click', () => {
+                const identifier = modalDetalleUsuario.dataset.identifier;
+                if (!identifier) {
+                    showNotification('❌ No se pudo determinar el usuario', 'error');
+                    return;
+                }
+                confirmAction(
+                    'Eliminar foto',
+                    '¿Está seguro de que desea eliminar la foto de este usuario?',
+                    () => {
+                        const headers = {};
+                        if (csrfToken && csrfHeader) headers[csrfHeader] = csrfToken;
+                        fetch(`/admin/usuarios/${identifier}/foto`, {
+                            method: 'DELETE',
+                            headers
+                        })
+                        .then(async (resp) => {
+                            let data = {};
+                            try { data = await resp.json(); } catch (e) {}
+                            if (!resp.ok || data.success === false) {
+                                throw new Error(data.message || 'No se pudo borrar la foto');
+                            }
+                            renderDetalleUsuario(data.data || {});
+                            showNotification('✅ Foto eliminada', 'success');
+                        })
+                        .catch((error) => {
+                            console.error('Error eliminando foto:', error);
+                            showNotification(`❌ ${error.message || 'Error al eliminar foto'}`, 'error');
+                        });
+                    }
+                );
+            });
+        }
 
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape' && modalDetalleUsuario.classList.contains('show')) {
@@ -480,6 +530,55 @@ document.addEventListener('DOMContentLoaded', function () {
                 placeholder.style.display = 'flex';
             }
         }
+        if (btnBorrarFotoUsuario) {
+            btnBorrarFotoUsuario.style.display = urlValida ? 'inline-flex' : 'none';
+        }
+    }
+
+
+    function initializeFotoDeleteForm() {
+        if (!btnBorrarFotoForm) {
+            return;
+        }
+        btnBorrarFotoForm.addEventListener('click', () => {
+            const form = document.getElementById('user-form');
+            const identifier = form?.dataset?.identifier || form?.dataset?.originalDni;
+            if (!identifier) {
+                showNotification('❌ No se pudo determinar el usuario', 'error');
+                return;
+            }
+            confirmAction(
+                'Eliminar foto',
+                '¿Está seguro de que desea eliminar la foto de este usuario?',
+                () => {
+                    const headers = {};
+                    if (csrfToken && csrfHeader) headers[csrfHeader] = csrfToken;
+                    fetch(`/admin/usuarios/${identifier}/foto`, {
+                        method: 'DELETE',
+                        headers
+                    })
+                    .then(async (resp) => {
+                        let data = {};
+                        try { data = await resp.json(); } catch (e) {}
+                        if (!resp.ok || data.success === false) {
+                            throw new Error(data.message || 'No se pudo borrar la foto');
+                        }
+                        // Actualizar preview del formulario
+                        if (fotoPreview && uploadPlaceholder) {
+                            fotoPreview.src = '';
+                            fotoPreview.style.display = 'none';
+                            uploadPlaceholder.style.display = 'flex';
+                        }
+                        btnBorrarFotoForm.style.display = 'none';
+                        showNotification('✅ Foto eliminada', 'success');
+                    })
+                    .catch((error) => {
+                        console.error('Error eliminando foto:', error);
+                        showNotification(`❌ ${error.message || 'Error al eliminar foto'}`, 'error');
+                    });
+                }
+            );
+        });
     }
 
     function renderUbicacionDetalle(detalle = {}) {
@@ -890,8 +989,13 @@ document.addEventListener('DOMContentLoaded', function () {
                         ciudadSelect.appendChild(option);
                     });
                     ciudadSelect.disabled = false;
+                    ciudadSelect.required = true;
+                    ciudadesDisponibles = true;
                 } else {
                     ciudadSelect.innerHTML = '<option value="">No hay ciudades disponibles</option>';
+                    ciudadSelect.disabled = true;
+                    ciudadSelect.required = false;
+                    ciudadesDisponibles = false;
                 }
                 
                 document.getElementById('ciudadId').value = '';
@@ -900,6 +1004,9 @@ document.addEventListener('DOMContentLoaded', function () {
             .catch(error => {
                 console.error('❌ Error cargando ciudades:', error);
                 ciudadSelect.innerHTML = '<option value="">Error al cargar ciudades</option>';
+                ciudadSelect.disabled = true;
+                ciudadSelect.required = false;
+                ciudadesDisponibles = false;
                 throw error;
             });
     }
@@ -1004,9 +1111,13 @@ document.addEventListener('DOMContentLoaded', function () {
             hideFieldError(provinciaSelect);
         }
         
-        if (!ciudadId) {
-            showFieldError(ciudadSelect, 'Por favor, selecciona una ciudad');
-            isValid = false;
+        if (ciudadesDisponibles) {
+            if (!ciudadId) {
+                showFieldError(ciudadSelect, 'Por favor, selecciona una ciudad');
+                isValid = false;
+            } else {
+                hideFieldError(ciudadSelect);
+            }
         } else {
             hideFieldError(ciudadSelect);
         }
@@ -1063,12 +1174,32 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (btnCloseForm) {
             btnCloseForm.addEventListener('click', function() {
+                const form = document.getElementById('user-form');
+                const isEditMode = form?.dataset?.mode === 'edit';
+                if (isEditMode) {
+                    confirmAction(
+                        'Cancelar edición',
+                        '¿Está seguro de que desea cancelar? Los cambios no guardados se perderán.',
+                        hideForm
+                    );
+                    return;
+                }
                 hideForm();
             });
         }
 
         if (btnCancelForm) {
             btnCancelForm.addEventListener('click', function() {
+                const form = document.getElementById('user-form');
+                const isEditMode = form?.dataset?.mode === 'edit';
+                if (isEditMode) {
+                    confirmAction(
+                        'Cancelar edición',
+                        '¿Está seguro de que desea cancelar? Los cambios no guardados se perderán.',
+                        hideForm
+                    );
+                    return;
+                }
                 hideForm();
             });
         }
@@ -1653,31 +1784,44 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
     
-        function applyFilters() {
-            const filters = {
-                search: searchInput ? searchInput.value.toLowerCase() : '',
-                rol: filtroRol ? filtroRol.value : '',
-                estado: filtroEstado ? filtroEstado.value : '',
-                genero: filtroGenero ? filtroGenero.value : ''
-            };
-    
-            // Aplicar filtros a la tabla
-            filterTable(filters);
-        }
-    
-        function clearFilters() {
-            if (searchInput) searchInput.value = '';
-            if (filtroRol) filtroRol.value = '';
-            if (filtroEstado) filtroEstado.value = '';
-            if (filtroGenero) filtroGenero.value = '';
+    function applyFilters() {
+        const filters = {
+            search: searchInput ? searchInput.value.toLowerCase() : '',
+            rol: filtroRol ? filtroRol.value : '',
+            estado: filtroEstado ? filtroEstado.value : '',
+            genero: filtroGenero ? filtroGenero.value : ''
+        };
 
-            applyFilters();
-            loadUsuarios(1);
+        const filtersActive = hasActiveFilters(filters);
+        if (filtersActive) {
+            loadUsuarios(1, { forceAll: true, filtersOverride: filters });
+            return;
         }
+
+        // Aplicar filtros a la tabla
+        filterTable(filters);
+        setPaginationControlsVisible(true);
+    }
     
-        function filterTable(filters) {
-            const table = document.getElementById('usuarios-table');
-            if (!table) return;
+    function clearFilters() {
+        if (searchInput) searchInput.value = '';
+        if (filtroRol) filtroRol.value = '';
+        if (filtroEstado) filtroEstado.value = '';
+        if (filtroGenero) filtroGenero.value = '';
+
+        applyFilters();
+        pageSize = defaultPageSize;
+        setPaginationControlsVisible(true);
+        loadUsuarios(1);
+    }
+
+    function hasActiveFilters(filters = {}) {
+        return Object.values(filters).some((value) => value != null && `${value}`.trim() !== '');
+    }
+    
+    function filterTable(filters) {
+        const table = document.getElementById('usuarios-table');
+        if (!table) return;
     
             const rows = table.querySelectorAll('tbody tr');
             let visibleCount = 0;
@@ -1723,8 +1867,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (showRow) visibleCount++;
             });
     
-            updateTableStats(visibleCount);
-        }
+        updateTableStats(visibleCount);
+        return visibleCount;
+    }
     
         function updateTableStats(count) {
             const totalElement = document.getElementById('total-usuarios');
@@ -1892,6 +2037,23 @@ document.addEventListener('DOMContentLoaded', function () {
             setValue('fechaNacimiento', formatearFechaIso(detalle?.fechaNacimiento));
             setSelectValue('genero', detalle?.genero);
 
+            // Foto en formulario (solo visualización)
+            const fotoUrl = detalle?.foto || detalle?.fotoUrl || detalle?.fotoPerfil || detalle?.imagenPerfil;
+            if (fotoPreview && uploadPlaceholder) {
+                if (fotoUrl) {
+                    fotoPreview.src = fotoUrl;
+                    fotoPreview.style.display = 'block';
+                    uploadPlaceholder.style.display = 'none';
+                } else {
+                    fotoPreview.src = '';
+                    fotoPreview.style.display = 'none';
+                    uploadPlaceholder.style.display = 'flex';
+                }
+            }
+            if (btnBorrarFotoForm) {
+                btnBorrarFotoForm.style.display = fotoUrl ? 'inline-flex' : 'none';
+            }
+
             const estadoInferido = typeof detalle?.estado === 'string'
                 ? detalle.estado
                 : (detalle?.estadoBoolean === false ? 'INACTIVO' : 'ACTIVO');
@@ -2049,7 +2211,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 #genero[required],
                 #pais[required],
                 #provincia[required],
-                #ciudad[required],
                 #correo[required],
                 #telefono[required],
                 #rol-select[required]
@@ -2095,6 +2256,26 @@ document.addEventListener('DOMContentLoaded', function () {
             // ✅ Validar ubicación
             if (!validateLocation()) {
                 isValid = false;
+            }
+
+            // ✅ Validar campos de docente si corresponde
+            if (selectedRoles.includes('DOCENTE')) {
+                const matricula = document.getElementById('matricula');
+                const experiencia = document.getElementById('experiencia');
+
+                if (!matricula || !matricula.value.trim()) {
+                    if (matricula) showFieldError(matricula, 'La matrícula es obligatoria');
+                    isValid = false;
+                } else if (matricula) {
+                    hideFieldError(matricula);
+                }
+
+                if (!experiencia || !experiencia.value.trim()) {
+                    if (experiencia) showFieldError(experiencia, 'La experiencia es obligatoria');
+                    isValid = false;
+                } else if (experiencia) {
+                    hideFieldError(experiencia);
+                }
             }
         
             // ✅ Validar fecha de nacimiento
@@ -2153,6 +2334,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (form) {
             form.addEventListener('submit', function(event) {
                 event.preventDefault();
+                console.log('🧾 Submit de formulario detectado');
                 
                 if (form.dataset.mode === 'view') {
                     return;
@@ -2160,11 +2342,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 if (validateForm()) {
                     submitForm();
+                } else {
+                    console.warn('⚠️ Validación fallida, no se envía');
                 }
             });
         }
     
-        function submitForm() {
+        function submitForm(skipConfirm = false) {
             console.log('🚀 Enviando formulario de usuario...');
             
             const form = document.getElementById('user-form');
@@ -2175,6 +2359,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (isEditMode && (!identifier || `${identifier}`.trim() === '')) {
                 showNotification('❌ No se pudo determinar el usuario a editar', 'error');
+                return;
+            }
+            
+            if (isEditMode && !skipConfirm) {
+                confirmAction(
+                    'Confirmar modificación',
+                    '¿Está seguro de que desea guardar los cambios del usuario?',
+                    () => submitForm(true)
+                );
                 return;
             }
 
@@ -2211,6 +2404,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
             } else {
                 formData.delete('horariosDisponibilidad');
+                formData.delete('matricula');
+                formData.delete('experiencia');
+            }
+            
+            if (formData.get('experiencia') === '') {
+                formData.delete('experiencia');
             }
 
             const headers = {};
@@ -2407,15 +2606,24 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     
         // Función para cargar usuarios en la tabla
-        function loadUsuarios(page = 1) {
+        function loadUsuarios(page = 1, options = {}) {
             console.log(`🔄 Cargando usuarios página ${page}...`);
 
             const serverPage = Math.max(0, page - 1);
+            const { forceAll = false, filtersOverride = null } = options;
             const queryParams = new URLSearchParams();
+
+            const activeFilters = filtersOverride || getCurrentFilters();
+            const filtersActive = forceAll || hasActiveFilters(activeFilters);
+
+        if (filtersActive) {
+            queryParams.set('page', 0);
+            queryParams.set('size', 10000);
+        } else {
+            pageSize = defaultPageSize;
             queryParams.set('page', serverPage);
             queryParams.set('size', pageSize);
-
-            const activeFilters = getCurrentFilters();
+        }
             Object.entries(activeFilters).forEach(([key, value]) => {
                 if (value !== undefined && value !== null && `${value}`.trim() !== '') {
                     queryParams.append(key, value);
@@ -2451,20 +2659,34 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (data.success) {
                     const renderStats = populateUsuariosTable(data.data);
 
-                    if (data.pagination) {
-                        updatePagination(data.pagination);
-                    } else {
-                        const defaultPagination = {
-                            totalElements: renderStats.totalElements,
-                            totalPages: Math.max(1, Math.ceil(renderStats.totalElements / pageSize)),
-                            currentPage: serverPage,
-                            pageSize: pageSize
-                        };
-                        updatePagination(defaultPagination);
-                        console.log("⚠️ Usando paginación por defecto:", defaultPagination);
+                    if (!filtersActive) {
+                        if (data.pagination) {
+                            updatePagination(data.pagination);
+                        } else {
+                            const defaultPagination = {
+                                totalElements: renderStats.totalElements,
+                                totalPages: Math.max(1, Math.ceil(renderStats.totalElements / pageSize)),
+                                currentPage: serverPage,
+                                pageSize: pageSize
+                            };
+                            updatePagination(defaultPagination);
+                            console.log("⚠️ Usando paginación por defecto:", defaultPagination);
+                        }
                     }
 
-                    filterTable(activeFilters);
+                    const visibleCount = filterTable(activeFilters);
+                    if (filtersActive) {
+                        const singlePage = {
+                            totalElements: visibleCount || 0,
+                            totalPages: 1,
+                            currentPage: 0,
+                            pageSize: visibleCount || 1
+                        };
+                        updatePagination(singlePage);
+                        setPaginationControlsVisible(false);
+                    } else {
+                        setPaginationControlsVisible(true);
+                    }
                 } else {
                     console.error('Error del servidor:', data.message);
                     showNotification('❌ Error al cargar usuarios: ' + data.message, 'error', 10000);
@@ -2534,6 +2756,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 pageBtn.textContent = i;
                 pageBtn.onclick = () => loadUsuarios(i);
                 pagesContainer.appendChild(pageBtn);
+            }
+        }
+
+        function setPaginationControlsVisible(visible) {
+            const controls = document.querySelector('.pagination-controls');
+            if (controls) {
+                controls.style.display = visible ? 'flex' : 'none';
             }
         }
 

@@ -648,18 +648,21 @@ input:checked + .slider:after {
                         <!-- Imagen de presentación -->
                         <div class="form-section">
                             <h4><i class="fas fa-image"></i> Imagen de Presentación</h4>
-                            <div class="image-upload-container">
-                                <input type="file" id="imagen" name="imagen" accept="image/*" class="image-input">
-                                <label for="imagen" class="image-upload-area">
-                                    <div class="upload-placeholder">
-                                        <i class="fas fa-cloud-upload-alt"></i>
-                                        <p>Subir imagen</p>
-                                        <span>JPG, PNG, GIF hasta 5MB</span>
-                                    </div>
-                                    <img id="image-preview" style="display: none;" alt="Vista previa">
-                                </label>
-                            </div>
-                        </div>
+                              <div class="image-upload-container">
+                                 <input type="file" id="imagen" name="imagen" accept="image/*" class="image-input">
+                                 <label for="imagen" class="image-upload-area">
+                                     <div class="upload-placeholder">
+                                          <i class="fas fa-cloud-upload-alt"></i>
+                                         <p>Subir imagen</p>
+                                         <span>JPG, PNG, GIF hasta 5MB</span>
+                                     </div>
+                                     <img id="image-preview" style="display: none;" alt="Vista previa">
+                                 </label>
+                              </div>
+                              <button type="button" id="btn-clear-image" class="btn btn-outline-secondary btn-sm mt-2">
+                                  Borrar imagen
+                              </button>
+                          </div>
 
                         <!-- Certificación -->
                         <div class="form-section">
@@ -1616,6 +1619,41 @@ input:checked + .slider:after {
         console.log('🔥 SCRIPT INLINE CARGADO');
         
         document.addEventListener('DOMContentLoaded', function() {
+            // Imagen: preview inmediato al seleccionar archivo
+            const imagenInput = document.getElementById('imagen');
+            const imagePreview = document.getElementById('image-preview');
+            const uploadPlaceholder = document.querySelector('.upload-placeholder');
+            if (imagenInput && imagePreview && uploadPlaceholder) {
+                imagenInput.addEventListener('change', function(event) {
+                    const file = event.target.files && event.target.files[0];
+                    if (!file) return;
+                    if (file.size > 5 * 1024 * 1024) {
+                        if (typeof mostrarNotificacion === 'function') {
+                            mostrarNotificacion('La imagen supera 5MB', 'warning');
+                        } else {
+                            alert('La imagen supera 5MB');
+                        }
+                        imagenInput.value = '';
+                        return;
+                    }
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        imagePreview.src = e.target.result;
+                        imagePreview.style.display = 'block';
+                        uploadPlaceholder.style.display = 'none';
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+            const btnClearImage = document.getElementById('btn-clear-image');
+            if (btnClearImage && imagenInput && imagePreview && uploadPlaceholder) {
+                btnClearImage.addEventListener('click', function() {
+                    imagenInput.value = '';
+                    imagePreview.src = '';
+                    imagePreview.style.display = 'none';
+                    uploadPlaceholder.style.display = 'flex';
+                });
+            }
             console.log('✅ DOM CARGADO');
             
             // Test: Verificar que los botones de ver detalle estén presentes
@@ -3744,8 +3782,9 @@ if (typeof window.mostrarNotificacion !== 'function') {
             const imagenElement = document.getElementById('detalle-imagen');
             const sinImagenElement = document.getElementById('detalle-sin-imagen');
             if (imagenElement && sinImagenElement) {
-                if (oferta.imagen) {
-                    imagenElement.src = oferta.imagen;
+                const imagenSrc = oferta.imagenUrl || oferta.imagen;
+                if (imagenSrc) {
+                    imagenElement.src = imagenSrc;
                     imagenElement.style.display = 'block';
                     sinImagenElement.style.display = 'none';
                 } else {

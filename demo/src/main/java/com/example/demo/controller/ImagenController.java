@@ -23,8 +23,12 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.model.CarruselImagen;
 import com.example.demo.model.Instituto;
+import com.example.demo.model.OfertaImagen;
+import com.example.demo.model.UsuarioImagen;
 import com.example.demo.service.ImagenService;
 import com.example.demo.service.InstitutoService;
+import com.example.demo.service.OfertaImagenService;
+import com.example.demo.service.UsuarioImagenService;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import java.nio.file.Files;
@@ -39,6 +43,12 @@ public class ImagenController {
     
     @Autowired
     private InstitutoService institutoService;
+    
+    @Autowired
+    private OfertaImagenService ofertaImagenService;
+    
+    @Autowired
+    private UsuarioImagenService usuarioImagenService;
 
     // Endpoint principal para servir las imágenes del carrusel
     @GetMapping("/api/carrusel/imagen/{id}")
@@ -103,6 +113,42 @@ public class ImagenController {
     @GetMapping("/imagen/carrusel/{id}")
     public ResponseEntity<byte[]> obtenerImagenCarruselAlt(@PathVariable Long id) {
         return obtenerImagenCarrusel(id);
+    }
+
+    // Endpoint para servir las imágenes de ofertas académicas
+    @GetMapping("/api/ofertas/imagen/{id}")
+    public ResponseEntity<byte[]> obtenerImagenOferta(@PathVariable Long id) {
+        Optional<OfertaImagen> imagen = ofertaImagenService.obtenerImagenOferta(id);
+        
+        if (imagen.isPresent()) {
+            OfertaImagen img = imagen.get();
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.parseMediaType(img.getTipoMime()));
+            headers.setContentLength(img.getTamano());
+            headers.setCacheControl("max-age=3600"); // Cache por 1 hora
+            
+            return new ResponseEntity<>(img.getDatos(), headers, HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    // Endpoint para servir las imágenes de perfil de usuarios almacenadas en BD
+    @GetMapping("/api/usuarios/imagen/{id}")
+    public ResponseEntity<byte[]> obtenerImagenUsuario(@PathVariable Long id) {
+        Optional<UsuarioImagen> imagen = usuarioImagenService.obtenerImagenUsuario(id);
+        
+        if (imagen.isPresent()) {
+            UsuarioImagen img = imagen.get();
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.parseMediaType(img.getTipoMime()));
+            headers.setContentLength(img.getTamano());
+            headers.setCacheControl("max-age=3600");
+            
+            return new ResponseEntity<>(img.getDatos(), headers, HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
     }
 
     // API REST para subir múltiples imágenes al carrusel

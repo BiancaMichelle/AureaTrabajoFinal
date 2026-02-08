@@ -58,13 +58,9 @@ import com.example.demo.model.Tarea;
 import com.example.demo.model.Entrega;
 import com.example.demo.repository.*;
 import com.example.demo.service.MercadoPagoService;
+import com.example.demo.service.UsuarioImagenService;
 import com.example.demo.service.InstitutoService;
 import org.springframework.web.multipart.MultipartFile;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.util.UUID;
 import java.io.IOException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -118,6 +114,9 @@ public class AlumnoController {
     
     @Autowired
     private com.example.demo.service.NotificacionInscripcionService notificacionInscripcionService;
+    
+    @Autowired
+    private UsuarioImagenService usuarioImagenService;
 
     public AlumnoController(TareaRepository tareaRepository,
                           ExamenRepository examenRepository,
@@ -1303,6 +1302,7 @@ public class AlumnoController {
             // Actualizar foto de perfil
             if (foto != null && !foto.isEmpty()) {
                 try {
+                    eliminarFotoAnteriorSiExiste(usuario.getFoto());
                     String urlFoto = guardarFotoPerfil(foto);
                     usuario.setFoto(urlFoto);
                 } catch (IOException e) {
@@ -1341,36 +1341,32 @@ public class AlumnoController {
     }
 
     private String guardarFotoPerfil(MultipartFile foto) throws IOException {
-        // Crear directorio si no existe
-        Path directorioUsuarios = Paths.get("src/main/resources/static/img/usuarios");
-        if (!Files.exists(directorioUsuarios)) {
-            Files.createDirectories(directorioUsuarios);
-        }
-        
-        // Generar nombre único
-        String nombreOriginal = foto.getOriginalFilename();
-        String extension = nombreOriginal != null && nombreOriginal.contains(".") ? nombreOriginal.substring(nombreOriginal.lastIndexOf(".")) : ".jpg";
-        String nombreArchivo = "usuario_" + UUID.randomUUID().toString() + extension;
-        
-        // Guardar archivo en src (persistencia)
-        Path rutaArchivo = directorioUsuarios.resolve(nombreArchivo);
-        try (var inputStream = foto.getInputStream()) {
-            Files.copy(inputStream, rutaArchivo, StandardCopyOption.REPLACE_EXISTING);
-        }
-
-        // Intento de copiar a target/classes para visualización inmediata en desarrollo
-        try {
-            Path directorioTarget = Paths.get("target/classes/static/img/usuarios");
-            if (!Files.exists(directorioTarget)) {
-                Files.createDirectories(directorioTarget);
+        return "/api/usuarios/imagen/" + usuarioImagenService.guardarImagenUsuario(foto).getId();
+    }
+    
+    private void eliminarFotoAnteriorSiExiste(String fotoUrl) {
+        if (fotoUrl == null || fotoUrl.isBlank()) return;
+        Long id = extraerIdImagenUsuario(fotoUrl);
+        if (id != null) {
+            try {
+                usuarioImagenService.eliminarImagenUsuario(id);
+            } catch (Exception e) {
+                System.err.println("Advertencia: no se pudo eliminar foto previa: " + e.getMessage());
             }
-            Path rutaTarget = directorioTarget.resolve(nombreArchivo);
-            Files.copy(rutaArchivo, rutaTarget, StandardCopyOption.REPLACE_EXISTING);
-        } catch (IOException e) {
-            System.out.println("Advertencia: No se pudo copiar la imagen al directorio target: " + e.getMessage());
         }
-        
-        return "/img/usuarios/" + nombreArchivo;
+    }
+    
+    private Long extraerIdImagenUsuario(String fotoUrl) {
+        String prefix = "/api/usuarios/imagen/";
+        if (fotoUrl == null) return null;
+        int idx = fotoUrl.indexOf(prefix);
+        if (idx == -1) return null;
+        String idPart = fotoUrl.substring(idx + prefix.length());
+        try {
+            return Long.parseLong(idPart.trim());
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     @PostMapping("/perfil/seguridad/cambiar-password")

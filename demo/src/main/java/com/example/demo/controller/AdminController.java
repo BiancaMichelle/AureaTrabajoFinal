@@ -83,6 +83,8 @@ import com.example.demo.service.RegistroService;
 import com.example.demo.service.AnalisisRendimientoService;
 import com.example.demo.service.DisponibilidadDocenteService;
 import com.example.demo.service.GeneradorHorariosService;
+import com.example.demo.service.OfertaImagenService;
+import com.example.demo.service.UsuarioImagenService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Controller
@@ -131,6 +133,12 @@ public class AdminController {
     
     @Autowired
     private ImagenService imagenService;
+    
+    @Autowired
+    private OfertaImagenService ofertaImagenService;
+    
+    @Autowired
+    private UsuarioImagenService usuarioImagenService;
 
     @Autowired
     private UsuarioRepository usuarioRepository;
@@ -1461,6 +1469,8 @@ public class AdminController {
             @RequestParam(required = false) Double costoInscripcion,
             @RequestParam(required = false) String fechaInicio,
             @RequestParam(required = false) String fechaFin,
+            @RequestParam(required = false) String fechaInicioInscripcion,
+            @RequestParam(required = false) String fechaFinInscripcion,
             @RequestParam(required = false) String modalidad,
             @RequestParam(required = false) String otorgaCertificado,
             @RequestParam(required = false) MultipartFile imagen,
@@ -1530,6 +1540,8 @@ public class AdminController {
             Double costoAnterior = ofertaExistente.getCostoInscripcion();
             LocalDate fechaInicioAnterior = ofertaExistente.getFechaInicio();
             LocalDate fechaFinAnterior = ofertaExistente.getFechaFin();
+            LocalDate fechaInicioInscripcionAnterior = ofertaExistente.getFechaInicioInscripcion();
+            LocalDate fechaFinInscripcionAnterior = ofertaExistente.getFechaFinInscripcion();
             Modalidad modalidadAnterior = ofertaExistente.getModalidad();
             
             // Verificar si se puede modificar
@@ -1572,6 +1584,38 @@ public class AdminController {
                 errorResponse.put("success", false);
                 errorResponse.put("message", "Formato de fecha inválido. Use AAAA-MM-DD");
                 return ResponseEntity.badRequest().body(errorResponse);
+            }
+
+            // Validar fechas de inscripción si se proporcionan
+            if ((fechaInicioInscripcion != null && !fechaInicioInscripcion.trim().isEmpty()) ||
+                (fechaFinInscripcion != null && !fechaFinInscripcion.trim().isEmpty())) {
+                if (fechaInicioInscripcion == null || fechaInicioInscripcion.trim().isEmpty()) {
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("success", false);
+                    errorResponse.put("message", "La fecha de inicio de inscripción es obligatoria");
+                    return ResponseEntity.badRequest().body(errorResponse);
+                }
+                if (fechaFinInscripcion == null || fechaFinInscripcion.trim().isEmpty()) {
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("success", false);
+                    errorResponse.put("message", "La fecha de fin de inscripción es obligatoria");
+                    return ResponseEntity.badRequest().body(errorResponse);
+                }
+                try {
+                    LocalDate fechaInicioInscripcionDate = LocalDate.parse(fechaInicioInscripcion);
+                    LocalDate fechaFinInscripcionDate = LocalDate.parse(fechaFinInscripcion);
+                    if (fechaInicioInscripcionDate.isAfter(fechaFinInscripcionDate)) {
+                        Map<String, Object> errorResponse = new HashMap<>();
+                        errorResponse.put("success", false);
+                        errorResponse.put("message", "La fecha de inicio de inscripción no puede ser posterior a la fecha de fin de inscripción");
+                        return ResponseEntity.badRequest().body(errorResponse);
+                    }
+                } catch (Exception e) {
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("success", false);
+                    errorResponse.put("message", "Formato de fecha de inscripción inválido. Use AAAA-MM-DD");
+                    return ResponseEntity.badRequest().body(errorResponse);
+                }
             }
             
             // Validar lugar y enlace según modalidad
@@ -1662,6 +1706,12 @@ public class AdminController {
             if (descripcion != null) datosActualizar.put("descripcion", descripcion);
             datosActualizar.put("fechaInicio", fechaInicio); // Ya validados no nulos como String o LocalDate
             datosActualizar.put("fechaFin", fechaFin);
+            if (fechaInicioInscripcion != null && !fechaInicioInscripcion.trim().isEmpty()) {
+                datosActualizar.put("fechaInicioInscripcion", fechaInicioInscripcion);
+            }
+            if (fechaFinInscripcion != null && !fechaFinInscripcion.trim().isEmpty()) {
+                datosActualizar.put("fechaFinInscripcion", fechaFinInscripcion);
+            }
             
             // Lugar y Enlace pueden ser seteados a vacío, así que los pasamos directo
             datosActualizar.put("lugar", lugar);
@@ -1743,10 +1793,12 @@ public class AdminController {
                 addCambio(cambios, "nombre", nombreAnterior, ofertaModificada.getNombre());
                 addCambio(cambios, "descripcion", descripcionAnterior, ofertaModificada.getDescripcion());
                 addCambio(cambios, "cupos", cuposAnterior, ofertaModificada.getCupos());
-                addCambio(cambios, "costo", costoAnterior, ofertaModificada.getCostoInscripcion());
-                addCambio(cambios, "fechaInicio", fechaInicioAnterior, ofertaModificada.getFechaInicio());
-                addCambio(cambios, "fechaFin", fechaFinAnterior, ofertaModificada.getFechaFin());
-                addCambio(cambios, "modalidad", modalidadAnterior, ofertaModificada.getModalidad());
+            addCambio(cambios, "costo", costoAnterior, ofertaModificada.getCostoInscripcion());
+            addCambio(cambios, "fechaInicio", fechaInicioAnterior, ofertaModificada.getFechaInicio());
+            addCambio(cambios, "fechaFin", fechaFinAnterior, ofertaModificada.getFechaFin());
+            addCambio(cambios, "fechaInicioInscripcion", fechaInicioInscripcionAnterior, ofertaModificada.getFechaInicioInscripcion());
+            addCambio(cambios, "fechaFinInscripcion", fechaFinInscripcionAnterior, ofertaModificada.getFechaFinInscripcion());
+            addCambio(cambios, "modalidad", modalidadAnterior, ofertaModificada.getModalidad());
 
                 String detalleCambios = "Modificacion de oferta " + ofertaModificada.getTipoOferta() + ": " +
                         trunc(ofertaModificada.getNombre(), 80) + " (ID " + ofertaModificada.getIdOferta() + ")" +
@@ -2132,8 +2184,8 @@ public class AdminController {
                 return ResponseEntity.badRequest().body(response);
             }
 
-            // Convertir ciudadId a Long
-            Long ciudadIdLong = Long.valueOf(ciudadId);
+            // Convertir ciudadId a Long (opcional)
+            Long ciudadIdLong = (ciudadId != null && !ciudadId.isBlank()) ? Long.valueOf(ciudadId) : null;
 
             // ✅ Procesar horarios si es docente y hay horarios
             List<Map<String, String>> horariosList = new ArrayList<>();
@@ -2257,7 +2309,7 @@ public class AdminController {
                     : "";
             String estadoAnterior = usuarioPrevio.getEstado();
 
-            Long ciudadIdLong = Long.valueOf(ciudadId);
+            Long ciudadIdLong = (ciudadId != null && !ciudadId.isBlank()) ? Long.valueOf(ciudadId) : null;
 
             Usuario actualizado = registroService.actualizarUsuarioAdministrativo(
                     usuarioPrevio,
@@ -2309,6 +2361,52 @@ public class AdminController {
             response.put("success", false);
             response.put("message", "Error al actualizar usuario: " + e.getMessage());
             return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @DeleteMapping("/admin/usuarios/{identificador}/foto")
+    @Auditable(action = "ELIMINAR_FOTO_USUARIO", entity = "Usuario")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> eliminarFotoUsuario(@PathVariable String identificador) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            Optional<Usuario> usuarioOpt = buscarUsuarioPorIdentificador(identificador);
+            if (usuarioOpt.isEmpty()) {
+                response.put("success", false);
+                response.put("message", "Usuario no encontrado");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            }
+            
+            Usuario usuario = usuarioOpt.get();
+            String fotoUrl = usuario.getFoto();
+            if (fotoUrl == null || fotoUrl.isBlank()) {
+                response.put("success", false);
+                response.put("message", "El usuario no tiene foto");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            Long idImagen = extraerIdImagenUsuario(fotoUrl);
+            if (idImagen != null) {
+                try {
+                    usuarioImagenService.eliminarImagenUsuario(idImagen);
+                } catch (Exception e) {
+                    System.err.println("⚠️ No se pudo eliminar imagen en BD: " + e.getMessage());
+                }
+            }
+            
+            usuario.setFoto(null);
+            usuarioRepository.save(usuario);
+            
+            response.put("success", true);
+            response.put("message", "Foto eliminada correctamente");
+            response.put("data", mapearDetalleUsuario(usuario));
+            response.put("auditDetails", "Eliminacion de foto de usuario: " + usuario.getNombre() + " " + usuario.getApellido() +
+                " (DNI " + usuario.getDni() + ", ident " + identificador + ")");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "Error al eliminar foto: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 
@@ -2477,7 +2575,7 @@ public class AdminController {
                 usuarioMap.put("dni", usuario.getDni());
                 usuarioMap.put("nombreCompleto", usuario.getNombre() + " " + usuario.getApellido());
                 usuarioMap.put("correo", usuario.getCorreo());
-                usuarioMap.put("foto", null);
+                usuarioMap.put("foto", usuario.getFoto());
                 usuarioMap.put("estado", usuario.isEstado() ? "ACTIVO" : "INACTIVO");
                 if (usuario.getFechaRegistro() != null) {
                     usuarioMap.put("fechaRegistro", usuario.getFechaRegistro().toString());
@@ -2584,6 +2682,7 @@ public class AdminController {
         data.put("apellido", usuario.getApellido());
         data.put("nombreCompleto", usuario.getNombre() + " " + usuario.getApellido());
         data.put("correo", usuario.getCorreo());
+        data.put("foto", usuario.getFoto());
         data.put("telefono", usuario.getNumTelefono());
         data.put("fechaNacimiento", usuario.getFechaNacimiento());
         data.put("genero", usuario.getGenero());
@@ -2967,22 +3066,21 @@ public class AdminController {
     }
 
     private String guardarImagenOferta(MultipartFile imagen) throws IOException {
-        // Crear directorio si no existe
-        Path directorioOfertas = Paths.get("src/main/resources/static/img/ofertas");
-        if (!Files.exists(directorioOfertas)) {
-            Files.createDirectories(directorioOfertas);
+        // Guardar en BD y exponer vía endpoint (similar al carrusel)
+        return "/api/ofertas/imagen/" + ofertaImagenService.guardarImagenOferta(imagen).getId();
+    }
+    
+    private Long extraerIdImagenUsuario(String fotoUrl) {
+        String prefix = "/api/usuarios/imagen/";
+        if (fotoUrl == null) return null;
+        int idx = fotoUrl.indexOf(prefix);
+        if (idx == -1) return null;
+        String idPart = fotoUrl.substring(idx + prefix.length());
+        try {
+            return Long.parseLong(idPart.trim());
+        } catch (Exception e) {
+            return null;
         }
-        
-        // Generar nombre único
-        String nombreOriginal = imagen.getOriginalFilename();
-        String extension = nombreOriginal != null ? nombreOriginal.substring(nombreOriginal.lastIndexOf(".")) : ".jpg";
-        String nombreArchivo = "oferta_" + UUID.randomUUID().toString() + extension;
-        
-        // Guardar archivo
-        Path rutaArchivo = directorioOfertas.resolve(nombreArchivo);
-        Files.copy(imagen.getInputStream(), rutaArchivo, StandardCopyOption.REPLACE_EXISTING);
-        
-        return "/img/ofertas/" + nombreArchivo;
     }
     
     // ================= MÉTODOS AUXILIARES PARA OFERTAS =================

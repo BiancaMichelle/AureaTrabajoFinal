@@ -273,7 +273,9 @@ public class RegistroService {
     }
 
     private Ciudad buscarOCrearCiudad(Long ciudadId, Provincia provincia, String paisCodigo, String provinciaCodigo) {
-        Objects.requireNonNull(ciudadId, "ciudadId no puede ser nulo");
+        if (ciudadId == null) {
+            return null;
+        }
         Objects.requireNonNull(provincia, "provincia no puede ser nula");
         Objects.requireNonNull(paisCodigo, "paisCodigo no puede ser nulo");
         Objects.requireNonNull(provinciaCodigo, "provinciaCodigo no puede ser nulo");
@@ -350,7 +352,7 @@ public class RegistroService {
             System.out.println("📍 Ubicaciones asignadas:");
             System.out.println("   - País: " + pais.getNombre());
             System.out.println("   - Provincia: " + provincia.getNombre());
-            System.out.println("   - Ciudad: " + ciudad.getNombre());
+            System.out.println("   - Ciudad: " + (ciudad != null ? ciudad.getNombre() : "Sin ciudad"));
 
             // 5. LÓGICA DE CONTRASEÑA MODIFICADA
             String contraseñaPlana;
@@ -556,7 +558,7 @@ public class RegistroService {
             Provincia provincia = buscarOCrearProvincia(provinciaCodigo, pais);
             Ciudad ciudad = buscarOCrearCiudad(ciudadId, provincia, paisCodigo, provinciaCodigo);
 
-            System.out.println("✅ Entidades de ubicación encontradas: pais=" + pais.getNombre() + ", provincia=" + provincia.getNombre() + ", ciudad=" + ciudad.getNombre());
+            System.out.println("✅ Entidades de ubicación encontradas: pais=" + pais.getNombre() + ", provincia=" + provincia.getNombre() + ", ciudad=" + (ciudad != null ? ciudad.getNombre() : "Sin ciudad"));
 
             usuarioExistente.setDni(nuevoDni);
             usuarioExistente.setNombre(nombre);
@@ -574,7 +576,7 @@ public class RegistroService {
             usuarioExistente.setProvincia(provincia);
             usuarioExistente.setCiudad(ciudad);
 
-            System.out.println("✅ Ubicación asignada al usuario: pais=" + usuarioExistente.getPais().getNombre() + ", provincia=" + usuarioExistente.getProvincia().getNombre() + ", ciudad=" + usuarioExistente.getCiudad().getNombre());
+            System.out.println("✅ Ubicación asignada al usuario: pais=" + usuarioExistente.getPais().getNombre() + ", provincia=" + usuarioExistente.getProvincia().getNombre() + ", ciudad=" + (usuarioExistente.getCiudad() != null ? usuarioExistente.getCiudad().getNombre() : "Sin ciudad"));
 
             boolean estadoActivo = estadoLiteral == null || estadoLiteral.isBlank() || !"INACTIVO".equalsIgnoreCase(estadoLiteral);
             usuarioExistente.setEstado(estadoActivo);

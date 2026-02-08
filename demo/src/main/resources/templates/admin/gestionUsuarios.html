@@ -10,33 +10,117 @@
             flex-wrap: wrap;
         }
 
-        .usuario-detalle-avatar {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 3px solid var(--primary-color, #2563eb);
-            background: #fff;
+        .detail-photo-container {
+            width: 200px;
+            height: 200px;
+            position: relative;
         }
 
-        .usuario-detalle-avatar-placeholder {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            background: #f8fafc;
-            border: 2px dashed #cbd5f5;
+        .detail-photo-container .image-upload-area {
+            width: 100%;
+            height: 100%;
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 0 !important;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(59, 130, 246, 0.02);
+            position: relative;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        #detalle-usuario-foto {
+            width: 100% !important;
+            height: 100% !important;
+            max-width: 100% !important;
+            max-height: 100% !important;
+            border-radius: 10px;
+            object-fit: contain;
+            position: absolute;
+            inset: 0;
+            margin: auto;
+            display: block;
+        }
+
+        #detalle-usuario-sin-foto {
+            position: absolute;
+            inset: 0;
+            margin: auto;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-direction: column;
-            color: #64748b;
-            gap: 0.25rem;
-            font-size: 2rem;
+        }
+
+        .btn-delete-photo {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-radius: 0.5rem;
+            background: #dc2626;
+            color: #fff;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(220, 38, 38, 0.2);
+            transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+        }
+
+        .btn-delete-photo:hover {
+            background: #b91c1c;
+        }
+
+        .btn-delete-photo:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.45);
         }
 
         .usuario-detalle-avatar-placeholder span {
             font-size: 0.75rem;
             color: #94a3b8;
+        }
+
+        .user-photo-container {
+            width: 100% !important;
+            height: 250px !important;
+            position: relative;
+        }
+
+        .user-photo-container .image-upload-area {
+            width: 100% !important;
+            height: 250px !important;
+            padding: 0 !important;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            overflow: hidden;
+            position: relative;
+            box-sizing: border-box;
+        }
+
+        #foto-preview {
+            width: 100% !important;
+            height: 100% !important;
+            max-width: 100% !important;
+            max-height: 100% !important;
+            border-radius: 10px;
+            object-fit: contain;
+            display: block;
+            position: absolute;
+            inset: 0;
+            margin: auto;
+        }
+
+        .user-photo-container .upload-placeholder {
+            position: absolute;
+            inset: 0;
+            margin: auto;
+            padding: 1rem;
         }
 
         .detalle-roles-container {
@@ -356,18 +440,21 @@
                     <div class="form-right-column">
                         <!-- Foto de Perfil -->
                         <div class="form-section">
-                            <h4><i class="fas fa-camera"></i> Foto de Perfil (Opcional)</h4>
-                            <div class="image-upload-container">
-                                <input type="file" id="foto" name="foto" accept="image/*" class="image-input">
-                                <div class="image-upload-area">
+                            <h4><i class="fas fa-camera"></i> Foto de Perfil</h4>
+                            <div class="image-upload-container user-photo-container" style="width: 100%; height: 250px; position: relative; overflow: hidden;">
+                                <input type="file" id="foto" name="foto" accept="image/*" class="image-input" disabled>
+                                <div class="image-upload-area" style="width: 100%; height: 250px; position: relative; overflow: hidden;">
                                     <div class="upload-placeholder">
                                         <i class="fas fa-cloud-upload-alt"></i>
-                                        <p>Haga clic para seleccionar una foto</p>
-                                        <span>JPG, PNG (máx. 2MB)</span>
+                                        <p>La foto se gestiona desde el perfil del usuario</p>
+                                        <span>Solo se permite borrar desde aquí</span>
                                     </div>
-                                    <img id="foto-preview" style="display: none;">
+                                    <img id="foto-preview" style="display: none; width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; position: absolute; inset: 0; margin: auto;">
                                 </div>
                             </div>
+                            <button type="button" id="btn-borrar-foto-form" class="btn-delete-photo mt-3" style="display: none; background:#dc2626;color:#fff;border:1px solid rgba(220,38,38,0.2);border-radius:8px;padding:8px 12px;font-weight:600;font-size:0.875rem;box-shadow:0 1px 2px rgba(0,0,0,0.08);">
+                                Borrar foto
+                            </button>
                         </div>
 
                         <!-- Estado del Usuario -->
@@ -520,11 +607,18 @@
                     </div>
                     <div class="usuario-detalle-avatar-container">
                         <div>
-                            <img id="detalle-usuario-foto" src="" alt="Foto del usuario" class="usuario-detalle-avatar" style="display: none;">
-                            <div id="detalle-usuario-sin-foto" class="usuario-detalle-avatar-placeholder">
-                                <i class="fas fa-user"></i>
-                                <span>Sin foto</span>
+                            <div class="image-upload-container detail-photo-container" style="width: 200px; height: 200px; position: relative; overflow: hidden;">
+                                <div class="image-upload-area" style="width: 100%; height: 100%; position: relative; overflow: hidden; padding: 0;">
+                                    <div id="detalle-usuario-sin-foto" class="upload-placeholder">
+                                        <i class="fas fa-user"></i>
+                                        <span>Sin foto</span>
+                                    </div>
+                                    <img id="detalle-usuario-foto" src="" alt="Foto del usuario" style="display: none; width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; position: absolute; inset: 0; margin: auto;">
+                                </div>
                             </div>
+                            <button type="button" id="btn-borrar-foto-usuario" class="btn-delete-photo mt-3" style="display: none; background:#dc2626;color:#fff;border:1px solid rgba(220,38,38,0.2);border-radius:8px;padding:8px 12px;font-weight:600;font-size:0.875rem;box-shadow:0 1px 2px rgba(0,0,0,0.08);">
+                                Borrar foto
+                            </button>
                         </div>
                         <div class="oferta-info-grid">
                             <div class="info-item">
