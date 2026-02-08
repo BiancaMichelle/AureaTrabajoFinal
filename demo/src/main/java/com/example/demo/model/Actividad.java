@@ -81,4 +81,12 @@ public abstract class Actividad {
         }
         return "";
     }
+
+    @Transient
+    public LocalDateTime getFechaAperturaActividad() {
+        if (this instanceof Examen examen) {
+            return examen.getFechaApertura();
+        }
+        return null;
+    }
 }

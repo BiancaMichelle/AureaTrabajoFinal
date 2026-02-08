@@ -119,6 +119,51 @@
             font-weight: 600;
         }
 
+        /* Toast notifications */
+        .toast-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            background: #fff;
+            color: #1f2937;
+            padding: 14px 16px;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+            border-left: 4px solid #3b82f6;
+            max-width: 360px;
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            animation: slideInRight 0.3s ease-out;
+        }
+
+        .toast-notification.toast-warning {
+            border-left-color: #f59e0b;
+        }
+
+        .toast-notification.toast-error {
+            border-left-color: #ef4444;
+        }
+
+        .toast-notification.toast-success {
+            border-left-color: #22c55e;
+        }
+
+        .toast-notification .toast-close {
+            background: transparent;
+            border: none;
+            color: #6b7280;
+            font-size: 16px;
+            cursor: pointer;
+            margin-left: auto;
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(120%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
         .edit-icon {
             display: none;
             position: absolute;
@@ -936,7 +981,9 @@
                                             th:data-actividad-descripcion="${actividad.descripcion}"
                                             th:data-actividad-tipo="${actividad.tipoActividad}"
                                             th:data-actividad-contenido="${actividad.contenidoTextoActividad}"
-                                            th:data-actividad-url="${actividad.urlActividad}">
+                                            th:data-actividad-url="${actividad.urlActividad}"
+                                            th:data-actividad-apertura="${actividad.fechaAperturaActividad != null ? #temporals.format(actividad.fechaAperturaActividad, 'yyyy-MM-dd''T''HH:mm:ss') : ''}"
+                                            th:data-actividad-apertura-text="${actividad.fechaAperturaActividad != null ? #temporals.format(actividad.fechaAperturaActividad, 'dd/MM/yyyy HH:mm') : ''}">
                                             
                                             <!-- Icono Dinámico -->
                                             <div class="activity-icon-container"
@@ -1019,11 +1066,11 @@
                                                         </th:block>
 
                                                         <th:block th:if="${actividad instanceof T(com.example.demo.model.Examen)}">
-                                                            <a th:unless="${puedeModificar}"
-                                                               th:href="@{/examen/realizar/{id}(id=${actividad.idActividad})}"
-                                                               class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                                                                <button th:unless="${puedeModificar}" type="button"
+                                                                                    th:attr="data-examen-url=@{/examen/realizar/{id}(id=${actividad.idActividad})}"
+                                                                                    class="btn btn-sm btn-outline-primary rounded-pill px-3 js-ver-examen">
                                                                 Ver Examen
-                                                            </a>
+                                                            </button>
                                                             <a th:if="${puedeModificar}"
                                                                th:href="@{/examen/detalle/{id}(id=${actividad.idActividad})}"
                                                                class="btn btn-sm btn-outline-primary rounded-pill px-3">
@@ -1286,6 +1333,27 @@
                 const visible = parseVisibilityFlag(button.dataset.visible);
                 updateVisibilityButtonState(button, visible);
             });
+        }
+
+        function mostrarToast(mensaje, tipo = 'warning', duracion = 6000) {
+            const toast = document.createElement('div');
+            toast.className = `toast-notification toast-${tipo}`;
+            toast.innerHTML = `
+                <i class="fas fa-info-circle text-${tipo === 'warning' ? 'yellow' : (tipo === 'error' ? 'red' : 'green')}-500 mt-0.5"></i>
+                <div class="text-sm">${mensaje}</div>
+                <button class="toast-close" aria-label="Cerrar">&times;</button>
+            `;
+
+            document.body.appendChild(toast);
+
+            const close = () => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            };
+
+            toast.querySelector('.toast-close').addEventListener('click', close);
+            setTimeout(close, duracion);
         }
 
         async function updateModuleVisibilityOnServer(moduloId, visible) {
@@ -1668,6 +1736,43 @@
             });
         }
 
+        function registerExamLinks() {
+            document.querySelectorAll('.js-ver-examen').forEach((button) => {
+                button.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    if (PUEDE_MODIFICAR) {
+                        const url = button.getAttribute('data-examen-url');
+                        if (url) window.location.href = url;
+                        return;
+                    }
+
+                    const card = event.currentTarget.closest('.activity-item');
+                    const aperturaIso = card ? card.getAttribute('data-actividad-apertura') : null;
+                    
+                    if (!aperturaIso) {
+                        const url = button.getAttribute('data-examen-url');
+                        if (url) window.location.href = url;
+                        return;
+                    }
+
+                    const apertura = new Date(aperturaIso);
+                    const ahora = new Date();
+                    
+                    if (apertura > ahora) {
+                        const textoApertura = card.getAttribute('data-actividad-apertura-text') || apertura.toLocaleString('es-AR');
+                        mostrarToast(`El examen aún no está abierto. Intenta el ${textoApertura}.`, 'warning');
+                        return;
+                    }
+
+                    // Si pasó todas las validaciones, navegar
+                    const url = button.getAttribute('data-examen-url');
+                    if (url) window.location.href = url;
+                });
+            });
+        }
+
         let pendingDeleteType = null;
         let pendingDeleteId = null;
 
@@ -1772,6 +1877,7 @@
         registerVisibilityToggleHandlers();
         registerEditButtons();
         registerDeleteButtons();
+        registerExamLinks();
         window.closeEditModuleModal = closeEditModuleModal;
         window.closeDeleteModal = closeDeleteModal;
 
@@ -2714,8 +2820,19 @@
             console.log('📋 Cargando pools para oferta:', OFERTA_ID);
 
             // Primero cargamos los pools existentes de esta oferta
-            fetch(`/pool/listar/${OFERTA_ID}`)
-                .then(response => response.json())
+            fetch(`/pool/listar/${OFERTA_ID}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'same-origin'
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error al cargar pools: ' + response.status);
+                    }
+                    return response.json();
+                })
                 .then(poolsExistentes => {
                     console.log('=== POOLS EXISTENTES ===');
                     console.log('Cantidad:', poolsExistentes.length);

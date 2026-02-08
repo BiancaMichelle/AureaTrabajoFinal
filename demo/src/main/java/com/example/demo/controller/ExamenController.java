@@ -113,7 +113,7 @@ public class ExamenController {
     public String realizarExamen(@PathVariable Long examenId, Principal principal, Model model,
             Authentication authentication) {
         System.out.println("🎯 =================  ACCESO A EXAMEN =================");
-        System.out.println("🎯 Usuario: " + principal.getName() + " intenta acceder al examen ID: " + examenId);
+        System.out.println("🎯 Usuario: " + (principal != null ? principal.getName() : "N/A") + " intenta acceder al examen ID: " + examenId);
         try {
             Examen examen = examenRepository.findById(examenId)
                     .orElseThrow(() -> new RuntimeException("Examen no encontrado"));
@@ -126,13 +126,17 @@ public class ExamenController {
 
             if (!esDocenteOAdmin) {
                 System.out.println("🎯 Iniciando validaciones para alumno...");
+                String dniAlumno = obtenerDniDesdePrincipal(principal);
+                if (dniAlumno == null || dniAlumno.isBlank()) {
+                    return "redirect:/alumno/mis-ofertas?error=No+se+pudo+validar+tu+usuario";
+                }
                 // 0. Validar si ya lo rindió y está corregido
                 try {
                     // Fix: Find Alumno ID properly (Assuming Usuario extends or finding Alumno by
                     // DNI)
                     // Using AlumnoRepository directly if ID needed, or just casting if Usuario
                     // instance of Alumno
-                    Alumno alumno = alumnoRepository.findByDni(principal.getName()).orElse(null);
+                    Alumno alumno = alumnoRepository.findByDni(dniAlumno).orElse(null);
                     if (alumno != null) {
                         List<Intento> intentosPrevios = intentoRepository
                                 .findByAlumno_IdAndExamen_IdActividad(alumno.getId(), examenId);
@@ -150,7 +154,7 @@ public class ExamenController {
 
                 // 1. Validar Inscripción Activa
                 List<Inscripciones> inscripciones = inscripcionRepository.findByAlumnoDniAndOfertaId(
-                        principal.getName(), examen.getModulo().getCurso().getIdOferta());
+                    dniAlumno, examen.getModulo().getCurso().getIdOferta());
 
                 Inscripciones inscripcionActiva = inscripciones.stream()
                         .filter(i -> Boolean.TRUE.equals(i.getEstadoInscripcion()))
@@ -283,9 +287,15 @@ public class ExamenController {
                 if (principal == null)
                     return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 
+                String dniAlumno = obtenerDniDesdePrincipal(principal);
+                if (dniAlumno == null || dniAlumno.isBlank()) {
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                            .body(Map.of("error", "Usuario no identificado"));
+                }
+
                 // 1. Validar Inscripción
                 List<Inscripciones> inscripciones = inscripcionRepository.findByAlumnoDniAndOfertaId(
-                        principal.getName(), examen.getModulo().getCurso().getIdOferta());
+                    dniAlumno, examen.getModulo().getCurso().getIdOferta());
 
                 Inscripciones inscripcionActiva = inscripciones.stream()
                         .filter(i -> Boolean.TRUE.equals(i.getEstadoInscripcion()))
@@ -407,7 +417,8 @@ public class ExamenController {
             Examen examen = examenRepository.findById(examenId)
                     .orElseThrow(() -> new RuntimeException("Examen no encontrado"));
 
-            Alumno alumno = alumnoRepository.findByDni(principal.getName())
+                String dniAlumno = obtenerDniDesdePrincipal(principal);
+                Alumno alumno = alumnoRepository.findByDni(dniAlumno)
                     .orElseThrow(() -> new RuntimeException("Alumno no encontrado"));
 
             Intento intento = new Intento();
@@ -476,7 +487,7 @@ public class ExamenController {
             intentoRepository.save(intento);
 
             if (Boolean.TRUE.equals(examen.getCalificacionAutomatica())) {
-                enviarFeedbackIA(alumno, examen, intento, respuestasIntento);
+                examenFeedbackService.generarYProgramarFeedback(alumno, examen, intento, respuestasIntento);
             }
 
             Map<String, Object> response = new HashMap<>();
@@ -561,36 +572,15 @@ public class ExamenController {
         return result;
     }
 
-    private void enviarFeedbackIA(Usuario alumno, Examen examen, Intento intento, List<RespuestaIntento> respuestasIntento) {
-        List<RespuestaIntento> incorrectas = respuestasIntento.stream()
-                .filter(r -> Boolean.FALSE.equals(r.getEsCorrecta()))
-                .limit(3)
-                .collect(Collectors.toList());
-
-        if (incorrectas.isEmpty()) {
-            return;
+    private String obtenerDniDesdePrincipal(Principal principal) {
+        if (principal == null || principal.getName() == null) {
+            return null;
         }
-
-        List<Modulo> modulosRelacionados = examen.getModulosRelacionados();
-        if (modulosRelacionados == null || modulosRelacionados.isEmpty()) {
-            modulosRelacionados = examen.getModulo() != null ? List.of(examen.getModulo()) : List.of();
-        }
-
-        String feedback = chatServiceSimple.generarFeedbackExamen(alumno, examen, incorrectas, modulosRelacionados);
-        if (feedback == null || feedback.isBlank()) {
-            return;
-        }
-
-        LocalDateTime ahora = LocalDateTime.now();
-        LocalDateTime cierre = examen.getFechaCierre();
-        if (cierre == null || !ahora.isBefore(cierre)) {
-            examenFeedbackService.enviarFeedbackInmediato(alumno, examen, feedback);
-        } else {
-            examenFeedbackService.programarFeedback(alumno, examen,
-                    intento != null ? intento.getIdIntento() : null,
-                    feedback,
-                    cierre);
-        }
+        String identificador = principal.getName();
+        Usuario usuario = usuarioRepository.findByDni(identificador)
+                .or(() -> usuarioRepository.findByCorreo(identificador))
+                .orElse(null);
+        return usuario != null && usuario.getDni() != null ? usuario.getDni() : identificador;
     }
 
     @GetMapping("/{examenId}/intentos")

@@ -6,6 +6,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +17,9 @@ import com.example.demo.model.Notificacion;
 import com.example.demo.model.Usuario;
 import com.example.demo.repository.ExamenFeedbackPendienteRepository;
 import com.example.demo.repository.NotificacionRepository;
+import com.example.demo.model.Modulo;
+import com.example.demo.model.RespuestaIntento;
+import com.example.demo.ia.service.ChatServiceSimple;
 
 @Service
 public class ExamenFeedbackService {
@@ -27,6 +31,51 @@ public class ExamenFeedbackService {
 
     @Autowired
     private NotificacionRepository notificacionRepository;
+
+    @Autowired
+    private ChatServiceSimple chatServiceSimple;
+
+    @Async
+    @Transactional
+    public void generarYProgramarFeedback(Usuario alumno, Examen examen, com.example.demo.model.Intento intento, List<RespuestaIntento> respuestasIntento) {
+        try {
+            if (alumno == null || examen == null || respuestasIntento == null) {
+                return;
+            }
+
+            List<RespuestaIntento> incorrectas = respuestasIntento.stream()
+                    .filter(r -> Boolean.FALSE.equals(r.getEsCorrecta()))
+                    .limit(3)
+                    .toList();
+
+            if (incorrectas.isEmpty()) {
+                return;
+            }
+
+            List<Modulo> modulosRelacionados = examen.getModulosRelacionados();
+            if (modulosRelacionados == null || modulosRelacionados.isEmpty()) {
+                modulosRelacionados = examen.getModulo() != null ? List.of(examen.getModulo()) : List.of();
+            }
+
+            String feedback = chatServiceSimple.generarFeedbackExamen(alumno, examen, incorrectas, modulosRelacionados);
+            if (feedback == null || feedback.isBlank()) {
+                return;
+            }
+
+            LocalDateTime ahora = LocalDateTime.now();
+            LocalDateTime cierre = examen.getFechaCierre();
+            if (cierre == null || !ahora.isBefore(cierre)) {
+                enviarFeedbackInmediato(alumno, examen, feedback);
+            } else {
+                programarFeedback(alumno, examen,
+                        intento != null ? intento.getIdIntento() : null,
+                        feedback,
+                        cierre);
+            }
+        } catch (Exception e) {
+            log.error("Error generando feedback IA: {}", e.getMessage());
+        }
+    }
 
     @Transactional
     public void programarFeedback(Usuario alumno, Examen examen, java.util.UUID intentoId, String mensaje, LocalDateTime fechaProgramada) {
