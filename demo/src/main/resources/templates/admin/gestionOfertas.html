@@ -3125,6 +3125,29 @@
                     return;
                 }
 
+                // ✅ ORDENAR horarios por día y hora antes de mostrar
+                const DIAS_ORDEN = {
+                    'LUNES': 1, 'MARTES': 2, 'MIERCOLES': 3, 'MIÉRCOLES': 3,
+                    'JUEVES': 4, 'VIERNES': 5, 'SABADO': 6, 'SÁBADO': 6, 'DOMINGO': 7
+                };
+
+                horariosSeleccionados.sort((a, b) => {
+                    const diaA = (a.dia || '').toUpperCase().trim();
+                    const diaB = (b.dia || '').toUpperCase().trim();
+                    const ordenA = DIAS_ORDEN[diaA] || 999;
+                    const ordenB = DIAS_ORDEN[diaB] || 999;
+
+                    // Si son días diferentes, ordenar por día
+                    if (ordenA !== ordenB) {
+                        return ordenA - ordenB;
+                    }
+
+                    // Si es el mismo día, ordenar por hora de inicio
+                    const horaA = a.horaInicio || '';
+                    const horaB = b.horaInicio || '';
+                    return horaA.localeCompare(horaB);
+                });
+
                 // Crear chips para cada horario
                 horariosSeleccionados.forEach((horario, index) => {
                     const chip = document.createElement('div');
@@ -3144,7 +3167,7 @@
                 // Actualizar input hidden con JSON
                 hiddenInput.value = JSON.stringify(horariosSeleccionados);
 
-                console.log('🔄 Horarios actualizados:', horariosSeleccionados.length);
+                console.log('🔄 Horarios actualizados y ordenados:', horariosSeleccionados.length);
             }
 
             // Función global para remover horario
