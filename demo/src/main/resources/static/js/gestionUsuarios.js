@@ -1563,6 +1563,15 @@ document.addEventListener('DOMContentLoaded', function () {
         // ✅ NUEVA: Función para verificar horarios solapados
         function existeHorarioSolapado(dia, nuevaHoraDesde, nuevaHoraHasta) {
             const filas = horariosDocenteTableBody.querySelectorAll('tr');
+            const toMinutes = (valor) => {
+                if (!valor) return 0;
+                const partes = valor.toString().split(':');
+                const h = parseInt(partes[0] || '0', 10);
+                const m = parseInt(partes[1] || '0', 10);
+                return (h * 60) + m;
+            };
+            const nuevoInicio = toMinutes(nuevaHoraDesde);
+            const nuevoFin = toMinutes(nuevaHoraHasta);
             
             for (let fila of filas) {
                 const diaExistente = fila.cells[0].textContent;
@@ -1570,10 +1579,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 const [horaDesdeExistente, horaHastaExistente] = horarioExistente.split(' - ');
                 
                 if (diaExistente === dia) {
-                    // Verificar solapamiento
-                    if ((nuevaHoraDesde >= horaDesdeExistente && nuevaHoraDesde < horaHastaExistente) ||
-                        (nuevaHoraHasta > horaDesdeExistente && nuevaHoraHasta <= horaHastaExistente) ||
-                        (nuevaHoraDesde <= horaDesdeExistente && nuevaHoraHasta >= horaHastaExistente)) {
+                    const existenteInicio = toMinutes(horaDesdeExistente);
+                    const existenteFin = toMinutes(horaHastaExistente);
+                    // Verificar solapamiento (permitir que termine exactamente cuando otro comienza)
+                    if (nuevoInicio < existenteFin && nuevoFin > existenteInicio) {
                         return true;
                     }
                 }

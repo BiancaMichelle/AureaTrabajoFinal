@@ -2971,13 +2971,23 @@ input:checked + .slider:after {
                 return;
             }
             
+            const toMinutes = (valor) => {
+                if (!valor) return 0;
+                const partes = valor.toString().split(':');
+                const h = parseInt(partes[0] || '0', 10);
+                const m = parseInt(partes[1] || '0', 10);
+                return (h * 60) + m;
+            };
+            const nuevoInicio = toMinutes(horaInicio);
+            const nuevoFin = toMinutes(horaFin);
+
             // Verificar conflictos de horario
-            const conflicto = horariosSeleccionados.find(h => 
-                h.dia === dia && 
-                ((horaInicio >= h.horaInicio && horaInicio < h.horaFin) ||
-                 (horaFin > h.horaInicio && horaFin <= h.horaFin) ||
-                 (horaInicio <= h.horaInicio && horaFin >= h.horaFin))
-            );
+            const conflicto = horariosSeleccionados.find(h => {
+                if (h.dia !== dia) return false;
+                const existenteInicio = toMinutes(h.horaInicio);
+                const existenteFin = toMinutes(h.horaFin);
+                return nuevoInicio < existenteFin && nuevoFin > existenteInicio;
+            });
             
             if (conflicto) {
                 mostrarNotificacion('Existe un conflicto de horario en el mismo día', 'error');
