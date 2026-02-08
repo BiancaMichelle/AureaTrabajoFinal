@@ -57,6 +57,11 @@ public class Instituto {
     @Column(length = 1000)
     private String politicaPagos;
 
+    // Datos fiscales para comprobantes
+    private String razonSocial;
+    private String cuil;
+    private java.time.LocalDateTime inicioActividad;
+
     // Configuración de bloqueos por mora (días de tolerancia)
     private Integer diasMoraBloqueoExamen;
     private Integer diasMoraBloqueoMaterial;

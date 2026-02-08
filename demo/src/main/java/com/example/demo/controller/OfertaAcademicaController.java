@@ -23,6 +23,8 @@ import com.example.demo.model.Curso;
 import com.example.demo.model.Formacion;
 import com.example.demo.model.Modulo;
 import com.example.demo.model.OfertaAcademica;
+import com.example.demo.model.Usuario;
+import com.example.demo.model.Docente;
 import com.example.demo.repository.ModuloRepository;
 import com.example.demo.repository.OfertaAcademicaRepository;
 import com.example.demo.repository.UsuarioRepository;
@@ -73,6 +75,16 @@ public class OfertaAcademicaController {
         } else {
             System.out.println("👤 Usuario alumno - cargando SOLO módulos visibles");
             modulos = moduloRepository.findByCursoAndVisibilidadTrueOrderByFechaInicioModuloAsc(oferta);
+        }
+
+        if (!puedeModificar && modulos != null) {
+            for (Modulo modulo : modulos) {
+                if (modulo.getActividades() != null) {
+                    modulo.setActividades(modulo.getActividades().stream()
+                            .filter(a -> Boolean.TRUE.equals(a.getVisibilidad()))
+                            .collect(java.util.stream.Collectors.toList()));
+                }
+            }
         }
         
         System.out.println("📋 Total de módulos cargados: " + modulos.size());
@@ -207,20 +219,38 @@ public class OfertaAcademicaController {
         }
         
         // Si es Admin, tiene permiso total
-        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ADMIN"));
+        boolean isAdmin = auth.getAuthorities().stream()
+            .anyMatch(a -> a.getAuthority().equals("ADMIN") || a.getAuthority().equals("ROLE_ADMIN"));
         if (isAdmin) return;
 
-        String dni = auth.getName();
+        String identifier = auth.getName();
+        Usuario usuario = usuarioRepository.findByDni(identifier)
+            .or(() -> usuarioRepository.findByCorreo(identifier))
+            .orElse(null);
+        String dni = usuario != null ? usuario.getDni() : identifier;
+
         OfertaAcademica oferta = ofertaAcademicaRepository.findById(cursoId)
-                .orElseThrow(() -> new RuntimeException("Oferta no encontrada"));
+            .orElseThrow(() -> new RuntimeException("Oferta no encontrada"));
 
         boolean esDocenteAsignado = false;
         if (oferta instanceof Curso curso) {
+            if (curso.getDocentes() != null) {
             esDocenteAsignado = curso.getDocentes().stream()
-                    .anyMatch(d -> d.getDni().equals(dni));
+                .anyMatch(d -> dni != null && dni.equals(d.getDni()));
+            }
+            if (!esDocenteAsignado && usuario instanceof Docente docente) {
+            esDocenteAsignado = curso.getDocentes() != null && curso.getDocentes().stream()
+                .anyMatch(d -> d.getId() != null && d.getId().equals(docente.getId()));
+            }
         } else if (oferta instanceof Formacion formacion) {
+            if (formacion.getDocentes() != null) {
             esDocenteAsignado = formacion.getDocentes().stream()
-                    .anyMatch(d -> d.getDni().equals(dni));
+                .anyMatch(d -> dni != null && dni.equals(d.getDni()));
+            }
+            if (!esDocenteAsignado && usuario instanceof Docente docente) {
+            esDocenteAsignado = formacion.getDocentes() != null && formacion.getDocentes().stream()
+                .anyMatch(d -> d.getId() != null && d.getId().equals(docente.getId()));
+            }
         }
 
         if (!esDocenteAsignado) {

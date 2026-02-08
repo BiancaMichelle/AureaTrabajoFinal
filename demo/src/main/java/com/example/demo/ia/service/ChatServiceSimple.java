@@ -1037,6 +1037,106 @@ public class ChatServiceSimple {
     public List<ChatMessage> obtenerHistorialSesion(String sessionId) {
         return chatMessageRepository.findBySessionIdOrderByCreatedAtAsc(sessionId);
     }
+
+    public String generarFeedbackExamen(Usuario alumno, Examen examen, List<RespuestaIntento> incorrectas, List<Modulo> modulosRelacionados) {
+        try {
+            String contexto = construirContextoModulos(modulosRelacionados);
+            String detallePreguntas = construirDetallePreguntasIncorrectas(incorrectas);
+
+            String systemPrompt = "Eres un tutor académico empático y motivador. " +
+                    "Tu objetivo es explicar por qué algunas respuestas están incorrectas usando SOLO el contenido proporcionado. " +
+                    "No desmotivés al estudiante. No inventes contenido; si faltan datos, recomienda revisar los módulos listados.";
+
+            String userPrompt = "Alumno: " + (alumno != null ? alumno.getNombre() + " " + alumno.getApellido() : "Estudiante") + "\n" +
+                    "Examen: " + (examen != null ? examen.getTitulo() : "Examen") + "\n\n" +
+                    "Módulos relacionados y contenido:\n" + contexto + "\n\n" +
+                    "Preguntas incorrectas (máximo 3):\n" + detallePreguntas + "\n\n" +
+                    "Instrucciones:\n" +
+                    "1) Empieza con un mensaje breve de ánimo (1-2 líneas).\n" +
+                    "2) Explica por qué están mal las respuestas (para cada pregunta), con base en el contenido.\n" +
+                    "3) Propón 2 o 3 preguntas de estudio para investigar en el aula.\n" +
+                    "4) Usa un tono claro y cercano.\n";
+
+            List<Map<String, Object>> messages = new ArrayList<>();
+            messages.add(Map.of("role", "system", "content", systemPrompt));
+            messages.add(Map.of("role", "user", "content", userPrompt));
+
+            String raw = generarRespuestaConChat(messages);
+            return postFilterIaResponse(raw);
+        } catch (Exception e) {
+            System.err.println("Error generando feedback examen: " + e.getMessage());
+            return null;
+        }
+    }
+
+    private String construirContextoModulos(List<Modulo> modulosRelacionados) {
+        if (modulosRelacionados == null || modulosRelacionados.isEmpty()) {
+            return "(Sin módulos relacionados disponibles)";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (Modulo m : modulosRelacionados) {
+            if (m == null) continue;
+            sb.append("- ").append(m.getNombre() != null ? m.getNombre() : "Módulo").append("\n");
+            if (m.getObjetivos() != null && !m.getObjetivos().isBlank()) {
+                sb.append("  Objetivos: ").append(m.getObjetivos()).append("\n");
+            }
+            if (m.getTemario() != null && !m.getTemario().isBlank()) {
+                sb.append("  Temario: ").append(m.getTemario()).append("\n");
+            }
+            if (m.getBibliografia() != null && !m.getBibliografia().isBlank()) {
+                sb.append("  Bibliografía: ").append(m.getBibliografia()).append("\n");
+            }
+        }
+        return sb.toString();
+    }
+
+    private String construirDetallePreguntasIncorrectas(List<RespuestaIntento> incorrectas) {
+        StringBuilder sb = new StringBuilder();
+        int index = 1;
+        for (RespuestaIntento r : incorrectas) {
+            Pregunta p = r.getPregunta();
+            sb.append(index++).append(") ");
+            sb.append(p != null ? p.getEnunciado() : "Pregunta").append("\n");
+            sb.append("   Respuesta del alumno: ").append(formatearRespuestaUsuario(r.getRespuestaUsuario())).append("\n");
+            sb.append("   Respuesta correcta: ").append(obtenerOpcionesCorrectas(p)).append("\n");
+        }
+        return sb.toString();
+    }
+
+    private String obtenerOpcionesCorrectas(Pregunta pregunta) {
+        if (pregunta == null || pregunta.getOpciones() == null) {
+            return "No disponible";
+        }
+        List<String> correctas = pregunta.getOpciones().stream()
+                .filter(Opcion::getEsCorrecta)
+                .map(Opcion::getDescripcion)
+                .filter(Objects::nonNull)
+                .toList();
+        if (correctas.isEmpty()) {
+            return "No disponible";
+        }
+        return String.join(" | ", correctas);
+    }
+
+    private String formatearRespuestaUsuario(String respuestaUsuario) {
+        if (respuestaUsuario == null || respuestaUsuario.isBlank()) {
+            return "Sin respuesta";
+        }
+        String valor = respuestaUsuario.trim();
+        try {
+            com.fasterxml.jackson.databind.JsonNode node = objectMapper.readTree(valor);
+            if (node.isArray()) {
+                List<String> valores = new ArrayList<>();
+                node.forEach(n -> valores.add(n.isTextual() ? n.asText() : n.toString()));
+                return String.join(", ", valores);
+            }
+            if (node.isTextual()) {
+                return node.asText();
+            }
+        } catch (Exception ignored) {
+        }
+        return valor;
+    }
     
     public void limpiarSesion(String sessionId) {
         chatMessageRepository.deleteBySessionId(sessionId);

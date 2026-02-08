@@ -194,9 +194,10 @@
                         answerEl.innerHTML = '<p class="text-red-500">Error: Tipo de pregunta no reconocido.</p>';
                 }
                 
-                // Si es vista previa, deshabilitar todos los inputs
+                // Si es vista previa, deshabilitar todos los inputs (tanto en answerEl como en textEl)
                 if (esVistaPrevia) {
-                    const inputs = answerEl.querySelectorAll('input, textarea, select');
+                    const inputs = [...answerEl.querySelectorAll('input, textarea, select'), 
+                                    ...textEl.querySelectorAll('input, textarea, select')];
                     inputs.forEach(input => {
                         input.disabled = true;
                         input.classList.add('bg-gray-100', 'cursor-not-allowed');
@@ -332,34 +333,46 @@
             function renderAutocompletado(pregunta) {
                 // Para este tipo, el texto de la pregunta se inyecta como HTML
                 textEl.innerHTML = '';
+                console.log('🔤 Renderizando AUTOCOMPLETADO:', pregunta.texto);
+                
                 // Inicializamos la respuesta como un array si no existe
                 if (!Array.isArray(respuestasUsuario[preguntaActualIndex])) {
                     const numBlanks = (pregunta.texto.match(/\[BLANK\]/g) || []).length;
                     respuestasUsuario[preguntaActualIndex] = new Array(numBlanks).fill('');
+                    console.log('Inicializando array con', numBlanks, 'blancos');
                 }
                 const respuestasGuardadas = respuestasUsuario[preguntaActualIndex];
 
                 const partes = pregunta.texto.split('[BLANK]');
                 partes.forEach((parte, index) => {
                     // Añadir el texto
-                    textEl.appendChild(document.createTextNode(parte));
+                    const textoNode = document.createTextNode(parte);
+                    textEl.appendChild(textoNode);
                     
                     // Añadir un input si no es la última parte
                     if (index < partes.length - 1) {
                         const input = document.createElement('input');
                         input.type = 'text';
+                        input.setAttribute('autocomplete', 'off');
+                        input.setAttribute('spellcheck', 'false');
                         // Reemplazamos la clase con estilos Tailwind directos y agregamos fondo para mayor visibilidad
                         input.className = 'inline-block w-48 border-b-2 border-gray-400 focus:border-blue-500 outline-none mx-2 px-1 text-lg font-medium bg-gray-50';
                         input.dataset.index = index;
                         input.value = respuestasGuardadas[index] || '';
+                        input.placeholder = '___________';
                         
-                        input.oninput = () => {
-                            respuestasUsuario[preguntaActualIndex][input.dataset.index] = input.value;
-                        };
+                        input.addEventListener('input', function(e) {
+                            const idx = parseInt(this.dataset.index);
+                            respuestasUsuario[preguntaActualIndex][idx] = this.value;
+                            console.log('Input actualizado:', idx, '=', this.value);
+                        });
                         
                         textEl.appendChild(input);
+                        console.log('Input agregado en posición', index, 'con valor:', input.value);
                     }
                 });
+                
+                console.log('Total inputs agregados:', textEl.querySelectorAll('input').length);
             }
             
             function renderEmparejamiento(pregunta) {

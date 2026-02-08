@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -46,6 +47,7 @@ import com.example.demo.model.Opcion;
 import com.example.demo.model.Pool;
 import com.example.demo.model.Pregunta;
 import com.example.demo.model.RespuestaIntento;
+import com.example.demo.model.Usuario;
 import com.example.demo.repository.AlumnoRepository;
 import com.example.demo.repository.CuotaRepository;
 import com.example.demo.repository.ExamenRepository;
@@ -54,8 +56,10 @@ import com.example.demo.repository.IntentoRepository;
 import com.example.demo.repository.PoolRepository;
 import com.example.demo.repository.PreguntaRepository;
 import com.example.demo.repository.UsuarioRepository;
-import com.example.demo.service.EmailService;
 import com.example.demo.service.InstitutoService;
+import com.example.demo.ia.service.ChatServiceSimple;
+import com.example.demo.model.Modulo;
+import com.example.demo.service.ExamenFeedbackService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -94,7 +98,11 @@ public class ExamenController {
     private InstitutoService institutoService;
 
     @Autowired
-    private EmailService emailService;
+    private ChatServiceSimple chatServiceSimple;
+
+
+    @Autowired
+    private ExamenFeedbackService examenFeedbackService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -106,7 +114,7 @@ public class ExamenController {
     public String realizarExamen(@PathVariable Long examenId, Principal principal, Model model,
             Authentication authentication) {
         System.out.println("🎯 =================  ACCESO A EXAMEN =================");
-        System.out.println("🎯 Usuario: " + principal.getName() + " intenta acceder al examen ID: " + examenId);
+        System.out.println("🎯 Usuario: " + (principal != null ? principal.getName() : "N/A") + " intenta acceder al examen ID: " + examenId);
         try {
             Examen examen = examenRepository.findById(examenId)
                     .orElseThrow(() -> new RuntimeException("Examen no encontrado"));
@@ -119,15 +127,17 @@ public class ExamenController {
 
             if (!esDocenteOAdmin) {
                 System.out.println("🎯 Iniciando validaciones para alumno...");
+                String dniAlumno = obtenerDniDesdePrincipal(principal);
+                if (dniAlumno == null || dniAlumno.isBlank()) {
+                    return "redirect:/alumno/mis-ofertas?error=No+se+pudo+validar+tu+usuario";
+                }
                 // 0. Validar si ya lo rindió y está corregido
                 try {
-                    com.example.demo.model.Usuario usuario = usuarioRepository.findByDni(principal.getName())
-                            .orElse(null);
                     // Fix: Find Alumno ID properly (Assuming Usuario extends or finding Alumno by
                     // DNI)
                     // Using AlumnoRepository directly if ID needed, or just casting if Usuario
                     // instance of Alumno
-                    Alumno alumno = alumnoRepository.findByDni(principal.getName()).orElse(null);
+                    Alumno alumno = alumnoRepository.findByDni(dniAlumno).orElse(null);
                     if (alumno != null) {
                         List<Intento> intentosPrevios = intentoRepository
                                 .findByAlumno_IdAndExamen_IdActividad(alumno.getId(), examenId);
@@ -145,7 +155,7 @@ public class ExamenController {
 
                 // 1. Validar Inscripción Activa
                 List<Inscripciones> inscripciones = inscripcionRepository.findByAlumnoDniAndOfertaId(
-                        principal.getName(), examen.getModulo().getCurso().getIdOferta());
+                    dniAlumno, examen.getModulo().getCurso().getIdOferta());
 
                 Inscripciones inscripcionActiva = inscripciones.stream()
                         .filter(i -> Boolean.TRUE.equals(i.getEstadoInscripcion()))
@@ -278,9 +288,15 @@ public class ExamenController {
                 if (principal == null)
                     return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 
+                String dniAlumno = obtenerDniDesdePrincipal(principal);
+                if (dniAlumno == null || dniAlumno.isBlank()) {
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                            .body(Map.of("error", "Usuario no identificado"));
+                }
+
                 // 1. Validar Inscripción
                 List<Inscripciones> inscripciones = inscripcionRepository.findByAlumnoDniAndOfertaId(
-                        principal.getName(), examen.getModulo().getCurso().getIdOferta());
+                    dniAlumno, examen.getModulo().getCurso().getIdOferta());
 
                 Inscripciones inscripcionActiva = inscripciones.stream()
                         .filter(i -> Boolean.TRUE.equals(i.getEstadoInscripcion()))
@@ -397,12 +413,13 @@ public class ExamenController {
     public ResponseEntity<?> entregarExamen(@RequestBody Map<String, Object> payload, Principal principal) {
         try {
             Long examenId = Long.valueOf(payload.get("examenId").toString());
-            List<Map<String, Object>> respuestas = (List<Map<String, Object>>) payload.get("respuestas");
+            List<Map<String, Object>> respuestas = obtenerRespuestasComoLista(payload.get("respuestas"));
 
             Examen examen = examenRepository.findById(examenId)
                     .orElseThrow(() -> new RuntimeException("Examen no encontrado"));
 
-            Alumno alumno = alumnoRepository.findByDni(principal.getName())
+                String dniAlumno = obtenerDniDesdePrincipal(principal);
+                Alumno alumno = alumnoRepository.findByDni(dniAlumno)
                     .orElseThrow(() -> new RuntimeException("Alumno no encontrado"));
 
             Intento intento = new Intento();
@@ -470,6 +487,10 @@ public class ExamenController {
 
             intentoRepository.save(intento);
 
+            if (Boolean.TRUE.equals(examen.getCalificacionAutomatica())) {
+                examenFeedbackService.generarYProgramarFeedback(alumno, examen, intento, respuestasIntento);
+            }
+
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             // Redirigir al aula del alumno asociado a la oferta del módulo
@@ -511,7 +532,9 @@ public class ExamenController {
                     .anyMatch(op -> op.getDescripcion().equalsIgnoreCase(respuesta));
         } else if (tipo == TipoPregunta.MULTIPLE_CHOICE) {
             if (respuestaUsuarioObj instanceof List) {
-                List<String> respuestas = (List<String>) respuestaUsuarioObj;
+                List<String> respuestas = ((List<?>) respuestaUsuarioObj).stream()
+                        .map(Object::toString)
+                        .collect(Collectors.toList());
                 // Verificar que todas las respuestas seleccionadas sean correctas y que no
                 // falte ninguna
                 // (Criterio estricto)
@@ -527,6 +550,38 @@ public class ExamenController {
         }
 
         return false;
+    }
+
+    private List<Map<String, Object>> obtenerRespuestasComoLista(Object raw) {
+        if (!(raw instanceof List<?> rawList)) {
+            return new ArrayList<>();
+        }
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Object item : rawList) {
+            if (item instanceof Map<?, ?> map) {
+                Map<String, Object> casted = new HashMap<>();
+                for (Map.Entry<?, ?> entry : map.entrySet()) {
+                    if (entry.getKey() != null) {
+                        casted.put(entry.getKey().toString(), entry.getValue());
+                    }
+                }
+                result.add(casted);
+            }
+        }
+
+        return result;
+    }
+
+    private String obtenerDniDesdePrincipal(Principal principal) {
+        if (principal == null || principal.getName() == null) {
+            return null;
+        }
+        String identificador = principal.getName();
+        Usuario usuario = usuarioRepository.findByDni(identificador)
+                .or(() -> usuarioRepository.findByCorreo(identificador))
+                .orElse(null);
+        return usuario != null && usuario.getDni() != null ? usuario.getDni() : identificador;
     }
 
     @GetMapping("/{examenId}/intentos")
@@ -546,14 +601,30 @@ public class ExamenController {
     public String obtenerFragmentCorreccion(@PathVariable Long examenId,
             @PathVariable UUID intentoId,
             Authentication authentication,
+            Principal principal,
             Model model) {
+        System.out.println("=== OBTENER FRAGMENT CORRECCION ===");
+        System.out.println("ExamenId: " + examenId);
+        System.out.println("IntentoId: " + intentoId);
+        System.out.println("Principal name: " + (principal != null ? principal.getName() : "NULL"));
+        System.out.println("Authentication: " + (authentication != null ? authentication.getName() : "NULL"));
+        
         Examen examen = examenRepository.findById(examenId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Examen no encontrado"));
+        System.out.println("Examen encontrado: " + examen.getTitulo());
 
-        var usuario = usuarioRepository.findByDni(authentication.getName())
+        String dni = obtenerDniDesdePrincipal(principal);
+        System.out.println("DNI obtenido: " + dni);
+        
+        var usuario = usuarioRepository.findByDni(dni)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
+        System.out.println("Usuario encontrado: " + usuario.getNombre() + " (Tipo: " + usuario.getClass().getSimpleName() + ")");
 
-        if (!puedeGestionarExamen(authentication, usuario, examen)) {
+        boolean puede = puedeGestionarExamen(authentication, usuario, examen);
+        System.out.println("Puede gestionar examen: " + puede);
+        
+        if (!puede) {
+            System.out.println("ERROR: No tiene permisos para gestionar este examen");
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
@@ -747,28 +818,58 @@ public class ExamenController {
 
     private boolean puedeGestionarExamen(Authentication authentication, com.example.demo.model.Usuario usuario,
             Examen examen) {
+        System.out.println("--- VERIFICANDO PERMISOS ---");
+        System.out.println("Usuario: " + usuario.getNombre() + " (Tipo: " + usuario.getClass().getSimpleName() + ")");
+        
         boolean esAdmin = authentication.getAuthorities().stream()
                 .anyMatch(auth -> {
                     String nombre = auth.getAuthority();
                     return "ADMIN".equalsIgnoreCase(nombre) || "ROLE_ADMIN".equalsIgnoreCase(nombre);
                 });
+        System.out.println("Es ADMIN: " + esAdmin);
         if (esAdmin) {
             return true;
         }
 
         if (!(usuario instanceof Docente docente)) {
+            System.out.println("Usuario NO es Docente");
             return false;
         }
+        System.out.println("Usuario ES Docente (ID: " + docente.getId() + ")");
 
         OfertaAcademica oferta = examen.getModulo() != null ? examen.getModulo().getCurso() : null;
-        if (oferta instanceof Curso curso) {
-            return curso.getDocentes() != null && curso.getDocentes().stream()
-                    .anyMatch(d -> d.getId().equals(docente.getId()));
+        System.out.println("Oferta obtenida: " + (oferta != null ? oferta.getNombre() + " (Tipo: " + oferta.getClass().getSimpleName() + ")" : "NULL"));
+        
+        if (oferta == null) {
+            System.out.println("Oferta es NULL");
+            return false;
         }
-        if (oferta instanceof Formacion formacion) {
-            return formacion.getDocentes() != null && formacion.getDocentes().stream()
+        
+        // Desempaquetar el proxy de Hibernate para obtener la clase real
+        OfertaAcademica ofertaReal = (OfertaAcademica) Hibernate.unproxy(oferta);
+        System.out.println("Oferta real (desempaquetada): " + ofertaReal.getClass().getSimpleName());
+        
+        if (ofertaReal instanceof Curso curso) {
+            System.out.println("Es Curso. Docentes: " + (curso.getDocentes() != null ? curso.getDocentes().size() : 0));
+            if (curso.getDocentes() != null) {
+                curso.getDocentes().forEach(d -> System.out.println("  - Docente ID: " + d.getId()));
+            }
+            boolean resultado = curso.getDocentes() != null && curso.getDocentes().stream()
                     .anyMatch(d -> d.getId().equals(docente.getId()));
+            System.out.println("Resultado para Curso: " + resultado);
+            return resultado;
         }
+        if (ofertaReal instanceof Formacion formacion) {
+            System.out.println("Es Formación. Docentes: " + (formacion.getDocentes() != null ? formacion.getDocentes().size() : 0));
+            if (formacion.getDocentes() != null) {
+                formacion.getDocentes().forEach(d -> System.out.println("  - Docente ID: " + d.getId()));
+            }
+            boolean resultado = formacion.getDocentes() != null && formacion.getDocentes().stream()
+                    .anyMatch(d -> d.getId().equals(docente.getId()));
+            System.out.println("Resultado para Formación: " + resultado);
+            return resultado;
+        }
+        System.out.println("Oferta no es ni Curso ni Formación (es: " + ofertaReal.getClass().getName() + ")");
         return false;
     }
 

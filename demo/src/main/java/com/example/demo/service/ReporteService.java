@@ -5,6 +5,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.LocalDateTime;
+import java.text.NumberFormat;
+import java.util.Locale;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.nio.charset.StandardCharsets;
@@ -24,6 +27,7 @@ import com.example.demo.model.OfertaAcademica;
 import com.example.demo.model.Pago;
 import com.example.demo.model.Curso;
 import com.example.demo.model.Docente;
+import com.example.demo.model.Instituto;
 import com.example.demo.model.Usuario;
 import com.example.demo.repository.OfertaAcademicaRepository;
 import com.example.demo.enums.EstadoOferta;
@@ -63,6 +67,9 @@ public class ReporteService {
 
     @Autowired
     private CuotaRepository cuotaRepository;
+
+    @Autowired
+    private InstitutoService institutoService;
 
     @Autowired
     private TemplateEngine templateEngine; // Thymeleaf Template Engine
@@ -117,7 +124,7 @@ public class ReporteService {
      */
     public String generarGraficoTortaBase64(Map<String, Number> datasetValues, String titulo) {
         try {
-            DefaultPieDataset dataset = new DefaultPieDataset();
+            DefaultPieDataset<String> dataset = new DefaultPieDataset<>();
             for (Map.Entry<String, Number> entry : datasetValues.entrySet()) {
                 dataset.setValue(entry.getKey(), entry.getValue());
             }
@@ -510,12 +517,22 @@ public class ReporteService {
                     cb.setColorFill(java.awt.Color.BLACK);
                     
                     String usuario = "Generado por: Sistema";
-                    String rol = "";
                     if (org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication() != null) {
-                        String name = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
-                        usuario = "Generado por: " + name;
-                        // Intentar obtener rol (simplificado)
-                        rol = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getAuthorities().toString();
+                        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+                        String name = auth.getName();
+                            if (auth.getPrincipal() instanceof com.example.demo.model.CustomUsuarioDetails) {
+                                com.example.demo.model.Usuario u = ((com.example.demo.model.CustomUsuarioDetails) auth.getPrincipal()).getUsuario();
+                            if (u != null) {
+                                String nombreCompleto = (u.getNombre() != null ? u.getNombre() : "") +
+                                        (u.getApellido() != null ? " " + u.getApellido() : "");
+                                String dni = u.getDni() != null ? u.getDni() : name;
+                                usuario = "Generado por: " + nombreCompleto.trim() + " - " + dni;
+                            } else {
+                                usuario = "Generado por: " + name;
+                            }
+                        } else {
+                            usuario = "Generado por: " + name;
+                        }
                     }
                     
                     String fechaGen = "Generación: " + java.time.LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
@@ -594,7 +611,7 @@ public class ReporteService {
 
             // Font Styles
             com.lowagie.text.Font h1Font = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14, new java.awt.Color(44, 62, 80));
-            com.lowagie.text.Font h2Font = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, new java.awt.Color(52, 73, 94));
+            // h2Font reservado para futuros subtítulos
             com.lowagie.text.Font pFont = FontFactory.getFont(FontFactory.HELVETICA, 10);
             
             // --- 1. RESUMEN EJECUTIVO ---
@@ -609,13 +626,16 @@ public class ReporteService {
             document.add(Chunk.NEWLINE);
             
             // Cálculos
-            long totalOfertas = ofertas.size();
             java.util.Map<String, Long> porEstado = ofertas.stream()
                 .collect(Collectors.groupingBy(o -> o.getEstado() != null ? o.getEstado().name() : "DESCONOCIDO", Collectors.counting()));
             java.util.Map<String, Long> porModalidad = ofertas.stream()
                 .collect(Collectors.groupingBy(o -> o.getModalidad() != null ? o.getModalidad().name() : "SIN DEFINIR", Collectors.counting()));
             java.util.Map<String, Long> porTipo = ofertas.stream()
                 .collect(Collectors.groupingBy(OfertaAcademica::getTipoOferta, Collectors.counting()));
+
+            if (porTipo.isEmpty()) porTipo = java.util.Map.of("Sin datos", 0L);
+            if (porEstado.isEmpty()) porEstado = java.util.Map.of("Sin datos", 0L);
+            if (porModalidad.isEmpty()) porModalidad = java.util.Map.of("Sin datos", 0L);
             
             // Gráficos (Tablas visuales)
             addChartSection(document, "Ofertas por Tipo", porTipo, new java.awt.Color(230, 126, 34));
@@ -636,8 +656,6 @@ public class ReporteService {
             long alumnosBaja = totalAlumnos - alumnosAlta;
             
             // Datos Operativos (Inscripciones)
-            long totalInscripciones = ofertas.stream()
-                 .mapToLong(o -> o.getInscripciones() != null ? o.getInscripciones().size() : 0).sum();
             
             // Tabla KPIs Alumnos
             PdfPTable studentsTable = new PdfPTable(3);
@@ -769,7 +787,11 @@ public class ReporteService {
         try {
             chartTable.setWidths(new int[]{30, 60, 10});
         } catch(DocumentException e) {}
-        
+
+        if (data == null || data.isEmpty()) {
+            data = java.util.Map.of("Sin datos", 0L);
+        }
+
         long maxValue = data.values().stream().mapToLong(v -> v).max().orElse(1);
         
         for (java.util.Map.Entry<String, Long> entry : data.entrySet()) {
@@ -842,11 +864,35 @@ public class ReporteService {
             com.lowagie.text.Font normalFont = FontFactory.getFont(FontFactory.HELVETICA, 12);
             com.lowagie.text.Font smallFont = FontFactory.getFont(FontFactory.HELVETICA, 10);
 
+            // Datos del emisor (parametrizable)
+            Instituto instituto = null;
+            if (pago.getOferta() != null && pago.getOferta().getInstituto() != null) {
+                instituto = pago.getOferta().getInstituto();
+            } else {
+                try {
+                    instituto = institutoService.obtenerInstituto();
+                } catch (Exception e) {
+                    instituto = null;
+                }
+            }
+            String razonSocial = instituto != null && instituto.getRazonSocial() != null && !instituto.getRazonSocial().isBlank()
+                ? instituto.getRazonSocial()
+                : (instituto != null && instituto.getNombreInstituto() != null ? instituto.getNombreInstituto() : "AUREA");
+            String cuil = instituto != null && instituto.getCuil() != null ? instituto.getCuil() : "N/A";
+            LocalDateTime inicioActividad = instituto != null ? instituto.getInicioActividad() : null;
+
             // Título
-            Paragraph title = new Paragraph("AUREA - Comprobante de Pago", titleFont);
+            Paragraph title = new Paragraph(razonSocial + " - Comprobante de Pago", titleFont);
             title.setAlignment(Element.ALIGN_CENTER);
             document.add(title);
             document.add(Chunk.NEWLINE);
+            document.add(Chunk.NEWLINE);
+
+            // Datos del Emisor
+            document.add(new Paragraph("Datos del Emisor:", headerFont));
+            document.add(new Paragraph("Razón Social: " + razonSocial, normalFont));
+            document.add(new Paragraph("CUIL: " + cuil, normalFont));
+            document.add(new Paragraph("Inicio de Actividad: " + (inicioActividad != null ? inicioActividad.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : "N/A"), normalFont));
             document.add(Chunk.NEWLINE);
 
             // Datos del Alumno
@@ -869,7 +915,8 @@ public class ReporteService {
             addTableRow(table, "Referencia de Pago:", pago.getExternalReference() != null ? pago.getExternalReference() : "N/A");
             addTableRow(table, "ID Transacción (MP):", pago.getPaymentId() != null ? pago.getPaymentId().toString() : "N/A");
             addTableRow(table, "Método de Pago:", pago.getTipoPago() != null ? pago.getTipoPago() : "N/A");
-            addTableRow(table, "Fecha:", pago.getFechaAprobacion() != null ? pago.getFechaAprobacion().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : LocalDate.now().toString());
+            LocalDateTime fechaPago = pago.getFechaAprobacion() != null ? pago.getFechaAprobacion() : pago.getFechaPago();
+            addTableRow(table, "Fecha de Pago:", fechaPago != null ? fechaPago.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : LocalDate.now().toString());
             
             // Monto destacado
             PdfPCell cellLabel = new PdfPCell(new Phrase("Monto Pagado:", headerFont));
@@ -877,7 +924,7 @@ public class ReporteService {
             cellLabel.setPadding(5);
             table.addCell(cellLabel);
 
-            PdfPCell cellValue = new PdfPCell(new Phrase("$ " + (pago.getMonto() != null ? pago.getMonto().toString() : "0.00"), titleFont));
+            PdfPCell cellValue = new PdfPCell(new Phrase(formatearMontoComa(pago.getMonto()), titleFont));
             cellValue.setBorder(0);
             cellValue.setPadding(5);
             table.addCell(cellValue);
@@ -1144,5 +1191,13 @@ public class ReporteService {
         cell2.setBorder(0);
         cell2.setPadding(5);
         table.addCell(cell2);
+    }
+
+    private String formatearMontoComa(java.math.BigDecimal monto) {
+        NumberFormat nf = NumberFormat.getNumberInstance(Locale.forLanguageTag("es-AR"));
+        nf.setMinimumFractionDigits(2);
+        nf.setMaximumFractionDigits(2);
+        String valor = nf.format(monto != null ? monto : java.math.BigDecimal.ZERO);
+        return "$ " + valor;
     }
 }

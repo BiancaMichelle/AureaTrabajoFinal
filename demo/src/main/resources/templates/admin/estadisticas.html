@@ -292,19 +292,6 @@
             </div>
         </div>
 
-        <!-- TABS NAVIGATION -->
-        <ul class="nav nav-tabs" id="statsTabs" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="oferta-tab" data-bs-toggle="tab" data-bs-target="#oferta" type="button" role="tab" aria-selected="true"><i class="fas fa-book me-2"></i>Oferta Académica</button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="inscripciones-tab" data-bs-toggle="tab" data-bs-target="#inscripciones" type="button" role="tab" aria-selected="false"><i class="fas fa-user-graduate me-2"></i>Inscripciones</button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="economico-tab" data-bs-toggle="tab" data-bs-target="#economico" type="button" role="tab" aria-selected="false"><i class="fas fa-chart-pie me-2"></i>Económico</button>
-            </li>
-        </ul>
-
         <div class="tab-content" id="statsTabsContent">
             
             <!-- TAB: OFERTA ACADÉMICA -->
@@ -384,11 +371,9 @@
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- TAB: INSCRIPCIONES -->
-            <div class="tab-pane fade" id="inscripciones" role="tabpanel">
-                <div class="row mb-4">
+                <!-- INSCRIPCIONES (migrado a Oferta Académica) -->
+                <div id="inscripciones-section" class="row mb-4">
                     <div class="col-lg-8">
                         <div class="metric-card">
                             <div class="card-header">
@@ -429,11 +414,9 @@
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- TAB: ECONÓMICO -->
-            <div class="tab-pane fade" id="economico" role="tabpanel">
-                <div class="row mb-4">
+                <!-- ECONÓMICO (migrado a Oferta Académica) -->
+                <div id="economico-section" class="row mb-4">
                     <div class="col-lg-6">
                         <div class="metric-card">
                             <div class="card-header">
@@ -460,7 +443,6 @@
                     </div>
                 </div>
             </div>
-
         </div> <!-- End Tab Content -->
 
     </div>
@@ -486,12 +468,7 @@
                                         <i class="fas fa-file-pdf fa-2x mb-2"></i><br>PDF
                                     </label>
                                 </div>
-                                <div class="w-50">
-                                    <input type="radio" class="btn-check visually-hidden" name="formato" id="fmtExcel" value="excel">
-                                    <label class="btn btn-outline-success w-100 py-3" for="fmtExcel" style="display: block; text-align: center; border: 1px solid #198754; border-radius: 0.375rem; color: #198754; cursor: pointer;">
-                                        <i class="fas fa-file-excel fa-2x mb-2"></i><br>Excel
-                                    </label>
-                                </div>
+                                <div class="w-50" style="display: none;"></div>
                             </div>
                         </div>
 
@@ -508,11 +485,13 @@
                             <div class="row g-2" style="display: flex; gap: 0.5rem;">
                                 <div class="col-6" style="flex: 1;">
                                     <label class="small text-muted">Desde</label>
-                                    <input type="date" name="fechaInicio" class="form-control" style="width: 100%;">
+                                    <input type="date" name="fechaInicio" class="form-control" style="width: 100%;"
+                                           th:attr="max=${#temporals.format(maxFechaHoy, 'yyyy-MM-dd')}">
                                 </div>
                                 <div class="col-6" style="flex: 1;">
                                     <label class="small text-muted">Hasta</label>
-                                    <input type="date" name="fechaFin" class="form-control" style="width: 100%;">
+                                     <input type="date" name="fechaFin" class="form-control" style="width: 100%;"
+                                         th:attr="max=${#temporals.format(maxFechaHoy, 'yyyy-MM-dd')}">
                                 </div>
                             </div>
                         </div>
@@ -530,11 +509,14 @@
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             initGlobalCharts();
-            initTabListeners();
+            loadOfertaCharts();
+            loadInscripcionCharts();
+            loadEconomicoCharts();
             
             // Modal Logic
             const modal = document.getElementById('statsReportModal');
@@ -559,23 +541,21 @@
             document.getElementById('btnRefreshCharts').onclick = () => window.location.reload();
         });
 
+        Chart.register(ChartDataLabels);
+
         const colors = {
             palette: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40']
         };
 
-        function initTabListeners() {
-            const tabs = document.querySelectorAll('button[data-bs-toggle="tab"]');
-            tabs.forEach(tab => {
-                tab.addEventListener('shown.bs.tab', event => {
-                    const targetId = event.target.getAttribute('data-bs-target');
-                    if(targetId === '#oferta') loadOfertaCharts();
-                    if(targetId === '#inscripciones') loadInscripcionCharts();
-                    if(targetId === '#economico') loadEconomicoCharts();
-                });
-            });
-            // Load initial active tab
-            loadOfertaCharts();
-        }
+        const dataLabelCommon = {
+            color: '#2d3748',
+            font: { weight: '600', size: 11 },
+            formatter: (value) => {
+                if (value === null || value === undefined) return '';
+                if (typeof value === 'number') return value.toLocaleString('es-AR');
+                return value;
+            }
+        };
 
         function initGlobalCharts() {
             // Placeholder for global summary charts if any
@@ -605,6 +585,14 @@
                             data: Object.values(porEstado),
                             backgroundColor: colors.palette
                         }]
+                    },
+                    options: {
+                        plugins: {
+                            datalabels: {
+                                ...dataLabelCommon,
+                                color: '#ffffff'
+                            }
+                        }
                     }
                 });
                 
@@ -624,6 +612,15 @@
                                     data: d.data,
                                     backgroundColor: '#667eea'
                                 }]
+                            },
+                            options: {
+                                plugins: {
+                                    datalabels: {
+                                        ...dataLabelCommon,
+                                        anchor: 'end',
+                                        align: 'top'
+                                    }
+                                }
                             }
                         });
                     });
@@ -640,7 +637,7 @@
     return labels;
 }
 function showStatsError(msg) {
-    const container = document.querySelector('#inscripciones .metric-card .card-body');
+    const container = document.querySelector('#inscripciones-section .metric-card .card-body');
     if (!container || container.querySelector('.stats-error')) return;
     const alert = document.createElement('div');
     alert.className = 'alert alert-warning stats-error';
@@ -699,7 +696,12 @@ function loadInscripcionCharts() {
                         maintainAspectRatio: false,
                         plugins: {
                             legend: { display: true, position: 'top' },
-                            tooltip: { mode: 'index', intersect: false }
+                            tooltip: { mode: 'index', intersect: false },
+                            datalabels: {
+                                ...dataLabelCommon,
+                                anchor: 'end',
+                                align: 'top'
+                            }
                         },
                         scales: {
                             y: {
@@ -750,7 +752,14 @@ function loadInscripcionCharts() {
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
-                            plugins: { legend: { display: false } },
+                            plugins: { 
+                                legend: { display: false },
+                                datalabels: {
+                                    ...dataLabelCommon,
+                                    anchor: 'end',
+                                    align: 'top'
+                                }
+                            },
                             scales: { y: { beginAtZero: true } }
                         }
                     });
@@ -777,7 +786,11 @@ function loadInscripcionCharts() {
                             responsive: true,
                             maintainAspectRatio: false,
                             plugins: { 
-                                legend: { position: 'right' }
+                                legend: { position: 'right' },
+                                datalabels: {
+                                    ...dataLabelCommon,
+                                    color: '#ffffff'
+                                }
                             }
                         }
                     });

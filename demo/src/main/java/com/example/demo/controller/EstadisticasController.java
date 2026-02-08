@@ -54,14 +54,19 @@ public class EstadisticasController {
             model.addAttribute("demandaOfertas", demandaOfertas != null ? demandaOfertas : new ArrayList<>());
             model.addAttribute("analisisDesercion", analisisDesercion);
             model.addAttribute("proyeccionCrecimiento", proyeccionCrecimiento);
-            model.addAttribute("fechaActualizacion", LocalDate.now());
+            LocalDate hoy = LocalDate.now();
+            model.addAttribute("fechaActualizacion", hoy);
+            model.addAttribute("maxFechaHoy", hoy);
             
             return "admin/estadisticas";
             
         } catch (Exception e) {
             model.addAttribute("error", "Error al cargar estadísticas: " + e.getMessage());
+            LocalDate hoy = LocalDate.now();
             model.addAttribute("metricas", crearMetricasPorDefecto());
             model.addAttribute("demandaOfertas", new ArrayList<>());
+            model.addAttribute("fechaActualizacion", hoy);
+            model.addAttribute("maxFechaHoy", hoy);
             return "admin/estadisticas";
         }
     }

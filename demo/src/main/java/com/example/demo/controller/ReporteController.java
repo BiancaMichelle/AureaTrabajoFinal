@@ -174,9 +174,9 @@ public class ReporteController {
             HttpServletRequest request
     ) throws Exception {
         
-        // Validación de backend: Se requiere al menos un tipo de oferta seleccionado
+        // Si no se envían tipos, no filtrar por tipo
         if (tipos == null || tipos.isEmpty()) {
-            return ResponseEntity.badRequest().body(null); 
+            tipos = null;
         }
 
         List<OfertaAcademica> ofertas = reporteService.filtrarOfertas(nombre, estado, categoriaId, fechaInicio, fechaFin, tipos);
