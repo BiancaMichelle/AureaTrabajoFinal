@@ -199,8 +199,6 @@ public class RegistroService {
         }
     }
 
-    // 🌍 MÉTODOS PARA BUSCAR O CREAR UBICACIONES (NUEVOS - DE LA SEGUNDA VERSIÓN)
-    // 🌍 MÉTODOS PARA BUSCAR O CREAR UBICACIONES (SIEMPRE DESDE API)
     private Pais buscarOCrearPais(String paisCodigo) {
         Objects.requireNonNull(paisCodigo, "paisCodigo no puede ser nulo");
         System.out.println("🌎 Buscando país en BD con código: " + paisCodigo);

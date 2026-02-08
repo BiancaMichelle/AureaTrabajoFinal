@@ -157,13 +157,6 @@ public class OfertaAcademica {
             throw new IllegalStateException("La fecha de inicio de inscripción no puede ser posterior a la fecha de fin de inscripción.");
         }
         
-        // REMOVIDO: Validación que las inscripciones deben cerrar antes del inicio
-        // Las inscripciones pueden continuar incluso después del inicio de la oferta
-        
-        // Validación de horarios (opcional: descomentar si se quiere forzar al menos uno)
-        // if (this.horarios == null || this.horarios.isEmpty()) {
-        //     throw new IllegalStateException("La oferta debe tener al menos un horario asignado.");
-        // }
     }
 
     // Helper methods para gestionar la relación bidireccional con Horario
@@ -473,19 +466,7 @@ public class OfertaAcademica {
         return inscriptos == 0 && estado != EstadoOferta.FINALIZADA;
     }
     
-    /**
-     * Duración formateada para mostrar (Delegada al método principal específico)
-     */
-    /*
-    public String getDuracionTexto() {
-        Long dias = getDuracionDias();
-        if (dias == null) return "No definida";
-        if (dias == 1) return "1 día";
-        if (dias < 7) return dias + " días";
-        if (dias < 30) return (dias / 7) + " semanas";
-        return (dias / 30) + " meses";
-    }
-    */
+
     /**
      * Devuelve la clase CSS para el badge de estado
      */
