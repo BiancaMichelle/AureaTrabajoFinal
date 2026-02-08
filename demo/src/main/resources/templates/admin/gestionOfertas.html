@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/adminBase :: layout(~{::title}, ~{::main})}">
 <head>
     <title>Gestión de Ofertas Académicas</title>
@@ -648,18 +648,21 @@ input:checked + .slider:after {
                         <!-- Imagen de presentación -->
                         <div class="form-section">
                             <h4><i class="fas fa-image"></i> Imagen de Presentación</h4>
-                            <div class="image-upload-container">
-                                <input type="file" id="imagen" name="imagen" accept="image/*" class="image-input">
-                                <label for="imagen" class="image-upload-area">
-                                    <div class="upload-placeholder">
-                                        <i class="fas fa-cloud-upload-alt"></i>
-                                        <p>Subir imagen</p>
-                                        <span>JPG, PNG, GIF hasta 5MB</span>
-                                    </div>
-                                    <img id="image-preview" style="display: none;" alt="Vista previa">
-                                </label>
-                            </div>
-                        </div>
+                              <div class="image-upload-container">
+                                 <input type="file" id="imagen" name="imagen" accept="image/*" class="image-input">
+                                 <label for="imagen" class="image-upload-area">
+                                     <div class="upload-placeholder">
+                                          <i class="fas fa-cloud-upload-alt"></i>
+                                         <p>Subir imagen</p>
+                                         <span>JPG, PNG, GIF hasta 5MB</span>
+                                     </div>
+                                     <img id="image-preview" style="display: none;" alt="Vista previa">
+                                 </label>
+                              </div>
+                              <button type="button" id="btn-clear-image" class="btn btn-outline-secondary btn-sm mt-2">
+                                  Borrar imagen
+                              </button>
+                          </div>
 
                         <!-- Certificación -->
                         <div class="form-section">
@@ -1168,6 +1171,16 @@ input:checked + .slider:after {
                             <span id="contadorCategorias">Total: 0 categorías</span>
                         </div>
                     </div>
+
+                    <div class="categoria-filtros" style="display: flex; gap: 10px; align-items: flex-end; margin: 10px 0 15px;">
+                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                            <label for="categorias-filter-input"><i class="fas fa-search"></i> Filtro</label>
+                            <input type="text" id="categorias-filter-input" class="form-control" placeholder="Filtrar por nombre o descripcion">
+                        </div>
+                        <button type="button" id="categorias-filter-clear" class="btn btn-outline" style="height: 38px;">
+                            <i class="fas fa-times"></i> Limpiar
+                        </button>
+                    </div>
                     
                     <!-- Loading y error messages -->
                     <div id="categoriasLoading" class="text-center">
@@ -1606,6 +1619,41 @@ input:checked + .slider:after {
         console.log('🔥 SCRIPT INLINE CARGADO');
         
         document.addEventListener('DOMContentLoaded', function() {
+            // Imagen: preview inmediato al seleccionar archivo
+            const imagenInput = document.getElementById('imagen');
+            const imagePreview = document.getElementById('image-preview');
+            const uploadPlaceholder = document.querySelector('.upload-placeholder');
+            if (imagenInput && imagePreview && uploadPlaceholder) {
+                imagenInput.addEventListener('change', function(event) {
+                    const file = event.target.files && event.target.files[0];
+                    if (!file) return;
+                    if (file.size > 5 * 1024 * 1024) {
+                        if (typeof mostrarNotificacion === 'function') {
+                            mostrarNotificacion('La imagen supera 5MB', 'warning');
+                        } else {
+                            alert('La imagen supera 5MB');
+                        }
+                        imagenInput.value = '';
+                        return;
+                    }
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        imagePreview.src = e.target.result;
+                        imagePreview.style.display = 'block';
+                        uploadPlaceholder.style.display = 'none';
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+            const btnClearImage = document.getElementById('btn-clear-image');
+            if (btnClearImage && imagenInput && imagePreview && uploadPlaceholder) {
+                btnClearImage.addEventListener('click', function() {
+                    imagenInput.value = '';
+                    imagePreview.src = '';
+                    imagePreview.style.display = 'none';
+                    uploadPlaceholder.style.display = 'flex';
+                });
+            }
             console.log('✅ DOM CARGADO');
             
             // Test: Verificar que los botones de ver detalle estén presentes
@@ -1623,6 +1671,8 @@ input:checked + .slider:after {
             const btnCloseForm = document.getElementById('btn-close-form');
             const btnCancelForm = document.getElementById('btn-cancel-form');
             const btnGestionarCategorias = document.getElementById('btn-gestionar-categorias');
+            const categoriasFilterInput = document.getElementById('categorias-filter-input');
+            const categoriasFilterClear = document.getElementById('categorias-filter-clear');
             
             console.log('Elementos encontrados:', {
                 btnShowForm: !!btnShowForm,
@@ -1631,6 +1681,20 @@ input:checked + .slider:after {
                 btnCancelForm: !!btnCancelForm,
                 btnGestionarCategorias: !!btnGestionarCategorias
             });
+
+            if (categoriasFilterInput) {
+                categoriasFilterInput.addEventListener('input', aplicarFiltroCategorias);
+            }
+
+            if (categoriasFilterClear) {
+                categoriasFilterClear.addEventListener('click', function() {
+                    if (categoriasFilterInput) {
+                        categoriasFilterInput.value = '';
+                        aplicarFiltroCategorias();
+                        categoriasFilterInput.focus();
+                    }
+                });
+            }
             
             // Manejador del botón mostrar formulario
             if (btnShowForm && formContainer) {
@@ -1750,6 +1814,9 @@ input:checked + .slider:after {
                     const modal = document.getElementById('categoriaModal');
                     if (modal) {
                         modal.style.display = 'flex';
+                        if (categoriasFilterInput) {
+                            categoriasFilterInput.value = '';
+                        }
                         cargarCategorias();
                     }
                 });
@@ -2462,6 +2529,35 @@ input:checked + .slider:after {
         }
         
         // Funciones para gestión de categorías
+        let categoriasCache = [];
+
+        function aplicarFiltroCategorias() {
+            const input = document.getElementById('categorias-filter-input');
+            const termino = input ? input.value.trim().toLowerCase() : '';
+
+            if (!termino) {
+                mostrarCategorias(categoriasCache);
+                return;
+            }
+
+            const coincideNombre = categoriasCache.filter(categoria => {
+                const nombre = (categoria.nombre || '').toLowerCase();
+                return nombre.includes(termino);
+            });
+
+            if (coincideNombre.length > 0) {
+                mostrarCategorias(coincideNombre, categoriasCache.length, 'nombre');
+                return;
+            }
+
+            const coincideDescripcion = categoriasCache.filter(categoria => {
+                const descripcion = (categoria.descripcion || '').toLowerCase();
+                return descripcion.includes(termino);
+            });
+
+            mostrarCategorias(coincideDescripcion, categoriasCache.length, 'descripcion');
+        }
+
         function cargarCategorias() {
             console.log('🔄 Cargando categorías...');
             
@@ -2480,7 +2576,8 @@ input:checked + .slider:after {
                     
                     if (loadingDiv) loadingDiv.style.display = 'none';
                     
-                    mostrarCategorias(categorias);
+                    categoriasCache = Array.isArray(categorias) ? categorias : [];
+                    aplicarFiltroCategorias();
                     if (table) table.style.display = 'table';
                 })
                 .catch(error => {
@@ -2517,14 +2614,14 @@ input:checked + .slider:after {
                 });
         }
         
-        function mostrarCategorias(categorias) {
+        function mostrarCategorias(categorias, totalCategorias = null, filtroLabel = '') {
             const tbody = document.getElementById('categoriasTableBody');
             const contador = document.getElementById('contadorCategorias');
-            
+
             if (!tbody) return;
-            
+
             tbody.innerHTML = '';
-            
+
             if (categorias && categorias.length > 0) {
                 categorias.forEach(categoria => {
                     const row = document.createElement('tr');
@@ -2542,21 +2639,30 @@ input:checked + .slider:after {
                     `;
                     tbody.appendChild(row);
                 });
-                
+
                 if (contador) {
-                    contador.textContent = `Total: ${categorias.length} categorías`;
+                    if (typeof totalCategorias === 'number' && totalCategorias !== categorias.length) {
+                        const sufijo = filtroLabel ? ` (filtro por ${filtroLabel})` : '';
+                        contador.textContent = `Mostrando ${categorias.length} de ${totalCategorias} categorías${sufijo}`;
+                    } else {
+                        contador.textContent = `Total: ${categorias.length} categorías`;
+                    }
                 }
             } else {
                 const row = document.createElement('tr');
                 row.innerHTML = '<td colspan="3" class="text-center text-muted">No hay categorías registradas</td>';
                 tbody.appendChild(row);
-                
+
                 if (contador) {
-                    contador.textContent = 'Total: 0 categorías';
+                    if (typeof totalCategorias === 'number') {
+                        contador.textContent = `Mostrando 0 de ${totalCategorias} categorías`;
+                    } else {
+                        contador.textContent = 'Total: 0 categorías';
+                    }
                 }
             }
         }
-        
+
         function mostrarError(mensaje) {
             const errorDiv = document.getElementById('categoriasError');
             if (errorDiv) {
@@ -2903,13 +3009,23 @@ input:checked + .slider:after {
                 return;
             }
             
+            const toMinutes = (valor) => {
+                if (!valor) return 0;
+                const partes = valor.toString().split(':');
+                const h = parseInt(partes[0] || '0', 10);
+                const m = parseInt(partes[1] || '0', 10);
+                return (h * 60) + m;
+            };
+            const nuevoInicio = toMinutes(horaInicio);
+            const nuevoFin = toMinutes(horaFin);
+
             // Verificar conflictos de horario
-            const conflicto = horariosSeleccionados.find(h => 
-                h.dia === dia && 
-                ((horaInicio >= h.horaInicio && horaInicio < h.horaFin) ||
-                 (horaFin > h.horaInicio && horaFin <= h.horaFin) ||
-                 (horaInicio <= h.horaInicio && horaFin >= h.horaFin))
-            );
+            const conflicto = horariosSeleccionados.find(h => {
+                if (h.dia !== dia) return false;
+                const existenteInicio = toMinutes(h.horaInicio);
+                const existenteFin = toMinutes(h.horaFin);
+                return nuevoInicio < existenteFin && nuevoFin > existenteInicio;
+            });
             
             if (conflicto) {
                 mostrarNotificacion('Existe un conflicto de horario en el mismo día', 'error');
@@ -3666,8 +3782,9 @@ if (typeof window.mostrarNotificacion !== 'function') {
             const imagenElement = document.getElementById('detalle-imagen');
             const sinImagenElement = document.getElementById('detalle-sin-imagen');
             if (imagenElement && sinImagenElement) {
-                if (oferta.imagen) {
-                    imagenElement.src = oferta.imagen;
+                const imagenSrc = oferta.imagenUrl || oferta.imagen;
+                if (imagenSrc) {
+                    imagenElement.src = imagenSrc;
                     imagenElement.style.display = 'block';
                     sinImagenElement.style.display = 'none';
                 } else {
@@ -4489,7 +4606,7 @@ if (typeof window.mostrarNotificacion !== 'function') {
                     mostrarNotificacion('Error de conexión al cargar los datos de la oferta', 'error');
                 });
         }
-        
+
         /**
          * Función para poblar el formulario con los datos de la oferta
          */
@@ -4497,6 +4614,12 @@ if (typeof window.mostrarNotificacion !== 'function') {
             console.log('📝 Poblando formulario con datos:', oferta);
             
             try {
+                const normalizarFecha = (valor) => {
+                    if (!valor) return '';
+                    const texto = valor.toString();
+                    return texto.includes('T') ? texto.split('T')[0] : texto;
+                };
+
                 // Establecer ID de la oferta para modificar
                 if (document.getElementById('idOfertaModificar')) {
                     document.getElementById('idOfertaModificar').value = oferta.id || oferta.idOferta || '';
@@ -4516,10 +4639,17 @@ if (typeof window.mostrarNotificacion !== 'function') {
                     document.getElementById('modalidad').value = oferta.modalidad || '';
                 }
                 if (document.getElementById('fechaInicio')) {
-                    document.getElementById('fechaInicio').value = oferta.fechaInicio || '';
+                    document.getElementById('fechaInicio').value = normalizarFecha(oferta.fechaInicio);
                 }
                 if (document.getElementById('fechaFin')) {
-                    document.getElementById('fechaFin').value = oferta.fechaFin || '';
+                    const fechaInicioInput = document.getElementById('fechaInicio');
+                    const fechaFinInput = document.getElementById('fechaFin');
+                    const fechaInicioVal = fechaInicioInput ? fechaInicioInput.value : '';
+                    fechaFinInput.value = normalizarFecha(oferta.fechaFin);
+                    if (fechaInicioVal) {
+                        fechaFinInput.disabled = false;
+                        fechaFinInput.setAttribute('min', fechaInicioVal);
+                    }
                 }
                 if (document.getElementById('cupos')) {
                     const cuposVal = oferta.cupos;

@@ -290,8 +290,8 @@
                                                  <span class="text-secondary"><i class="fas fa-user-check me-2"></i>Inscritos</span>
                                                  <span>
                                                      <!-- Changed from available to active/total -->
-                                                     <span class="fw-bold text-dark" th:text="${oferta.cupos - oferta.cuposDisponibles}">10</span>
-                                                     <span class="text-muted" th:text="|/ ${oferta.cupos}|">/ 30</span>
+                                                     <span class="fw-bold text-dark" th:text="${(oferta.cupos == null or oferta.cupos == T(java.lang.Integer).MAX_VALUE) ? oferta.cantidadAlumnosActivos : (oferta.cupos - oferta.cuposDisponibles)}">10</span>
+                                                     <span class="text-muted" th:text="${(oferta.cupos == null or oferta.cupos == T(java.lang.Integer).MAX_VALUE) ? '/ Sin límite' : '/ ' + oferta.cupos}">/ 30</span>
                                                  </span>
                                             </div>
                                             <div class="d-flex justify-content-between align-items-center" th:if="${oferta.certificado}">
@@ -411,8 +411,8 @@
                                                  <span class="text-secondary"><i class="fas fa-user-check me-2"></i>Inscritos</span>
                                                  <span>
                                                      <!-- Changed from available to active/total -->
-                                                     <span class="fw-bold text-dark" th:text="${oferta.cupos - oferta.cuposDisponibles}">10</span>
-                                                     <span class="text-muted" th:text="|/ ${oferta.cupos}|">/ 30</span>
+                                                     <span class="fw-bold text-dark" th:text="${(oferta.cupos == null or oferta.cupos == T(java.lang.Integer).MAX_VALUE) ? oferta.cantidadAlumnosActivos : (oferta.cupos - oferta.cuposDisponibles)}">10</span>
+                                                     <span class="text-muted" th:text="${(oferta.cupos == null or oferta.cupos == T(java.lang.Integer).MAX_VALUE) ? '/ Sin límite' : '/ ' + oferta.cupos}">/ 30</span>
                                                  </span>
                                             </div>
                                             <div class="d-flex justify-content-between align-items-center" th:if="${oferta.certificado}">
@@ -532,8 +532,8 @@
                                                  <span class="text-secondary"><i class="fas fa-users-cog me-2"></i>Inscritos</span>
                                                  <span>
                                                      <!-- Changed from available to active/total -->
-                                                     <span class="fw-bold text-dark" th:text="${oferta.cupos - oferta.cuposDisponibles}">10</span>
-                                                     <span class="text-muted" th:text="|/ ${oferta.cupos}|">/ 30</span>
+                                                     <span class="fw-bold text-dark" th:text="${(oferta.cupos == null or oferta.cupos == T(java.lang.Integer).MAX_VALUE) ? oferta.cantidadAlumnosActivos : (oferta.cupos - oferta.cuposDisponibles)}">10</span>
+                                                     <span class="text-muted" th:text="${(oferta.cupos == null or oferta.cupos == T(java.lang.Integer).MAX_VALUE) ? '/ Sin límite' : '/ ' + oferta.cupos}">/ 30</span>
                                                  </span>
                                             </div>
                                             <div class="d-flex justify-content-between align-items-center" th:if="${oferta.certificado}">
@@ -652,8 +652,8 @@
                                             <div class="d-flex justify-content-between align-items-center">
                                                  <span class="text-secondary"><i class="fas fa-users-cog me-2"></i>Inscritos</span>
                                                  <span>
-                                                     <span class="fw-bold text-dark" th:text="${oferta.cupos - oferta.cuposDisponibles}">10</span>
-                                                     <span class="text-muted" th:text="|/ ${oferta.cupos}|">/ 30</span>
+                                                     <span class="fw-bold text-dark" th:text="${(oferta.cupos == null or oferta.cupos == T(java.lang.Integer).MAX_VALUE) ? oferta.cantidadAlumnosActivos : (oferta.cupos - oferta.cuposDisponibles)}">10</span>
+                                                     <span class="text-muted" th:text="${(oferta.cupos == null or oferta.cupos == T(java.lang.Integer).MAX_VALUE) ? '/ Sin límite' : '/ ' + oferta.cupos}">/ 30</span>
                                                  </span>
                                             </div>
                                             <div class="d-flex justify-content-between align-items-center" th:if="${oferta.certificado}">

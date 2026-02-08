@@ -1,4 +1,4 @@
-package com.example.demo.model;
+﻿package com.example.demo.model;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.aspectj.lang.JoinPoint;
@@ -43,7 +43,8 @@ public class AuditAspect {
         
         // Analyze result for success/failure
         boolean exito = true;
-        StringBuilder detalles = new StringBuilder("Método ejecutado: " + jp.getSignature().getName());
+        String detalleBase = construirDetalleBase(auditable, jp.getArgs(), jp.getSignature().getName());
+        StringBuilder detalles = new StringBuilder(detalleBase);
 
         if (result instanceof ResponseEntity) {
             ResponseEntity<?> response = (ResponseEntity<?>) result;
@@ -53,6 +54,14 @@ public class AuditAspect {
             }
             if (response.getBody() instanceof Map) {
                 Map<?, ?> body = (Map<?, ?>) response.getBody();
+                Object auditDetails = body.get("auditDetails");
+                if (auditDetails != null) {
+                    String auditText = auditDetails.toString().trim();
+                    if (!auditText.isEmpty()) {
+                        detalles.setLength(0);
+                        detalles.append(auditText);
+                    }
+                }
                 if (Boolean.FALSE.equals(body.get("success"))) {
                     exito = false;
                     if (body.containsKey("error")) {
@@ -120,6 +129,33 @@ public class AuditAspect {
             }
         }
         return request.getRemoteAddr();
+    }
+
+    private String construirDetalleBase(Auditable auditable, Object[] args, String metodo) {
+        String accion = auditable != null ? auditable.action() : "";
+        if ("MODIFICAR_OFERTA".equalsIgnoreCase(accion)) {
+            String id = args != null && args.length > 0 && args[0] != null ? args[0].toString() : "-";
+            String tipo = args != null && args.length > 1 && args[1] != null ? args[1].toString() : "";
+            String nombre = args != null && args.length > 2 && args[2] != null ? args[2].toString() : "";
+            if (!tipo.isEmpty() || !nombre.isEmpty()) {
+                return String.format("Modificacion de oferta %s: %s (ID %s)", tipo, nombre, id);
+            }
+            return String.format("Modificacion de oferta (ID %s)", id);
+        }
+
+        if ("MODIFICACION_USUARIO".equalsIgnoreCase(accion)) {
+            String identificador = args != null && args.length > 0 && args[0] != null ? args[0].toString() : "-";
+            String dni = args != null && args.length > 1 && args[1] != null ? args[1].toString() : "";
+            String nombre = args != null && args.length > 2 && args[2] != null ? args[2].toString() : "";
+            String apellido = args != null && args.length > 3 && args[3] != null ? args[3].toString() : "";
+            String fullName = (nombre + " " + apellido).trim();
+            if (!fullName.isEmpty() || !dni.isEmpty()) {
+                return String.format("Modificacion de usuario: %s (DNI %s, ident %s)", fullName, dni, identificador);
+            }
+            return String.format("Modificacion de usuario (ident %s)", identificador);
+        }
+
+        return "Metodo ejecutado: " + metodo;
     }
 
     private String resumirArgs(Object[] args) {

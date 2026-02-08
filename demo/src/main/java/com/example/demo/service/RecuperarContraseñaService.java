@@ -1,12 +1,15 @@
-package com.example.demo.service;
+﻿package com.example.demo.service;
 
 import java.time.LocalDateTime;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
 
 import com.example.demo.model.Usuario;
 import com.example.demo.repository.UsuarioRepository;
@@ -19,13 +22,16 @@ public class RecuperarContraseñaService {
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    private final String baseUrl;
     
     public RecuperarContraseñaService(UsuarioRepository usuarioRepository, 
                                  PasswordEncoder passwordEncoder,
-                                 EmailService emailService) {
+                                 EmailService emailService,
+                                 @Value("${app.base-url:http://localhost:8080}") String baseUrl) {
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
+        this.baseUrl = baseUrl;
     }
     
     /**
@@ -44,20 +50,19 @@ public class RecuperarContraseñaService {
         
         Usuario usuario = usuarioOpt.get();
         
-        // Generar contraseña temporal
-        String passwordTemp = generarPasswordTemporal();
+        // Generar token de recuperación
         String token = UUID.randomUUID().toString();
         LocalDateTime expiracion = LocalDateTime.now().plusHours(24);
         
         // Guardar datos temporales en el usuario
-        usuario.setPasswordTemporal(passwordEncoder.encode(passwordTemp));
+        usuario.setPasswordTemporal(null);
         usuario.setTokenRecuperacion(token);
         usuario.setExpiracionToken(expiracion);
         
         usuarioRepository.save(usuario);
         
         // Enviar correo
-        enviarEmailRecuperacion(usuario, passwordTemp, token);
+        enviarEmailRecuperacion(usuario, token);
         
         System.out.println("✅ Proceso de recuperación iniciado para: " + usuario.getCorreo());
         return true;
@@ -142,8 +147,7 @@ public class RecuperarContraseñaService {
     private void enviarEmailCambioPassword(Usuario usuario, String token) {
         try {
             String subject = "Valida tu nueva contraseña - Aurea";
-            // Ajustar dominio en producción si es necesario
-            String enlaceConfirmacion = "http://localhost:8080/recuperacion/confirmar?token=" + token;
+            String enlaceConfirmacion = construirEnlaceConfirmacion(token);
 
             String body = String.format(
                 "Estimado/a %s %s,\n\n" +
@@ -200,24 +204,23 @@ public class RecuperarContraseñaService {
     }
     
     /**
-     * Envía email con la contraseña temporal y enlace de confirmación
+     * Envía email con enlace para restablecer la contraseña
      */
-    private void enviarEmailRecuperacion(Usuario usuario, String passwordTemp, String token) {
+    private void enviarEmailRecuperacion(Usuario usuario, String token) {
         try {
             String subject = "Recuperación de Contraseña - Aurea";
-            String enlaceConfirmacion = "http://localhost:8080/recuperacion/confirmar?token=" + token;
+            String enlaceConfirmacion = construirEnlaceRestablecer(token);
             
             String body = String.format(
                 "Estimado/a %s %s,\n\n" +
                 "Hemos recibido una solicitud para recuperar tu contraseña.\n\n" +
-                "Tu contraseña temporal es: %s\n\n" +
-                "Para confirmar el cambio de contraseña, haz clic en el siguiente enlace:\n" +
+                "Para establecer una nueva contraseña, haz clic en el siguiente enlace:\n" +
                 "%s\n\n" +
                 "Este enlace expirará en 24 horas.\n\n" +
                 "Si no solicitaste este cambio, ignora este correo.\n\n" +
                 "Saludos cordiales,\n" +
                 "Equipo Aurea",
-                usuario.getNombre(), usuario.getApellido(), passwordTemp, enlaceConfirmacion
+                usuario.getNombre(), usuario.getApellido(), enlaceConfirmacion
             );
             
             emailService.sendEmail(usuario.getCorreo(), subject, body);
@@ -252,6 +255,50 @@ public class RecuperarContraseñaService {
         } catch (Exception e) {
             System.out.println("❌ Error enviando email de confirmación: " + e.getMessage());
         }
+    }
+
+    private String construirEnlaceConfirmacion(String token) {
+        String base = baseUrl != null ? baseUrl.trim() : "http://localhost:8080";
+        if (base.endsWith("/")) {
+            base = base.substring(0, base.length() - 1);
+        }
+        String tokenEncoded = URLEncoder.encode(token, StandardCharsets.UTF_8);
+        return base + "/recuperacion/confirmar?token=" + tokenEncoded;
+    }
+
+    private String construirEnlaceRestablecer(String token) {
+        String base = baseUrl != null ? baseUrl.trim() : "http://localhost:8080";
+        if (base.endsWith("/")) {
+            base = base.substring(0, base.length() - 1);
+        }
+        String tokenEncoded = URLEncoder.encode(token, StandardCharsets.UTF_8);
+        return base + "/recuperacion/nueva?token=" + tokenEncoded;
+    }
+
+    public boolean validarToken(String token) {
+        Optional<Usuario> usuarioOpt = usuarioRepository.findByTokenRecuperacion(token);
+        if (usuarioOpt.isEmpty()) return false;
+        Usuario usuario = usuarioOpt.get();
+        return usuario.getExpiracionToken() != null && usuario.getExpiracionToken().isAfter(LocalDateTime.now());
+    }
+
+    public Usuario restablecerConToken(String token, String passwordNueva) {
+        Optional<Usuario> usuarioOpt = usuarioRepository.findByTokenRecuperacion(token);
+        if (usuarioOpt.isEmpty()) return null;
+        Usuario usuario = usuarioOpt.get();
+        if (usuario.getExpiracionToken() == null || usuario.getExpiracionToken().isBefore(LocalDateTime.now())) {
+            limpiarDatosRecuperacion(usuario);
+            usuarioRepository.save(usuario);
+            return null;
+        }
+        if (!validarComplejidadPassword(passwordNueva)) {
+            throw new IllegalArgumentException("La nueva contraseña no cumple los requisitos de seguridad.");
+        }
+        usuario.setContraseña(passwordEncoder.encode(passwordNueva));
+        limpiarDatosRecuperacion(usuario);
+        usuarioRepository.save(usuario);
+        enviarEmailConfirmacion(usuario);
+        return usuario;
     }
     
     /**

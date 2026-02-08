@@ -12,6 +12,9 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.persistence.Transient;
+import java.time.LocalDate;
+import java.time.Period;
 
 @Entity
 @Getter
@@ -38,6 +41,14 @@ public class Docente extends Usuario{
     
     @OneToMany(mappedBy = "docente")
     private List<Clase> clases;
+    
+    @Transient
+    public Integer getExperienciaActualizada() {
+        int base = this.añosExperiencia == null ? 0 : this.añosExperiencia;
+        if (this.getFechaRegistro() == null) return base;
+        int añosDesdeRegistro = Period.between(this.getFechaRegistro().toLocalDate(), LocalDate.now()).getYears();
+        return base + añosDesdeRegistro;
+    }
 
     public void addHorario(Horario h) {
         if (this.horario == null) {
