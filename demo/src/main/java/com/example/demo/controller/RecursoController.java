@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -56,6 +57,40 @@ public class RecursoController {
             recursoRepository.save(recurso);
             
             return ResponseEntity.ok(Map.of("success", true, "message", "Recurso creado"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Error: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/editar/{recursoId}")
+    public ResponseEntity<?> editarRecurso(@PathVariable Long recursoId,
+                                           @RequestParam UUID moduloId,
+                                           @RequestParam String titulo,
+                                           @RequestParam(required = false) String descripcion,
+                                           @RequestParam String tipo,
+                                           @RequestParam(required = false) String url,
+                                           @RequestParam(required = false) String contenido) {
+        try {
+            Modulo modulo = moduloRepository.findById(moduloId)
+                .orElseThrow(() -> new RuntimeException("Módulo no encontrado"));
+
+            Recurso recurso = recursoRepository.findById(recursoId)
+                .orElseThrow(() -> new RuntimeException("Recurso no encontrado"));
+
+            recurso.setTitulo(titulo);
+            recurso.setDescripcion(descripcion);
+            recurso.setModulo(modulo);
+            try {
+                recurso.setTipo(TipoRecurso.valueOf(tipo));
+            } catch (IllegalArgumentException e) {
+                 return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Tipo de recurso inválido"));
+            }
+            recurso.setUrl(url);
+            recurso.setContenidoTexto(contenido);
+
+            recursoRepository.save(recurso);
+
+            return ResponseEntity.ok(Map.of("success", true, "message", "Recurso actualizado"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Error: " + e.getMessage()));
         }

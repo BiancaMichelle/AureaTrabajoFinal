@@ -2,6 +2,13 @@ package com.example.demo.model;
 
 import java.time.LocalDateTime;
 
+import com.example.demo.model.Examen;
+import com.example.demo.model.Tarea;
+import com.example.demo.model.Carpeta;
+import com.example.demo.model.Material;
+import com.example.demo.model.Recurso;
+import com.example.demo.model.TipoRecurso;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -10,6 +17,7 @@ import jakarta.persistence.Inheritance;
 import jakarta.persistence.InheritanceType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -33,4 +41,44 @@ public abstract class Actividad {
     @ManyToOne
     @JoinColumn(name = "modulo_id")
     private Modulo modulo;
+
+    @Transient
+    public String getTipoActividad() {
+        if (this instanceof Examen) {
+            return "EXAMEN";
+        }
+        if (this instanceof Tarea) {
+            return "TAREA";
+        }
+        if (this instanceof Carpeta) {
+            return "CARPETA";
+        }
+        if (this instanceof Material) {
+            return "MATERIAL";
+        }
+        if (this instanceof Recurso recurso) {
+            return recurso.getTipo() != null ? recurso.getTipo().name() : "RECURSO";
+        }
+        return "ACTIVIDAD";
+    }
+
+    @Transient
+    public String getContenidoTextoActividad() {
+        if (this instanceof Recurso recurso) {
+            if (recurso.getTipo() == TipoRecurso.TEXTO) {
+                return recurso.getContenidoTexto();
+            }
+        }
+        return "";
+    }
+
+    @Transient
+    public String getUrlActividad() {
+        if (this instanceof Recurso recurso) {
+            if (recurso.getTipo() == TipoRecurso.ENLACE) {
+                return recurso.getUrl();
+            }
+        }
+        return "";
+    }
 }

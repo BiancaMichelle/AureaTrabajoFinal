@@ -933,7 +933,10 @@
                                             th:classappend="${actividad instanceof T(com.example.demo.model.Carpeta) ? 'flex-wrap' : ''}"
                                             th:data-actividad-id="${actividad.idActividad}"
                                             th:data-actividad-titulo="${actividad.titulo}"
-                                            th:data-actividad-descripcion="${actividad.descripcion}">
+                                            th:data-actividad-descripcion="${actividad.descripcion}"
+                                            th:data-actividad-tipo="${actividad.tipoActividad}"
+                                            th:data-actividad-contenido="${actividad.contenidoTextoActividad}"
+                                            th:data-actividad-url="${actividad.urlActividad}">
                                             
                                             <!-- Icono Dinámico -->
                                             <div class="activity-icon-container"
@@ -955,7 +958,7 @@
                                                         <th:block th:unless="${actividad instanceof T(com.example.demo.model.Recurso) and actividad.tipo.name() == 'TEXTO'}">
                                                             <h5 th:if="${!(actividad instanceof T(com.example.demo.model.Recurso) and actividad.tipo.name() == 'ENLACE')}" th:text="${actividad.titulo}">Título Actividad</h5>
                                                             <h5 th:if="${actividad instanceof T(com.example.demo.model.Recurso) and actividad.tipo.name() == 'ENLACE'}">
-                                                                <a th:href="${actividad.url}" target="_blank" class="text-blue-600 hover:underline">
+                                                                <a th:href="${actividad.url}" target="_blank" class="text-blue-600 hover:underline js-actividad-enlace">
                                                                     <i class="fas fa-external-link-alt text-xs me-1"></i> <span th:text="${actividad.titulo}">Link</span>
                                                                 </a>
                                                             </h5>
@@ -990,7 +993,7 @@
                                                         </button>
                                                         
                                                         <th:block th:if="${actividad instanceof T(com.example.demo.model.Tarea)}">
-                                                             <button 
+                                                                                                                         <button 
                                                                th:data-id="${actividad.idActividad}"
                                                                th:data-titulo="${actividad.titulo}"
                                                                th:data-descripcion="${actividad.descripcion}"
@@ -1004,7 +1007,7 @@
                                                                 th:data-entrega-texto="${tareasEntregas != null && tareasEntregas.containsKey(actividad.idActividad) ? tareasEntregas.get(actividad.idActividad).contenido : ''}"
                                                                th:data-tipo-entrega="${#strings.listJoin(actividad.tipoEntrega, ',')}"
                                                                onclick="abrirModalTarea(this)"
-                                                               class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                                                                                                             class="btn btn-sm btn-outline-primary rounded-pill px-3 js-ver-tarea">
                                                                 Ver Tarea
                                                             </button>
                                                             <a th:if="${puedeModificar}"
@@ -1031,7 +1034,7 @@
                                                         <button th:if="${actividad instanceof T(com.example.demo.model.Carpeta)}"
                                                             th:attr="data-carpeta-id=${actividad.idActividad}"
                                                             onclick="toggleCarpetaInline(this)"
-                                                            class="btn btn-sm btn-light text-yellow-600 toggle-folder-btn">
+                                                            class="btn btn-sm btn-light text-yellow-600 toggle-folder-btn js-toggle-carpeta">
                                                             <i class="fas fa-folder"></i>
                                                         </button>
                                                     </div>
@@ -1045,7 +1048,7 @@
                                             </button>
 
                                             <div class="edit-controls ml-3">
-                                                <button type="button" class="edit-icon text-blue-600" data-edit-type="actividad" th:data-actividad-id="${actividad.idActividad}"><i class="fas fa-pen"></i></button>
+                                                <button type="button" class="edit-icon text-blue-600" data-edit-type="actividad" th:data-actividad-id="${actividad.idActividad}" th:if="${!(actividad instanceof T(com.example.demo.model.Material))}"><i class="fas fa-pen"></i></button>
                                                 <button type="button" class="delete-icon text-red-500" data-delete-type="actividad" th:data-actividad-id="${actividad.idActividad}" th:data-actividad-nombre="${actividad.titulo}"><i class="fas fa-trash"></i></button>
                                             </div>
 
@@ -1551,8 +1554,81 @@
             });
         }
 
-        function handlePendingEdit(typeLabel) {
-            alert(`⚠️ La edición de ${typeLabel} estará disponible próximamente.`);
+        function decodeHtmlEntities(text) {
+            if (!text) {
+                return '';
+            }
+            const textarea = document.createElement('textarea');
+            textarea.innerHTML = text;
+            return textarea.value;
+        }
+
+        function mostrarModalTextoActividad(titulo, contenidoHtml) {
+            const contenidoSeguro = decodeHtmlEntities(contenidoHtml || '');
+            const modalHTML = `
+                <div id="textoActividadModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[120]">
+                    <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
+                        <div class="flex items-center justify-between px-5 py-3 border-b bg-gray-50">
+                            <h3 class="text-lg font-semibold text-gray-800">
+                                <i class="fas fa-align-left text-blue-600 me-2"></i>${escapeHtml(titulo || 'Sección de texto')}
+                            </h3>
+                            <button type="button" onclick="document.getElementById('textoActividadModal').remove()" class="text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="p-6 overflow-y-auto" style="max-height: calc(80vh - 56px);">
+                            <div class="prose max-w-none text-gray-700">${contenidoSeguro}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+
+        function abrirActividadDesdeEdicion(card) {
+            if (!card) {
+                return;
+            }
+
+            const actividadId = card.getAttribute('data-actividad-id');
+            const actividadTipo = (card.getAttribute('data-actividad-tipo') || '').toUpperCase();
+
+            if (!actividadId) {
+                alert('No se pudo identificar la actividad.');
+                return;
+            }
+
+            if (actividadTipo === 'EXAMEN') {
+                window.location.href = `/examen/detalle/${actividadId}`;
+                return;
+            }
+
+            if (actividadTipo === 'TAREA') {
+                const verTareaBtn = card.querySelector('.js-ver-tarea');
+                if (verTareaBtn) {
+                    verTareaBtn.click();
+                    return;
+                }
+                alert('No se encontró el acceso a la tarea.');
+                return;
+            }
+
+            if (actividadTipo === 'ENLACE' || actividadTipo === 'TEXTO') {
+                abrirEditorRecursoDesdeCard(card);
+                return;
+            }
+
+            if (actividadTipo === 'CARPETA') {
+                const toggleBtn = card.querySelector('.js-toggle-carpeta');
+                if (toggleBtn) {
+                    toggleBtn.click();
+                    return;
+                }
+                alert('No se encontró la carpeta.');
+                return;
+            }
+
+            alert('La edición de esta actividad aún no está disponible.');
         }
 
         function registerEditButtons() {
@@ -1586,7 +1662,8 @@
                         return;
                     }
                     event.preventDefault();
-                    handlePendingEdit('actividades');
+                    const card = event.currentTarget.closest('.activity-item');
+                    abrirActividadDesdeEdicion(card);
                 });
             });
         }
@@ -2144,10 +2221,18 @@
         // ========================================
         // FORMULARIO DE RECURSO (ENLACE / TEXTO)
         // ========================================
-        function crearFormularioRecurso(moduloId, moduloNombre, tipo) {
+        function crearFormularioRecurso(moduloId, moduloNombre, tipo, opciones = {}) {
             const esEnlace = tipo === 'ENLACE';
-            const tituloModal = esEnlace ? 'Agregar Enlace' : 'Agregar Sección de Texto';
+            const esEdicion = opciones.modo === 'editar';
+            const tituloModal = esEnlace
+                ? (esEdicion ? 'Editar Enlace' : 'Agregar Enlace')
+                : (esEdicion ? 'Editar Sección de Texto' : 'Agregar Sección de Texto');
             const iconModal = esEnlace ? 'fa-link' : 'fa-align-left';
+            const tituloValor = opciones.titulo || '';
+            const descripcionValor = opciones.descripcion || '';
+            const urlValor = opciones.url || '';
+            const contenidoValor = opciones.contenido || '';
+            const formAction = esEdicion ? `/recurso/editar/${opciones.id}` : '/recurso/crear';
             
             return `
                 <div id="recursoModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
@@ -2161,29 +2246,29 @@
                             </button>
                         </div>
                         
-                        <form id="recursoForm" action="/recurso/crear" method="post" class="p-6">
+                        <form id="recursoForm" action="${formAction}" method="post" class="p-6">
                             <input type="hidden" name="${csrfParameterName}" value="${csrfToken}" />
                             <input type="hidden" name="moduloId" value="${moduloId}" />
                             <input type="hidden" name="tipo" value="${tipo}" />
                             
                             <div class="mb-4">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Título *</label>
-                                <input type="text" name="titulo" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" placeholder="Título del recurso">
+                                <input type="text" name="titulo" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" placeholder="Título del recurso" value="${escapeHtmlAtributo(tituloValor)}">
                             </div>
                             
                             ${esEnlace ? `
                                 <div class="mb-4">
                                     <label class="block text-sm font-medium text-gray-700 mb-1">URL (Enlace) *</label>
-                                    <input type="url" name="url" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" placeholder="https://ejemplo.com">
+                                    <input type="url" name="url" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" placeholder="https://ejemplo.com" value="${escapeHtmlAtributo(urlValor)}">
                                 </div>
                                 <div class="mb-4">
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
-                                    <textarea name="descripcion" rows="2" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"></textarea>
+                                    <textarea name="descripcion" rows="2" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border">${escapeHtml(descripcionValor)}</textarea>
                                 </div>
                             ` : `
                                 <div class="mb-4">
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Contenido *</label>
-                                    <textarea name="contenido" rows="6" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" placeholder="Escribe aquí el contenido..."></textarea>
+                                    <textarea name="contenido" rows="6" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" placeholder="Escribe aquí el contenido...">${escapeHtml(contenidoValor)}</textarea>
                                     <p class="text-xs text-gray-500 mt-1">Soporta HTML básico.</p>
                                 </div>
                             `}
@@ -2193,13 +2278,44 @@
                                     Cancelar
                                 </button>
                                 <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 shadow-sm">
-                                    Guardar
+                                    ${esEdicion ? 'Guardar cambios' : 'Guardar'}
                                 </button>
                             </div>
                         </form>
                     </div>
                 </div>
             `;
+        }
+
+        function abrirEditorRecursoDesdeCard(card) {
+            if (!card) {
+                return;
+            }
+
+            const actividadId = card.getAttribute('data-actividad-id');
+            const tipo = (card.getAttribute('data-actividad-tipo') || '').toUpperCase();
+            if (!actividadId || (tipo !== 'ENLACE' && tipo !== 'TEXTO')) {
+                return;
+            }
+
+            const moduloCard = card.closest('.moodle-module');
+            const moduloId = moduloCard ? moduloCard.getAttribute('data-modulo-id') : '';
+            const moduloNombre = moduloCard ? moduloCard.getAttribute('data-modulo-nombre') : '';
+            const titulo = card.getAttribute('data-actividad-titulo') || '';
+            const descripcion = card.getAttribute('data-actividad-descripcion') || '';
+            const url = card.getAttribute('data-actividad-url') || '';
+            const contenido = card.getAttribute('data-actividad-contenido') || '';
+
+            const modalHTML = crearFormularioRecurso(moduloId, moduloNombre, tipo, {
+                modo: 'editar',
+                id: actividadId,
+                titulo,
+                descripcion,
+                url,
+                contenido
+            });
+
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
         }
         
         async function guardarRecurso(form) {
@@ -4722,14 +4838,15 @@
         async function abrirModalTarea(btn) {
             const id = btn.getAttribute('data-id');
             
-            // Validar mora antes de abrir el modal
-            try {
-                const response = await fetch(`/clase/validar-mora/${id}`);
-                const data = await response.json();
-                
-                if (data.bloqueado === true) {
-                    // Mostrar modal de bloqueo con el mismo estilo de examen
-                    const modalBloqueado = `
+            // Validar mora antes de abrir el modal (solo alumnos)
+            if (!PUEDE_MODIFICAR) {
+                try {
+                    const response = await fetch(`/clase/validar-mora/${id}`);
+                    const data = await response.json();
+                    
+                    if (data.bloqueado === true) {
+                        // Mostrar modal de bloqueo con el mismo estilo de examen
+                        const modalBloqueado = `
                         <div id="tareaModalBloqueado" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
                             <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg">
                                 <div class="text-center">
@@ -4776,13 +4893,14 @@
                                 </div>
                             </div>
                         </div>
-                    `;
-                    document.body.insertAdjacentHTML('beforeend', modalBloqueado);
-                    return;
+                        `;
+                        document.body.insertAdjacentHTML('beforeend', modalBloqueado);
+                        return;
+                    }
+                } catch (error) {
+                    console.error('Error al validar mora:', error);
+                    // Continuar con el modal normal si falla la validación
                 }
-            } catch (error) {
-                console.error('Error al validar mora:', error);
-                // Continuar con el modal normal si falla la validación
             }
             
             // Si no está bloqueado, continuar con el modal normal

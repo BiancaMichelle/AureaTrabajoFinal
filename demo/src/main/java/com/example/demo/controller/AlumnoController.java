@@ -1154,6 +1154,14 @@ public class AlumnoController {
                 Map<Long, Entrega> tareasEntregas = new HashMap<>(); // Mapa para las entregas
 
                 if (!puedeModificar && modulos != null) {
+                    for (Modulo moduloActual : modulos) {
+                        if (moduloActual.getActividades() != null) {
+                            moduloActual.setActividades(moduloActual.getActividades().stream()
+                                    .filter(a -> Boolean.TRUE.equals(a.getVisibilidad()))
+                                    .collect(Collectors.toList()));
+                        }
+                    }
+
                     examenesResumen = new HashMap<>();
                     for (Modulo moduloActual : modulos) {
                         if (moduloActual.getActividades() == null) {

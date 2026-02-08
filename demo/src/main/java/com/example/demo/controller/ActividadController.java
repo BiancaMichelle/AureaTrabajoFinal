@@ -41,7 +41,9 @@ import com.example.demo.repository.ArchivoRepository;
 import com.example.demo.repository.ActividadRepository;
 import com.example.demo.model.Actividad;
 import com.example.demo.repository.CuotaRepository;
+import com.example.demo.repository.EntregaRepository;
 import com.example.demo.repository.InscripcionRepository;
+import com.example.demo.repository.IntentoRepository;
 import com.example.demo.repository.MaterialRepository;
 import com.example.demo.repository.ModuloRepository;
 import com.example.demo.repository.UsuarioRepository;
@@ -85,6 +87,12 @@ public class ActividadController {
     
     @Autowired
     private CuotaRepository cuotaRepository;
+
+    @Autowired
+    private EntregaRepository entregaRepository;
+
+    @Autowired
+    private IntentoRepository intentoRepository;
     
     @Autowired
     private InstitutoService institutoService;
@@ -256,7 +264,16 @@ public class ActividadController {
     @PreAuthorize("hasAnyAuthority('DOCENTE', 'ADMIN')")
     public ResponseEntity<Map<String, Object>> eliminarActividad(@PathVariable Long actividadId, Authentication authentication) {
         try {
-            examenService.eliminarActividad(actividadId);
+            Actividad actividad = actividadRepository.findById(actividadId)
+                    .orElseThrow(() -> new RuntimeException("Actividad no encontrada"));
+
+            if (actividad instanceof Tarea tarea) {
+                entregaRepository.deleteAll(entregaRepository.findByTarea(tarea));
+            } else if (actividad instanceof Examen examen) {
+                intentoRepository.deleteAll(intentoRepository.findByExamen_IdActividad(examen.getIdActividad()));
+            }
+
+            actividadRepository.delete(actividad);
             return ResponseEntity.ok(Map.of("success", true));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("success", false, "error", e.getMessage()));
