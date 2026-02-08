@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -600,14 +601,30 @@ public class ExamenController {
     public String obtenerFragmentCorreccion(@PathVariable Long examenId,
             @PathVariable UUID intentoId,
             Authentication authentication,
+            Principal principal,
             Model model) {
+        System.out.println("=== OBTENER FRAGMENT CORRECCION ===");
+        System.out.println("ExamenId: " + examenId);
+        System.out.println("IntentoId: " + intentoId);
+        System.out.println("Principal name: " + (principal != null ? principal.getName() : "NULL"));
+        System.out.println("Authentication: " + (authentication != null ? authentication.getName() : "NULL"));
+        
         Examen examen = examenRepository.findById(examenId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Examen no encontrado"));
+        System.out.println("Examen encontrado: " + examen.getTitulo());
 
-        var usuario = usuarioRepository.findByDni(authentication.getName())
+        String dni = obtenerDniDesdePrincipal(principal);
+        System.out.println("DNI obtenido: " + dni);
+        
+        var usuario = usuarioRepository.findByDni(dni)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
+        System.out.println("Usuario encontrado: " + usuario.getNombre() + " (Tipo: " + usuario.getClass().getSimpleName() + ")");
 
-        if (!puedeGestionarExamen(authentication, usuario, examen)) {
+        boolean puede = puedeGestionarExamen(authentication, usuario, examen);
+        System.out.println("Puede gestionar examen: " + puede);
+        
+        if (!puede) {
+            System.out.println("ERROR: No tiene permisos para gestionar este examen");
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
@@ -801,28 +818,58 @@ public class ExamenController {
 
     private boolean puedeGestionarExamen(Authentication authentication, com.example.demo.model.Usuario usuario,
             Examen examen) {
+        System.out.println("--- VERIFICANDO PERMISOS ---");
+        System.out.println("Usuario: " + usuario.getNombre() + " (Tipo: " + usuario.getClass().getSimpleName() + ")");
+        
         boolean esAdmin = authentication.getAuthorities().stream()
                 .anyMatch(auth -> {
                     String nombre = auth.getAuthority();
                     return "ADMIN".equalsIgnoreCase(nombre) || "ROLE_ADMIN".equalsIgnoreCase(nombre);
                 });
+        System.out.println("Es ADMIN: " + esAdmin);
         if (esAdmin) {
             return true;
         }
 
         if (!(usuario instanceof Docente docente)) {
+            System.out.println("Usuario NO es Docente");
             return false;
         }
+        System.out.println("Usuario ES Docente (ID: " + docente.getId() + ")");
 
         OfertaAcademica oferta = examen.getModulo() != null ? examen.getModulo().getCurso() : null;
-        if (oferta instanceof Curso curso) {
-            return curso.getDocentes() != null && curso.getDocentes().stream()
-                    .anyMatch(d -> d.getId().equals(docente.getId()));
+        System.out.println("Oferta obtenida: " + (oferta != null ? oferta.getNombre() + " (Tipo: " + oferta.getClass().getSimpleName() + ")" : "NULL"));
+        
+        if (oferta == null) {
+            System.out.println("Oferta es NULL");
+            return false;
         }
-        if (oferta instanceof Formacion formacion) {
-            return formacion.getDocentes() != null && formacion.getDocentes().stream()
+        
+        // Desempaquetar el proxy de Hibernate para obtener la clase real
+        OfertaAcademica ofertaReal = (OfertaAcademica) Hibernate.unproxy(oferta);
+        System.out.println("Oferta real (desempaquetada): " + ofertaReal.getClass().getSimpleName());
+        
+        if (ofertaReal instanceof Curso curso) {
+            System.out.println("Es Curso. Docentes: " + (curso.getDocentes() != null ? curso.getDocentes().size() : 0));
+            if (curso.getDocentes() != null) {
+                curso.getDocentes().forEach(d -> System.out.println("  - Docente ID: " + d.getId()));
+            }
+            boolean resultado = curso.getDocentes() != null && curso.getDocentes().stream()
                     .anyMatch(d -> d.getId().equals(docente.getId()));
+            System.out.println("Resultado para Curso: " + resultado);
+            return resultado;
         }
+        if (ofertaReal instanceof Formacion formacion) {
+            System.out.println("Es Formación. Docentes: " + (formacion.getDocentes() != null ? formacion.getDocentes().size() : 0));
+            if (formacion.getDocentes() != null) {
+                formacion.getDocentes().forEach(d -> System.out.println("  - Docente ID: " + d.getId()));
+            }
+            boolean resultado = formacion.getDocentes() != null && formacion.getDocentes().stream()
+                    .anyMatch(d -> d.getId().equals(docente.getId()));
+            System.out.println("Resultado para Formación: " + resultado);
+            return resultado;
+        }
+        System.out.println("Oferta no es ni Curso ni Formación (es: " + ofertaReal.getClass().getName() + ")");
         return false;
     }
 
