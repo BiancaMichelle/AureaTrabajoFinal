@@ -124,7 +124,10 @@
         <div class="activity-list">
             <div class="activity-item" th:each="actividad : ${actividadesRecientes}">
                 <div class="activity-icon">
+                    <i class="fas fa-sign-in-alt" th:if="${actividad.tipo} == 'login'"></i>
                     <i class="fas fa-user-plus" th:if="${actividad.tipo} == 'registro'"></i>
+                    <i class="fas fa-edit" th:if="${actividad.tipo} == 'modificacion'"></i>
+                    <i class="fas fa-trash-alt" th:if="${actividad.tipo} == 'eliminacion'"></i>
                     <i class="fas fa-graduation-cap" th:if="${actividad.tipo} == 'inscripcion'"></i>
                     <i class="fas fa-check-circle" th:if="${actividad.tipo} == 'completado'"></i>
                 </div>

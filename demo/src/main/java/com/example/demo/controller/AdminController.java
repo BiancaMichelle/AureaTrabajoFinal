@@ -13,19 +13,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
@@ -62,6 +59,7 @@ import com.example.demo.model.Pais;
 import com.example.demo.model.Rol;
 import com.example.demo.model.Seminario;
 import com.example.demo.model.Usuario;
+import com.example.demo.repository.AuditLogRepository;
 import com.example.demo.repository.CarruselImagenRepository;
 import com.example.demo.repository.CategoriaRepository;
 import com.example.demo.repository.CharlaRepository;
@@ -70,20 +68,19 @@ import com.example.demo.repository.DocenteRepository;
 import com.example.demo.repository.FormacionRepository;
 import com.example.demo.repository.HorarioRepository;
 import com.example.demo.repository.InscripcionRepository;
-import com.example.demo.repository.AuditLogRepository;
 import com.example.demo.repository.OfertaAcademicaRepository;
 import com.example.demo.repository.SeminarioRepository;
 import com.example.demo.repository.UsuarioRepository;
+import com.example.demo.service.AnalisisRendimientoService;
+import com.example.demo.service.CertificacionService;
+import com.example.demo.service.DisponibilidadDocenteService;
+import com.example.demo.service.GeneradorHorariosService;
 import com.example.demo.service.ImagenService;
 import com.example.demo.service.InstitutoService;
 import com.example.demo.service.LocacionAPIService;
 import com.example.demo.service.OfertaAcademicaService;
-import com.example.demo.service.CertificacionService;
-import com.example.demo.service.RegistroService;
-import com.example.demo.service.AnalisisRendimientoService;
-import com.example.demo.service.DisponibilidadDocenteService;
-import com.example.demo.service.GeneradorHorariosService;
 import com.example.demo.service.OfertaImagenService;
+import com.example.demo.service.RegistroService;
 import com.example.demo.service.UsuarioImagenService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -99,44 +96,43 @@ public class AdminController {
 
     @Autowired
     private OfertaAcademicaRepository ofertaAcademicaRepository;
-    
+
     @Autowired
     private CategoriaRepository categoriaRepository;
-    
+
     @Autowired
     private CursoRepository cursoRepository;
-    
+
     @Autowired
     private FormacionRepository formacionRepository;
-    
+
     @Autowired
     private CharlaRepository charlaRepository;
-    
+
     @Autowired
     private SeminarioRepository seminarioRepository;
-    
+
     @Autowired
     private OfertaAcademicaService ofertaAcademicaService;
 
     @Autowired
     private final LocacionAPIService locacionApiService;
-    
+
     @Autowired
     private RegistroService registroService;
-    
+
     @Autowired
     private InstitutoService institutoService;
-    
+
     @Autowired
     private CarruselImagenRepository carruselImagenRepository;
-    
-    
+
     @Autowired
     private ImagenService imagenService;
-    
+
     @Autowired
     private OfertaImagenService ofertaImagenService;
-    
+
     @Autowired
     private UsuarioImagenService usuarioImagenService;
 
@@ -148,25 +144,24 @@ public class AdminController {
 
     @Autowired
     private HorarioRepository horarioRepository;
-    
+
     @Autowired
     private DisponibilidadDocenteService disponibilidadDocenteService;
-    
+
     @Autowired
     private GeneradorHorariosService generadorHorariosService;
-    
+
     @Autowired
     private InscripcionRepository inscripcionRepository;
-    
+
     @Autowired
     private AuditLogRepository auditLogRepository;
 
     @Autowired
     private CertificacionService certificacionService;
 
-
     public AdminController(LocacionAPIService locacionApiService,
-                           RegistroService registroService) {
+            RegistroService registroService) {
         this.locacionApiService = locacionApiService;
         this.registroService = registroService;
     }
@@ -175,8 +170,8 @@ public class AdminController {
     public String adminDashboard(Model model) {
         // 1. Estadísticas de Ofertas
         long totalOfertas = ofertaAcademicaRepository.count();
-        long ofertasActivas = ofertaAcademicaRepository.countByEstado(EstadoOferta.ACTIVA) + 
-                             ofertaAcademicaRepository.countByEstado(EstadoOferta.ENCURSO);
+        long ofertasActivas = ofertaAcademicaRepository.countByEstado(EstadoOferta.ACTIVA) +
+                ofertaAcademicaRepository.countByEstado(EstadoOferta.ENCURSO);
 
         long totalCursos = cursoRepository.count();
         long totalFormaciones = formacionRepository.count();
@@ -186,7 +181,7 @@ public class AdminController {
         // 2. Estadísticas de Usuarios
         List<Usuario> alumnos = usuarioRepository.findByRolesNombre("ALUMNO");
         long totalAlumnos = alumnos.size();
-        
+
         List<Usuario> docentes = usuarioRepository.findByRolesNombre("DOCENTE");
         long totalDocentes = docentes.size();
 
@@ -198,24 +193,26 @@ public class AdminController {
         LocalDate endOfMonth = now.withDayOfMonth(now.lengthOfMonth());
         long inscripcionesMes = inscripcionRepository.countByFechaInscripcionBetween(startOfMonth, endOfMonth);
 
-        // 4. Tasa de Finalización (Alumnos que terminaron / Total inscripciones en ofertas finalizadas)
-        long inscripcionesFinalizadas = inscripcionRepository.countByOfertaEstadoAndEstadoInscripcionTrue(EstadoOferta.FINALIZADA);
+        // 4. Tasa de Finalización (Alumnos que terminaron / Total inscripciones en
+        // ofertas finalizadas)
+        long inscripcionesFinalizadas = inscripcionRepository
+                .countByOfertaEstadoAndEstadoInscripcionTrue(EstadoOferta.FINALIZADA);
         long totalInscripcionesEnFinalizadas = inscripcionRepository.countByOfertaEstado(EstadoOferta.FINALIZADA);
-        
-        long tasaFinalizacion = totalInscripcionesEnFinalizadas > 0 
-                ? (inscripcionesFinalizadas * 100 / totalInscripcionesEnFinalizadas) 
+
+        long tasaFinalizacion = totalInscripcionesEnFinalizadas > 0
+                ? (inscripcionesFinalizadas * 100 / totalInscripcionesEnFinalizadas)
                 : 0;
 
         // 5. Actividad Mensual (Últimos 6 meses para gráfica)
         List<Map<String, Object>> actividadMensual = new ArrayList<>();
-        String[] nombresMeses = {"Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"};
-        
+        String[] nombresMeses = { "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic" };
+
         for (int i = 5; i >= 0; i--) {
             LocalDate date = now.minusMonths(i);
             LocalDate start = date.withDayOfMonth(1);
             LocalDate end = date.withDayOfMonth(date.lengthOfMonth());
             long count = inscripcionRepository.countByFechaInscripcionBetween(start, end);
-            
+
             Map<String, Object> mesData = new HashMap<>();
             mesData.put("mes", nombresMeses[date.getMonthValue() - 1]);
             mesData.put("inscripciones", count);
@@ -223,19 +220,38 @@ public class AdminController {
             actividadMensual.add(mesData);
         }
 
-        // 6. Actividad Reciente
-        List<com.example.demo.model.AuditLog> logs = auditLogRepository.findRecentLogs(org.springframework.data.domain.PageRequest.of(0, 5)).getContent();
+        // 6. Actividad Reciente (solo logins de admin y CRUD del ABM)
+        List<com.example.demo.model.AuditLog> logs = auditLogRepository
+                .findDashboardRelevantLogs(org.springframework.data.domain.PageRequest.of(0, 5)).getContent();
         List<Map<String, Object>> actividadesRecientes = logs.stream().map(log -> {
             Map<String, Object> map = new HashMap<>();
             String accion = log.getAccion() != null ? log.getAccion().toLowerCase() : "";
-            
+
             String tipo = "otro";
-            if (accion.contains("alta") || accion.contains("registro") || accion.contains("crear")) tipo = "registro";
-            else if (accion.contains("inscri")) tipo = "inscripcion";
-            else if (accion.contains("finaliz") || accion.contains("complet")) tipo = "completado";
-            
+            String descripcion = "";
+
+            // Clasificar por tipo de acción
+            if (accion.contains("inicio_sesion") || accion.contains("login")) {
+                tipo = "login";
+                descripcion = log.getDetalles() != null ? log.getDetalles() : "Inicio de sesión de administrador";
+            } else if (accion.contains("alta") || accion.contains("crear")) {
+                tipo = "registro";
+                descripcion = log.getDetalles() != null ? log.getDetalles() : log.getAccion();
+            } else if (accion.contains("modificar") || accion.contains("modificacion")) {
+                tipo = "modificacion";
+                descripcion = log.getDetalles() != null ? log.getDetalles() : log.getAccion();
+            } else if (accion.contains("baja") || accion.contains("eliminar")) {
+                tipo = "eliminacion";
+                descripcion = log.getDetalles() != null ? log.getDetalles() : log.getAccion();
+            } else if (accion.contains("reactivar") || accion.contains("cambiar_estado")) {
+                tipo = "modificacion";
+                descripcion = log.getDetalles() != null ? log.getDetalles() : log.getAccion();
+            } else {
+                descripcion = log.getDetalles() != null ? log.getDetalles() : log.getAccion();
+            }
+
             map.put("tipo", tipo);
-            map.put("descripcion", log.getDetalles() != null ? log.getDetalles() : log.getAccion());
+            map.put("descripcion", descripcion);
             map.put("fechaHora", log.getFecha() + " " + log.getHora());
             return map;
         }).collect(Collectors.toList());
@@ -243,7 +259,7 @@ public class AdminController {
         // Pasar al modelo
         model.addAttribute("totalOfertas", totalOfertas);
         model.addAttribute("ofertasActivas", ofertasActivas);
-        
+
         model.addAttribute("totalCursos", totalCursos);
         model.addAttribute("totalFormaciones", totalFormaciones);
         model.addAttribute("totalSeminarios", totalSeminarios);
@@ -252,13 +268,13 @@ public class AdminController {
         model.addAttribute("totalAlumnos", totalAlumnos);
         model.addAttribute("totalDocentes", totalDocentes);
         model.addAttribute("ratioAlumnosDocentes", ratio);
-        
+
         model.addAttribute("inscripcionesMes", inscripcionesMes);
         model.addAttribute("tasaFinalizacion", tasaFinalizacion);
-        
+
         model.addAttribute("actividadMensual", actividadMensual);
         model.addAttribute("actividadesRecientes", actividadesRecientes);
-        
+
         return "admin/panelAdmin";
     }
 
@@ -282,7 +298,7 @@ public class AdminController {
             @RequestParam EstadoProcesoCertificacion estado,
             RedirectAttributes redirectAttributes) {
         OfertaAcademica oferta = ofertaAcademicaRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Oferta no encontrada"));
+                .orElseThrow(() -> new RuntimeException("Oferta no encontrada"));
 
         oferta.setEstadoProcesoCertificacion(estado);
         ofertaAcademicaRepository.save(oferta);
@@ -297,12 +313,13 @@ public class AdminController {
             RedirectAttributes redirectAttributes) {
         try {
             OfertaAcademica oferta = ofertaAcademicaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Oferta no encontrada"));
+                    .orElseThrow(() -> new RuntimeException("Oferta no encontrada"));
 
             Docente docenteReferencia = obtenerDocenteReferencia(oferta);
             certificacionService.cerrarNotasYEmitirCertificados(id, docenteReferencia);
 
-            redirectAttributes.addFlashAttribute("success", "Notas cerradas y acta emitida para la oferta " + oferta.getNombre());
+            redirectAttributes.addFlashAttribute("success",
+                    "Notas cerradas y acta emitida para la oferta " + oferta.getNombre());
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("error", "Error al cerrar notas: " + e.getMessage());
         }
@@ -313,7 +330,8 @@ public class AdminController {
         if (oferta instanceof Curso curso && curso.getDocentes() != null && !curso.getDocentes().isEmpty()) {
             return curso.getDocentes().get(0);
         }
-        if (oferta instanceof Formacion formacion && formacion.getDocentes() != null && !formacion.getDocentes().isEmpty()) {
+        if (oferta instanceof Formacion formacion && formacion.getDocentes() != null
+                && !formacion.getDocentes().isEmpty()) {
             return formacion.getDocentes().get(0);
         }
         throw new RuntimeException("La oferta no tiene docente asignado para registrar el cierre");
@@ -323,10 +341,10 @@ public class AdminController {
     public String gestionOfertas(Model model) {
         try {
             System.out.println("🔍 Iniciando gestionOfertas...");
-            
+
             // RESTAURADO: Cargar ofertas desde la base de datos con validación de nulos
             List<OfertaAcademica> ofertas = ofertaAcademicaService.obtenerTodas();
-            
+
             // Validación defensiva: eliminar ofertas nulas
             if (ofertas != null) {
                 ofertas.removeIf(Objects::isNull);
@@ -335,34 +353,34 @@ public class AdminController {
                 ofertas = new ArrayList<>();
                 System.out.println("⚠️ Lista de ofertas era null, inicializando vacía");
             }
-            
+
             model.addAttribute("ofertas", ofertas);
             model.addAttribute("modalidades", Modalidad.values());
             model.addAttribute("estados", EstadoOferta.values());
-            
+
             // Objeto vacío para formulario de edición
             OfertaAcademica ofertaEditar = new OfertaAcademica();
             model.addAttribute("ofertaEditar", ofertaEditar);
-            
+
             System.out.println("✅ gestionOfertas completado exitosamente");
             return "admin/gestionOfertas";
         } catch (Exception e) {
             System.err.println("❌ Error en gestionOfertas: " + e.getMessage());
             e.printStackTrace();
-            
+
             // En caso de error, pasamos datos mínimos
             model.addAttribute("ofertas", new ArrayList<>());
             model.addAttribute("modalidades", Modalidad.values());
             model.addAttribute("estados", EstadoOferta.values());
             model.addAttribute("ofertaEditar", new OfertaAcademica());
             model.addAttribute("error", "Error al cargar ofertas académicas: " + e.getMessage());
-            
+
             return "admin/gestionOfertas";
         }
     }
 
     // =================== ENDPOINTS PARA GESTIÓN DE OFERTAS ===================
-    
+
     /**
      * Endpoint para obtener los detalles de una oferta específica (para el modal)
      */
@@ -372,26 +390,28 @@ public class AdminController {
         try {
             System.out.println("🔍 Buscando oferta con ID: " + id);
             Optional<OfertaAcademica> ofertaOpt = ofertaAcademicaRepository.findById(id);
-            
+
             if (ofertaOpt.isEmpty()) {
-                System.out.println("❌ Oferta no encontrada con ID: " + id);            Map<String, Object> response = new HashMap<>();
+                System.out.println("❌ Oferta no encontrada con ID: " + id);
+                Map<String, Object> response = new HashMap<>();
                 response.put("success", false);
                 response.put("message", "Oferta no encontrada");
                 return ResponseEntity.notFound().build();
             }
-            
+
             OfertaAcademica oferta = ofertaOpt.get();
             EstadoOferta estadoAnterior = oferta.getEstado();
-            System.out.println("✅ Oferta encontrada: " + oferta.getNombre() + " (Tipo: " + oferta.getClass().getSimpleName() + ")");
-            
+            System.out.println("✅ Oferta encontrada: " + oferta.getNombre() + " (Tipo: "
+                    + oferta.getClass().getSimpleName() + ")");
+
             Map<String, Object> detalleOferta = obtenerDetalleOfertaCompleto(oferta);
             System.out.println("📋 Detalle obtenido con " + detalleOferta.size() + " campos");
             System.out.println("🔑 Campos disponibles: " + detalleOferta.keySet());
-            
+
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("oferta", detalleOferta);
-            
+
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             Map<String, Object> response = new HashMap<>();
@@ -400,7 +420,7 @@ public class AdminController {
             return ResponseEntity.internalServerError().body(response);
         }
     }
-    
+
     /**
      * Endpoint para el formulario de edición (carga los datos en el formulario)
      */
@@ -408,33 +428,33 @@ public class AdminController {
     public String editarOferta(@PathVariable Long id, Model model) {
         try {
             Optional<OfertaAcademica> ofertaOpt = ofertaAcademicaRepository.findById(id);
-            
+
             if (ofertaOpt.isEmpty()) {
                 model.addAttribute("error", "Oferta no encontrada");
                 return "redirect:/admin/gestion-ofertas";
             }
-            
+
             OfertaAcademica oferta = ofertaOpt.get();
             EstadoOferta estadoAnterior = oferta.getEstado();
-            
+
             // Agregar la oferta al modelo para pre-poblar el formulario
             model.addAttribute("ofertaEditar", oferta);
             model.addAttribute("esEdicion", true);
-            
+
             // Obtener todas las ofertas para la tabla
             List<OfertaAcademica> ofertas = ofertaAcademicaService.obtenerTodas();
             model.addAttribute("ofertas", ofertas);
-            
+
             model.addAttribute("modalidades", Modalidad.values());
             model.addAttribute("estados", EstadoOferta.values());
-            
+
             return "admin/gestionOfertas";
         } catch (Exception e) {
             model.addAttribute("error", "Error al cargar la oferta para edición: " + e.getMessage());
             return "redirect:/admin/gestion-ofertas";
         }
     }
-    
+
     @PostMapping("/admin/ia/trigger-analysis")
     @ResponseBody
     public ResponseEntity<String> triggerAnalisisIA() {
@@ -443,12 +463,13 @@ public class AdminController {
             return ResponseEntity.ok("Análisis de IA ejecutado correctamente.");
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body("Error al ejecutar análisis: " + e.getMessage());
+                    .body("Error al ejecutar análisis: " + e.getMessage());
         }
     }
 
     /**
-     * Endpoint para eliminar una oferta (Eliminación lógica: cambia estado a DE_BAJA)
+     * Endpoint para eliminar una oferta (Eliminación lógica: cambia estado a
+     * DE_BAJA)
      */
     @PostMapping("/admin/ofertas/eliminar/{id}")
     @Auditable(action = "ELIMINAR_OFERTA", entity = "OfertaAcademica")
@@ -456,34 +477,36 @@ public class AdminController {
     public ResponseEntity<Map<String, Object>> eliminarOferta(@PathVariable Long id) {
         try {
             Optional<OfertaAcademica> ofertaOpt = ofertaAcademicaRepository.findById(id);
-            
+
             if (ofertaOpt.isEmpty()) {
                 Map<String, Object> response = new HashMap<>();
                 response.put("success", false);
                 response.put("message", "Oferta no encontrada");
                 return ResponseEntity.notFound().build();
             }
-            
+
             OfertaAcademica oferta = ofertaOpt.get();
             EstadoOferta estadoAnterior = oferta.getEstado();
-            
-            // Verificar si puede ser eliminada (lógica de negocio: sin inscripciones, no finalizada)
+
+            // Verificar si puede ser eliminada (lógica de negocio: sin inscripciones, no
+            // finalizada)
             if (!oferta.puedeSerEliminada()) {
                 Map<String, Object> response = new HashMap<>();
                 response.put("success", false);
                 response.put("message", "No se puede eliminar esta oferta porque tiene inscripciones o ya finalizó");
                 return ResponseEntity.badRequest().body(response);
             }
-            
+
             // Eliminación Lógica a través del servicio
             ofertaAcademicaService.eliminar(id, oferta.getTipoOferta());
-            
+
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "Oferta eliminada correctamente (Baja lógica)");
             response.put("auditDetails",
-                    "Eliminacion de oferta " + oferta.getTipoOferta() + ": " + trunc(oferta.getNombre(), 80) + " (ID " + oferta.getIdOferta() + ")");
-            
+                    "Eliminacion de oferta " + oferta.getTipoOferta() + ": " + trunc(oferta.getNombre(), 80) + " (ID "
+                            + oferta.getIdOferta() + ")");
+
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             Map<String, Object> response = new HashMap<>();
@@ -492,7 +515,7 @@ public class AdminController {
             return ResponseEntity.internalServerError().body(response);
         }
     }
-    
+
     /**
      * Endpoint para cambiar el estado de una oferta (activar/desactivar)
      */
@@ -503,29 +526,31 @@ public class AdminController {
         try {
             System.out.println("🔄 Cambiando estado de oferta con ID: " + id);
             Optional<OfertaAcademica> ofertaOpt = ofertaAcademicaRepository.findById(id);
-            
+
             if (ofertaOpt.isEmpty()) {
-                System.out.println("❌ Oferta no encontrada con ID: " + id);            Map<String, Object> response = new HashMap<>();
+                System.out.println("❌ Oferta no encontrada con ID: " + id);
+                Map<String, Object> response = new HashMap<>();
                 response.put("success", false);
                 response.put("message", "Oferta no encontrada");
                 response.put("motivo", "OFERTA_NO_ENCONTRADA");
                 return ResponseEntity.ok(response);
             }
-            
+
             OfertaAcademica oferta = ofertaOpt.get();
             EstadoOferta estadoAnterior = oferta.getEstado();
             System.out.println("📋 Estado actual: " + oferta.getEstado());
-            
+
             // Validar si se puede cambiar el estado (no FINALIZADA)
             if (!oferta.puedeCambiarEstado()) {
                 String motivo = "No se puede cambiar el estado de una oferta finalizada";
-                System.out.println("❌ No se puede cambiar estado: " + motivo);            Map<String, Object> response = new HashMap<>();
+                System.out.println("❌ No se puede cambiar estado: " + motivo);
+                Map<String, Object> response = new HashMap<>();
                 response.put("success", false);
                 response.put("message", motivo);
                 response.put("motivo", "ESTADO_FINAL");
                 return ResponseEntity.ok(response);
             }
-            
+
             boolean exito = false;
             String mensajeError = null;
             String motivoCodigo = "VALIDACION_FALLIDA";
@@ -551,31 +576,33 @@ public class AdminController {
                     System.out.println("🔴 Cambiando a DE_BAJA");
                 }
             }
-            
+
             if (!exito) {
-                System.out.println("❌ Operación rechazada: " + mensajeError);            Map<String, Object> response = new HashMap<>();
+                System.out.println("❌ Operación rechazada: " + mensajeError);
+                Map<String, Object> response = new HashMap<>();
                 response.put("success", false);
                 response.put("message", mensajeError);
                 response.put("motivo", motivoCodigo);
                 return ResponseEntity.ok(response);
             }
-            
+
             // Guardar cambios
             ofertaAcademicaRepository.save(oferta);
             System.out.println("✅ Estado cambiado exitosamente a: " + oferta.getEstado());
-            
+
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("nuevoEstado", oferta.getEstado().toString());
             response.put("message", "Estado de la oferta cambiado exitosamente");
             response.put("auditDetails",
-                    "Cambio de estado oferta " + oferta.getTipoOferta() + ": " + trunc(oferta.getNombre(), 80) + " (ID " + oferta.getIdOferta() + ") " + estadoAnterior + " -> " + oferta.getEstado());
-            
+                    "Cambio de estado oferta " + oferta.getTipoOferta() + ": " + trunc(oferta.getNombre(), 80) + " (ID "
+                            + oferta.getIdOferta() + ") " + estadoAnterior + " -> " + oferta.getEstado());
+
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             System.err.println("❌ Error cambiando estado de oferta " + id + ": " + e.getMessage());
             e.printStackTrace();
-            
+
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", "Error interno del servidor: " + e.getMessage());
@@ -583,49 +610,51 @@ public class AdminController {
             return ResponseEntity.ok(response);
         }
     }
-    
+
     /**
      * Genera el mensaje de error explicando por qué no se puede dar de baja
      */
     private String obtenerMotivoRechazoBaja(OfertaAcademica oferta) {
         java.time.LocalDate ahora = java.time.LocalDate.now();
-        
+
         // Contar inscripciones activas
         int inscripcionesActivas = 0;
         if (oferta.getInscripciones() != null) {
             inscripcionesActivas = (int) oferta.getInscripciones().stream()
-                    .filter(inscripcion -> inscripcion.getEstadoInscripcion() != null && 
-                           inscripcion.getEstadoInscripcion() == true)
+                    .filter(inscripcion -> inscripcion.getEstadoInscripcion() != null &&
+                            inscripcion.getEstadoInscripcion() == true)
                     .count();
         }
-        
-        // Si ya terminó la oferta, siempre se debería poder dar de baja (aunque el estado sería FINALIZADA)
+
+        // Si ya terminó la oferta, siempre se debería poder dar de baja (aunque el
+        // estado sería FINALIZADA)
         if (oferta.getFechaFin() != null && oferta.getFechaFin().isBefore(ahora)) {
-            return null; 
+            return null;
         }
-        
+
         // Si ya comenzó y tiene inscripciones activas
         if (oferta.getFechaInicio() != null && !oferta.getFechaInicio().isAfter(ahora) && inscripcionesActivas > 0) {
-            return "No se puede dar de baja esta oferta porque ya comenzó y tiene " + 
-                   inscripcionesActivas + " inscripcion" + (inscripcionesActivas > 1 ? "es" : "") + " activa" + 
-                   (inscripcionesActivas > 1 ? "s" : "") + ". Las inscripciones deben ser canceladas primero.";
+            return "No se puede dar de baja esta oferta porque ya comenzó y tiene " +
+                    inscripcionesActivas + " inscripcion" + (inscripcionesActivas > 1 ? "es" : "") + " activa" +
+                    (inscripcionesActivas > 1 ? "s" : "") + ". Las inscripciones deben ser canceladas primero.";
         }
-        
+
         return "No se puede dar de baja la oferta debido a restricciones de negocio.";
     }
-    
+
     /**
-     * Método auxiliar para mapear una oferta a un objeto de respuesta con validaciones defensivas
+     * Método auxiliar para mapear una oferta a un objeto de respuesta con
+     * validaciones defensivas
      */
     private Map<String, Object> mapearOfertaAResponse(OfertaAcademica oferta) {
         Map<String, Object> map = new HashMap<>();
-        
+
         // Validación defensiva: verificar que la oferta no sea null
         if (oferta == null) {
             map.put("error", "Oferta nula");
             return map;
         }
-        
+
         // Mapear campos básicos con validaciones defensivas
         map.put("id", oferta.getIdOferta() != null ? oferta.getIdOferta() : 0L);
         map.put("nombre", oferta.getNombre() != null ? oferta.getNombre() : "");
@@ -646,33 +675,34 @@ public class AdminController {
         map.put("lugar", oferta.getLugar() != null ? oferta.getLugar() : "");
         map.put("enlace", oferta.getEnlace() != null ? oferta.getEnlace() : "");
         map.put("imagenUrl", oferta.getImagenUrl() != null ? oferta.getImagenUrl() : "");
-        
+
         // Validaciones defensivas para métodos que pueden fallar
         try {
             map.put("puedeSerEditada", oferta.puedeSerEditada() != null ? oferta.puedeSerEditada() : false);
         } catch (Exception e) {
             map.put("puedeSerEditada", false);
         }
-        
+
         try {
             map.put("puedeSerEliminada", oferta.puedeSerEliminada() != null ? oferta.puedeSerEliminada() : false);
         } catch (Exception e) {
             map.put("puedeSerEliminada", false);
         }
-        
+
         map.put("visibilidad", oferta.getVisibilidad() != null ? oferta.getVisibilidad() : "");
         return map;
     }
 
     /**
-     * Obtiene el detalle completo de una oferta usando los métodos específicos del modelo
+     * Obtiene el detalle completo de una oferta usando los métodos específicos del
+     * modelo
      */
     private Map<String, Object> obtenerDetalleOfertaCompleto(OfertaAcademica oferta) {
         Map<String, Object> detalle = new HashMap<>();
-        
+
         try {
             System.out.println("🔄 Obteniendo detalle para oferta tipo: " + oferta.getClass().getSimpleName());
-            
+
             // Determinar el tipo específico y obtener el detalle correspondiente
             if (oferta instanceof com.example.demo.model.Curso) {
                 System.out.println("📚 Procesando como Curso...");
@@ -709,7 +739,7 @@ public class AdminController {
             // Fallback en caso de error
             detalle = mapearOfertaAResponse(oferta);
         }
-        
+
         // Agregar horarios si existen
         if (oferta.getHorarios() != null && !oferta.getHorarios().isEmpty()) {
             List<Map<String, Object>> horariosList = new ArrayList<>();
@@ -732,37 +762,40 @@ public class AdminController {
      */
     private Map<String, Object> convertirDetalleAMap(Object detalle) {
         Map<String, Object> map = new HashMap<>();
-        
+
         try {
             System.out.println("🔄 Convirtiendo objeto detalle a Map: " + detalle.getClass().getSimpleName());
-            
+
             // Usar reflection para convertir el objeto a Map
             java.lang.reflect.Field[] fields = detalle.getClass().getDeclaredFields();
             System.out.println("📊 Campos encontrados: " + fields.length);
-            
+
             for (java.lang.reflect.Field field : fields) {
                 field.setAccessible(true);
                 Object value = field.get(detalle);
                 String fieldName = field.getName();
                 map.put(fieldName, value);
-                
+
                 System.out.println("🔑 Campo: " + fieldName + " = " + (value != null ? value.toString() : "null"));
             }
-            
+
             System.out.println("✅ Conversión completada. Total campos: " + map.size());
         } catch (Exception e) {
             System.err.println("❌ Error convirtiendo detalle a Map: " + e.getMessage());
             e.printStackTrace();
         }
-        
+
         return map;
     }
 
     private String trunc(Object value, int max) {
-        if (value == null) return "";
+        if (value == null)
+            return "";
         String text = value.toString();
-        if (text.length() <= max) return text;
-        if (max <= 3) return text.substring(0, max);
+        if (text.length() <= max)
+            return text;
+        if (max <= 3)
+            return text.substring(0, max);
         return text.substring(0, max - 3) + "...";
     }
 
@@ -775,41 +808,39 @@ public class AdminController {
     }
 
     // =================== ENDPOINTS PARA DOCENTES ===================
-    
+
     @GetMapping("/admin/docentes/buscar")
     @ResponseBody
-    public ResponseEntity<List<Map<String, Object>>> buscarDocentes(@RequestParam(value = "q", defaultValue = "") String query) {
+    public ResponseEntity<List<Map<String, Object>>> buscarDocentes(
+            @RequestParam(value = "q", defaultValue = "") String query) {
         try {
             // Si la query está vacía, devolver todos los docentes
-            List<Docente> todosDocentes = query.trim().isEmpty() ? 
-                docenteRepository.findAllDocentes() : 
-                docenteRepository.buscarPorNombreApellidoOMatricula(query);
-            
+            List<Docente> todosDocentes = query.trim().isEmpty() ? docenteRepository.findAllDocentes()
+                    : docenteRepository.buscarPorNombreApellidoOMatricula(query);
+
             // FILTRAR SOLO DOCENTES ACTIVOS
             List<Docente> docentes = todosDocentes.stream()
-                .filter(d -> Boolean.TRUE.equals(d.isEstado()))
-                .collect(Collectors.toList());
-            
+                    .filter(d -> Boolean.TRUE.equals(d.isEstado()))
+                    .collect(Collectors.toList());
+
             List<Map<String, Object>> resultado = new ArrayList<>();
-            
+
             for (Docente docente : docentes) {
                 Map<String, Object> docenteMap = new HashMap<>();
                 docenteMap.put("id", docente.getId());
                 docenteMap.put("nombre", docente.getNombre() + " " + docente.getApellido());
-                
+
                 resultado.add(docenteMap);
             }
-            
+
             return ResponseEntity.ok(resultado);
-            
+
         } catch (Exception e) {
             return ResponseEntity.status(500).body(new ArrayList<>());
         }
     }
 
     // =================== ENDPOINTS PARA CATEGORÍAS ===================
-
-
 
     @GetMapping("/admin/gestion-usuarios")
     public String gestionUsuarios(Model model) {
@@ -820,7 +851,7 @@ public class AdminController {
         } catch (Exception e) {
             model.addAttribute("paises", List.of());
         }
-        
+
         return "admin/gestionUsuarios";
     }
 
@@ -833,48 +864,50 @@ public class AdminController {
             OfertaAcademica oferta = new OfertaAcademica();
             oferta.setNombre((String) datos.get("nombre"));
             oferta.setDescripcion((String) datos.get("descripcion"));
-            
+
             if (datos.get("cupos") != null) {
                 oferta.setCupos(Integer.valueOf(datos.get("cupos").toString()));
             }
-            
+
             if (datos.get("costo") != null) {
                 oferta.setCostoInscripcion(Double.valueOf(datos.get("costo").toString()));
             }
-            
+
             if (datos.get("fechaInicio") != null) {
                 oferta.setFechaInicio(LocalDate.parse((String) datos.get("fechaInicio")));
             }
-            
+
             if (datos.get("fechaFin") != null) {
                 oferta.setFechaFin(LocalDate.parse((String) datos.get("fechaFin")));
             }
-            
+
             // Configurar modalidad
             String modalidadStr = (String) datos.get("modalidad");
             if (modalidadStr != null) {
                 oferta.setModalidad(Modalidad.valueOf(modalidadStr.toUpperCase()));
             }
-            
+
             // Configurar estado por defecto
             oferta.setEstado(EstadoOferta.ACTIVA);
             oferta.setVisibilidad(true);
-            
+
             OfertaAcademica nuevaOferta = ofertaAcademicaRepository.save(oferta);
-            
+
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "Oferta creada exitosamente");
             response.put("auditDetails",
                     "Creacion de oferta: " + trunc(oferta.getNombre(), 80) + " (ID " + nuevaOferta.getIdOferta() + ")" +
-                    (oferta.getDescripcion() != null ? " | descripcion: " + trunc(oferta.getDescripcion(), 120) : "") + 
-                    (oferta.getCupos() != null ? " | cupos: " + oferta.getCupos() : "") + 
-                    (oferta.getCostoInscripcion() != null ? " | costo: " + oferta.getCostoInscripcion() : "") + 
-                    (oferta.getFechaInicio() != null ? " | inicio: " + oferta.getFechaInicio() : "") + 
-                    (oferta.getFechaFin() != null ? " | fin: " + oferta.getFechaFin() : "") + 
-                    (oferta.getModalidad() != null ? " | modalidad: " + oferta.getModalidad() : ""));
+                            (oferta.getDescripcion() != null ? " | descripcion: " + trunc(oferta.getDescripcion(), 120)
+                                    : "")
+                            +
+                            (oferta.getCupos() != null ? " | cupos: " + oferta.getCupos() : "") +
+                            (oferta.getCostoInscripcion() != null ? " | costo: " + oferta.getCostoInscripcion() : "") +
+                            (oferta.getFechaInicio() != null ? " | inicio: " + oferta.getFechaInicio() : "") +
+                            (oferta.getFechaFin() != null ? " | fin: " + oferta.getFechaFin() : "") +
+                            (oferta.getModalidad() != null ? " | modalidad: " + oferta.getModalidad() : ""));
             response.put("id", nuevaOferta.getIdOferta());
-            
+
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             Map<String, Object> response = new HashMap<>();
@@ -933,24 +966,28 @@ public class AdminController {
             // Campos genéricos para lugar y enlace (para todos los tipos)
             @RequestParam(required = false) String lugar,
             @RequestParam(required = false) String enlace) {
-        
+
         try {
             System.out.println("🔥 REGISTRO DE OFERTA INICIADO");
             System.out.println("Tipo: " + tipoOferta);
-            
+
             // Unificar lugar y enlace si vienen en campos específicos
             if (lugar == null || lugar.trim().isEmpty()) {
-                if ("CHARLA".equalsIgnoreCase(tipoOferta)) lugar = lugarCharla;
-                else if ("SEMINARIO".equalsIgnoreCase(tipoOferta)) lugar = lugarSeminario;
+                if ("CHARLA".equalsIgnoreCase(tipoOferta))
+                    lugar = lugarCharla;
+                else if ("SEMINARIO".equalsIgnoreCase(tipoOferta))
+                    lugar = lugarSeminario;
             }
             if (enlace == null || enlace.trim().isEmpty()) {
-                if ("CHARLA".equalsIgnoreCase(tipoOferta)) enlace = enlaceCharla;
-                else if ("SEMINARIO".equalsIgnoreCase(tipoOferta)) enlace = enlaceSeminario;
+                if ("CHARLA".equalsIgnoreCase(tipoOferta))
+                    enlace = enlaceCharla;
+                else if ("SEMINARIO".equalsIgnoreCase(tipoOferta))
+                    enlace = enlaceSeminario;
             }
-            
+
             System.out.println("Lugar: " + lugar);
             System.out.println("Enlace: " + enlace);
-            
+
             // Validación obligatoria de fechas
             if (fechaInicio == null || fechaInicio.trim().isEmpty()) {
                 Map<String, Object> errorResponse = new HashMap<>();
@@ -958,20 +995,20 @@ public class AdminController {
                 errorResponse.put("message", "La fecha de inicio es obligatoria");
                 return ResponseEntity.badRequest().body(errorResponse);
             }
-            
+
             if (fechaFin == null || fechaFin.trim().isEmpty()) {
                 Map<String, Object> errorResponse = new HashMap<>();
                 errorResponse.put("success", false);
                 errorResponse.put("message", "La fecha de fin es obligatoria");
                 return ResponseEntity.badRequest().body(errorResponse);
             }
-            
+
             // Validar formato de fechas
             LocalDate fechaInicioDate, fechaFinDate, fechaInicioInscripcionDate, fechaFinInscripcionDate;
             try {
                 fechaInicioDate = LocalDate.parse(fechaInicio);
                 fechaFinDate = LocalDate.parse(fechaFin);
-                
+
                 // Validar que fecha de inicio no sea posterior a fecha de fin
                 if (fechaInicioDate.isAfter(fechaFinDate)) {
                     Map<String, Object> errorResponse = new HashMap<>();
@@ -979,7 +1016,7 @@ public class AdminController {
                     errorResponse.put("message", "La fecha de inicio no puede ser posterior a la fecha de fin");
                     return ResponseEntity.badRequest().body(errorResponse);
                 }
-                
+
                 // Validar fechas de inscripción
                 if (fechaInicioInscripcion == null || fechaInicioInscripcion.trim().isEmpty()) {
                     Map<String, Object> errorResponse = new HashMap<>();
@@ -987,25 +1024,27 @@ public class AdminController {
                     errorResponse.put("message", "La fecha de inicio de inscripción es obligatoria");
                     return ResponseEntity.badRequest().body(errorResponse);
                 }
-                
+
                 if (fechaFinInscripcion == null || fechaFinInscripcion.trim().isEmpty()) {
                     Map<String, Object> errorResponse = new HashMap<>();
                     errorResponse.put("success", false);
                     errorResponse.put("message", "La fecha de fin de inscripción es obligatoria");
                     return ResponseEntity.badRequest().body(errorResponse);
                 }
-                
+
                 fechaInicioInscripcionDate = LocalDate.parse(fechaInicioInscripcion);
                 fechaFinInscripcionDate = LocalDate.parse(fechaFinInscripcion);
-                
-                // Validar que fecha de inicio de inscripción no sea posterior a fecha de fin de inscripción
+
+                // Validar que fecha de inicio de inscripción no sea posterior a fecha de fin de
+                // inscripción
                 if (fechaInicioInscripcionDate.isAfter(fechaFinInscripcionDate)) {
                     Map<String, Object> errorResponse = new HashMap<>();
                     errorResponse.put("success", false);
-                    errorResponse.put("message", "La fecha de inicio de inscripción no puede ser posterior a la fecha de fin de inscripción");
+                    errorResponse.put("message",
+                            "La fecha de inicio de inscripción no puede ser posterior a la fecha de fin de inscripción");
                     return ResponseEntity.badRequest().body(errorResponse);
                 }
-                
+
                 // REMOVIDO: Validación que las inscripciones deben cerrar antes del inicio
                 // Las inscripciones pueden continuar incluso después del inicio de la oferta
             } catch (Exception e) {
@@ -1014,23 +1053,26 @@ public class AdminController {
                 errorResponse.put("message", "Formato de fecha inválido. Use el formato YYYY-MM-DD");
                 return ResponseEntity.badRequest().body(errorResponse);
             }
-            
+
             // Validar lugar y enlace según modalidad
-            // IMPORTANTE: Enlace obligatorio SOLO para CHARLA y SEMINARIO en modalidad virtual/híbrida
+            // IMPORTANTE: Enlace obligatorio SOLO para CHARLA y SEMINARIO en modalidad
+            // virtual/híbrida
             boolean esVirtual = "VIRTUAL".equalsIgnoreCase(modalidad) || "HIBRIDA".equalsIgnoreCase(modalidad);
             boolean esPresencial = "PRESENCIAL".equalsIgnoreCase(modalidad) || "HIBRIDA".equalsIgnoreCase(modalidad);
-            boolean esCharlaOSeminario = "CHARLA".equalsIgnoreCase(tipoOferta) || "SEMINARIO".equalsIgnoreCase(tipoOferta);
-            
+            boolean esCharlaOSeminario = "CHARLA".equalsIgnoreCase(tipoOferta)
+                    || "SEMINARIO".equalsIgnoreCase(tipoOferta);
+
             // Validar enlace si es virtual/híbrida SOLO para Charla y Seminario
             if (esVirtual && esCharlaOSeminario) {
                 if (enlace == null || enlace.trim().isEmpty()) {
                     Map<String, Object> errorResponse = new HashMap<>();
                     errorResponse.put("success", false);
-                    errorResponse.put("message", "Para modalidad Virtual o Híbrida en Charlas y Seminarios, el enlace es obligatorio");
+                    errorResponse.put("message",
+                            "Para modalidad Virtual o Híbrida en Charlas y Seminarios, el enlace es obligatorio");
                     return ResponseEntity.badRequest().body(errorResponse);
                 }
             }
-            
+
             // Validar URL si se proporciona enlace
             if (enlace != null && !enlace.trim().isEmpty()) {
                 try {
@@ -1042,7 +1084,7 @@ public class AdminController {
                     return ResponseEntity.badRequest().body(errorResponse);
                 }
             }
-            
+
             // Validar lugar si es presencial/híbrida
             if (esPresencial) {
                 if (lugar == null || lugar.trim().isEmpty()) {
@@ -1052,7 +1094,7 @@ public class AdminController {
                     return ResponseEntity.badRequest().body(errorResponse);
                 }
             }
-            
+
             // Validaciones específicas por tipo
             if ("CURSO".equalsIgnoreCase(tipoOferta) || "FORMACION".equalsIgnoreCase(tipoOferta)) {
                 String docentes = "CURSO".equalsIgnoreCase(tipoOferta) ? docentesCurso : docentesFormacion;
@@ -1062,7 +1104,7 @@ public class AdminController {
                     errorResponse.put("message", "Debe asignar al menos un docente para Cursos y Formaciones");
                     return ResponseEntity.badRequest().body(errorResponse);
                 }
-                
+
                 if (horarios == null || horarios.trim().isEmpty() || "[]".equals(horarios.trim())) {
                     Map<String, Object> errorResponse = new HashMap<>();
                     errorResponse.put("success", false);
@@ -1071,10 +1113,11 @@ public class AdminController {
                 }
             } else if ("CHARLA".equalsIgnoreCase(tipoOferta) || "SEMINARIO".equalsIgnoreCase(tipoOferta)) {
                 String disertantes = "CHARLA".equalsIgnoreCase(tipoOferta) ? disertantesCharla : disertantesSeminario;
-                
+
                 // Validar disertantes (siempre requerido al menos uno)
-                boolean tieneDisertantes = disertantes != null && !disertantes.trim().isEmpty() && !"[]".equals(disertantes.trim());
-                
+                boolean tieneDisertantes = disertantes != null && !disertantes.trim().isEmpty()
+                        && !"[]".equals(disertantes.trim());
+
                 if (!tieneDisertantes) {
                     Map<String, Object> errorResponse = new HashMap<>();
                     errorResponse.put("success", false);
@@ -1082,39 +1125,45 @@ public class AdminController {
                     return ResponseEntity.badRequest().body(errorResponse);
                 }
             }
-            
+
             // Normalizar costos: convertir null a 0
-            if (costoInscripcion == null) costoInscripcion = 0.0;
-            if (costoCuota == null) costoCuota = 0.0;
-            if (costoMora == null) costoMora = 0.0;
-            if (costoCuotaFormacion == null) costoCuotaFormacion = 0.0;
-            if (costoMoraFormacion == null) costoMoraFormacion = 0.0;
-            
+            if (costoInscripcion == null)
+                costoInscripcion = 0.0;
+            if (costoCuota == null)
+                costoCuota = 0.0;
+            if (costoMora == null)
+                costoMora = 0.0;
+            if (costoCuotaFormacion == null)
+                costoCuotaFormacion = 0.0;
+            if (costoMoraFormacion == null)
+                costoMoraFormacion = 0.0;
+
             OfertaAcademica oferta;
-            
+
             // Crear la instancia específica según el tipo
             switch (tipoOferta.toUpperCase()) {
                 case "CURSO":
-                    oferta = crearCurso(nombre, descripcion, cupos, costoInscripcion, fechaInicio, fechaFin, 
-                                      fechaInicioInscripcion, fechaFinInscripcion, modalidad, lugar, enlace,
-                                      temario, docentesCurso, costoCuota, costoMora, nrCuotas, diaVencimiento);
+                    oferta = crearCurso(nombre, descripcion, cupos, costoInscripcion, fechaInicio, fechaFin,
+                            fechaInicioInscripcion, fechaFinInscripcion, modalidad, lugar, enlace,
+                            temario, docentesCurso, costoCuota, costoMora, nrCuotas, diaVencimiento);
                     break;
                 case "FORMACION":
                     oferta = crearFormacion(nombre, descripcion, cupos, costoInscripcion, fechaInicio, fechaFin,
-                                          fechaInicioInscripcion, fechaFinInscripcion, modalidad, lugar, enlace,
-                                          planFormacion, docentesFormacion, 
-                                          costoCuotaFormacion, costoMoraFormacion, nrCuotasFormacion, diaVencimientoFormacion);
+                            fechaInicioInscripcion, fechaFinInscripcion, modalidad, lugar, enlace,
+                            planFormacion, docentesFormacion,
+                            costoCuotaFormacion, costoMoraFormacion, nrCuotasFormacion, diaVencimientoFormacion);
                     break;
                 case "CHARLA":
                     oferta = crearCharla(nombre, descripcion, cupos, costoInscripcion, fechaInicio, fechaFin,
-                                       fechaInicioInscripcion, fechaFinInscripcion, modalidad,
-                                       lugar, enlace, horaCharla, duracionEstimada, disertantesCharla, 
-                                       publicoObjetivoCharla);
+                            fechaInicioInscripcion, fechaFinInscripcion, modalidad,
+                            lugar, enlace, horaCharla, duracionEstimada, disertantesCharla,
+                            publicoObjetivoCharla);
                     break;
                 case "SEMINARIO":
                     oferta = crearSeminario(nombre, descripcion, cupos, costoInscripcion, fechaInicio, fechaFin,
-                                          fechaInicioInscripcion, fechaFinInscripcion, modalidad,
-                                          lugar, enlace, horaSeminario, duracionMinutos, disertantesSeminario, publicoObjetivoSeminario);
+                            fechaInicioInscripcion, fechaFinInscripcion, modalidad,
+                            lugar, enlace, horaSeminario, duracionMinutos, disertantesSeminario,
+                            publicoObjetivoSeminario);
                     break;
                 default:
                     throw new IllegalArgumentException("Tipo de oferta no válido: " + tipoOferta);
@@ -1122,17 +1171,18 @@ public class AdminController {
 
             // Calcular duración en meses antes de guardar
             oferta.calcularDuracionMeses();
-            
+
             // Establecer valor del certificado
             if (otorgaCertificado != null && !otorgaCertificado.trim().isEmpty()) {
                 boolean certificado = "true".equalsIgnoreCase(otorgaCertificado.trim());
                 oferta.setCertificado(certificado);
-                System.out.println("Certificado establecido: " + certificado + " (desde string: '" + otorgaCertificado + "')");
+                System.out.println(
+                        "Certificado establecido: " + certificado + " (desde string: '" + otorgaCertificado + "')");
             } else {
                 oferta.setCertificado(false);
                 System.out.println("Certificado establecido por defecto: false");
             }
-            
+
             // Manejar imagen
             if (imagen != null && !imagen.isEmpty()) {
                 try {
@@ -1144,14 +1194,18 @@ public class AdminController {
                     oferta.setImagenUrl("/img/predeterminado.jpg");
                 }
             } else {
-                // Si no se carga imagen nueva Y no tiene imagen previa (es create o no edit), usar default.
-                // Nota: para editar, normalmente se valida si imagen es null para mantener la anterior.
-                // Aquí, como es registrarOferta (POST), es creación nueva (o sobreescritura si lógica lo permite).
-                // Revisar si es edición -> El método registrarOferta parece ser solo para CREAR o registrar nueva.
+                // Si no se carga imagen nueva Y no tiene imagen previa (es create o no edit),
+                // usar default.
+                // Nota: para editar, normalmente se valida si imagen es null para mantener la
+                // anterior.
+                // Aquí, como es registrarOferta (POST), es creación nueva (o sobreescritura si
+                // lógica lo permite).
+                // Revisar si es edición -> El método registrarOferta parece ser solo para CREAR
+                // o registrar nueva.
                 // Para editar suele haber otro método 'actualizarOferta'.
                 oferta.setImagenUrl("/img/predeterminado.jpg");
             }
-            
+
             // Asociar horarios si se proporcionaron (ANTES DE GUARDAR)
             if (horarios != null && !horarios.trim().isEmpty()) {
                 asociarHorarios(oferta, horarios);
@@ -1168,14 +1222,15 @@ public class AdminController {
 
             // Guardar en la base de datos
             OfertaAcademica nuevaOferta = ofertaAcademicaRepository.save(oferta);
-            
+
             // ✅ Asociar categorías si se proporcionaron
             if (categorias != null && !categorias.trim().isEmpty()) {
                 System.out.println("🏷️ Procesando categorías: " + categorias);
                 asociarCategoriasAOferta(nuevaOferta, categorias);
             }
-            
-            // ✅ Si es una Formación con docentes, guardar los docentes para persistir la relación ManyToMany
+
+            // ✅ Si es una Formación con docentes, guardar los docentes para persistir la
+            // relación ManyToMany
             if (nuevaOferta instanceof Formacion) {
                 Formacion formacion = (Formacion) nuevaOferta;
                 if (formacion.getDocentes() != null && !formacion.getDocentes().isEmpty()) {
@@ -1186,67 +1241,70 @@ public class AdminController {
                     System.out.println("   ✅ Relación docente-formación guardada");
                 }
             }
-            
+
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "Oferta académica registrada exitosamente");
             response.put("auditDetails",
-                    "Creacion de oferta " + tipoOferta + ": " + trunc(nombre, 80) + " (ID " + oferta.getIdOferta() + ")" +
-                    (descripcion != null ? " | descripcion: " + trunc(descripcion, 120) : "") + 
-                    (cupos != null ? " | cupos: " + cupos : "") + 
-                    (costoInscripcion != null ? " | costo: " + costoInscripcion : "") + 
-                    (fechaInicio != null ? " | inicio: " + fechaInicio : "") + 
-                    (fechaFin != null ? " | fin: " + fechaFin : "") + 
-                    (modalidad != null ? " | modalidad: " + modalidad : ""));
+                    "Creacion de oferta " + tipoOferta + ": " + trunc(nombre, 80) + " (ID " + oferta.getIdOferta() + ")"
+                            +
+                            (descripcion != null ? " | descripcion: " + trunc(descripcion, 120) : "") +
+                            (cupos != null ? " | cupos: " + cupos : "") +
+                            (costoInscripcion != null ? " | costo: " + costoInscripcion : "") +
+                            (fechaInicio != null ? " | inicio: " + fechaInicio : "") +
+                            (fechaFin != null ? " | fin: " + fechaFin : "") +
+                            (modalidad != null ? " | modalidad: " + modalidad : ""));
             response.put("id", nuevaOferta.getIdOferta());
             response.put("tipo", tipoOferta);
-            
+
             return ResponseEntity.ok(response);
-            
+
         } catch (DataIntegrityViolationException e) {
             // Capturar error de duplicado (nombre único)
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
-            
+
             String mensaje = e.getMessage();
-            if (mensaje != null && (mensaje.toLowerCase().contains("uk_oferta_nombre") || 
-                                   mensaje.toLowerCase().contains("duplicate key"))) {
-                response.put("message", "Ya existe una oferta académica con este nombre. Por favor, elija un nombre diferente.");
+            if (mensaje != null && (mensaje.toLowerCase().contains("uk_oferta_nombre") ||
+                    mensaje.toLowerCase().contains("duplicate key"))) {
+                response.put("message",
+                        "Ya existe una oferta académica con este nombre. Por favor, elija un nombre diferente.");
             } else {
-                response.put("message", "Error: La oferta no pudo registrarse debido a una restricción de datos. Verifique que no exista una oferta duplicada.");
+                response.put("message",
+                        "Error: La oferta no pudo registrarse debido a una restricción de datos. Verifique que no exista una oferta duplicada.");
             }
-            
+
             return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
-            
+
         } catch (jakarta.validation.ConstraintViolationException e) {
             // Capturar errores de validación y convertirlos a mensajes amigables
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
-            
+
             String mensajeError = e.getConstraintViolations().stream()
-                .map(violation -> {
-                    String campo = violation.getPropertyPath().toString();
-                    String mensaje = violation.getMessage();
-                    
-                    // Personalizar mensajes según el campo
-                    if (campo.equals("cupos")) {
-                        return "La cantidad mínima de cupos es de 1";
-                    } else if (campo.equals("costoInscripcion")) {
-                        return "El costo de inscripción " + mensaje;
-                    } else if (campo.equals("nombre")) {
-                        return "El nombre de la oferta es obligatorio";
-                    } else if (campo.equals("descripcion")) {
-                        return "La descripción de la oferta es obligatoria";
-                    } else {
-                        return "El campo " + campo + " " + mensaje;
-                    }
-                })
-                .findFirst()
-                .orElse("Error de validación en los datos ingresados");
-            
+                    .map(violation -> {
+                        String campo = violation.getPropertyPath().toString();
+                        String mensaje = violation.getMessage();
+
+                        // Personalizar mensajes según el campo
+                        if (campo.equals("cupos")) {
+                            return "La cantidad mínima de cupos es de 1";
+                        } else if (campo.equals("costoInscripcion")) {
+                            return "El costo de inscripción " + mensaje;
+                        } else if (campo.equals("nombre")) {
+                            return "El nombre de la oferta es obligatorio";
+                        } else if (campo.equals("descripcion")) {
+                            return "La descripción de la oferta es obligatoria";
+                        } else {
+                            return "El campo " + campo + " " + mensaje;
+                        }
+                    })
+                    .findFirst()
+                    .orElse("Error de validación en los datos ingresados");
+
             response.put("message", mensajeError);
             return ResponseEntity.badRequest().body(response);
-            
+
         } catch (Exception e) {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
@@ -1254,49 +1312,52 @@ public class AdminController {
             return ResponseEntity.badRequest().body(response);
         }
     }
-    
+
     // Métodos auxiliares para crear cada tipo de oferta específica
-    
+
     private Curso crearCurso(String nombre, String descripcion, Integer cupos, Double costo,
-                           String fechaInicio, String fechaFin, String fechaInicioInscripcion, String fechaFinInscripcion,
-                           String modalidad, String lugar, String enlace,
-                           String temario, String docentesIds, Double costoCuota, Double costoMora, 
-                           Integer nrCuotas, Integer diaVencimiento) {
+            String fechaInicio, String fechaFin, String fechaInicioInscripcion, String fechaFinInscripcion,
+            String modalidad, String lugar, String enlace,
+            String temario, String docentesIds, Double costoCuota, Double costoMora,
+            Integer nrCuotas, Integer diaVencimiento) {
         Curso curso = new Curso();
-        configurarOfertaBase(curso, nombre, descripcion, cupos, costo, fechaInicio, fechaFin, 
-                           fechaInicioInscripcion, fechaFinInscripcion, modalidad, lugar, enlace);
-        
+        configurarOfertaBase(curso, nombre, descripcion, cupos, costo, fechaInicio, fechaFin,
+                fechaInicioInscripcion, fechaFinInscripcion, modalidad, lugar, enlace);
+
         // Campos específicos del curso
         curso.setTemario(temario);
-        if (costoCuota != null) curso.setCostoCuota(costoCuota);
+        if (costoCuota != null)
+            curso.setCostoCuota(costoCuota);
         if (costoMora != null) {
             curso.setCostoMora(costoMora);
             curso.setRecargoMora(costoMora);
         }
-        if (nrCuotas != null) curso.setNrCuotas(nrCuotas);
-        if (diaVencimiento != null) curso.setDiaVencimiento(diaVencimiento);
-        
+        if (nrCuotas != null)
+            curso.setNrCuotas(nrCuotas);
+        if (diaVencimiento != null)
+            curso.setDiaVencimiento(diaVencimiento);
+
         // Asociar docentes si se proporcionaron
         if (docentesIds != null && !docentesIds.trim().isEmpty()) {
             List<Docente> docentes = obtenerDocentesPorIds(docentesIds);
             curso.setDocentes(docentes);
         }
-        
+
         return curso;
     }
-    
+
     private Formacion crearFormacion(String nombre, String descripcion, Integer cupos, Double costo,
-                                   String fechaInicio, String fechaFin, String fechaInicioInscripcion, String fechaFinInscripcion,
-                                   String modalidad, String lugar, String enlace,
-                                   String plan, String docentesIds, Double costoCuota, Double costoMora,
-                                   Integer nrCuotas, Integer diaVencimiento) {
+            String fechaInicio, String fechaFin, String fechaInicioInscripcion, String fechaFinInscripcion,
+            String modalidad, String lugar, String enlace,
+            String plan, String docentesIds, Double costoCuota, Double costoMora,
+            Integer nrCuotas, Integer diaVencimiento) {
         Formacion formacion = new Formacion();
         configurarOfertaBase(formacion, nombre, descripcion, cupos, costo, fechaInicio, fechaFin,
-                           fechaInicioInscripcion, fechaFinInscripcion, modalidad, lugar, enlace);
-        
+                fechaInicioInscripcion, fechaFinInscripcion, modalidad, lugar, enlace);
+
         // Campos específicos de la formación
         formacion.setPlan(plan);
-        
+
         // ✅ Asegurar que los valores no sean null
         formacion.setCostoCuota(costoCuota != null ? costoCuota : 0.0);
         formacion.setCostoMora(costoMora != null ? costoMora : 0.0);
@@ -1305,18 +1366,18 @@ public class AdminController {
         }
         formacion.setNrCuotas(nrCuotas != null ? nrCuotas : 0);
         formacion.setDiaVencimiento(diaVencimiento != null ? diaVencimiento : 0);
-        
+
         System.out.println("🔍 Formación creada con:");
         System.out.println("   - Costo Cuota: " + formacion.getCostoCuota());
         System.out.println("   - Costo Mora: " + formacion.getCostoMora());
         System.out.println("   - Nr Cuotas: " + formacion.getNrCuotas());
         System.out.println("   - Día Vencimiento: " + formacion.getDiaVencimiento());
-        
+
         // Asociar docentes si se proporcionaron
         if (docentesIds != null && !docentesIds.trim().isEmpty()) {
             System.out.println("🎓 Asociando docentes: " + docentesIds);
             List<Docente> docentes = obtenerDocentesPorIds(docentesIds);
-            
+
             if (!docentes.isEmpty()) {
                 // ✅ Configurar relación bidireccional ManyToMany
                 for (Docente docente : docentes) {
@@ -1336,19 +1397,19 @@ public class AdminController {
         } else {
             System.out.println("   ℹ️ No se proporcionaron docentes");
         }
-        
+
         return formacion;
     }
-    
+
     private Charla crearCharla(String nombre, String descripcion, Integer cupos, Double costo,
-                             String fechaInicio, String fechaFin, String fechaInicioInscripcion, String fechaFinInscripcion,
-                             String modalidad,
-                             String lugar, String enlace, String horaCharla, Integer duracionEstimada,
-                             String disertantesStr, String publicoObjetivo) {
+            String fechaInicio, String fechaFin, String fechaInicioInscripcion, String fechaFinInscripcion,
+            String modalidad,
+            String lugar, String enlace, String horaCharla, Integer duracionEstimada,
+            String disertantesStr, String publicoObjetivo) {
         Charla charla = new Charla();
         configurarOfertaBase(charla, nombre, descripcion, cupos, costo, fechaInicio, fechaFin,
-                           fechaInicioInscripcion, fechaFinInscripcion, modalidad, lugar, enlace);
-        
+                fechaInicioInscripcion, fechaFinInscripcion, modalidad, lugar, enlace);
+
         // Convertir y asignar hora de inicio
         if (horaCharla != null && !horaCharla.trim().isEmpty()) {
             try {
@@ -1357,11 +1418,12 @@ public class AdminController {
                 System.err.println("Error al convertir hora de charla: " + e.getMessage());
             }
         }
-        
+
         // Campos específicos de la charla
-        if (duracionEstimada != null) charla.setDuracionEstimada(duracionEstimada);
+        if (duracionEstimada != null)
+            charla.setDuracionEstimada(duracionEstimada);
         charla.setPublicoObjetivo(publicoObjetivo);
-        
+
         // Procesar disertantes (separados por coma)
         if (disertantesStr != null && !disertantesStr.trim().isEmpty()) {
             List<String> disertantes = new ArrayList<>();
@@ -1374,19 +1436,19 @@ public class AdminController {
             }
             charla.setDisertantes(disertantes);
         }
-        
+
         return charla;
     }
-    
+
     private Seminario crearSeminario(String nombre, String descripcion, Integer cupos, Double costo,
-                                   String fechaInicio, String fechaFin, String fechaInicioInscripcion, String fechaFinInscripcion,
-                                   String modalidad,
-                                   String lugar, String enlace, String horaSeminario, Integer duracionMinutos,
-                                   String disertantesStr, String publicoObjetivo) {
+            String fechaInicio, String fechaFin, String fechaInicioInscripcion, String fechaFinInscripcion,
+            String modalidad,
+            String lugar, String enlace, String horaSeminario, Integer duracionMinutos,
+            String disertantesStr, String publicoObjetivo) {
         Seminario seminario = new Seminario();
         configurarOfertaBase(seminario, nombre, descripcion, cupos, costo, fechaInicio, fechaFin,
-                           fechaInicioInscripcion, fechaFinInscripcion, modalidad, lugar, enlace);
-        
+                fechaInicioInscripcion, fechaFinInscripcion, modalidad, lugar, enlace);
+
         // Convertir y asignar hora de inicio
         if (horaSeminario != null && !horaSeminario.trim().isEmpty()) {
             try {
@@ -1395,11 +1457,12 @@ public class AdminController {
                 System.err.println("Error al convertir hora de seminario: " + e.getMessage());
             }
         }
-        
+
         // Campos específicos del seminario
-        if (duracionMinutos != null) seminario.setDuracionMinutos(duracionMinutos);
+        if (duracionMinutos != null)
+            seminario.setDuracionMinutos(duracionMinutos);
         seminario.setPublicoObjetivo(publicoObjetivo);
-        
+
         // Procesar disertantes (separados por coma)
         if (disertantesStr != null && !disertantesStr.trim().isEmpty()) {
             List<String> disertantes = new ArrayList<>();
@@ -1412,43 +1475,45 @@ public class AdminController {
             }
             seminario.setDisertantes(disertantes);
         }
-        
+
         return seminario;
     }
-    
+
     private void configurarOfertaBase(OfertaAcademica oferta, String nombre, String descripcion,
-                                    Integer cupos, Double costo, String fechaInicio, 
-                                    String fechaFin, String fechaInicioInscripcion, String fechaFinInscripcion,
-                                    String modalidad, String lugar, String enlace) {
+            Integer cupos, Double costo, String fechaInicio,
+            String fechaFin, String fechaInicioInscripcion, String fechaFinInscripcion,
+            String modalidad, String lugar, String enlace) {
         oferta.setNombre(nombre);
         oferta.setDescripcion(descripcion);
         oferta.setLugar(lugar);
         oferta.setEnlace(enlace);
-        
-        if (cupos != null) oferta.setCupos(cupos);
-        if (costo != null) oferta.setCostoInscripcion(costo);
-        
+
+        if (cupos != null)
+            oferta.setCupos(cupos);
+        if (costo != null)
+            oferta.setCostoInscripcion(costo);
+
         if (fechaInicio != null && !fechaInicio.isEmpty()) {
             oferta.setFechaInicio(LocalDate.parse(fechaInicio));
         }
-        
+
         if (fechaFin != null && !fechaFin.isEmpty()) {
             oferta.setFechaFin(LocalDate.parse(fechaFin));
         }
-        
+
         if (fechaInicioInscripcion != null && !fechaInicioInscripcion.isEmpty()) {
             oferta.setFechaInicioInscripcion(LocalDate.parse(fechaInicioInscripcion));
         }
-        
+
         if (fechaFinInscripcion != null && !fechaFinInscripcion.isEmpty()) {
             oferta.setFechaFinInscripcion(LocalDate.parse(fechaFinInscripcion));
         }
-        
+
         // Configurar modalidad
         if (modalidad != null && !modalidad.isEmpty()) {
             oferta.setModalidad(Modalidad.valueOf(modalidad.toUpperCase()));
         }
-        
+
         // Configurar estado por defecto
         oferta.setEstado(EstadoOferta.ACTIVA);
         oferta.setVisibilidad(true);
@@ -1507,23 +1572,27 @@ public class AdminController {
             // Campos genéricos para lugar y enlace
             @RequestParam(required = false) String lugar,
             @RequestParam(required = false) String enlace) {
-        
+
         try {
             System.out.println("MODIFICACIÓN DE OFERTA INICIADA");
             System.out.println("ID Oferta: " + idOferta);
             System.out.println("Tipo: " + tipoOferta);
             System.out.println("Nombre: " + nombre);
-            
+
             // Unificar lugar y enlace si vienen en campos específicos
             if (lugar == null || lugar.trim().isEmpty()) {
-                if ("CHARLA".equalsIgnoreCase(tipoOferta)) lugar = lugarCharla;
-                else if ("SEMINARIO".equalsIgnoreCase(tipoOferta)) lugar = lugarSeminario;
+                if ("CHARLA".equalsIgnoreCase(tipoOferta))
+                    lugar = lugarCharla;
+                else if ("SEMINARIO".equalsIgnoreCase(tipoOferta))
+                    lugar = lugarSeminario;
             }
             if (enlace == null || enlace.trim().isEmpty()) {
-                if ("CHARLA".equalsIgnoreCase(tipoOferta)) enlace = enlaceCharla;
-                else if ("SEMINARIO".equalsIgnoreCase(tipoOferta)) enlace = enlaceSeminario;
+                if ("CHARLA".equalsIgnoreCase(tipoOferta))
+                    enlace = enlaceCharla;
+                else if ("SEMINARIO".equalsIgnoreCase(tipoOferta))
+                    enlace = enlaceSeminario;
             }
-            
+
             // Buscar la oferta existente
             Optional<OfertaAcademica> ofertaOpt = ofertaAcademicaRepository.findById(idOferta);
             if (ofertaOpt.isEmpty()) {
@@ -1532,7 +1601,7 @@ public class AdminController {
                 errorResponse.put("message", "Oferta no encontrada");
                 return ResponseEntity.badRequest().body(errorResponse);
             }
-            
+
             OfertaAcademica ofertaExistente = ofertaOpt.get();
             String nombreAnterior = ofertaExistente.getNombre();
             String descripcionAnterior = ofertaExistente.getDescripcion();
@@ -1543,7 +1612,7 @@ public class AdminController {
             LocalDate fechaInicioInscripcionAnterior = ofertaExistente.getFechaInicioInscripcion();
             LocalDate fechaFinInscripcionAnterior = ofertaExistente.getFechaFinInscripcion();
             Modalidad modalidadAnterior = ofertaExistente.getModalidad();
-            
+
             // Verificar si se puede modificar
             if (!ofertaExistente.puedeSerEditada()) {
                 Map<String, Object> errorResponse = new HashMap<>();
@@ -1551,7 +1620,7 @@ public class AdminController {
                 errorResponse.put("message", "No se puede modificar una oferta finalizada");
                 return ResponseEntity.badRequest().body(errorResponse);
             }
-            
+
             // Validaciones de fechas
             if (fechaInicio == null || fechaInicio.trim().isEmpty()) {
                 Map<String, Object> errorResponse = new HashMap<>();
@@ -1559,20 +1628,20 @@ public class AdminController {
                 errorResponse.put("message", "La fecha de inicio es obligatoria");
                 return ResponseEntity.badRequest().body(errorResponse);
             }
-            
+
             if (fechaFin == null || fechaFin.trim().isEmpty()) {
                 Map<String, Object> errorResponse = new HashMap<>();
                 errorResponse.put("success", false);
                 errorResponse.put("message", "La fecha de fin es obligatoria");
                 return ResponseEntity.badRequest().body(errorResponse);
             }
-            
+
             // Validar formato de fechas
             LocalDate fechaInicioDate, fechaFinDate;
             try {
                 fechaInicioDate = LocalDate.parse(fechaInicio);
                 fechaFinDate = LocalDate.parse(fechaFin);
-                
+
                 if (fechaInicioDate.isAfter(fechaFinDate)) {
                     Map<String, Object> errorResponse = new HashMap<>();
                     errorResponse.put("success", false);
@@ -1588,7 +1657,7 @@ public class AdminController {
 
             // Validar fechas de inscripción si se proporcionan
             if ((fechaInicioInscripcion != null && !fechaInicioInscripcion.trim().isEmpty()) ||
-                (fechaFinInscripcion != null && !fechaFinInscripcion.trim().isEmpty())) {
+                    (fechaFinInscripcion != null && !fechaFinInscripcion.trim().isEmpty())) {
                 if (fechaInicioInscripcion == null || fechaInicioInscripcion.trim().isEmpty()) {
                     Map<String, Object> errorResponse = new HashMap<>();
                     errorResponse.put("success", false);
@@ -1607,7 +1676,8 @@ public class AdminController {
                     if (fechaInicioInscripcionDate.isAfter(fechaFinInscripcionDate)) {
                         Map<String, Object> errorResponse = new HashMap<>();
                         errorResponse.put("success", false);
-                        errorResponse.put("message", "La fecha de inicio de inscripción no puede ser posterior a la fecha de fin de inscripción");
+                        errorResponse.put("message",
+                                "La fecha de inicio de inscripción no puede ser posterior a la fecha de fin de inscripción");
                         return ResponseEntity.badRequest().body(errorResponse);
                     }
                 } catch (Exception e) {
@@ -1617,23 +1687,26 @@ public class AdminController {
                     return ResponseEntity.badRequest().body(errorResponse);
                 }
             }
-            
+
             // Validar lugar y enlace según modalidad
-            // IMPORTANTE: Enlace obligatorio SOLO para CHARLA y SEMINARIO en modalidad virtual/híbrida
+            // IMPORTANTE: Enlace obligatorio SOLO para CHARLA y SEMINARIO en modalidad
+            // virtual/híbrida
             boolean esVirtual = "VIRTUAL".equalsIgnoreCase(modalidad) || "HIBRIDA".equalsIgnoreCase(modalidad);
             boolean esPresencial = "PRESENCIAL".equalsIgnoreCase(modalidad) || "HIBRIDA".equalsIgnoreCase(modalidad);
-            boolean esCharlaOSeminario = "CHARLA".equalsIgnoreCase(tipoOferta) || "SEMINARIO".equalsIgnoreCase(tipoOferta);
-            
+            boolean esCharlaOSeminario = "CHARLA".equalsIgnoreCase(tipoOferta)
+                    || "SEMINARIO".equalsIgnoreCase(tipoOferta);
+
             // Validar enlace si es virtual/híbrida SOLO para Charla y Seminario
             if (esVirtual && esCharlaOSeminario) {
                 if (enlace == null || enlace.trim().isEmpty()) {
                     Map<String, Object> errorResponse = new HashMap<>();
                     errorResponse.put("success", false);
-                    errorResponse.put("message", "Para modalidad Virtual o Híbrida en Charlas y Seminarios, el enlace es obligatorio");
+                    errorResponse.put("message",
+                            "Para modalidad Virtual o Híbrida en Charlas y Seminarios, el enlace es obligatorio");
                     return ResponseEntity.badRequest().body(errorResponse);
                 }
             }
-            
+
             // Validar URL si se proporciona enlace
             if (enlace != null && !enlace.trim().isEmpty()) {
                 try {
@@ -1645,7 +1718,7 @@ public class AdminController {
                     return ResponseEntity.badRequest().body(errorResponse);
                 }
             }
-            
+
             // Validar lugar si es presencial/híbrida
             if (esPresencial) {
                 if (lugar == null || lugar.trim().isEmpty()) {
@@ -1655,11 +1728,11 @@ public class AdminController {
                     return ResponseEntity.badRequest().body(errorResponse);
                 }
             }
-            
+
             // Validar que el tipo de oferta coincida (Comparación robusta por instancia)
             boolean tipoCoincide = false;
             String tipoOfertaUpper = tipoOferta.toUpperCase();
-            
+
             switch (tipoOfertaUpper) {
                 case "CURSO":
                     tipoCoincide = ofertaExistente instanceof Curso;
@@ -1676,14 +1749,15 @@ public class AdminController {
                 default:
                     tipoCoincide = false;
             }
-            
+
             if (!tipoCoincide) {
                 Map<String, Object> errorResponse = new HashMap<>();
                 errorResponse.put("success", false);
-                errorResponse.put("message", "No se puede cambiar el tipo de oferta existente (" + ofertaExistente.getTipoOferta() + " vs " + tipoOferta + ")");
+                errorResponse.put("message", "No se puede cambiar el tipo de oferta existente ("
+                        + ofertaExistente.getTipoOferta() + " vs " + tipoOferta + ")");
                 return ResponseEntity.badRequest().body(errorResponse);
             }
-            
+
             // Llamar al servicio apropiado según el tipo de oferta
             OfertaAcademica ofertaModificada = null;
 
@@ -1697,13 +1771,16 @@ public class AdminController {
                     System.err.println("❌ Error al actualizar imagen: " + e.getMessage());
                 }
             }
-            
-            // Preparar mapa de datos para delegar la actualización al modelo (Refactorización)
+
+            // Preparar mapa de datos para delegar la actualización al modelo
+            // (Refactorización)
             Map<String, Object> datosActualizar = new HashMap<>();
-            
+
             // Datos comunes
-            if (nombre != null) datosActualizar.put("nombre", nombre);
-            if (descripcion != null) datosActualizar.put("descripcion", descripcion);
+            if (nombre != null)
+                datosActualizar.put("nombre", nombre);
+            if (descripcion != null)
+                datosActualizar.put("descripcion", descripcion);
             datosActualizar.put("fechaInicio", fechaInicio); // Ya validados no nulos como String o LocalDate
             datosActualizar.put("fechaFin", fechaFin);
             if (fechaInicioInscripcion != null && !fechaInicioInscripcion.trim().isEmpty()) {
@@ -1712,48 +1789,65 @@ public class AdminController {
             if (fechaFinInscripcion != null && !fechaFinInscripcion.trim().isEmpty()) {
                 datosActualizar.put("fechaFinInscripcion", fechaFinInscripcion);
             }
-            
+
             // Lugar y Enlace pueden ser seteados a vacío, así que los pasamos directo
             datosActualizar.put("lugar", lugar);
             datosActualizar.put("enlace", enlace);
-            
-            if (cupos != null) datosActualizar.put("cupos", cupos);
-            if (modalidad != null) datosActualizar.put("modalidad", modalidad);
-            if (otorgaCertificado != null) datosActualizar.put("certificado", otorgaCertificado);
-            if (costoInscripcion != null) datosActualizar.put("costoInscripcion", costoInscripcion);
-            
+
+            if (cupos != null)
+                datosActualizar.put("cupos", cupos);
+            if (modalidad != null)
+                datosActualizar.put("modalidad", modalidad);
+            if (otorgaCertificado != null)
+                datosActualizar.put("certificado", otorgaCertificado);
+            if (costoInscripcion != null)
+                datosActualizar.put("costoInscripcion", costoInscripcion);
+
             if (nuevaImagenUrl != null) {
                 datosActualizar.put("imagenUrl", nuevaImagenUrl);
             }
 
             // Datos específicos por tipo
             if ("CURSO".equals(tipoOfertaUpper)) {
-                if (temario != null) datosActualizar.put("temario", temario);
-                if (costoCuota != null) datosActualizar.put("costoCuota", costoCuota);
-                if (costoMora != null) datosActualizar.put("costoMora", costoMora);
-                if (nrCuotas != null) datosActualizar.put("nrCuotas", nrCuotas);
-                if (diaVencimiento != null) datosActualizar.put("diaVencimiento", diaVencimiento);
-                
+                if (temario != null)
+                    datosActualizar.put("temario", temario);
+                if (costoCuota != null)
+                    datosActualizar.put("costoCuota", costoCuota);
+                if (costoMora != null)
+                    datosActualizar.put("costoMora", costoMora);
+                if (nrCuotas != null)
+                    datosActualizar.put("nrCuotas", nrCuotas);
+                if (diaVencimiento != null)
+                    datosActualizar.put("diaVencimiento", diaVencimiento);
+
                 if (docentesCurso != null && !docentesCurso.trim().isEmpty()) {
                     datosActualizar.put("docentes", obtenerDocentesPorIds(docentesCurso));
                 }
-                
+
             } else if ("FORMACION".equals(tipoOfertaUpper)) {
-                if (planFormacion != null) datosActualizar.put("plan", planFormacion);
-                if (costoCuotaFormacion != null) datosActualizar.put("costoCuota", costoCuotaFormacion);
-                if (costoMoraFormacion != null) datosActualizar.put("costoMora", costoMoraFormacion);
-                if (nrCuotasFormacion != null) datosActualizar.put("nrCuotas", nrCuotasFormacion);
-                if (diaVencimientoFormacion != null) datosActualizar.put("diaVencimiento", diaVencimientoFormacion);
-                
+                if (planFormacion != null)
+                    datosActualizar.put("plan", planFormacion);
+                if (costoCuotaFormacion != null)
+                    datosActualizar.put("costoCuota", costoCuotaFormacion);
+                if (costoMoraFormacion != null)
+                    datosActualizar.put("costoMora", costoMoraFormacion);
+                if (nrCuotasFormacion != null)
+                    datosActualizar.put("nrCuotas", nrCuotasFormacion);
+                if (diaVencimientoFormacion != null)
+                    datosActualizar.put("diaVencimiento", diaVencimientoFormacion);
+
                 // Si hubiera lógica de docentes para formación
-                 if (docentesFormacion != null && !docentesFormacion.trim().isEmpty()) {
-                     // datosActualizar.put("docentes", obtenerDocentesPorIds(docentesFormacion));
-                 }
-                 
+                if (docentesFormacion != null && !docentesFormacion.trim().isEmpty()) {
+                    // datosActualizar.put("docentes", obtenerDocentesPorIds(docentesFormacion));
+                }
+
             } else if ("CHARLA".equals(tipoOfertaUpper)) {
-                if (duracionEstimada != null) datosActualizar.put("duracionEstimada", duracionEstimada);
-                if (publicoObjetivoCharla != null) datosActualizar.put("publicoObjetivo", publicoObjetivoCharla);
-                if (disertantesCharla != null) datosActualizar.put("disertantes", disertantesCharla);
+                if (duracionEstimada != null)
+                    datosActualizar.put("duracionEstimada", duracionEstimada);
+                if (publicoObjetivoCharla != null)
+                    datosActualizar.put("publicoObjetivo", publicoObjetivoCharla);
+                if (disertantesCharla != null)
+                    datosActualizar.put("disertantes", disertantesCharla);
                 if (horaCharla != null && !horaCharla.trim().isEmpty()) {
                     try {
                         datosActualizar.put("horaInicio", java.sql.Time.valueOf(horaCharla + ":00"));
@@ -1761,11 +1855,14 @@ public class AdminController {
                         System.err.println("Error al convertir hora de charla: " + e.getMessage());
                     }
                 }
-                
+
             } else if ("SEMINARIO".equals(tipoOfertaUpper)) {
-                if (duracionMinutos != null) datosActualizar.put("duracionMinutos", duracionMinutos);
-                if (publicoObjetivoSeminario != null) datosActualizar.put("publicoObjetivo", publicoObjetivoSeminario);
-                if (disertantesSeminario != null) datosActualizar.put("disertantes", disertantesSeminario);
+                if (duracionMinutos != null)
+                    datosActualizar.put("duracionMinutos", duracionMinutos);
+                if (publicoObjetivoSeminario != null)
+                    datosActualizar.put("publicoObjetivo", publicoObjetivoSeminario);
+                if (disertantesSeminario != null)
+                    datosActualizar.put("disertantes", disertantesSeminario);
                 if (horaSeminario != null && !horaSeminario.trim().isEmpty()) {
                     try {
                         datosActualizar.put("horaInicio", java.sql.Time.valueOf(horaSeminario + ":00"));
@@ -1780,12 +1877,12 @@ public class AdminController {
 
             // Guardar la oferta modificada
             ofertaModificada = ofertaAcademicaRepository.save(ofertaExistente);
-            
+
             // Asociar categorías si se proporcionaron
             if (categorias != null && !categorias.trim().isEmpty()) {
                 asociarCategoriasAOferta(ofertaModificada, categorias);
             }
-            
+
             if (ofertaModificada != null) {
                 System.out.println("Oferta modificada exitosamente: " + ofertaModificada.getNombre());
 
@@ -1793,12 +1890,14 @@ public class AdminController {
                 addCambio(cambios, "nombre", nombreAnterior, ofertaModificada.getNombre());
                 addCambio(cambios, "descripcion", descripcionAnterior, ofertaModificada.getDescripcion());
                 addCambio(cambios, "cupos", cuposAnterior, ofertaModificada.getCupos());
-            addCambio(cambios, "costo", costoAnterior, ofertaModificada.getCostoInscripcion());
-            addCambio(cambios, "fechaInicio", fechaInicioAnterior, ofertaModificada.getFechaInicio());
-            addCambio(cambios, "fechaFin", fechaFinAnterior, ofertaModificada.getFechaFin());
-            addCambio(cambios, "fechaInicioInscripcion", fechaInicioInscripcionAnterior, ofertaModificada.getFechaInicioInscripcion());
-            addCambio(cambios, "fechaFinInscripcion", fechaFinInscripcionAnterior, ofertaModificada.getFechaFinInscripcion());
-            addCambio(cambios, "modalidad", modalidadAnterior, ofertaModificada.getModalidad());
+                addCambio(cambios, "costo", costoAnterior, ofertaModificada.getCostoInscripcion());
+                addCambio(cambios, "fechaInicio", fechaInicioAnterior, ofertaModificada.getFechaInicio());
+                addCambio(cambios, "fechaFin", fechaFinAnterior, ofertaModificada.getFechaFin());
+                addCambio(cambios, "fechaInicioInscripcion", fechaInicioInscripcionAnterior,
+                        ofertaModificada.getFechaInicioInscripcion());
+                addCambio(cambios, "fechaFinInscripcion", fechaFinInscripcionAnterior,
+                        ofertaModificada.getFechaFinInscripcion());
+                addCambio(cambios, "modalidad", modalidadAnterior, ofertaModificada.getModalidad());
 
                 String detalleCambios = "Modificacion de oferta " + ofertaModificada.getTipoOferta() + ": " +
                         trunc(ofertaModificada.getNombre(), 80) + " (ID " + ofertaModificada.getIdOferta() + ")" +
@@ -1809,7 +1908,7 @@ public class AdminController {
                 response.put("message", "Oferta modificada exitosamente");
                 response.put("auditDetails", detalleCambios);
                 response.put("oferta", mapearOfertaAResponse(ofertaModificada));
-                
+
                 return ResponseEntity.ok(response);
             } else {
                 Map<String, Object> errorResponse = new HashMap<>();
@@ -1817,20 +1916,23 @@ public class AdminController {
                 errorResponse.put("message", "Error al modificar la oferta");
                 return ResponseEntity.badRequest().body(errorResponse);
             }
-            
+
         } catch (Exception e) {
             System.err.println("❌ Error al modificar oferta: " + e.toString());
             e.printStackTrace();
-            
+
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("success", false);
-            errorResponse.put("message", "Error al modificar oferta: " + e.toString()); // Usamos toString para ver el tipo de excepción si mensaje es null
+            errorResponse.put("message", "Error al modificar oferta: " + e.toString()); // Usamos toString para ver el
+                                                                                        // tipo de excepción si mensaje
+                                                                                        // es null
             return ResponseEntity.badRequest().body(errorResponse);
         }
     }
 
     /**
-     * Endpoint para generar propuestas automáticas de horarios para una oferta académica
+     * Endpoint para generar propuestas automáticas de horarios para una oferta
+     * académica
      */
     @PostMapping("/admin/ofertas/generar-horarios-automaticos")
     @ResponseBody
@@ -1842,7 +1944,7 @@ public class AdminController {
             @RequestParam(defaultValue = "4") int maxHorasDiarias,
             @RequestParam(required = false) String horariosFijadosJson,
             @RequestParam(defaultValue = "false") boolean buscarAlternativas) {
-        
+
         try {
             System.out.println("📅 Generando propuestas automáticas de horarios...");
             System.out.println("   - Oferta ID: " + idOferta);
@@ -1850,7 +1952,7 @@ public class AdminController {
             System.out.println("   - Horas semanales: " + horasSemanales);
             System.out.println("   - Max Horas/Día: " + maxHorasDiarias);
             System.out.println("   - Buscar Alternativas: " + buscarAlternativas);
-            
+
             // Validaciones
             if (idDocente == null || horasSemanales == null || horasSemanales <= 0) {
                 Map<String, Object> errorResponse = new HashMap<>();
@@ -1858,10 +1960,10 @@ public class AdminController {
                 errorResponse.put("message", "Parámetros inválidos: docente y horas semanales son requeridos");
                 return ResponseEntity.badRequest().body(errorResponse);
             }
-            
+
             // Buscar docente
             Docente docente = docenteRepository.findById(java.util.UUID.fromString(idDocente))
-                .orElseThrow(() -> new RuntimeException("Docente no encontrado"));
+                    .orElseThrow(() -> new RuntimeException("Docente no encontrado"));
 
             List<Docente> docentes = new ArrayList<>();
             if (docentesIds != null && !docentesIds.isBlank()) {
@@ -1878,34 +1980,37 @@ public class AdminController {
             if (docentes.isEmpty()) {
                 docentes.add(docente);
             }
-            
+
             // Buscar oferta (solo si existe - para ofertas existentes)
             OfertaAcademica oferta = null;
             if (idOferta != null && idOferta > 0) {
                 oferta = ofertaAcademicaRepository.findById(idOferta).orElse(null);
             }
-            
+
             // Procesar horarios fijados (pinned)
             List<GeneradorHorariosService.HorarioAsignado> pinned = new ArrayList<>();
             if (horariosFijadosJson != null && !horariosFijadosJson.isEmpty()) {
                 try {
                     ObjectMapper mapper = new ObjectMapper();
-                    List<Map<String, String>> rawList = mapper.readValue(horariosFijadosJson, new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, String>>>(){});
-                    
+                    List<Map<String, String>> rawList = mapper.readValue(horariosFijadosJson,
+                            new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, String>>>() {
+                            });
+
                     for (Map<String, String> m : rawList) {
                         try {
                             String horaInicioStr = m.get("horaInicio");
                             String horaFinStr = m.get("horaFin");
-                            
+
                             // Unificar formato a HH:mm:ss para Time.valueOf
-                            if (horaInicioStr.length() == 5) horaInicioStr += ":00"; // HH:mm -> HH:mm:ss
-                            if (horaFinStr.length() == 5) horaFinStr += ":00";
-                            
+                            if (horaInicioStr.length() == 5)
+                                horaInicioStr += ":00"; // HH:mm -> HH:mm:ss
+                            if (horaFinStr.length() == 5)
+                                horaFinStr += ":00";
+
                             GeneradorHorariosService.HorarioAsignado ha = new GeneradorHorariosService.HorarioAsignado(
-                                Dias.valueOf(m.get("dia")),
-                                Time.valueOf(horaInicioStr),
-                                Time.valueOf(horaFinStr)
-                            );
+                                    Dias.valueOf(m.get("dia")),
+                                    Time.valueOf(horaInicioStr),
+                                    Time.valueOf(horaFinStr));
                             if (m.get("docenteId") != null) {
                                 ha.setDocenteId(m.get("docenteId"));
                             }
@@ -1915,7 +2020,8 @@ public class AdminController {
                             }
                             pinned.add(ha);
                         } catch (Exception e) {
-                            System.err.println("   ! Error al procesar horario fijado individual: " + m + " - " + e.getMessage());
+                            System.err.println(
+                                    "   ! Error al procesar horario fijado individual: " + m + " - " + e.getMessage());
                         }
                     }
                     System.out.println("   - Horarios fijados procesados correctamente: " + pinned.size());
@@ -1923,20 +2029,21 @@ public class AdminController {
                     System.err.println("Error parseando JSON de horarios fijados: " + e.getMessage());
                 }
             }
-            
+
             // Generar propuestas
-            List<GeneradorHorariosService.PropuestaHorario> propuestas = 
-                (docentes.size() > 1)
-                    ? generadorHorariosService.generarPropuestasMulti(oferta, docentes, horasSemanales, maxHorasDiarias, pinned, buscarAlternativas)
-                    : generadorHorariosService.generarPropuestas(oferta, docente, horasSemanales, maxHorasDiarias, pinned, buscarAlternativas);
-            
+            List<GeneradorHorariosService.PropuestaHorario> propuestas = (docentes.size() > 1)
+                    ? generadorHorariosService.generarPropuestasMulti(oferta, docentes, horasSemanales, maxHorasDiarias,
+                            pinned, buscarAlternativas)
+                    : generadorHorariosService.generarPropuestas(oferta, docente, horasSemanales, maxHorasDiarias,
+                            pinned, buscarAlternativas);
+
             if (propuestas.isEmpty()) {
                 Map<String, Object> errorResponse = new HashMap<>();
                 errorResponse.put("success", false);
                 // Mensaje especifico si no hay opciones
-                String msg = pinned.isEmpty() 
-                    ? "No se pudieron generar propuestas. El docente no tiene suficiente disponibilidad." 
-                    : "No se encontraron otras alternativas con las restricciones y horarios fijados seleccionados.";
+                String msg = pinned.isEmpty()
+                        ? "No se pudieron generar propuestas. El docente no tiene suficiente disponibilidad."
+                        : "No se encontraron otras alternativas con las restricciones y horarios fijados seleccionados.";
                 errorResponse.put("message", msg);
 
                 // Info diagnostico de disponibilidad
@@ -1950,7 +2057,8 @@ public class AdminController {
                 debug.put("cargaActual", Math.round(cargaActual * 100.0) / 100.0);
                 debug.put("disponibilidadTotal", Math.round(disponibilidadTotal * 100.0) / 100.0);
                 debug.put("disponibilidadLibre", Math.round(disponibilidadLibre * 100.0) / 100.0);
-                debug.put("disponibilidadLibrePorDia", disponibilidadDocenteService.calcularDisponibilidadLibrePorDia(docente));
+                debug.put("disponibilidadLibrePorDia",
+                        disponibilidadDocenteService.calcularDisponibilidadLibrePorDia(docente));
                 errorResponse.put("debug", debug);
 
                 return ResponseEntity.badRequest().body(errorResponse);
@@ -1966,17 +2074,19 @@ public class AdminController {
                 propuestaMap.put("totalHorasSemana", Math.round(propuesta.getTotalHorasSemana() * 100.0) / 100.0);
                 propuestaMap.put("cantidadDias", propuesta.getCantidadDias());
                 propuestaMap.put("promedioHorasPorDia", Math.round(propuesta.getPromedioHorasPorDia() * 100.0) / 100.0);
-                propuestaMap.put("cargaAdicionalDocente", Math.round(propuesta.getCargaAdicionalDocente() * 100.0) / 100.0);
-                propuestaMap.put("porcentajeCargaTotal", Math.round(propuesta.getPorcentajeCargaTotal() * 100.0) / 100.0);
+                propuestaMap.put("cargaAdicionalDocente",
+                        Math.round(propuesta.getCargaAdicionalDocente() * 100.0) / 100.0);
+                propuestaMap.put("porcentajeCargaTotal",
+                        Math.round(propuesta.getPorcentajeCargaTotal() * 100.0) / 100.0);
                 propuestaMap.put("score", Math.round(propuesta.getScore() * 100.0) / 100.0);
                 propuestasJSON.add(propuestaMap);
             }
-            
+
             // Información adicional del docente
             double cargaActual = disponibilidadDocenteService.calcularCargaHorariaSemanal(docente);
             double disponibilidadTotal = disponibilidadDocenteService.calcularDisponibilidadTotalSemanal(docente);
             double porcentajeOcupacion = disponibilidadDocenteService.calcularPorcentajeOcupacion(docente);
-            
+
             Map<String, Object> infoDocente = new HashMap<>();
             infoDocente.put("nombre", docente.getNombre() + " " + docente.getApellido());
             infoDocente.put("cargaActual", Math.round(cargaActual * 100.0) / 100.0);
@@ -1988,7 +2098,7 @@ public class AdminController {
                 // Mapa DIA -> Lista de rangos [{start: "08:00", end: "12:00"}]
                 Map<String, List<Map<String, String>>> disponibilidadDetallada = new HashMap<>();
                 List<DisponibilidadDocente> dispoList = disponibilidadDocenteService.obtenerDisponibilidades(docente);
-                
+
                 for (DisponibilidadDocente d : dispoList) {
                     String dia = d.getDia().toString();
                     if (!disponibilidadDetallada.containsKey(dia)) {
@@ -1997,8 +2107,10 @@ public class AdminController {
                     Map<String, String> rango = new HashMap<>();
                     String inicio = d.getHoraInicio().toString();
                     String fin = d.getHoraFin().toString();
-                    if (inicio.length() == 8) inicio = inicio.substring(0, 5); // 08:00:00 -> 08:00
-                    if (fin.length() == 8) fin = fin.substring(0, 5);
+                    if (inicio.length() == 8)
+                        inicio = inicio.substring(0, 5); // 08:00:00 -> 08:00
+                    if (fin.length() == 8)
+                        fin = fin.substring(0, 5);
                     rango.put("inicio", inicio);
                     rango.put("fin", fin);
                     disponibilidadDetallada.get(dia).add(rango);
@@ -2024,7 +2136,7 @@ public class AdminController {
 
                     Map<String, List<Map<String, String>>> disponibilidadDetallada = new HashMap<>();
                     List<DisponibilidadDocente> dispoList = disponibilidadDocenteService.obtenerDisponibilidades(dref);
-                    
+
                     for (DisponibilidadDocente dd : dispoList) {
                         String dia = dd.getDia().toString();
                         if (!disponibilidadDetallada.containsKey(dia)) {
@@ -2033,8 +2145,10 @@ public class AdminController {
                         Map<String, String> rango = new HashMap<>();
                         String inicio = dd.getHoraInicio().toString();
                         String fin = dd.getHoraFin().toString();
-                        if (inicio.length() == 8) inicio = inicio.substring(0, 5); // 08:00:00 -> 08:00
-                        if (fin.length() == 8) fin = fin.substring(0, 5);
+                        if (inicio.length() == 8)
+                            inicio = inicio.substring(0, 5); // 08:00:00 -> 08:00
+                        if (fin.length() == 8)
+                            fin = fin.substring(0, 5);
                         rango.put("inicio", inicio);
                         rango.put("fin", fin);
                         disponibilidadDetallada.get(dia).add(rango);
@@ -2047,21 +2161,21 @@ public class AdminController {
                 }
             }
             infoDocente.put("docentes", docentesInfo);
-            
+
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "Propuestas generadas exitosamente");
             response.put("propuestas", propuestasJSON);
             response.put("infoDocente", infoDocente);
-            
+
             System.out.println("✅ " + propuestas.size() + " propuestas generadas exitosamente");
-            
+
             return ResponseEntity.ok(response);
-            
+
         } catch (Exception e) {
             System.err.println("❌ Error al generar propuestas: " + e.getMessage());
             e.printStackTrace();
-            
+
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("success", false);
             errorResponse.put("message", "Error al generar propuestas: " + e.getMessage());
@@ -2074,7 +2188,7 @@ public class AdminController {
     public ResponseEntity<Map<String, Object>> listarOfertas() {
         try {
             List<OfertaAcademica> ofertas = ofertaAcademicaRepository.findAll();
-            
+
             // Validación defensiva: eliminar ofertas nulas
             if (ofertas != null) {
                 ofertas.removeIf(Objects::isNull);
@@ -2105,7 +2219,7 @@ public class AdminController {
     public ResponseEntity<Map<String, Object>> listarOfertasAjax() {
         try {
             List<OfertaAcademica> ofertas = ofertaAcademicaRepository.findAll();
-            
+
             // Validación defensiva: eliminar ofertas nulas
             if (ofertas != null) {
                 ofertas.removeIf(Objects::isNull);
@@ -2157,7 +2271,7 @@ public class AdminController {
             @RequestParam(required = false) String colegioEgreso,
             @RequestParam(required = false) Integer añoEgreso,
             @RequestParam(required = false) String ultimosEstudios) {
-        
+
         try {
             System.out.println("Registrando usuario desde admin:");
             System.out.println("   - DNI: " + dni);
@@ -2174,7 +2288,7 @@ public class AdminController {
                 response.put("message", "La fecha de nacimiento es obligatoria");
                 return ResponseEntity.badRequest().body(response);
             }
-            
+
             // Validar edad mínima (16 años)
             Period edad = Period.between(fechaNacimiento, LocalDate.now());
             if (edad.getYears() < 16) {
@@ -2193,13 +2307,13 @@ public class AdminController {
                 try {
                     // Parsear el JSON de horarios
                     ObjectMapper objectMapper = new ObjectMapper();
-                    horariosList = objectMapper.readValue(horariosDisponibilidad, 
-                        objectMapper.getTypeFactory().constructCollectionType(List.class, Map.class));
-                    
+                    horariosList = objectMapper.readValue(horariosDisponibilidad,
+                            objectMapper.getTypeFactory().constructCollectionType(List.class, Map.class));
+
                     System.out.println("Horarios procesados: " + horariosList.size());
                     for (Map<String, String> horario : horariosList) {
-                        System.out.println("   - " + horario.get("diaSemana") + ": " + 
-                                        horario.get("horaInicio") + " - " + horario.get("horaFin"));
+                        System.out.println("   - " + horario.get("diaSemana") + ": " +
+                                horario.get("horaInicio") + " - " + horario.get("horaFin"));
                     }
                 } catch (Exception e) {
                     System.out.println("Error parseando horarios: " + e.getMessage());
@@ -2208,35 +2322,36 @@ public class AdminController {
 
             // Usar el servicio unificado - MODIFICAR EL SERVICIO PARA ACEPTAR HORARIOS
             Usuario nuevoUsuario = registroService.registrarUsuarioAdministrativo(
-                dni, nombre, apellido, fechaNacimiento, genero,
-                correo, telefono, paisCodigo, provinciaCodigo,
-                ciudadIdLong, rol, matricula,
-                experiencia, colegioEgreso, añoEgreso, ultimosEstudios,
-                horariosList // ✅ Pasar los horarios al servicio
+                    dni, nombre, apellido, fechaNacimiento, genero,
+                    correo, telefono, paisCodigo, provinciaCodigo,
+                    ciudadIdLong, rol, matricula,
+                    experiencia, colegioEgreso, añoEgreso, ultimosEstudios,
+                    horariosList // ✅ Pasar los horarios al servicio
             );
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
-            response.put("message", "Usuario registrado exitosamente. Las credenciales han sido enviadas al correo electrónico.");
+            response.put("message",
+                    "Usuario registrado exitosamente. Las credenciales han sido enviadas al correo electrónico.");
             response.put("auditDetails",
                     "Creacion de usuario: " + nombre + " " + apellido + " (DNI " + dni + ")" +
-                    (correo != null ? " | correo: " + correo : "") + 
-                    (telefono != null ? " | telefono: " + telefono : "") + 
-                    (rol != null ? " | rol: " + rol : "") + 
-                    (estado != null ? " | estado: " + estado : ""));
+                            (correo != null ? " | correo: " + correo : "") +
+                            (telefono != null ? " | telefono: " + telefono : "") +
+                            (rol != null ? " | rol: " + rol : "") +
+                            (estado != null ? " | estado: " + estado : ""));
             response.put("id", nuevoUsuario.getId());
             response.put("dni", nuevoUsuario.getDni());
             response.put("nombre", nuevoUsuario.getNombre() + " " + nuevoUsuario.getApellido());
             response.put("rol", rol);
-            
+
             System.out.println("✅ Usuario registrado exitosamente desde admin: " + nuevoUsuario.getId());
-            
+
             return ResponseEntity.ok(response);
-            
+
         } catch (Exception e) {
             System.out.println("Error al registrar usuario desde admin: " + e.getMessage());
             e.printStackTrace();
-            
+
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", "Error al registrar usuario: " + e.getMessage());
@@ -2291,11 +2406,16 @@ public class AdminController {
 
         try {
             System.out.println("📝 Actualizando usuario: " + identificador);
-            System.out.println("📍 Datos de ubicación recibidos: paisCodigo=" + paisCodigo + ", provinciaCodigo=" + provinciaCodigo + ", ciudadId=" + ciudadId);
+            System.out.println("📍 Datos de ubicación recibidos: paisCodigo=" + paisCodigo + ", provinciaCodigo="
+                    + provinciaCodigo + ", ciudadId=" + ciudadId);
             if ("DOCENTE".equalsIgnoreCase(rol)) {
-                System.out.println("👨‍🏫 Datos de docente recibidos: matricula=" + matricula + ", experiencia=" + experiencia + ", horarios=" + (horariosDisponibilidad != null ? horariosDisponibilidad.substring(0, Math.min(100, horariosDisponibilidad.length())) : "null"));
+                System.out.println("👨‍🏫 Datos de docente recibidos: matricula=" + matricula + ", experiencia="
+                        + experiencia + ", horarios="
+                        + (horariosDisponibilidad != null
+                                ? horariosDisponibilidad.substring(0, Math.min(100, horariosDisponibilidad.length()))
+                                : "null"));
             }
-            
+
             Optional<Usuario> usuarioOpt = buscarUsuarioPorIdentificador(identificador);
             if (usuarioOpt.isEmpty()) {
                 response.put("success", false);
@@ -2330,8 +2450,7 @@ public class AdminController {
                     añoEgreso,
                     ultimosEstudios,
                     horariosDisponibilidad,
-                    estado
-            );
+                    estado);
 
             List<String> cambios = new ArrayList<>();
             addCambio(cambios, "dni", usuarioPrevio.getDni(), dni);
@@ -2376,7 +2495,7 @@ public class AdminController {
                 response.put("message", "Usuario no encontrado");
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
             }
-            
+
             Usuario usuario = usuarioOpt.get();
             String fotoUrl = usuario.getFoto();
             if (fotoUrl == null || fotoUrl.isBlank()) {
@@ -2384,7 +2503,7 @@ public class AdminController {
                 response.put("message", "El usuario no tiene foto");
                 return ResponseEntity.badRequest().body(response);
             }
-            
+
             Long idImagen = extraerIdImagenUsuario(fotoUrl);
             if (idImagen != null) {
                 try {
@@ -2393,15 +2512,16 @@ public class AdminController {
                     System.err.println("⚠️ No se pudo eliminar imagen en BD: " + e.getMessage());
                 }
             }
-            
+
             usuario.setFoto(null);
             usuarioRepository.save(usuario);
-            
+
             response.put("success", true);
             response.put("message", "Foto eliminada correctamente");
             response.put("data", mapearDetalleUsuario(usuario));
-            response.put("auditDetails", "Eliminacion de foto de usuario: " + usuario.getNombre() + " " + usuario.getApellido() +
-                " (DNI " + usuario.getDni() + ", ident " + identificador + ")");
+            response.put("auditDetails",
+                    "Eliminacion de foto de usuario: " + usuario.getNombre() + " " + usuario.getApellido() +
+                            " (DNI " + usuario.getDni() + ", ident " + identificador + ")");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             response.put("success", false);
@@ -2409,7 +2529,6 @@ public class AdminController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
-
 
     @PutMapping("/admin/alumnos/{idAlumno}/toggle-documentacion")
     @ResponseBody
@@ -2494,7 +2613,7 @@ public class AdminController {
             response.put("message", "Usuario dado de baja correctamente");
             response.put("auditDetails",
                     "Baja de usuario: " + usuarioOpt.get().getNombre() + " " + usuarioOpt.get().getApellido() +
-                    " (DNI " + usuarioOpt.get().getDni() + ", ident " + identificador + ")");
+                            " (DNI " + usuarioOpt.get().getDni() + ", ident " + identificador + ")");
             return ResponseEntity.ok(response);
         } catch (IllegalStateException ex) {
             response.put("success", false);
@@ -2531,7 +2650,7 @@ public class AdminController {
             response.put("message", "Usuario reactivado correctamente");
             response.put("auditDetails",
                     "Reactivacion de usuario: " + usuarioOpt.get().getNombre() + " " + usuarioOpt.get().getApellido() +
-                    " (DNI " + usuarioOpt.get().getDni() + ", ident " + identificador + ")");
+                            " (DNI " + usuarioOpt.get().getDni() + ", ident " + identificador + ")");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             response.put("success", false);
@@ -2543,33 +2662,34 @@ public class AdminController {
     @GetMapping("/admin/usuarios/listar")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> listarUsuarios(
-            @RequestParam(defaultValue = "0") int page,  // ✅ CAMBIAR A 0 POR DEFECTO
+            @RequestParam(defaultValue = "0") int page, // ✅ CAMBIAR A 0 POR DEFECTO
             @RequestParam(defaultValue = "10") int size) {
-        
+
         try {
             System.out.println("📋 Solicitando usuarios REALES - página: " + page + ", tamaño: " + size);
-            
+
             // OBTENER USUARIOS REALES DE LA BASE DE DATOS
             List<Usuario> todosUsuarios = usuarioRepository.findAll();
             System.out.println("👥 Usuarios encontrados en BD: " + todosUsuarios.size());
-            
+
             // ✅ CORREGIR PAGINACIÓN - VERIFICAR LÍMITES
             int start = page * size;
             int end = Math.min(start + size, todosUsuarios.size());
-            
+
             // ✅ EVITAR ERROR CUANDO START ES MAYOR QUE EL TAMAÑO DE LA LISTA
             if (start >= todosUsuarios.size()) {
                 start = 0; // Volver a la primera página
                 page = 0;
             }
-            
+
             List<Usuario> usuariosPagina = todosUsuarios.subList(start, end);
-            
-            System.out.println("📄 Usuarios en esta página: " + usuariosPagina.size() + " (start: " + start + ", end: " + end + ")");
-            
+
+            System.out.println("📄 Usuarios en esta página: " + usuariosPagina.size() + " (start: " + start + ", end: "
+                    + end + ")");
+
             // Convertir usuarios reales a formato para frontend
             List<Map<String, Object>> usuariosResponse = new ArrayList<>();
-            
+
             for (Usuario usuario : usuariosPagina) {
                 Map<String, Object> usuarioMap = new HashMap<>();
                 usuarioMap.put("dni", usuario.getDni());
@@ -2583,7 +2703,7 @@ public class AdminController {
                     // Si no existe, usar fecha por defecto o campo alternativo
                     usuarioMap.put("fechaRegistro", "Fecha no disponible");
                 }
-                
+
                 // Obtener roles reales
                 List<String> roles = new ArrayList<>();
                 if (usuario.getRoles() != null) {
@@ -2595,41 +2715,42 @@ public class AdminController {
                     }
                 }
                 usuarioMap.put("roles", roles);
-                
+
                 usuariosResponse.add(usuarioMap);
-                
-                System.out.println("✅ Usuario real: " + usuario.getNombre() + " " + usuario.getApellido() + 
-                                " - DNI: " + usuario.getDni() + " - Roles: " + roles);
+
+                System.out.println("✅ Usuario real: " + usuario.getNombre() + " " + usuario.getApellido() +
+                        " - DNI: " + usuario.getDni() + " - Roles: " + roles);
             }
-            
+
             // Crear respuesta
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
-            
+
             Map<String, Object> data = new HashMap<>();
             data.put("content", usuariosResponse);
             data.put("totalElements", todosUsuarios.size());
-            data.put("totalPages", Math.max(1, (int) Math.ceil((double) todosUsuarios.size() / size))); // ✅ Mínimo 1 página
+            data.put("totalPages", Math.max(1, (int) Math.ceil((double) todosUsuarios.size() / size))); // ✅ Mínimo 1
+                                                                                                        // página
             data.put("size", size);
             data.put("number", page);
-            
+
             response.put("data", data);
-            
+
             Map<String, Object> pagination = new HashMap<>();
             pagination.put("currentPage", page);
             pagination.put("totalPages", Math.max(1, (int) Math.ceil((double) todosUsuarios.size() / size)));
             pagination.put("totalElements", todosUsuarios.size());
             pagination.put("pageSize", size);
-            
+
             response.put("pagination", pagination);
-            
+
             System.out.println("✅ Respuesta enviada - " + usuariosResponse.size() + " usuarios reales");
             return ResponseEntity.ok(response);
-            
+
         } catch (Exception e) {
             System.out.println("❌ Error obteniendo usuarios reales: " + e.getMessage());
             e.printStackTrace();
-            
+
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", "Error al obtener usuarios: " + e.getMessage());
@@ -2639,17 +2760,23 @@ public class AdminController {
 
     // Método auxiliar para convertir roles a nombres legibles
     private String convertirRolALegible(String rol) {
-        if (rol == null) return "Sin rol";
-        
-        switch(rol.toUpperCase()) {
-            case "ALUMNO": return "Alumno";
-            case "DOCENTE": return "Docente"; 
-            case "ADMIN": return "Administrador";
-            case "COORDINADOR": return "Coordinador";
-            default: return rol;
+        if (rol == null)
+            return "Sin rol";
+
+        switch (rol.toUpperCase()) {
+            case "ALUMNO":
+                return "Alumno";
+            case "DOCENTE":
+                return "Docente";
+            case "ADMIN":
+                return "Administrador";
+            case "COORDINADOR":
+                return "Coordinador";
+            default:
+                return rol;
         }
     }
-    
+
     private Optional<Usuario> buscarUsuarioPorIdentificador(String identificador) {
         if (identificador == null || identificador.isBlank()) {
             return Optional.empty();
@@ -2716,12 +2843,13 @@ public class AdminController {
             data.put("añoEgreso", alumno.getAñoEgreso());
             data.put("ultimosEstudios", alumno.getUltimosEstudios());
             data.put("documentacionEntregada", alumno.getDocumentacionEntregada());
-            
+
             // Validar inscripciones activas
             List<Inscripciones> inscripciones = inscripcionRepository.findByAlumno(alumno);
             long activas = inscripciones.stream().filter(i -> Boolean.TRUE.equals(i.getEstadoInscripcion())).count();
             if (activas > 0) {
-                warnings.add("El alumno tiene " + activas + " inscripción(es) activa(s). Se recomienda verificar antes de dar de baja.");
+                warnings.add("El alumno tiene " + activas
+                        + " inscripción(es) activa(s). Se recomienda verificar antes de dar de baja.");
             }
 
             // Mapear detalle de inscripciones para el panel de administración
@@ -2731,7 +2859,8 @@ public class AdminController {
                 map.put("ofertaTitulo", insc.getOferta().getNombre()); // Nombre de la oferta
                 map.put("fechaInscripcion", insc.getFechaInscripcion());
                 map.put("estadoInscripcion", insc.getEstadoInscripcion());
-                map.put("documentacionEntregada", insc.getDocumentacionEntregada() != null ? insc.getDocumentacionEntregada() : false);
+                map.put("documentacionEntregada",
+                        insc.getDocumentacionEntregada() != null ? insc.getDocumentacionEntregada() : false);
                 return map;
             }).collect(Collectors.toList());
             data.put("inscripciones", inscripcionesDetalle);
@@ -2750,25 +2879,33 @@ public class AdminController {
                 if (curso.getEstado() == EstadoOferta.ACTIVA || curso.getEstado() == EstadoOferta.ENCURSO) {
                     // REGLA ESTRICTA: Si está en un curso activo, BLOQUEAR.
                     canBeDeleted = false;
-                    blockingReason = "No se puede dar de baja: El docente está asignado al curso activo '" + curso.getNombre() + "'.";
+                    blockingReason = "No se puede dar de baja: El docente está asignado al curso activo '"
+                            + curso.getNombre() + "'.";
                     break;
                 }
             }
 
             // Obtener las disponibilidades del docente (no los horarios de clases)
-            List<DisponibilidadDocente> disponibilidades = disponibilidadDocenteService.obtenerDisponibilidades(docente);
+            List<DisponibilidadDocente> disponibilidades = disponibilidadDocenteService
+                    .obtenerDisponibilidades(docente);
             if (disponibilidades != null && !disponibilidades.isEmpty()) {
                 List<Map<String, Object>> horarios = disponibilidades.stream().map(disponibilidad -> {
                     Map<String, Object> horarioMap = new HashMap<>();
-                    horarioMap.put("diaSemana", disponibilidad.getDia() != null ? disponibilidad.getDia().name() : null);
-                    horarioMap.put("horaInicio", disponibilidad.getHoraInicio() != null ? disponibilidad.getHoraInicio().toString().substring(0, 5) : null);
-                    horarioMap.put("horaFin", disponibilidad.getHoraFin() != null ? disponibilidad.getHoraFin().toString().substring(0, 5) : null);
+                    horarioMap.put("diaSemana",
+                            disponibilidad.getDia() != null ? disponibilidad.getDia().name() : null);
+                    horarioMap.put("horaInicio",
+                            disponibilidad.getHoraInicio() != null
+                                    ? disponibilidad.getHoraInicio().toString().substring(0, 5)
+                                    : null);
+                    horarioMap.put("horaFin",
+                            disponibilidad.getHoraFin() != null ? disponibilidad.getHoraFin().toString().substring(0, 5)
+                                    : null);
                     return horarioMap;
                 }).collect(Collectors.toList());
                 data.put("horariosDisponibilidad", horarios);
             }
         }
-        
+
         // ===== DATOS DE VALIDACIÓN =====
         data.put("canBeDeleted", canBeDeleted);
         data.put("warnings", warnings);
@@ -2806,19 +2943,18 @@ public class AdminController {
 
         return data;
     }
-    
-    
 
-    // =================   CONFIGURACIONES INSTITUCIONALES   =================
-    
+    // ================= CONFIGURACIONES INSTITUCIONALES =================
+
     @GetMapping("/admin/configuracion")
     public String configuracionInstitucional(Model model) {
         // Obtener configuración actual del instituto
         Instituto instituto = institutoService.obtenerInstituto();
-        
+
         // Obtener imágenes del carrusel
-        List<CarruselImagen> imagenesCarrusel = carruselImagenRepository.findByInstitutoAndActivaTrueOrderByOrden(instituto);
-        
+        List<CarruselImagen> imagenesCarrusel = carruselImagenRepository
+                .findByInstitutoAndActivaTrueOrderByOrden(instituto);
+
         model.addAttribute("instituto", instituto);
         model.addAttribute("imagenesCarrusel", imagenesCarrusel);
         return "admin/configuraciones";
@@ -2829,24 +2965,24 @@ public class AdminController {
     public ResponseEntity<Map<String, Object>> guardarConfiguracion(
             @RequestParam Map<String, String> params,
             @RequestParam(value = "logo", required = false) MultipartFile logo) {
-        
+
         try {
             System.out.println("=== GUARDANDO CONFIGURACIÓN ===");
             System.out.println("Parámetros recibidos: " + params.keySet());
-            
+
             Map<String, Object> response = new HashMap<>();
-            
+
             // Validar campos requeridos
             if (params.get("nombreInstituto") == null || params.get("nombreInstituto").trim().isEmpty()) {
                 response.put("success", false);
                 response.put("message", "El nombre del instituto es obligatorio");
                 return ResponseEntity.badRequest().body(response);
             }
-            
+
             // Obtener instituto actual
             Instituto instituto = institutoService.obtenerInstituto();
             System.out.println("Instituto actual ID: " + instituto.getIdInstituto());
-            
+
             // Actualizar campos básicos
             instituto.setNombreInstituto(params.get("nombreInstituto"));
             instituto.setDescripcion(params.get("descripcion"));
@@ -2873,11 +3009,12 @@ public class AdminController {
             } else {
                 instituto.setInicioActividad(null);
             }
-            
-            // Configuraciones automáticas - Los checkboxes solo envían valor si están marcados
+
+            // Configuraciones automáticas - Los checkboxes solo envían valor si están
+            // marcados
             instituto.setPermisoBajaAutomatica("on".equals(params.get("permisoBajaAutomatica")));
             System.out.println("Baja automática: " + instituto.getPermisoBajaAutomatica());
-            
+
             if (params.get("minimoAlumnoBaja") != null && !params.get("minimoAlumnoBaja").trim().isEmpty()) {
                 try {
                     instituto.setMinimoAlumnoBaja(Integer.parseInt(params.get("minimoAlumnoBaja").trim()));
@@ -2892,7 +3029,7 @@ public class AdminController {
                     System.out.println("Error parseando inactividadBaja: " + params.get("inactividadBaja"));
                 }
             }
-            
+
             // Configuración de bloqueos por mora
             System.out.println("=== BLOQUEOS POR MORA ===");
             if (params.get("diasMoraBloqueoExamen") != null && !params.get("diasMoraBloqueoExamen").trim().isEmpty()) {
@@ -2907,27 +3044,31 @@ public class AdminController {
                 instituto.setDiasMoraBloqueoExamen(null);
                 System.out.println("Días mora examen: null (campo vacío)");
             }
-            
-            if (params.get("diasMoraBloqueoMaterial") != null && !params.get("diasMoraBloqueoMaterial").trim().isEmpty()) {
+
+            if (params.get("diasMoraBloqueoMaterial") != null
+                    && !params.get("diasMoraBloqueoMaterial").trim().isEmpty()) {
                 try {
                     int dias = Integer.parseInt(params.get("diasMoraBloqueoMaterial").trim());
                     instituto.setDiasMoraBloqueoMaterial(dias);
                     System.out.println("Días mora material: " + dias);
                 } catch (NumberFormatException e) {
-                    System.out.println("Error parseando diasMoraBloqueoMaterial: " + params.get("diasMoraBloqueoMaterial"));
+                    System.out.println(
+                            "Error parseando diasMoraBloqueoMaterial: " + params.get("diasMoraBloqueoMaterial"));
                 }
             } else {
                 instituto.setDiasMoraBloqueoMaterial(null);
                 System.out.println("Días mora material: null (campo vacío)");
             }
-            
-            if (params.get("diasMoraBloqueoActividad") != null && !params.get("diasMoraBloqueoActividad").trim().isEmpty()) {
+
+            if (params.get("diasMoraBloqueoActividad") != null
+                    && !params.get("diasMoraBloqueoActividad").trim().isEmpty()) {
                 try {
                     int dias = Integer.parseInt(params.get("diasMoraBloqueoActividad").trim());
                     instituto.setDiasMoraBloqueoActividad(dias);
                     System.out.println("Días mora actividad: " + dias);
                 } catch (NumberFormatException e) {
-                    System.out.println("Error parseando diasMoraBloqueoActividad: " + params.get("diasMoraBloqueoActividad"));
+                    System.out.println(
+                            "Error parseando diasMoraBloqueoActividad: " + params.get("diasMoraBloqueoActividad"));
                 }
             } else {
                 instituto.setDiasMoraBloqueoActividad(null);
@@ -2949,26 +3090,25 @@ public class AdminController {
 
             instituto.setHabilitarIA("on".equals(params.get("habilitarIA")));
             instituto.setReportesAutomaticos("on".equals(params.get("reportesAutomaticos")));
-            
+
             System.out.println("Habilitar IA: " + instituto.getHabilitarIA());
             System.out.println("Reportes automáticos: " + instituto.getReportesAutomaticos());
-            
+
             // Guardar colores institucionales
             List<String> colores = new ArrayList<>(List.of(
-                params.get("colorPrimario") != null ? params.get("colorPrimario") : "#1f2937",
-                params.get("colorSecundario") != null ? params.get("colorSecundario") : "#f8fafc",
-                params.get("colorTexto") != null ? params.get("colorTexto") : "#374151"
-            ));
+                    params.get("colorPrimario") != null ? params.get("colorPrimario") : "#1f2937",
+                    params.get("colorSecundario") != null ? params.get("colorSecundario") : "#f8fafc",
+                    params.get("colorTexto") != null ? params.get("colorTexto") : "#374151"));
             instituto.setColores(colores);
             System.out.println("Colores: " + colores);
-            
+
             // Procesar logo si se subió
             if (logo != null && !logo.isEmpty()) {
                 String logoPath = guardarLogo(logo);
                 instituto.setLogoPath(logoPath);
                 System.out.println("Logo guardado: " + logoPath);
             }
-            
+
             // Guardar instituto
             Instituto institutoGuardado = institutoService.guardarInstituto(instituto);
             System.out.println("=== INSTITUTO GUARDADO EXITOSAMENTE ===");
@@ -2976,33 +3116,33 @@ public class AdminController {
             System.out.println("Días mora examen guardado: " + institutoGuardado.getDiasMoraBloqueoExamen());
             System.out.println("Días mora material guardado: " + institutoGuardado.getDiasMoraBloqueoMaterial());
             System.out.println("Días mora actividad guardado: " + institutoGuardado.getDiasMoraBloqueoActividad());
-            
+
             response.put("success", true);
             response.put("message", "Configuración guardada exitosamente");
-            
+
             return ResponseEntity.ok(response);
-            
+
         } catch (Exception e) {
             System.err.println("❌ ERROR AL GUARDAR CONFIGURACIÓN: " + e.getMessage());
             e.printStackTrace();
-            
+
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", "Error al guardar la configuración: " + e.getMessage());
             return ResponseEntity.status(500).body(response);
         }
     }
-    
+
     // ================= GESTIÓN WEB DEL CARRUSEL =================
-    
+
     @PostMapping("/admin/configuracion/carrusel/subir")
     public String subirImagenesCarruselWeb(
             @RequestParam("imagenes") MultipartFile[] imagenes,
             Model model) {
-        
+
         System.out.println("=== INICIO SUBIDA DE IMÁGENES ===");
         System.out.println("Número de imágenes recibidas: " + (imagenes != null ? imagenes.length : "null"));
-        
+
         try {
             // Validaciones
             if (imagenes == null || imagenes.length == 0) {
@@ -3013,19 +3153,20 @@ public class AdminController {
 
             for (int i = 0; i < imagenes.length; i++) {
                 MultipartFile imagen = imagenes[i];
-                System.out.println("Imagen " + i + ": " + imagen.getOriginalFilename() + 
-                                 " - Tamaño: " + imagen.getSize() + " bytes");
+                System.out.println("Imagen " + i + ": " + imagen.getOriginalFilename() +
+                        " - Tamaño: " + imagen.getSize() + " bytes");
             }
 
             Instituto instituto = institutoService.obtenerInstituto();
             System.out.println("Instituto obtenido: " + (instituto != null ? "OK" : "null"));
-            
-            List<CarruselImagen> imagenesGuardadas = imagenService.guardarMultiplesImagenesCarrusel(imagenes, instituto);
+
+            List<CarruselImagen> imagenesGuardadas = imagenService.guardarMultiplesImagenesCarrusel(imagenes,
+                    instituto);
             System.out.println("Imágenes guardadas exitosamente: " + imagenesGuardadas.size());
-            
+
             model.addAttribute("mensaje", "Imágenes subidas exitosamente: " + imagenesGuardadas.size());
             return "redirect:/admin/configuracion?success=upload";
-            
+
         } catch (IOException e) {
             System.out.println("ERROR IOException: " + e.getMessage());
             e.printStackTrace();
@@ -3038,7 +3179,7 @@ public class AdminController {
             return "redirect:/admin/configuracion?error=server";
         }
     }
-    
+
     @PostMapping("/admin/configuracion/carrusel/eliminar/{id}")
     public String eliminarImagenCarruselWeb(@PathVariable Long id, Model model) {
         try {
@@ -3046,33 +3187,33 @@ public class AdminController {
             if (!imagen.isPresent()) {
                 return "redirect:/admin/configuracion?error=notfound";
             }
-            
+
             imagenService.eliminarImagenCarrusel(id);
             return "redirect:/admin/configuracion?success=delete";
-            
+
         } catch (Exception e) {
             return "redirect:/admin/configuracion?error=deletefail";
         }
     }
-    
+
     // ================= MÉTODOS AUXILIARES =================
-    
+
     private String guardarLogo(MultipartFile logo) throws IOException {
         // Crear directorio si no existe
         Path directorioLogos = Paths.get("src/main/resources/static/img/logos");
         if (!Files.exists(directorioLogos)) {
             Files.createDirectories(directorioLogos);
         }
-        
+
         // Generar nombre único
         String nombreOriginal = logo.getOriginalFilename();
         String extension = nombreOriginal != null ? nombreOriginal.substring(nombreOriginal.lastIndexOf(".")) : ".jpg";
         String nombreArchivo = "logo_" + UUID.randomUUID().toString() + extension;
-        
+
         // Guardar archivo
         Path rutaArchivo = directorioLogos.resolve(nombreArchivo);
         Files.copy(logo.getInputStream(), rutaArchivo, StandardCopyOption.REPLACE_EXISTING);
-        
+
         return "/img/logos/" + nombreArchivo;
     }
 
@@ -3080,12 +3221,14 @@ public class AdminController {
         // Guardar en BD y exponer vía endpoint (similar al carrusel)
         return "/api/ofertas/imagen/" + ofertaImagenService.guardarImagenOferta(imagen).getId();
     }
-    
+
     private Long extraerIdImagenUsuario(String fotoUrl) {
         String prefix = "/api/usuarios/imagen/";
-        if (fotoUrl == null) return null;
+        if (fotoUrl == null)
+            return null;
         int idx = fotoUrl.indexOf(prefix);
-        if (idx == -1) return null;
+        if (idx == -1)
+            return null;
         String idPart = fotoUrl.substring(idx + prefix.length());
         try {
             return Long.parseLong(idPart.trim());
@@ -3093,9 +3236,9 @@ public class AdminController {
             return null;
         }
     }
-    
+
     // ================= MÉTODOS AUXILIARES PARA OFERTAS =================
-    
+
     /**
      * Asocia categorías a una oferta académica
      */
@@ -3103,10 +3246,10 @@ public class AdminController {
         if (categoriasIds == null || categoriasIds.trim().isEmpty()) {
             return;
         }
-        
+
         List<Categoria> categorias = new ArrayList<>();
         String[] ids = categoriasIds.split(",");
-        
+
         for (String idStr : ids) {
             try {
                 Long id = Long.parseLong(idStr.trim());
@@ -3118,22 +3261,22 @@ public class AdminController {
                 System.err.println("Error al parsear ID de categoría: " + idStr);
             }
         }
-        
+
         oferta.setCategorias(categorias);
     }
-    
+
     /**
      * Obtiene lista de docentes por IDs separados por coma
      */
     private List<Docente> obtenerDocentesPorIds(String docentesIds) {
         List<Docente> docentes = new ArrayList<>();
-        
+
         if (docentesIds == null || docentesIds.trim().isEmpty()) {
             return docentes;
         }
-        
+
         String[] ids = docentesIds.split(",");
-        
+
         for (String idStr : ids) {
             try {
                 UUID id = UUID.fromString(idStr.trim());
@@ -3145,110 +3288,120 @@ public class AdminController {
                 System.err.println("Error al parsear UUID de docente: " + idStr);
             }
         }
-        
+
         return docentes;
     }
-    
+
     /**
      * Asocia horarios a una oferta académica
-     * @param oferta La oferta académica guardada
-     * @param horariosJson JSON con los horarios en formato: [{"dia":"LUNES","horaInicio":"09:00","horaFin":"11:00","docenteId":"1"}]
+     * 
+     * @param oferta       La oferta académica guardada
+     * @param horariosJson JSON con los horarios en formato:
+     *                     [{"dia":"LUNES","horaInicio":"09:00","horaFin":"11:00","docenteId":"1"}]
      */
 
     /**
      * Asocia horarios a una oferta academica
-     * @param oferta La oferta academica guardada
-     * @param horariosJson JSON con los horarios en formato: [{"dia":"LUNES","horaInicio":"09:00","horaFin":"11:00","docenteId":"1"}]
+     * 
+     * @param oferta       La oferta academica guardada
+     * @param horariosJson JSON con los horarios en formato:
+     *                     [{"dia":"LUNES","horaInicio":"09:00","horaFin":"11:00","docenteId":"1"}]
      */
 
     /**
      * Asocia horarios a una oferta academica
-     * @param oferta La oferta academica guardada
-     * @param horariosJson JSON con los horarios en formato: [{"dia":"LUNES","horaInicio":"09:00","horaFin":"11:00","docenteId":"1"}]
+     * 
+     * @param oferta       La oferta academica guardada
+     * @param horariosJson JSON con los horarios en formato:
+     *                     [{"dia":"LUNES","horaInicio":"09:00","horaFin":"11:00","docenteId":"1"}]
      */
     private void asociarHorarios(OfertaAcademica oferta, String horariosJson) {
-    try {
-        System.out.println("?? ASOCIANDO HORARIOS - JSON recibido: " + horariosJson);
-        List<Map<String, String>> horariosData = parseHorariosJson(horariosJson);
-
-        for (Map<String, String> horarioData : horariosData) {
-            // 1. Configurar día
-            String diaStr = horarioData.get("dia");
-            Dias dia = null;
-            try {
-                if (diaStr != null && !diaStr.isEmpty()) {
-                    dia = Dias.valueOf(diaStr.trim().toUpperCase());
-                }
-            } catch (IllegalArgumentException e) {
-                System.err.println("Día inválido: " + diaStr);
-            }
-
-            // 2. Configurar horas
-            Time horaInicio = null;
-            Time horaFin = null;
-            String hIStr = horarioData.get("horaInicio");
-            String hFStr = horarioData.get("horaFin");
-
-            if (hIStr != null) horaInicio = parseFlexibleTime(hIStr);
-            if (hFStr != null) horaFin = parseFlexibleTime(hFStr);
-
-            // 3. Procesar Docentes (Maneja múltiples o uno solo)
-            List<UUID> docentesIdsList = obtenerListaDeIds(horarioData);
-
-            if (docentesIdsList.isEmpty()) {
-                // Crear horario sin docente
-                crearYAñadirHorario(oferta, dia, horaInicio, horaFin, null);
-            } else {
-                // Crear un horario por cada docente
-                for (UUID docenteId : docentesIdsList) {
-                    Docente docente = docenteRepository.findById(docenteId).orElse(null);
-                    crearYAñadirHorario(oferta, dia, horaInicio, horaFin, docente);
-                }
-            }
-        }
-        System.out.println("? Proceso completado. Los horarios se guardarán en cascada con la oferta.");
-
-    } catch (Exception e) {
-        System.err.println("Error crítico al procesar horarios: " + e.getMessage());
-        e.printStackTrace();
-    }
-}
-private List<UUID> obtenerListaDeIds(Map<String, String> horarioData) {
-    List<UUID> listaIds = new ArrayList<>();
-    
-    // 1. Intentar obtener múltiples IDs (separados por coma)
-    String docentesIdsStr = horarioData.get("docentesIds");
-    if (docentesIdsStr != null && !docentesIdsStr.isEmpty()) {
-        for (String s : docentesIdsStr.split(",")) {
-            try {
-                listaIds.add(UUID.fromString(s.trim()));
-            } catch (IllegalArgumentException e) {
-                System.err.println("UUID inválido en lista: " + s);
-            }
-        }
-    }
-
-    // 2. Si no hubo múltiples, intentar obtener el ID único
-    String docenteIdStr = horarioData.get("docenteId");
-    if (listaIds.isEmpty() && docenteIdStr != null && !docenteIdStr.isEmpty()) {
         try {
-            listaIds.add(UUID.fromString(docenteIdStr.trim()));
-        } catch (IllegalArgumentException e) {
-            System.err.println("UUID único inválido: " + docenteIdStr);
+            System.out.println("?? ASOCIANDO HORARIOS - JSON recibido: " + horariosJson);
+            List<Map<String, String>> horariosData = parseHorariosJson(horariosJson);
+
+            for (Map<String, String> horarioData : horariosData) {
+                // 1. Configurar día
+                String diaStr = horarioData.get("dia");
+                Dias dia = null;
+                try {
+                    if (diaStr != null && !diaStr.isEmpty()) {
+                        dia = Dias.valueOf(diaStr.trim().toUpperCase());
+                    }
+                } catch (IllegalArgumentException e) {
+                    System.err.println("Día inválido: " + diaStr);
+                }
+
+                // 2. Configurar horas
+                Time horaInicio = null;
+                Time horaFin = null;
+                String hIStr = horarioData.get("horaInicio");
+                String hFStr = horarioData.get("horaFin");
+
+                if (hIStr != null)
+                    horaInicio = parseFlexibleTime(hIStr);
+                if (hFStr != null)
+                    horaFin = parseFlexibleTime(hFStr);
+
+                // 3. Procesar Docentes (Maneja múltiples o uno solo)
+                List<UUID> docentesIdsList = obtenerListaDeIds(horarioData);
+
+                if (docentesIdsList.isEmpty()) {
+                    // Crear horario sin docente
+                    crearYAñadirHorario(oferta, dia, horaInicio, horaFin, null);
+                } else {
+                    // Crear un horario por cada docente
+                    for (UUID docenteId : docentesIdsList) {
+                        Docente docente = docenteRepository.findById(docenteId).orElse(null);
+                        crearYAñadirHorario(oferta, dia, horaInicio, horaFin, docente);
+                    }
+                }
+            }
+            System.out.println("? Proceso completado. Los horarios se guardarán en cascada con la oferta.");
+
+        } catch (Exception e) {
+            System.err.println("Error crítico al procesar horarios: " + e.getMessage());
+            e.printStackTrace();
         }
     }
-    
-    return listaIds;
-}
-// Método auxiliar para evitar repetir código
-private void crearYAñadirHorario(OfertaAcademica oferta, Dias dia, Time inicio, Time fin, Docente docente) {
-    Horario h = new Horario();
-    h.setDia(dia);
-    h.setHoraInicio(inicio);
-    h.setHoraFin(fin);
-    h.setDocente(docente);
-    oferta.addHorario(h); // Asumo que este método también hace h.setOfertaAcademica(this)
-}
+
+    private List<UUID> obtenerListaDeIds(Map<String, String> horarioData) {
+        List<UUID> listaIds = new ArrayList<>();
+
+        // 1. Intentar obtener múltiples IDs (separados por coma)
+        String docentesIdsStr = horarioData.get("docentesIds");
+        if (docentesIdsStr != null && !docentesIdsStr.isEmpty()) {
+            for (String s : docentesIdsStr.split(",")) {
+                try {
+                    listaIds.add(UUID.fromString(s.trim()));
+                } catch (IllegalArgumentException e) {
+                    System.err.println("UUID inválido en lista: " + s);
+                }
+            }
+        }
+
+        // 2. Si no hubo múltiples, intentar obtener el ID único
+        String docenteIdStr = horarioData.get("docenteId");
+        if (listaIds.isEmpty() && docenteIdStr != null && !docenteIdStr.isEmpty()) {
+            try {
+                listaIds.add(UUID.fromString(docenteIdStr.trim()));
+            } catch (IllegalArgumentException e) {
+                System.err.println("UUID único inválido: " + docenteIdStr);
+            }
+        }
+
+        return listaIds;
+    }
+
+    // Método auxiliar para evitar repetir código
+    private void crearYAñadirHorario(OfertaAcademica oferta, Dias dia, Time inicio, Time fin, Docente docente) {
+        Horario h = new Horario();
+        h.setDia(dia);
+        h.setHoraInicio(inicio);
+        h.setHoraFin(fin);
+        h.setDocente(docente);
+        oferta.addHorario(h); // Asumo que este método también hace h.setOfertaAcademica(this)
+    }
 
     private Time parseFlexibleTime(String value) {
         String v = value.trim();
@@ -3256,78 +3409,82 @@ private void crearYAñadirHorario(OfertaAcademica oferta, Dias dia, Time inicio,
             v = v.substring(0, 8);
         }
         java.time.format.DateTimeFormatter fmt = new java.time.format.DateTimeFormatterBuilder()
-            .appendPattern("H:mm")
-            .optionalStart()
-            .appendPattern(":ss")
-            .optionalEnd()
-            .toFormatter();
+                .appendPattern("H:mm")
+                .optionalStart()
+                .appendPattern(":ss")
+                .optionalEnd()
+                .toFormatter();
         java.time.LocalTime lt = java.time.LocalTime.parse(v, fmt);
         return java.sql.Time.valueOf(lt);
     }
 
     private List<Map<String, String>> parseHorariosJson(String json) {
         List<Map<String, String>> horarios = new ArrayList<>();
-        
+
         if (json == null || json.trim().isEmpty() || json.equals("[]")) {
             return horarios;
         }
-        
+
         try {
             System.out.println("📋 Parseando JSON: " + json);
-            
+
             // Remover corchetes
             json = json.trim();
-            if (json.startsWith("[")) json = json.substring(1);
-            if (json.endsWith("]")) json = json.substring(0, json.length() - 1);
-            
+            if (json.startsWith("["))
+                json = json.substring(1);
+            if (json.endsWith("]"))
+                json = json.substring(0, json.length() - 1);
+
             if (json.trim().isEmpty()) {
                 return horarios;
             }
-            
+
             // Dividir por objetos (asumiendo formato simple)
             String[] objetos = json.split("\\},\\s*\\{");
-            
+
             for (String objeto : objetos) {
                 objeto = objeto.trim();
-                if (objeto.startsWith("{")) objeto = objeto.substring(1);
-                if (objeto.endsWith("}")) objeto = objeto.substring(0, objeto.length() - 1);
-                
+                if (objeto.startsWith("{"))
+                    objeto = objeto.substring(1);
+                if (objeto.endsWith("}"))
+                    objeto = objeto.substring(0, objeto.length() - 1);
+
                 System.out.println("  📝 Procesando objeto: " + objeto);
-                
+
                 Map<String, String> horario = new HashMap<>();
-                
+
                 // Dividir por comas que NO estén dentro de comillas
                 String[] pares = objeto.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
-                
+
                 for (String par : pares) {
                     par = par.trim();
                     System.out.println("    🔍 Par: " + par);
-                    
+
                     // Encontrar la primera ocurrencia de : que separa clave de valor
                     int colonIndex = par.indexOf(":");
                     if (colonIndex > 0) {
                         String key = par.substring(0, colonIndex).trim().replaceAll("\"", "");
                         String value = par.substring(colonIndex + 1).trim().replaceAll("\"", "");
-                        
+
                         System.out.println("      ✅ Key: " + key + ", Value: " + value);
                         horario.put(key, value);
                     }
                 }
-                
+
                 if (!horario.isEmpty()) {
                     System.out.println("  ✅ Horario parseado: " + horario);
                     horarios.add(horario);
                 }
             }
-            
+
         } catch (Exception e) {
             System.err.println("❌ Error al parsear JSON de horarios: " + e.getMessage());
             e.printStackTrace();
         }
-        
+
         return horarios;
     }
-    
+
     /**
      * Asocia categorías a una oferta académica
      */
@@ -3336,22 +3493,22 @@ private void crearYAñadirHorario(OfertaAcademica oferta, Dias dia, Time inicio,
             System.out.println("⚠️ No se proporcionaron categorías");
             return;
         }
-        
+
         try {
             System.out.println("🏷️ Asociando categorías a oferta: " + oferta.getNombre());
             System.out.println("   IDs recibidos: " + categoriasIds);
-            
+
             // Dividir por comas
             String[] ids = categoriasIds.split(",");
             List<Categoria> categorias = new ArrayList<>();
-            
+
             for (String idStr : ids) {
                 idStr = idStr.trim();
                 if (!idStr.isEmpty()) {
                     try {
                         Long id = Long.parseLong(idStr);
                         Optional<Categoria> categoriaOpt = categoriaRepository.findById(id);
-                        
+
                         if (categoriaOpt.isPresent()) {
                             Categoria categoria = categoriaOpt.get();
                             categorias.add(categoria);
@@ -3364,7 +3521,7 @@ private void crearYAñadirHorario(OfertaAcademica oferta, Dias dia, Time inicio,
                     }
                 }
             }
-            
+
             // Asignar categorías a la oferta
             if (!categorias.isEmpty()) {
                 oferta.setCategorias(categorias);
@@ -3373,11 +3530,11 @@ private void crearYAñadirHorario(OfertaAcademica oferta, Dias dia, Time inicio,
             } else {
                 System.out.println("   ⚠️ No se encontraron categorías válidas para asociar");
             }
-            
+
         } catch (Exception e) {
             System.err.println("❌ Error al asociar categorías: " + e.getMessage());
             e.printStackTrace();
         }
     }
-    
+
 }
