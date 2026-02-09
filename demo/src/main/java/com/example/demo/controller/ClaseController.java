@@ -161,7 +161,7 @@ public class ClaseController {
             clase.setTitulo(titulo.trim());
             clase.setDescripcion(descripcion != null ? descripcion.trim() : "");
             clase.setInicio(inicio);
-            clase.setFin(inicio.plusHours(duracion));
+            clase.setFin(calcularFinClase(inicio, duracion));
             clase.setAsistenciaAutomatica(asistenciaAutomatica);
             clase.setPreguntasAleatorias(preguntasAleatorias);
             clase.setCantidadPreguntas(Boolean.TRUE.equals(preguntasAleatorias) ? cantidadPreguntas : null);
@@ -218,7 +218,7 @@ public class ClaseController {
             claseDetalles.setTitulo(titulo.trim());
             claseDetalles.setDescripcion(descripcion.trim());
             claseDetalles.setInicio(inicio);
-            claseDetalles.setFin(inicio.plusHours(duracion));
+            claseDetalles.setFin(calcularFinClase(inicio, duracion));
             
             claseDetalles.setAsistenciaAutomatica(asistenciaAutomatica);
             claseDetalles.setPreguntasAleatorias(preguntasAleatorias);
@@ -244,15 +244,21 @@ public class ClaseController {
     public ResponseEntity<?> obtenerDatosClase(@PathVariable UUID claseId) {
         return claseService.findById(claseId)
                 .map(clase -> {
+                    long duracionMinutos = java.time.Duration.between(clase.getInicio(), clase.getFin()).toMinutes();
                     long duracionHoras = java.time.Duration.between(clase.getInicio(), clase.getFin()).toHours();
-                    if (duracionHoras == 0) duracionHoras = 1;
+                    long duracionValor;
+                    if (duracionMinutos > 0 && duracionMinutos <= 3) {
+                        duracionValor = 0; // opción de prueba (3 minutos)
+                    } else {
+                        duracionValor = duracionHoras == 0 ? 1 : duracionHoras;
+                    }
 
                     return ResponseEntity.ok(Map.ofEntries(
                         Map.entry("id", clase.getIdClase()),
                         Map.entry("titulo", clase.getTitulo()),
                         Map.entry("descripcion", clase.getDescripcion()),
                         Map.entry("inicio", clase.getInicio().format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME)),
-                        Map.entry("duracion", duracionHoras),
+                        Map.entry("duracion", duracionValor),
                         Map.entry("asistenciaAutomatica", clase.getAsistenciaAutomatica() != null && clase.getAsistenciaAutomatica()),
                         Map.entry("preguntasAleatorias", clase.getPreguntasAleatorias() != null && clase.getPreguntasAleatorias()),
                         Map.entry("cantidadPreguntas", clase.getCantidadPreguntas() != null ? clase.getCantidadPreguntas() : 3),
@@ -329,7 +335,7 @@ public class ClaseController {
             LocalDateTime ahora = LocalDateTime.now();
             
             // A) Verificar si ya terminó (CRITICO: Esto debe ser antes de cualquier credencial)
-            if (ahora.isAfter(clase.getFin())) {
+            if (!ahora.isBefore(clase.getFin())) {
                 model.addAttribute("clase", clase);
                 model.addAttribute("error", "La clase finalizó el " + 
                     java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm").format(clase.getFin()));
@@ -357,6 +363,10 @@ public class ClaseController {
             model.addAttribute("reunionActiva", true);
             model.addAttribute("usuario", usuario);
             model.addAttribute("esDocente", esDocente);
+            long duracionMinutos = clase.getInicio() != null && clase.getFin() != null
+                ? java.time.Duration.between(clase.getInicio(), clase.getFin()).toMinutes()
+                : 0;
+            model.addAttribute("duracionMinutos", duracionMinutos);
 
             return "clase-VideoConferencia";
 
@@ -610,6 +620,20 @@ public class ClaseController {
         return authentication.getAuthorities().stream()
                 .anyMatch(auth -> auth.getAuthority().equals("ADMIN") ||
                         auth.getAuthority().equals("DOCENTE"));
+    }
+
+    private LocalDateTime calcularFinClase(LocalDateTime inicio, Integer duracionHoras) {
+        if (inicio == null) {
+            return null;
+        }
+        if (duracionHoras != null && duracionHoras == 0) {
+            // Opción de prueba: 3 minutos
+            return inicio.plusMinutes(3);
+        }
+        if (duracionHoras == null) {
+            return inicio;
+        }
+        return inicio.plusHours(duracionHoras);
     }
 
     @PostMapping("/finalizar-con-resumen/{claseId}")

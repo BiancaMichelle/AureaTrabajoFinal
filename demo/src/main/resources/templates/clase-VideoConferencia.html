@@ -110,6 +110,19 @@
             </div>
         </div>
 
+        <!-- Aviso de asistencia automática por tiempo (solo alumnos) -->
+        <div id="asistenciaAutoAviso"
+            class="hidden bg-amber-50 border border-amber-200 text-amber-800 px-5 py-4 rounded-xl mb-6">
+            <div class="flex items-center gap-3">
+                <i class="fas fa-stopwatch text-amber-600 text-lg"></i>
+                <div class="text-sm">
+                    <strong>Asistencia automática:</strong>
+                    Debés permanecer al menos <span id="minutosRequeridosAviso" class="font-semibold">-</span> minutos
+                    para que se registre tu asistencia.
+                </div>
+            </div>
+        </div>
+
         <!-- Mensaje de error -->
         <div th:if="${error}" class="bg-red-50 border border-red-300 text-red-800 px-5 py-4 rounded-xl mb-6">
             <div class="flex items-center">
@@ -257,6 +270,9 @@
             const isTeacher = /*[[${esDocente}]]*/ false;
             const transcripcionHabilitada = /*[[${clase.transcripcionHabilitada != null ? clase.transcripcionHabilitada : false}]]*/ false;
             const claseId = /*[[${clase.idClase}]]*/ '';
+            const claseDuracionMinutos = /*[[${duracionMinutos != null ? duracionMinutos : 0}]]*/ 0;
+            const claseInicioIso = /*[[${clase.inicio != null ? #temporals.format(clase.inicio, 'yyyy-MM-dd''T''HH:mm:ss') : ''}]]*/ '';
+            const claseFinIso = /*[[${clase.fin != null ? #temporals.format(clase.fin, 'yyyy-MM-dd''T''HH:mm:ss') : ''}]]*/ '';
             // Obtener datos del usuario de manera segura con Thymeleaf
             const usuarioNombre = /*[[${usuario != null ? usuario.nombre + ' ' + usuario.apellido : 'Usuario Invitado'}]]*/ 'Usuario Invitado';
             const usuarioEmail = /*[[${usuario != null ? usuario.correo : 'email@example.com'}]]*/ 'email@example.com';
@@ -319,16 +335,26 @@
                 console.warn("⚠️ Tiempo de espera de carga agotado (Fallback ejecutado)");
             }, 5000);
 
+            let api = null;
+            let programarCierreClase = null;
+
+            function obtenerFechaFinClase() {
+                if (!claseFinIso) return null;
+                const fecha = new Date(claseFinIso);
+                return Number.isNaN(fecha.getTime()) ? null : fecha;
+            }
+
             try {
                 if (typeof JitsiMeetExternalAPI === 'undefined') {
                     throw new Error("La librería de Jitsi no se ha cargado correctamente. Verifique su conexión a internet.");
                 }
 
                 console.log("🚀 Iniciando Jitsi en:", domain, "Sala:", roomName);
-                const api = new JitsiMeetExternalAPI(domain, options);
+                api = new JitsiMeetExternalAPI(domain, options);
 
                 let hasJoined = false;
                 let forcedExit = false;
+                let classEndTimer = null;
 
                 // Ocultar mensaje de carga cuando se carga la API
                 api.addEventListener('videoConferenceJoined', () => {
@@ -343,6 +369,10 @@
                     // Iniciar transcripción si es docente y está habilitada
                     if (isTeacher && transcripcionHabilitada) {
                         iniciarTranscripcion();
+                    }
+
+                    if (!isTeacher && asistenciaAutomatica) {
+                        iniciarAsistenciaTiempo();
                     }
                 });
                 
@@ -362,6 +392,9 @@
                         if (isTeacher && transcripcionHabilitada) {
                             detenerTranscripcion();
                         }
+                        if (!isTeacher && asistenciaAutomatica) {
+                            detenerAsistenciaTiempo();
+                        }
                     }
                 });
 
@@ -372,6 +405,9 @@
                         mostrarMensajeFinClase();
                         if (isTeacher && transcripcionHabilitada) {
                             detenerTranscripcion();
+                        }
+                        if (!isTeacher && asistenciaAutomatica) {
+                            detenerAsistenciaTiempo();
                         }
                     }
                 });
@@ -407,8 +443,50 @@
                     }
 
                     // Eliminar la instancia de la API para limpiar recursos
-                    api.dispose();
+                    if (api) {
+                        api.dispose();
+                    }
                 }
+
+                function forzarCierreClase() {
+                    forcedExit = true;
+
+                    // Si no se llegó a unir, igual mostramos el mensaje de cierre.
+                    if (!hasJoined) {
+                        if (!isTeacher && asistenciaAutomatica) {
+                            detenerAsistenciaTiempo();
+                        }
+                        mostrarMensajeFinClase();
+                        return;
+                    }
+
+                    // Si ya está unido, intentamos colgar para forzar el cierre y mostrar el mensaje.
+                    try {
+                        api.executeCommand('hangup');
+                    } catch (e) {
+                        console.warn("No se pudo ejecutar hangup, mostrando cierre manual:", e);
+                        if (!isTeacher && asistenciaAutomatica) {
+                            detenerAsistenciaTiempo();
+                        }
+                        mostrarMensajeFinClase();
+                    }
+                }
+
+                function programarCierreClaseInternal() {
+                    const fin = obtenerFechaFinClase();
+                    if (!fin) return;
+                    const msRestantes = fin.getTime() - Date.now();
+                    if (classEndTimer) {
+                        clearTimeout(classEndTimer);
+                    }
+                    if (msRestantes <= 0) {
+                        forzarCierreClase();
+                    } else {
+                        classEndTimer = setTimeout(forzarCierreClase, msRestantes);
+                    }
+                }
+
+                programarCierreClase = programarCierreClaseInternal;
 
             } catch (error) {
                 console.error("❌ Error crítico al iniciar Jitsi:", error);
@@ -565,9 +643,153 @@
             // --- LÓGICA DE ASISTENCIA AUTOMÁTICA ---
             const asistenciaAutomatica = /*[[${clase.asistenciaAutomatica}]]*/ false;
             const preguntasAleatorias = /*[[${clase.preguntasAleatorias}]]*/ false;
-            
+            let asistenciaTimer = null;
+            let asistenciaTiempoConfirmada = false;
+            let asistenciaRetryTimer = null;
+            let asistenciaConfirmando = false;
+
+            function obtenerMinutosRequeridos() {
+                if (!claseDuracionMinutos || claseDuracionMinutos <= 0) {
+                    return null;
+                }
+                return Math.floor(claseDuracionMinutos / 2) + 1; // más de la mitad
+            }
+
+            function mostrarAvisoAsistenciaAutomatica() {
+                const aviso = document.getElementById('asistenciaAutoAviso');
+                const valor = document.getElementById('minutosRequeridosAviso');
+                if (!aviso || !valor) return;
+                if (isTeacher || !asistenciaAutomatica || preguntasAleatorias) {
+                    aviso.classList.add('hidden');
+                    return;
+                }
+                const minutosRequeridos = obtenerMinutosRequeridos();
+                if (!minutosRequeridos) {
+                    aviso.classList.add('hidden');
+                    return;
+                }
+                valor.textContent = minutosRequeridos;
+                aviso.classList.remove('hidden');
+            }
+
+            async function marcarIngresoAsistenciaTiempo() {
+                try {
+                    await fetch(`/api/clase/${claseId}/asistencia/ingreso`, {
+                        method: 'POST',
+                        headers: {
+                            [csrfHeader]: csrfToken
+                        }
+                    });
+                    console.log("🟢 Ingreso de asistencia registrado");
+                } catch (e) {
+                    console.error("Error registrando ingreso de asistencia:", e);
+                }
+            }
+
+            async function marcarSalidaAsistenciaTiempo() {
+                try {
+                    await fetch(`/api/clase/${claseId}/asistencia/salida`, {
+                        method: 'POST',
+                        headers: {
+                            [csrfHeader]: csrfToken
+                        }
+                    });
+                    console.log("🔴 Salida de asistencia registrada");
+                } catch (e) {
+                    console.error("Error registrando salida de asistencia:", e);
+                }
+            }
+
+            async function confirmarAsistenciaTiempo() {
+                if (asistenciaTiempoConfirmada || asistenciaConfirmando) return false;
+                asistenciaConfirmando = true;
+                try {
+                    const response = await fetch(`/api/clase/${claseId}/asistencia/confirmar`, {
+                        method: 'POST',
+                        headers: {
+                            [csrfHeader]: csrfToken
+                        }
+                    });
+                    const data = await response.json().catch(() => null);
+                    if (response.ok && data && data.success) {
+                        asistenciaTiempoConfirmada = true;
+                        console.log("✅ Asistencia automática por tiempo registrada");
+                        return true;
+                    } else {
+                        console.log("⏳ Asistencia aún no cumple el tiempo mínimo");
+                        return false;
+                    }
+                } catch (e) {
+                    console.error("Error confirmando asistencia por tiempo:", e);
+                    return false;
+                } finally {
+                    asistenciaConfirmando = false;
+                }
+            }
+
+            function iniciarReintentosAsistencia() {
+                if (asistenciaRetryTimer || asistenciaTiempoConfirmada) return;
+                asistenciaRetryTimer = setInterval(async () => {
+                    const ok = await confirmarAsistenciaTiempo();
+                    if (ok) {
+                        detenerReintentosAsistencia();
+                    }
+                }, 15000);
+            }
+
+            function detenerReintentosAsistencia() {
+                if (asistenciaRetryTimer) {
+                    clearInterval(asistenciaRetryTimer);
+                    asistenciaRetryTimer = null;
+                }
+            }
+
+            function iniciarAsistenciaTiempo() {
+                if (!asistenciaAutomatica || isTeacher) {
+                    return;
+                }
+                if (preguntasAleatorias) {
+                    return;
+                }
+                const minutosRequeridos = obtenerMinutosRequeridos();
+                if (!minutosRequeridos) {
+                    return;
+                }
+                if (asistenciaTimer) {
+                    clearTimeout(asistenciaTimer);
+                }
+                marcarIngresoAsistenciaTiempo();
+                asistenciaTimer = setTimeout(() => {
+                    confirmarAsistenciaTiempo().then(ok => {
+                        if (!ok) {
+                            iniciarReintentosAsistencia();
+                        }
+                    });
+                }, minutosRequeridos * 60 * 1000);
+            }
+
+            async function detenerAsistenciaTiempo() {
+                if (!asistenciaAutomatica || isTeacher) {
+                    return;
+                }
+                if (asistenciaTimer) {
+                    clearTimeout(asistenciaTimer);
+                    asistenciaTimer = null;
+                }
+                detenerReintentosAsistencia();
+                await marcarSalidaAsistenciaTiempo();
+                if (!asistenciaTiempoConfirmada) {
+                    await confirmarAsistenciaTiempo();
+                }
+            }
+
+            mostrarAvisoAsistenciaAutomatica();
+            if (typeof programarCierreClase === 'function') {
+                programarCierreClase();
+            }
+
             if (asistenciaAutomatica && preguntasAleatorias && !isTeacher) {
-                console.log("⏰ Iniciando monitoreo de asistencia automática");
+                console.log("⏰ Iniciando monitoreo de asistencia automática por preguntas");
                 setInterval(verificarPreguntaAsistencia, 60000); // Check every minute
             }
 

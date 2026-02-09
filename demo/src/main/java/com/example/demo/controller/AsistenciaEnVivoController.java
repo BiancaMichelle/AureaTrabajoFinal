@@ -58,4 +58,41 @@ public class AsistenciaEnVivoController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    @PostMapping("/{claseId}/asistencia/ingreso")
+    public ResponseEntity<?> registrarIngreso(@PathVariable UUID claseId, Principal principal) {
+        if (principal == null) return ResponseEntity.status(401).build();
+        try {
+            asistenciaEnVivoService.registrarIngreso(claseId, principal.getName());
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{claseId}/asistencia/salida")
+    public ResponseEntity<?> registrarSalida(@PathVariable UUID claseId, Principal principal) {
+        if (principal == null) return ResponseEntity.status(401).build();
+        try {
+            long acumulado = asistenciaEnVivoService.registrarSalida(claseId, principal.getName());
+            return ResponseEntity.ok(Map.of("success", true, "segundosAcumulados", acumulado));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{claseId}/asistencia/confirmar")
+    public ResponseEntity<?> confirmarAsistenciaTiempo(@PathVariable UUID claseId, Principal principal) {
+        if (principal == null) return ResponseEntity.status(401).build();
+        try {
+            Map<String, Object> result = asistenciaEnVivoService.registrarAsistenciaPorTiempo(claseId, principal.getName());
+            boolean success = Boolean.TRUE.equals(result.get("success"));
+            if (success) {
+                return ResponseEntity.ok(result);
+            }
+            return ResponseEntity.badRequest().body(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
 }
