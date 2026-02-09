@@ -2165,14 +2165,39 @@ input:checked + .slider:after {
                 return;
             }
             
-            // Para CHARLA y SEMINARIO
-            if (tipoOferta === 'CHARLA' || tipoOferta === 'SEMINARIO') {
+            // Para CHARLA
+            if (tipoOferta === 'CHARLA') {
                 if (modalidad === 'PRESENCIAL') {
                     // Solo ubicación, sin enlace
                     seccionUbicacion.style.display = 'block';
                     grupoLugar.style.display = 'block';
                     grupoEnlace.style.display = 'none';
                 } else if (modalidad === 'VIRTUAL' || modalidad === 'HIBRIDA') {
+                    // Ubicación y enlace
+                    seccionUbicacion.style.display = 'block';
+                    grupoLugar.style.display = 'block';
+                    grupoEnlace.style.display = 'block';
+                } else {
+                    seccionUbicacion.style.display = 'none';
+                    grupoLugar.style.display = 'none';
+                    grupoEnlace.style.display = 'none';
+                }
+                return;
+            }
+
+            // Para SEMINARIO
+            if (tipoOferta === 'SEMINARIO') {
+                if (modalidad === 'PRESENCIAL') {
+                    // Solo ubicación, sin enlace
+                    seccionUbicacion.style.display = 'block';
+                    grupoLugar.style.display = 'block';
+                    grupoEnlace.style.display = 'none';
+                } else if (modalidad === 'VIRTUAL') {
+                    // Solo enlace, sin ubicación
+                    seccionUbicacion.style.display = 'block';
+                    grupoLugar.style.display = 'none';
+                    grupoEnlace.style.display = 'block';
+                } else if (modalidad === 'HIBRIDA') {
                     // Ubicación y enlace
                     seccionUbicacion.style.display = 'block';
                     grupoLugar.style.display = 'block';
