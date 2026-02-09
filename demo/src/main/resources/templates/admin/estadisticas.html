@@ -229,7 +229,7 @@
     <div class="container-fluid py-4">
         <div class="dashboard-header">
             <div>
-                <h1><i class="fas fa-chart-line text-primary me-2"></i>Dashboard Académico</h1>
+                <h1><i class="fas fa-chart-line text-primary me-2"></i>Estadísticas</h1>
                 <p class="mb-0">Visión general del rendimiento y métricas clave del sistema</p>
             </div>
             <div class="d-flex gap-3">
@@ -547,14 +547,27 @@
             palette: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40']
         };
 
+        const formatEntero = (value) => {
+            if (value === null || value === undefined || value === '') return '';
+            const numero = Number(value);
+            if (!Number.isFinite(numero)) return value;
+            return Math.round(numero).toLocaleString('es-AR');
+        };
+
+        const formatMoneda = (value) => {
+            if (value === null || value === undefined || value === '') return '';
+            const numero = Number(value);
+            if (!Number.isFinite(numero)) return value;
+            return numero.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        };
+
         const dataLabelCommon = {
-            color: '#2d3748',
-            font: { weight: '600', size: 11 },
-            formatter: (value) => {
-                if (value === null || value === undefined) return '';
-                if (typeof value === 'number') return value.toLocaleString('es-AR');
-                return value;
-            }
+            color: '#ffffff',
+            backgroundColor: 'rgba(15, 23, 42, 0.85)',
+            borderRadius: 6,
+            padding: { top: 4, right: 6, bottom: 4, left: 6 },
+            font: { weight: '700', size: 13 },
+            formatter: formatEntero
         };
 
         function initGlobalCharts() {
@@ -588,6 +601,11 @@
                     },
                     options: {
                         plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: (context) => `${context.label}: ${formatEntero(context.raw)}`
+                                }
+                            },
                             datalabels: {
                                 ...dataLabelCommon,
                                 color: '#ffffff'
@@ -615,10 +633,21 @@
                             },
                             options: {
                                 plugins: {
+                                    tooltip: {
+                                        callbacks: {
+                                            label: (context) => `${context.dataset.label}: ${formatEntero(context.raw)}`
+                                        }
+                                    },
                                     datalabels: {
                                         ...dataLabelCommon,
                                         anchor: 'end',
                                         align: 'top'
+                                    }
+                                },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        ticks: { stepSize: 1, callback: (value) => formatEntero(value) }
                                     }
                                 }
                             }
@@ -696,7 +725,13 @@ function loadInscripcionCharts() {
                         maintainAspectRatio: false,
                         plugins: {
                             legend: { display: true, position: 'top' },
-                            tooltip: { mode: 'index', intersect: false },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                callbacks: {
+                                    label: (context) => `${context.dataset.label}: ${formatEntero(context.raw)}`
+                                }
+                            },
                             datalabels: {
                                 ...dataLabelCommon,
                                 anchor: 'end',
@@ -706,7 +741,7 @@ function loadInscripcionCharts() {
                         scales: {
                             y: {
                                 beginAtZero: true,
-                                ticks: { stepSize: 1 }
+                                ticks: { stepSize: 1, callback: (value) => formatEntero(value) }
                             }
                         }
                     }
@@ -754,13 +789,24 @@ function loadInscripcionCharts() {
                             maintainAspectRatio: false,
                             plugins: { 
                                 legend: { display: false },
+                                tooltip: {
+                                    callbacks: {
+                                        label: (context) => `${context.dataset.label}: ${formatMoneda(context.raw)}`
+                                    }
+                                },
                                 datalabels: {
                                     ...dataLabelCommon,
+                                    formatter: formatMoneda,
                                     anchor: 'end',
                                     align: 'top'
                                 }
                             },
-                            scales: { y: { beginAtZero: true } }
+                            scales: { 
+                                y: { 
+                                    beginAtZero: true,
+                                    ticks: { callback: (value) => formatMoneda(value) }
+                                } 
+                            }
                         }
                     });
                 }
@@ -787,6 +833,11 @@ function loadInscripcionCharts() {
                             maintainAspectRatio: false,
                             plugins: { 
                                 legend: { position: 'right' },
+                                tooltip: {
+                                    callbacks: {
+                                        label: (context) => `${context.label}: ${formatEntero(context.raw)}`
+                                    }
+                                },
                                 datalabels: {
                                     ...dataLabelCommon,
                                     color: '#ffffff'

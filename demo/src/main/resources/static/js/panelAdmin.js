@@ -127,6 +127,12 @@ document.addEventListener('DOMContentLoaded', function () {
         Chart.defaults.color = '#64748b';
         Chart.defaults.borderColor = '#e2e8f0';
 
+        const formatEntero = (value) => {
+            const numero = Number(value);
+            if (!Number.isFinite(numero)) return value;
+            return Math.round(numero);
+        };
+
         // 1. Gráfico de Distribución de Ofertas (Dona)
         const ofertasCtx = document.getElementById('ofertasChart');
         if (ofertasCtx) {
@@ -184,7 +190,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                 label: function(context) {
                                     const total = context.dataset.data.reduce((a, b) => a + b, 0);
                                     const percentage = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : 0;
-                                    return `${context.label}: ${context.parsed} (${percentage}%)`;
+                                    return `${context.label}: ${formatEntero(context.parsed)} (${percentage}%)`;
                                 }
                             }
                         }
@@ -239,7 +245,10 @@ document.addEventListener('DOMContentLoaded', function () {
                             titleColor: '#f8fafc',
                             bodyColor: '#f8fafc',
                             cornerRadius: 8,
-                            padding: 12
+                            padding: 12,
+                            callbacks: {
+                                label: (context) => `${context.label}: ${formatEntero(context.raw)}`
+                            }
                         }
                     },
                     scales: {
@@ -249,7 +258,9 @@ document.addEventListener('DOMContentLoaded', function () {
                                 color: '#64748b',
                                 font: {
                                     size: 12
-                                }
+                                },
+                                stepSize: 1,
+                                precision: 0
                             },
                             grid: {
                                 color: '#e2e8f0',
