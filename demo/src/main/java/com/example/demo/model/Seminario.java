@@ -31,6 +31,7 @@ public class Seminario extends OfertaAcademica {
     private String publicoObjetivo;
     @Min(10)
     private Integer duracionMinutos; // en minutos
+    private Integer numeroEncuentros;
 
     @ElementCollection
     @NotEmpty(message = "Debe haber al menos un disertante")
@@ -127,6 +128,10 @@ public class Seminario extends OfertaAcademica {
         // Validar duración mínima para seminarios (generalmente más largos que charlas)
         if (duracionMinutos != null && duracionMinutos < 30) {
             errores.add("Un seminario debe durar al menos 30 minutos");
+        }
+
+        if (numeroEncuentros != null && numeroEncuentros <= 0) {
+            errores.add("El número de encuentros debe ser mayor a 0");
         }
         
         return errores;
@@ -331,6 +336,7 @@ public class Seminario extends OfertaAcademica {
         detalle.setFechaInicioInscripcion(this.getFechaInicioInscripcion());
         detalle.setFechaFinInscripcion(this.getFechaFinInscripcion());
         detalle.setHoraInicio(this.horaInicio);
+        detalle.setNumeroEncuentros(this.numeroEncuentros);
         
         // Convertir categorías a DTO simple
         List<CategoriaSimple> categoriasSimples = new ArrayList<>();
@@ -408,6 +414,9 @@ public class Seminario extends OfertaAcademica {
                  }
              }
         }
+        if (datos.containsKey("numeroEncuentros")) {
+            this.setNumeroEncuentros(convertirEntero(datos.get("numeroEncuentros")));
+        }
     }
 
     /**
@@ -438,6 +447,7 @@ public class Seminario extends OfertaAcademica {
         private LocalDate fechaInicioInscripcion;
         private LocalDate fechaFinInscripcion;
         private java.sql.Time horaInicio;
+        private Integer numeroEncuentros;
         
         // Información adicional
         private int totalInscripciones;
@@ -519,6 +529,9 @@ public class Seminario extends OfertaAcademica {
         
         public java.sql.Time getHoraInicio() { return horaInicio; }
         public void setHoraInicio(java.sql.Time horaInicio) { this.horaInicio = horaInicio; }
+
+        public Integer getNumeroEncuentros() { return numeroEncuentros; }
+        public void setNumeroEncuentros(Integer numeroEncuentros) { this.numeroEncuentros = numeroEncuentros; }
     }
 
 }

@@ -7,7 +7,10 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.sql.Time;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.Period;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -47,6 +50,7 @@ import com.example.demo.model.Auditable;
 import com.example.demo.model.CarruselImagen;
 import com.example.demo.model.Categoria;
 import com.example.demo.model.Charla;
+import com.example.demo.model.Clase;
 import com.example.demo.model.Curso;
 import com.example.demo.model.DisponibilidadDocente;
 import com.example.demo.model.Docente;
@@ -151,6 +155,9 @@ public class AdminController {
 
     @Autowired
     private HorarioRepository horarioRepository;
+
+    @Autowired
+    private com.example.demo.repository.ClaseRepository claseRepository;
 
     @Autowired
     private DisponibilidadDocenteService disponibilidadDocenteService;
@@ -980,6 +987,8 @@ public class AdminController {
             @RequestParam(required = false) String lugarSeminario,
             @RequestParam(required = false) String enlaceSeminario,
             @RequestParam(required = false) String horaSeminario,
+            @RequestParam(required = false) Integer numeroEncuentros,
+            @RequestParam(required = false) List<String> fechasEncuentros,
             @RequestParam(required = false) Integer duracionMinutos,
             @RequestParam(required = false) String disertantesSeminario,
             @RequestParam(required = false) String publicoObjetivoSeminario,
@@ -1072,6 +1081,57 @@ public class AdminController {
                 errorResponse.put("success", false);
                 errorResponse.put("message", "Formato de fecha inválido. Use el formato YYYY-MM-DD");
                 return ResponseEntity.badRequest().body(errorResponse);
+            }
+
+            List<LocalDate> fechasEncuentrosParsed = null;
+
+            // Validar número de encuentros para seminarios
+            if ("SEMINARIO".equalsIgnoreCase(tipoOferta)) {
+                if (numeroEncuentros == null || numeroEncuentros <= 0) {
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("success", false);
+                    errorResponse.put("message", "Debe indicar el número de encuentros del seminario");
+                    return ResponseEntity.badRequest().body(errorResponse);
+                }
+                long maxEncuentros = ChronoUnit.DAYS.between(fechaInicioDate, fechaFinDate) + 1;
+                if (numeroEncuentros > maxEncuentros) {
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("success", false);
+                    errorResponse.put("message", "El número de encuentros no puede superar los días entre la fecha de inicio y la fecha de fin");
+                    return ResponseEntity.badRequest().body(errorResponse);
+                }
+
+                if (fechasEncuentros == null || fechasEncuentros.size() != numeroEncuentros) {
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("success", false);
+                    errorResponse.put("message", "Debe indicar la fecha de cada encuentro del seminario");
+                    return ResponseEntity.badRequest().body(errorResponse);
+                }
+
+                try {
+                    fechasEncuentrosParsed = new ArrayList<>();
+                    for (String fechaEncuentroStr : fechasEncuentros) {
+                        if (fechaEncuentroStr == null || fechaEncuentroStr.trim().isEmpty()) {
+                            Map<String, Object> errorResponse = new HashMap<>();
+                            errorResponse.put("success", false);
+                            errorResponse.put("message", "Todos los encuentros deben tener una fecha asignada");
+                            return ResponseEntity.badRequest().body(errorResponse);
+                        }
+                        LocalDate fechaEncuentro = LocalDate.parse(fechaEncuentroStr);
+                        if (fechaEncuentro.isBefore(fechaInicioDate) || fechaEncuentro.isAfter(fechaFinDate)) {
+                            Map<String, Object> errorResponse = new HashMap<>();
+                            errorResponse.put("success", false);
+                            errorResponse.put("message", "Las fechas de los encuentros deben estar entre la fecha de inicio y fin del seminario");
+                            return ResponseEntity.badRequest().body(errorResponse);
+                        }
+                        fechasEncuentrosParsed.add(fechaEncuentro);
+                    }
+                } catch (Exception e) {
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("success", false);
+                    errorResponse.put("message", "Formato de fecha inválido en los encuentros. Use el formato YYYY-MM-DD");
+                    return ResponseEntity.badRequest().body(errorResponse);
+                }
             }
 
             // Validar lugar y enlace según modalidad
@@ -1182,7 +1242,7 @@ public class AdminController {
                 case "SEMINARIO":
                     oferta = crearSeminario(nombre, descripcion, cupos, costoInscripcion, fechaInicio, fechaFin,
                             fechaInicioInscripcion, fechaFinInscripcion, modalidad,
-                            lugar, enlace, horaSeminario, duracionMinutos, disertantesSeminario,
+                            lugar, enlace, horaSeminario, numeroEncuentros, duracionMinutos, disertantesSeminario,
                             publicoObjetivoSeminario);
                     break;
                 default:
@@ -1242,6 +1302,21 @@ public class AdminController {
 
             // Guardar en la base de datos
             OfertaAcademica nuevaOferta = ofertaAcademicaRepository.save(oferta);
+
+            // Generar clases para seminarios virtuales
+            if (nuevaOferta instanceof Seminario) {
+                Seminario seminario = (Seminario) nuevaOferta;
+                if (seminario.getModalidad() == Modalidad.VIRTUAL || seminario.getModalidad() == Modalidad.HIBRIDA) {
+                    try {
+                        int encuentros = seminario.getNumeroEncuentros() != null ? seminario.getNumeroEncuentros() : 0;
+                        if (encuentros > 0) {
+                            crearClasesVirtualesSeminario(seminario, encuentros, fechasEncuentrosParsed);
+                        }
+                    } catch (Exception e) {
+                        System.err.println("Error generando clases para seminario virtual: " + e.getMessage());
+                    }
+                }
+            }
 
             // ✅ Asociar categorías si se proporcionaron
             if (categorias != null && !categorias.trim().isEmpty()) {
@@ -1463,7 +1538,7 @@ public class AdminController {
     private Seminario crearSeminario(String nombre, String descripcion, Integer cupos, Double costo,
             String fechaInicio, String fechaFin, String fechaInicioInscripcion, String fechaFinInscripcion,
             String modalidad,
-            String lugar, String enlace, String horaSeminario, Integer duracionMinutos,
+            String lugar, String enlace, String horaSeminario, Integer numeroEncuentros, Integer duracionMinutos,
             String disertantesStr, String publicoObjetivo) {
         Seminario seminario = new Seminario();
         configurarOfertaBase(seminario, nombre, descripcion, cupos, costo, fechaInicio, fechaFin,
@@ -1481,6 +1556,8 @@ public class AdminController {
         // Campos específicos del seminario
         if (duracionMinutos != null)
             seminario.setDuracionMinutos(duracionMinutos);
+        if (numeroEncuentros != null)
+            seminario.setNumeroEncuentros(numeroEncuentros);
         seminario.setPublicoObjetivo(publicoObjetivo);
 
         // Procesar disertantes (separados por coma)
@@ -1586,6 +1663,8 @@ public class AdminController {
             @RequestParam(required = false) String lugarSeminario,
             @RequestParam(required = false) String enlaceSeminario,
             @RequestParam(required = false) String horaSeminario,
+            @RequestParam(required = false) Integer numeroEncuentros,
+            @RequestParam(required = false) List<String> fechasEncuentros,
             @RequestParam(required = false) Integer duracionMinutos,
             @RequestParam(required = false) String disertantesSeminario,
             @RequestParam(required = false) String publicoObjetivoSeminario,
@@ -1673,6 +1752,56 @@ public class AdminController {
                 errorResponse.put("success", false);
                 errorResponse.put("message", "Formato de fecha inválido. Use AAAA-MM-DD");
                 return ResponseEntity.badRequest().body(errorResponse);
+            }
+
+            List<LocalDate> fechasEncuentrosParsed = null;
+
+            if ("SEMINARIO".equalsIgnoreCase(tipoOferta)) {
+                if (numeroEncuentros == null || numeroEncuentros <= 0) {
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("success", false);
+                    errorResponse.put("message", "El número de encuentros debe ser mayor a 0");
+                    return ResponseEntity.badRequest().body(errorResponse);
+                }
+                long maxEncuentros = ChronoUnit.DAYS.between(fechaInicioDate, fechaFinDate) + 1;
+                if (numeroEncuentros > maxEncuentros) {
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("success", false);
+                    errorResponse.put("message", "El número de encuentros no puede superar los días entre la fecha de inicio y la fecha de fin");
+                    return ResponseEntity.badRequest().body(errorResponse);
+                }
+
+                if (fechasEncuentros == null || fechasEncuentros.size() != numeroEncuentros) {
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("success", false);
+                    errorResponse.put("message", "Debe indicar la fecha de cada encuentro del seminario");
+                    return ResponseEntity.badRequest().body(errorResponse);
+                }
+
+                try {
+                    fechasEncuentrosParsed = new ArrayList<>();
+                    for (String fechaEncuentroStr : fechasEncuentros) {
+                        if (fechaEncuentroStr == null || fechaEncuentroStr.trim().isEmpty()) {
+                            Map<String, Object> errorResponse = new HashMap<>();
+                            errorResponse.put("success", false);
+                            errorResponse.put("message", "Todos los encuentros deben tener una fecha asignada");
+                            return ResponseEntity.badRequest().body(errorResponse);
+                        }
+                        LocalDate fechaEncuentro = LocalDate.parse(fechaEncuentroStr);
+                        if (fechaEncuentro.isBefore(fechaInicioDate) || fechaEncuentro.isAfter(fechaFinDate)) {
+                            Map<String, Object> errorResponse = new HashMap<>();
+                            errorResponse.put("success", false);
+                            errorResponse.put("message", "Las fechas de los encuentros deben estar entre la fecha de inicio y fin del seminario");
+                            return ResponseEntity.badRequest().body(errorResponse);
+                        }
+                        fechasEncuentrosParsed.add(fechaEncuentro);
+                    }
+                } catch (Exception e) {
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("success", false);
+                    errorResponse.put("message", "Formato de fecha inválido en los encuentros. Use el formato YYYY-MM-DD");
+                    return ResponseEntity.badRequest().body(errorResponse);
+                }
             }
 
             // Validar fechas de inscripción si se proporcionan
@@ -1879,6 +2008,8 @@ public class AdminController {
             } else if ("SEMINARIO".equals(tipoOfertaUpper)) {
                 if (duracionMinutos != null)
                     datosActualizar.put("duracionMinutos", duracionMinutos);
+                if (numeroEncuentros != null)
+                    datosActualizar.put("numeroEncuentros", numeroEncuentros);
                 if (publicoObjetivoSeminario != null)
                     datosActualizar.put("publicoObjetivo", publicoObjetivoSeminario);
                 if (disertantesSeminario != null)
@@ -3280,6 +3411,44 @@ public class AdminController {
     private String guardarImagenOferta(MultipartFile imagen) throws IOException {
         // Guardar en BD y exponer vía endpoint (similar al carrusel)
         return "/api/ofertas/imagen/" + ofertaImagenService.guardarImagenOferta(imagen).getId();
+    }
+
+    private void crearClasesVirtualesSeminario(Seminario seminario, int numeroEncuentros, List<LocalDate> fechasEncuentros) {
+        if (seminario == null || numeroEncuentros <= 0) {
+            return;
+        }
+        if (seminario.getFechaInicio() == null || seminario.getFechaFin() == null) {
+            return;
+        }
+        if (seminario.getEnlace() == null || seminario.getEnlace().trim().isEmpty()) {
+            return;
+        }
+
+        LocalDate inicio = seminario.getFechaInicio();
+        List<LocalDate> fechasProgramadas = null;
+        if (fechasEncuentros != null && fechasEncuentros.size() == numeroEncuentros) {
+            fechasProgramadas = new ArrayList<>(fechasEncuentros);
+        }
+        int duracion = seminario.getDuracionMinutos() != null && seminario.getDuracionMinutos() > 0
+                ? seminario.getDuracionMinutos()
+                : 60;
+        LocalTime hora = seminario.getHoraInicio() != null
+                ? seminario.getHoraInicio().toLocalTime()
+                : LocalTime.of(0, 0);
+
+        for (int i = 0; i < numeroEncuentros; i++) {
+            LocalDate fecha = (fechasProgramadas != null) ? fechasProgramadas.get(i) : inicio.plusDays(i);
+            Clase clase = new Clase();
+            clase.setTitulo("Seminario: " + seminario.getNombre() + " - Encuentro " + (i + 1));
+            clase.setDescripcion(seminario.getDescripcion());
+            LocalDateTime inicioClase = LocalDateTime.of(fecha, hora);
+            clase.setInicio(inicioClase);
+            clase.setFin(inicioClase.plusMinutes(duracion));
+            clase.setCurso(seminario);
+            clase.setMeetingUrl(seminario.getEnlace());
+            clase.setRoomName("seminario-" + seminario.getIdOferta() + "-" + (i + 1));
+            claseRepository.save(clase);
+        }
     }
 
     private Long extraerIdImagenUsuario(String fotoUrl) {
