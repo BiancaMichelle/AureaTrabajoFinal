@@ -58,7 +58,9 @@ function uploadImages(fileInput) {
     })
     .then(data => {
         if (data.success) {
-            window.location.href = '/admin/configuracion?success=upload';
+            showInlineMessage('Imagenes subidas exitosamente', 'success');
+            refreshCarruselImages();
+            resetUploadUI(fileInput);
         } else {
             alert('Error: ' + data.message);
             uploadBtn.disabled = false;
@@ -67,11 +69,127 @@ function uploadImages(fileInput) {
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Error al subir las imágenes. Por favor intente nuevamente.');
+        alert('Error al subir las imagenes. Por favor intente nuevamente.');
         uploadBtn.disabled = false;
         uploadBtn.innerHTML = originalText;
     });
 }
+
+function resetUploadUI(fileInput) {
+    const uploadBtn = document.getElementById('upload-btn');
+    const previewContainer = document.getElementById('preview-container');
+    const previewGrid = document.getElementById('preview-grid');
+    if (fileInput) fileInput.value = '';
+    if (previewGrid) previewGrid.innerHTML = '';
+    if (previewContainer) previewContainer.style.display = 'none';
+    if (uploadBtn) {
+        uploadBtn.disabled = false;
+        uploadBtn.style.display = 'none';
+        uploadBtn.innerHTML = '<i class="fas fa-upload"></i> Subir Imágenes al Carrusel';
+    }
+}
+
+function showInlineMessage(text, type) {
+    const container = document.querySelector('.carrusel-management');
+    if (!container) return;
+    let alert = document.getElementById('carrusel-alert');
+    if (!alert) {
+        alert = document.createElement('div');
+        alert.id = 'carrusel-alert';
+        alert.style.marginBottom = '12px';
+        container.prepend(alert);
+    }
+    alert.className = `alert alert-${type === 'success' ? 'success' : 'danger'}`;
+    alert.textContent = text;
+    clearTimeout(alert._hideTimer);
+    alert._hideTimer = setTimeout(() => {
+        if (alert) {
+            alert.remove();
+        }
+    }, 20000);
+}
+
+function refreshCarruselImages() {
+    const grid = document.querySelector('.images-grid');
+    const emptyState = document.querySelector('.no-images');
+    if (!grid) return;
+    fetch('/api/carrusel/imagenes', { cache: 'no-store' })
+        .then(r => r.json())
+        .then(payload => {
+            const images = Array.isArray(payload) ? payload : (payload?.imagenes || payload?.data || []);
+            grid.innerHTML = '';
+            if (!images || images.length === 0) {
+                if (emptyState) emptyState.style.display = 'block';
+                return;
+            }
+            if (emptyState) emptyState.style.display = 'none';
+            images.forEach(img => {
+                const item = document.createElement('div');
+                item.className = 'image-item';
+                const cacheBuster = Date.now();
+                const src = `/api/carrusel/imagen/${img.id}?t=${cacheBuster}`;
+                const alt = img.altText || 'Imagen del carrusel';
+                item.innerHTML = `
+                    <div class="image-preview" onclick="openImageModal(this)">
+                        <img src="${src}" alt="${alt}" data-full-src="${src}">
+                        <div class="image-overlay">
+                            <button type="button" class="btn-delete-image" data-id="${img.id}" onclick="event.stopPropagation();">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(item);
+            });
+            bindDeleteHandlers();
+        })
+        .catch(err => {
+            console.error('Error recargando carrusel:', err);
+        });
+}
+
+function bindDeleteHandlers() {
+    const buttons = document.querySelectorAll('.images-grid .btn-delete-image[data-id]');
+    buttons.forEach(btn => {
+        if (btn.dataset.bound === 'true') return;
+        btn.dataset.bound = 'true';
+        btn.addEventListener('click', () => {
+            const id = btn.dataset.id;
+            if (!id) return;
+            const doDelete = () => {
+                fetch(`/api/carrusel/${id}`, { method: 'DELETE' })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            showInlineMessage('Imagen eliminada exitosamente', 'success');
+                            refreshCarruselImages();
+                        } else {
+                            showInlineMessage(data.message || 'Error al eliminar la imagen', 'danger');
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Error eliminando imagen:', err);
+                        showInlineMessage('Error al eliminar la imagen', 'danger');
+                    });
+            };
+            if (typeof ModalConfirmacion !== 'undefined' && ModalConfirmacion.show) {
+                ModalConfirmacion.show('Eliminar Imagen', '¿Estás seguro de que quieres eliminar esta imagen?', doDelete);
+            } else if (confirm('¿Estás seguro de que quieres eliminar esta imagen?')) {
+                doDelete();
+            }
+        });
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Interceptar formularios existentes de eliminación para evitar recarga
+    document.querySelectorAll('.images-grid form').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+        });
+    });
+    bindDeleteHandlers();
+});
 
 // Funciones para el modal de imagen
 function openImageModal(element) {

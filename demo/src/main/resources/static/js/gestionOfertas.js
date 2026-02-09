@@ -1575,8 +1575,7 @@ function seleccionarPropuesta(index) {
         habilitarEdicionPropuesta(true, index);
         // Desmarcar estilos de selecci?n
         document.querySelectorAll('.propuesta-card').forEach((card) => {
-            card.style.border = '1px solid #dee2e6';
-            card.style.background = 'white';
+            card.classList.remove('card-selected');
         });
         mostrarAlerta('Propuesta deseleccionada', 'info');
         return;
@@ -1585,10 +1584,12 @@ function seleccionarPropuesta(index) {
     window.propuestaSeleccionadaIndex = index;
 
     const card = document.querySelectorAll('.propuesta-card')[index];
-    const checks = card ? card.querySelectorAll('.pin-check:checked') : [];
+    const checksSelected = card ? card.querySelectorAll('.pin-check:checked') : [];
+    const checksAll = card ? card.querySelectorAll('.pin-check') : [];
+    const checks = (checksSelected && checksSelected.length > 0) ? checksSelected : checksAll;
 
     if (!checks || checks.length === 0) {
-        mostrarAlerta('Debes marcar con el check los horarios que deseas seleccionar', 'warning');
+        mostrarAlerta('No hay horarios disponibles para seleccionar', 'warning');
         return;
     }
 
@@ -1674,11 +1675,13 @@ function seleccionarPropuesta(index) {
     // Marcar visualmente la propuesta seleccionada
     document.querySelectorAll('.propuesta-card').forEach((cardEl, i) => {
         if (i === index) {
-            cardEl.style.border = '2px solid #28a745';
-            cardEl.style.background = '#f0fff4';
+            cardEl.classList.add('card-selected');
+            cardEl.style.outline = '3px solid #10b981';
+            cardEl.style.outlineOffset = '2px';
         } else {
-            cardEl.style.border = '1px solid #dee2e6';
-            cardEl.style.background = 'white';
+            cardEl.classList.remove('card-selected');
+            cardEl.style.outline = 'none';
+            cardEl.style.outlineOffset = '0';
         }
     });
 

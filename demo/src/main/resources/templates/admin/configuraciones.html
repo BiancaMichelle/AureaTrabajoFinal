@@ -89,10 +89,10 @@
                                            th:value="${instituto?.telefono}">
                                 </div>
                                 <div class="form-group">
-                                    <label for="email">Email Institucional</label>
+                                    <label for="email">Email Institucional *</label>
                                     <input type="email" id="email" name="email" 
                                            class="form-control" placeholder="contacto@instituto.com"
-                                           th:value="${instituto?.email}">
+                                           th:value="${instituto?.email}" required>
                                 </div>
                             </div>
                         </div>
@@ -127,22 +127,22 @@
                             <h4><i class="fas fa-credit-card"></i> Configuración de Pagos</h4>
                             <div class="form-grid">
                                 <div class="form-group">
-                                    <label for="razonSocial">Razón Social</label>
+                                    <label for="razonSocial">Razón Social *</label>
                                     <input type="text" id="razonSocial" name="razonSocial" 
                                            class="form-control" placeholder="Ej: Instituto Aurea S.A."
-                                           th:value="${instituto?.razonSocial}">
+                                           th:value="${instituto?.razonSocial}" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="cuil">CUIL</label>
+                                    <label for="cuil">CUIL *</label>
                                     <input type="text" id="cuil" name="cuil" 
                                            class="form-control" placeholder="Ej: 30-12345678-9"
-                                           th:value="${instituto?.cuil}">
+                                           th:value="${instituto?.cuil}" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="inicioActividad">Inicio de Actividad</label>
+                                    <label for="inicioActividad">Inicio de Actividad *</label>
                                     <input type="datetime-local" id="inicioActividad" name="inicioActividad"
                                            class="form-control"
-                                           th:value="${instituto?.inicioActividad != null ? #temporals.format(instituto.inicioActividad, 'yyyy-MM-dd''T''HH:mm') : ''}">
+                                           th:value="${instituto?.inicioActividad != null ? #temporals.format(instituto.inicioActividad, 'yyyy-MM-dd''T''HH:mm') : ''}" required>
                                 </div>
                                 <div class="form-group">
                                     <label for="moneda">Moneda *</label>
@@ -156,19 +156,19 @@
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <label for="cuentaBancaria">CBU / Cuenta Bancaria</label>
+                                    <label for="cuentaBancaria">CBU / Cuenta Bancaria *</label>
                                     <input type="text" id="cuentaBancaria" name="cuentaBancaria" 
                                            class="form-control" placeholder="1234567890123456789012"
-                                           th:value="${instituto?.cuentaBancaria}">
+                                           th:value="${instituto?.cuentaBancaria}" required>
                                     <div class="form-text">
                                         <i class="fas fa-info-circle"></i> CBU para recibir pagos de inscripciones
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label for="politicaPagos">Política de Pagos</label>
+                                    <label for="politicaPagos">Política de Pagos *</label>
                                     <textarea id="politicaPagos" name="politicaPagos" class="form-control" 
                                               rows="3" placeholder="Términos y condiciones de pago..."
-                                              th:text="${instituto?.politicaPagos}"></textarea>
+                                              th:text="${instituto?.politicaPagos}" required></textarea>
                                 </div>
                             </div>
                         </div>
@@ -204,7 +204,7 @@
                                     <input type="number" id="diasMoraBloqueoAula" name="diasMoraBloqueoAula" 
                                            class="form-control" min="0" placeholder="Ej: 15"
                                            th:value="${instituto?.diasMoraBloqueoAula}">
-                                    <div class="form-text">Si la mora supera estos días, el alumno no podrá acceder al aula hasta regularizar el pago.</div>
+                                    <div class="form-text">Si la mora supera estos dÃ­as, el alumno no podrÃ¡ acceder al aula hasta regularizar el pago.</div>
                                 </div>
                             </div>
                         </div>
@@ -215,15 +215,19 @@
                         <!-- Logo del Instituto -->
                         <div class="form-section">
                             <h4><i class="fas fa-image"></i> Logo Institucional</h4>
-                            <div class="image-upload-container">
+                            <div class="image-upload-container logo-photo-container" style="width: 100%; height: 250px; position: relative; overflow: hidden;">
                                 <input type="file" id="logo-input" name="logo" accept="image/*" class="image-input">
-                                <div class="image-upload-area" onclick="document.getElementById('logo-input').click()">
-                                    <div class="upload-placeholder" id="logo-placeholder">
+                                <div class="image-upload-area" style="width: 100%; height: 250px; position: relative; overflow: hidden; padding: 0;" onclick="document.getElementById('logo-input').click()">
+                                    <div class="upload-placeholder" id="logo-placeholder"
+                                         th:style="${instituto != null and instituto.logoPath != null and !#strings.isEmpty(instituto.logoPath)} ? 'display:none;' : ''">
                                         <i class="fas fa-cloud-upload-alt"></i>
                                         <p>Haga clic para subir el logo</p>
                                         <span>PNG, JPG hasta 5MB</span>
                                     </div>
-                                    <img id="logo-preview" style="display: none; max-width: 100%; height: auto; border-radius: 8px;" alt="Logo preview">
+                                    <img id="logo-preview"
+                                         th:src="${instituto != null ? instituto.logoPath : ''}"
+                                         th:style="${instituto != null and instituto.logoPath != null and !#strings.isEmpty(instituto.logoPath)} ? 'display:block; width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; position: absolute; inset: 0; margin: auto; border-radius: 8px;' : 'display:none; width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; position: absolute; inset: 0; margin: auto; border-radius: 8px;'"
+                                         alt="Logo preview">
                                 </div>
                             </div>
                         </div>
@@ -274,49 +278,49 @@
                             
                             <!-- Mostrar mensajes de éxito/error -->
                             <div th:if="${param.success != null}" class="alert alert-success">
-                                <span th:if="${param.success[0] == 'upload'}">✓ Imágenes subidas exitosamente</span>
-                                <span th:if="${param.success[0] == 'delete'}">✓ Imagen eliminada exitosamente</span>
+                                <span th:if="${param.success[0] == 'upload'}">âœ“ ImÃ¡genes subidas exitosamente</span>
+                                <span th:if="${param.success[0] == 'delete'}">âœ“ Imagen eliminada exitosamente</span>
                             </div>
                             
                             <div th:if="${param.error != null}" class="alert alert-danger">
-                                <span th:if="${param.error[0] == 'nofiles'}">⚠ No se han seleccionado imágenes</span>
-                                <span th:if="${param.error[0] == 'processing'}">⚠ Error al procesar las imágenes</span>
-                                <span th:if="${param.error[0] == 'server'}">⚠ Error interno del servidor</span>
-                                <span th:if="${param.error[0] == 'notfound'}">⚠ Imagen no encontrada</span>
-                                <span th:if="${param.error[0] == 'deletefail'}">⚠ Error al eliminar la imagen</span>
+                                <span th:if="${param.error[0] == 'nofiles'}">âš  No se han seleccionado imÃ¡genes</span>
+                                <span th:if="${param.error[0] == 'processing'}">âš  Error al procesar las imÃ¡genes</span>
+                                <span th:if="${param.error[0] == 'server'}">âš  Error interno del servidor</span>
+                                <span th:if="${param.error[0] == 'notfound'}">âš  Imagen no encontrada</span>
+                                <span th:if="${param.error[0] == 'deletefail'}">âš  Error al eliminar la imagen</span>
                             </div>
                             
                             <div class="carrusel-management">
-                                <!-- Área de subida de imágenes (AJAX) -->
+                                <!-- Ãrea de subida de imÃ¡genes (AJAX) -->
                                 <div class="upload-form">
                                     <div class="upload-area">
                                         <div class="upload-content">
                                             <i class="fas fa-cloud-upload-alt upload-icon"></i>
-                                            <h5>Subir Imágenes al Carrusel</h5>
-                                            <p>Haz clic aquí para seleccionar imágenes</p>
-                                            <span class="upload-hint">O arrastra los archivos aquí</span>
+                                            <h5>Subir ImÃ¡genes al Carrusel</h5>
+                                            <p>Haz clic aquÃ­ para seleccionar imÃ¡genes</p>
+                                            <span class="upload-hint">O arrastra los archivos aquÃ­</span>
                                             <div class="upload-specs">
-                                                <small>Formatos: JPG, PNG, GIF • Máximo 10MB por imagen</small>
+                                                <small>Formatos: JPG, PNG, GIF â€¢ MÃ¡ximo 10MB por imagen</small>
                                             </div>
                                         </div>
                                     </div>
                                     <input type="file" id="imageFiles" name="imagenes" multiple accept="image/*" 
                                            style="display: none;">
                                     
-                                    <!-- Preview de imágenes seleccionadas -->
+                                    <!-- Preview de imÃ¡genes seleccionadas -->
                                     <div id="preview-container" style="display: none; margin: 15px 0;">
                                         <h6><i class="fas fa-eye"></i> Vista previa:</h6>
                                         <div id="preview-grid" class="preview-grid"></div>
                                     </div>
                                     
                                     <button type="button" id="upload-btn" class="btn-upload" style="display: none;">
-                                        <i class="fas fa-upload"></i> Subir Imágenes al Carrusel
+                                        <i class="fas fa-upload"></i> Subir ImÃ¡genes al Carrusel
                                     </button>
                                 </div>
                                 
-                                <!-- Lista de imágenes actuales -->
+                                <!-- Lista de imÃ¡genes actuales -->
                                 <div class="current-images">
-                                    <h5>Imágenes actuales del carrusel:</h5>
+                                    <h5>ImÃ¡genes actuales del carrusel:</h5>
                                     <div class="images-grid">
                                         <div th:each="imagen : ${imagenesCarrusel}" class="image-item">
                                             <div class="image-preview" onclick="openImageModal(this)">
@@ -324,13 +328,9 @@
                                                      th:alt="${imagen.altText ?: 'Imagen del carrusel'}" 
                                                      th:data-full-src="@{'/api/carrusel/imagen/' + ${imagen.id}}" />
                                                 <div class="image-overlay">
-                                                    <form th:action="@{'/admin/configuracion/carrusel/eliminar/' + ${imagen.id}}" 
-                                                          method="POST" style="display: inline;" 
-                                                          th:attr="onsubmit='event.preventDefault(); var form = this; ModalConfirmacion.show(\'Eliminar Imagen\', \'¿Estás seguro de que quieres eliminar esta imagen?\', function() { form.submit(); });'">
-                                                        <button type="submit" class="btn-delete-image" onclick="event.stopPropagation();">
-                                                            <i class="fas fa-trash"></i>
-                                                        </button>
-                                                    </form>
+                                                    <button type="button" class="btn-delete-image" th:data-id="${imagen.id}" onclick="event.stopPropagation();">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
                                                     <div class="image-order">
                                                         <span th:text="${imagen.orden}"></span>
                                                     </div>
@@ -344,7 +344,7 @@
                                     
                                     <div th:if="${#lists.isEmpty(imagenesCarrusel)}" class="no-images">
                                         <i class="fas fa-image"></i>
-                                        <p>No hay imágenes en el carrusel. Sube algunas para comenzar.</p>
+                                        <p>No hay imÃ¡genes en el carrusel. Sube algunas para comenzar.</p>
                                     </div>
                                 </div>
 
@@ -358,15 +358,15 @@
                                 <div class="carrusel-instructions">
                                     <div class="instruction-item">
                                         <i class="fas fa-info-circle"></i>
-                                        <span>Las imágenes se mostrarán en orden en la página principal</span>
+                                        <span>Las imÃ¡genes se mostrarÃ¡n en orden en la pÃ¡gina principal</span>
                                     </div>
                                     <div class="instruction-item">
                                         <i class="fas fa-file-image"></i>
-                                        <span>Formatos soportados: JPG, PNG, GIF (máx. 10MB cada una)</span>
+                                        <span>Formatos soportados: JPG, PNG, GIF (mÃ¡x. 10MB cada una)</span>
                                     </div>
                                     <div class="instruction-item">
                                         <i class="fas fa-database"></i>
-                                        <span>Las imágenes se almacenan de forma segura en la base de datos</span>
+                                        <span>Las imÃ¡genes se almacenan de forma segura en la base de datos</span>
                                     </div>
                                 </div>
                             </div>
@@ -423,6 +423,15 @@
                                 </label>
                             </div>
                         </div>
+                            <div style="margin: 8px 0 16px 38px;">
+                                <button type="button" id="btn-ejecutar-reportes-semanales" class="btn btn-secondary" style="padding: 8px 14px; border-radius: 10px; border: 1px solid #1e40af; background: linear-gradient(135deg, #1e3a8a, #1e40af); color: #fff; font-weight: 600; box-shadow: 0 6px 16px rgba(30,64,175,0.25); display: inline-flex; align-items: center; gap: 8px;">
+                                    <span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:8px;background:rgba(255,255,255,0.12);">
+                                        <i class="fas fa-clock"></i>
+                                    </span>
+                                    Simular sabado y generar reportes
+                                </button>
+                                <div class="form-text" style="margin-top: 6px;">Genera los 3 reportes y envia el aviso al chat del admin.</div>
+                            </div>
                     </div>
                 </div>
                 
@@ -431,7 +440,7 @@
                         <i class="fas fa-save"></i> Guardar Configuración
                     </button>
                     <button type="button" id="btn-reset-config" class="btn-cancel">
-                        <i class="fas fa-undo"></i> Restablecer
+                        <i class="fas fa-undo"></i> Colores por defecto
                     </button>
                 </div>
             </form>

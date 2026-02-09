@@ -77,6 +77,7 @@ import com.example.demo.service.DisponibilidadDocenteService;
 import com.example.demo.service.GeneradorHorariosService;
 import com.example.demo.service.ImagenService;
 import com.example.demo.service.InstitutoService;
+import com.example.demo.service.InstitutoLogoService;
 import com.example.demo.service.LocacionAPIService;
 import com.example.demo.service.OfertaAcademicaService;
 import com.example.demo.service.OfertaImagenService;
@@ -124,6 +125,12 @@ public class AdminController {
     @Autowired
     private InstitutoService institutoService;
 
+    @Autowired
+    private com.example.demo.scheduler.ReporteSemanalScheduler reporteSemanalScheduler;
+
+    @Autowired
+    private InstitutoLogoService institutoLogoService;
+    
     @Autowired
     private CarruselImagenRepository carruselImagenRepository;
 
@@ -482,6 +489,7 @@ public class AdminController {
                 Map<String, Object> response = new HashMap<>();
                 response.put("success", false);
                 response.put("message", "Oferta no encontrada");
+                response.put("auditDetails", "No se pudo eliminar: oferta no encontrada (ID " + id + ").");
                 return ResponseEntity.notFound().build();
             }
 
@@ -493,7 +501,9 @@ public class AdminController {
             if (!oferta.puedeSerEliminada()) {
                 Map<String, Object> response = new HashMap<>();
                 response.put("success", false);
-                response.put("message", "No se puede eliminar esta oferta porque tiene inscripciones o ya finalizó");
+                String motivo = "No se puede eliminar esta oferta porque tiene inscripciones o ya finalizó";
+                response.put("message", motivo);
+                response.put("auditDetails", motivo + " (ID " + oferta.getIdOferta() + ").");
                 return ResponseEntity.badRequest().body(response);
             }
 
@@ -511,7 +521,9 @@ public class AdminController {
         } catch (Exception e) {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
-            response.put("message", "Error al eliminar la oferta: " + e.getMessage());
+            String motivo = "Error al eliminar la oferta: " + e.getMessage();
+            response.put("message", motivo);
+            response.put("auditDetails", motivo);
             return ResponseEntity.internalServerError().body(response);
         }
     }
@@ -533,6 +545,7 @@ public class AdminController {
                 response.put("success", false);
                 response.put("message", "Oferta no encontrada");
                 response.put("motivo", "OFERTA_NO_ENCONTRADA");
+                response.put("auditDetails", "No se pudo cambiar estado: oferta no encontrada (ID " + id + ").");
                 return ResponseEntity.ok(response);
             }
 
@@ -548,6 +561,7 @@ public class AdminController {
                 response.put("success", false);
                 response.put("message", motivo);
                 response.put("motivo", "ESTADO_FINAL");
+                response.put("auditDetails", motivo + " (ID " + oferta.getIdOferta() + ").");
                 return ResponseEntity.ok(response);
             }
 
@@ -583,6 +597,7 @@ public class AdminController {
                 response.put("success", false);
                 response.put("message", mensajeError);
                 response.put("motivo", motivoCodigo);
+                response.put("auditDetails", mensajeError + " (ID " + oferta.getIdOferta() + ").");
                 return ResponseEntity.ok(response);
             }
 
@@ -605,8 +620,10 @@ public class AdminController {
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
-            response.put("message", "Error interno del servidor: " + e.getMessage());
+            String motivo = "Error interno del servidor: " + e.getMessage();
+            response.put("message", motivo);
             response.put("motivo", "ERROR_SERVIDOR");
+            response.put("auditDetails", motivo + " (ID " + id + ").");
             return ResponseEntity.ok(response);
         }
     }
@@ -2420,6 +2437,7 @@ public class AdminController {
             if (usuarioOpt.isEmpty()) {
                 response.put("success", false);
                 response.put("message", "Usuario no encontrado");
+                response.put("auditDetails", "No se pudo dar de baja: usuario no encontrado (ident " + identificador + ").");
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
             }
 
@@ -2603,7 +2621,9 @@ public class AdminController {
             // currentUsername es el DNI según CustomUsuarioDetails
             if (usuarioOpt.get().getDni().equals(currentUsername)) {
                 response.put("success", false);
-                response.put("message", "No puedes dar de baja a tu propia cuenta de usuario.");
+                String motivo = "No puedes dar de baja a tu propia cuenta de usuario.";
+                response.put("message", motivo);
+                response.put("auditDetails", motivo + " (DNI " + usuarioOpt.get().getDni() + ").");
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
             }
 
@@ -2617,15 +2637,21 @@ public class AdminController {
             return ResponseEntity.ok(response);
         } catch (IllegalStateException ex) {
             response.put("success", false);
-            response.put("message", ex.getMessage());
+            String motivo = ex.getMessage();
+            response.put("message", motivo);
+            response.put("auditDetails", motivo);
             return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
         } catch (DataIntegrityViolationException ex) {
             response.put("success", false);
-            response.put("message", "El usuario no puede eliminarse porque tiene registros asociados");
+            String motivo = "El usuario no puede eliminarse porque tiene registros asociados";
+            response.put("message", motivo);
+            response.put("auditDetails", motivo);
             return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
         } catch (Exception e) {
             response.put("success", false);
-            response.put("message", "Error al eliminar usuario: " + e.getMessage());
+            String motivo = "Error al eliminar usuario: " + e.getMessage();
+            response.put("message", motivo);
+            response.put("auditDetails", motivo);
             return ResponseEntity.badRequest().body(response);
         }
     }
@@ -2978,7 +3004,28 @@ public class AdminController {
                 response.put("message", "El nombre del instituto es obligatorio");
                 return ResponseEntity.badRequest().body(response);
             }
+<<<<<<< HEAD
 
+=======
+            Map<String, String> requiredLabels = new HashMap<>();
+            requiredLabels.put("email", "El email institucional es obligatorio");
+            requiredLabels.put("razonSocial", "La razón social es obligatoria");
+            requiredLabels.put("cuil", "El CUIL es obligatorio");
+            requiredLabels.put("inicioActividad", "La fecha de inicio de actividad es obligatoria");
+            requiredLabels.put("moneda", "La moneda es obligatoria");
+            requiredLabels.put("cuentaBancaria", "La cuenta bancaria es obligatoria");
+            requiredLabels.put("politicaPagos", "La política de pagos es obligatoria");
+
+            for (Map.Entry<String, String> entry : requiredLabels.entrySet()) {
+                String value = params.get(entry.getKey());
+                if (value == null || value.trim().isEmpty()) {
+                    response.put("success", false);
+                    response.put("message", entry.getValue());
+                    return ResponseEntity.badRequest().body(response);
+                }
+            }
+            
+>>>>>>> origin/correcciones
             // Obtener instituto actual
             Instituto instituto = institutoService.obtenerInstituto();
             System.out.println("Instituto actual ID: " + instituto.getIdInstituto());
@@ -3000,14 +3047,13 @@ public class AdminController {
             instituto.setPoliticaPagos(params.get("politicaPagos"));
             instituto.setRazonSocial(params.get("razonSocial"));
             instituto.setCuil(params.get("cuil"));
-            if (params.get("inicioActividad") != null && !params.get("inicioActividad").trim().isEmpty()) {
-                try {
-                    instituto.setInicioActividad(java.time.LocalDateTime.parse(params.get("inicioActividad").trim()));
-                } catch (Exception e) {
-                    System.out.println("Error parseando inicioActividad: " + params.get("inicioActividad"));
-                }
-            } else {
-                instituto.setInicioActividad(null);
+            try {
+                instituto.setInicioActividad(java.time.LocalDateTime.parse(params.get("inicioActividad").trim()));
+            } catch (Exception e) {
+                System.out.println("Error parseando inicioActividad: " + params.get("inicioActividad"));
+                response.put("success", false);
+                response.put("message", "La fecha de inicio de actividad no es válida");
+                return ResponseEntity.badRequest().body(response);
             }
 
             // Configuraciones automáticas - Los checkboxes solo envían valor si están
@@ -3199,11 +3245,54 @@ public class AdminController {
     // ================= MÉTODOS AUXILIARES =================
 
     private String guardarLogo(MultipartFile logo) throws IOException {
-        // Crear directorio si no existe
-        Path directorioLogos = Paths.get("src/main/resources/static/img/logos");
-        if (!Files.exists(directorioLogos)) {
-            Files.createDirectories(directorioLogos);
+        Instituto instituto = institutoService.obtenerInstituto();
+        if (instituto == null) {
+            throw new IOException("Instituto no encontrado");
         }
+
+        // Eliminar logo anterior si existía en BD
+        Long oldId = extraerIdLogoInstituto(instituto.getLogoPath());
+        if (oldId != null) {
+            try {
+                institutoLogoService.eliminar(oldId);
+            } catch (Exception e) {
+                // Continuar si no se pudo borrar el anterior
+            }
+        }
+
+        var logoGuardado = institutoLogoService.guardarLogo(logo, instituto);
+        return "/api/instituto/logo/" + logoGuardado.getId();
+    }
+
+    @PostMapping("/admin/reportes/semanal/ejecutar")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> ejecutarReportesSemanalesManual() {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            String resumen = reporteSemanalScheduler.ejecutarReportesSemanalesManual();
+            response.put("success", true);
+            response.put("message", "Reportes semanales generados correctamente.");
+            response.put("resumen", resumen);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "Error al generar reportes semanales: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+
+    private Long extraerIdLogoInstituto(String logoUrl) {
+        String prefix = "/api/instituto/logo/";
+        if (logoUrl == null) return null;
+        int idx = logoUrl.indexOf(prefix);
+        if (idx == -1) return null;
+        String idPart = logoUrl.substring(idx + prefix.length());
+        try {
+            return Long.parseLong(idPart.trim());
+        } catch (Exception e) {
+            return null;
+        }
+<<<<<<< HEAD
 
         // Generar nombre único
         String nombreOriginal = logo.getOriginalFilename();
@@ -3215,6 +3304,8 @@ public class AdminController {
         Files.copy(logo.getInputStream(), rutaArchivo, StandardCopyOption.REPLACE_EXISTING);
 
         return "/img/logos/" + nombreArchivo;
+=======
+>>>>>>> origin/correcciones
     }
 
     private String guardarImagenOferta(MultipartFile imagen) throws IOException {

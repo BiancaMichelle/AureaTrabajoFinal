@@ -1172,7 +1172,26 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
 
+        function solicitarConfirmacionCancelacion() {
+            const form = document.getElementById('user-form');
+            const mode = form?.dataset?.mode || 'create';
+
+            if (mode === 'view') {
+                hideForm();
+                return;
+            }
+
+            const isEditMode = mode === 'edit';
+            const title = isEditMode ? 'Cancelar edición' : 'Cancelar registro';
+            const message = isEditMode
+                ? '¿Está seguro de que desea cancelar? Los cambios no guardados se perderán.'
+                : '¿Está seguro de que desea cancelar el registro? Los datos ingresados se perderán.';
+
+            confirmAction(title, message, hideForm);
+        }
+
         if (btnCloseForm) {
+<<<<<<< HEAD
             btnCloseForm.addEventListener('click', function () {
                 const form = document.getElementById('user-form');
                 const isEditMode = form?.dataset?.mode === 'edit';
@@ -1185,10 +1204,15 @@ document.addEventListener('DOMContentLoaded', function () {
                     return;
                 }
                 hideForm();
+=======
+            btnCloseForm.addEventListener('click', function() {
+                solicitarConfirmacionCancelacion();
+>>>>>>> origin/correcciones
             });
         }
 
         if (btnCancelForm) {
+<<<<<<< HEAD
             btnCancelForm.addEventListener('click', function () {
                 const form = document.getElementById('user-form');
                 const isEditMode = form?.dataset?.mode === 'edit';
@@ -1201,6 +1225,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     return;
                 }
                 hideForm();
+=======
+            btnCancelForm.addEventListener('click', function() {
+                solicitarConfirmacionCancelacion();
+>>>>>>> origin/correcciones
             });
         }
     }

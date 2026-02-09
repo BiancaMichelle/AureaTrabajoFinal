@@ -11,6 +11,10 @@ import java.util.Locale;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Comparator;
 
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -24,7 +28,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.example.demo.model.OfertaAcademica;
+import com.example.demo.model.Categoria;
 import com.example.demo.model.Pago;
+import java.awt.Color;
 import com.example.demo.model.Curso;
 import com.example.demo.model.Docente;
 import com.example.demo.model.Instituto;
@@ -33,7 +39,10 @@ import com.example.demo.repository.OfertaAcademicaRepository;
 import com.example.demo.enums.EstadoOferta;
 import com.example.demo.repository.UsuarioRepository;
 import com.example.demo.repository.CuotaRepository;
+import com.example.demo.repository.InscripcionRepository;
+import com.example.demo.repository.CategoriaRepository;
 import com.example.demo.enums.EstadoCuota;
+import com.example.demo.service.InstitutoLogoService;
 import com.lowagie.text.Chunk;
 import com.lowagie.text.Document;
 import com.lowagie.text.DocumentException;
@@ -49,10 +58,21 @@ import java.util.Base64;
 import java.awt.image.BufferedImage;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.labels.StandardPieSectionLabelGenerator;
+import org.jfree.chart.plot.CategoryPlot;
+import org.jfree.chart.plot.PiePlot;
+import org.jfree.chart.plot.PlotOrientation;
+import org.jfree.chart.renderer.category.BarRenderer;
+import org.jfree.data.category.DefaultCategoryDataset;
+import org.jfree.chart.axis.NumberAxis;
 import org.jfree.data.general.DefaultPieDataset;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
+import com.example.demo.model.AuditLog;
+import com.example.demo.service.AuditLogService;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class ReporteService {
@@ -69,7 +89,19 @@ public class ReporteService {
     private CuotaRepository cuotaRepository;
 
     @Autowired
+    private InscripcionRepository inscripcionRepository;
+    
+    @Autowired
+    private CategoriaRepository categoriaRepository;
+
+    @Autowired
     private InstitutoService institutoService;
+
+    @Autowired
+    private InstitutoLogoService institutoLogoService;
+
+    @Autowired
+    private AuditLogService auditLogService;
 
     @Autowired
     private TemplateEngine templateEngine; // Thymeleaf Template Engine
@@ -82,6 +114,193 @@ public class ReporteService {
             e.printStackTrace();
             return "body { font-family: Helvetica; }"; // Fallback simple
         }
+    }
+
+    private String obtenerLogoBase64(Instituto instituto) {
+        if (instituto == null || instituto.getLogoPath() == null || instituto.getLogoPath().isBlank()) {
+            return null;
+        }
+        String path = instituto.getLogoPath().trim();
+        if (path.startsWith("/api/instituto/logo/")) {
+            try {
+                String idPart = path.substring("/api/instituto/logo/".length());
+                Long id = Long.parseLong(idPart.trim());
+                var logo = institutoLogoService.obtenerPorId(id).orElse(null);
+                if (logo == null) return null;
+                String mime = logo.getTipoMime() != null ? logo.getTipoMime() : "image/png";
+                return "data:" + mime + ";base64," + Base64.getEncoder().encodeToString(logo.getDatos());
+            } catch (Exception e) {
+                return null;
+            }
+        }
+        if (path.startsWith("/")) {
+            path = path.substring(1);
+        }
+        try {
+            ClassPathResource resource = new ClassPathResource("static/" + path);
+            if (!resource.exists()) {
+                return null;
+            }
+            byte[] bytes = StreamUtils.copyToByteArray(resource.getInputStream());
+            String lower = path.toLowerCase();
+            String mime = "image/png";
+            if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) {
+                mime = "image/jpeg";
+            } else if (lower.endsWith(".gif")) {
+                mime = "image/gif";
+            } else if (lower.endsWith(".webp")) {
+                mime = "image/webp";
+            }
+            return "data:" + mime + ";base64," + Base64.getEncoder().encodeToString(bytes);
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
+    private Map<String, String> obtenerDatosGenerador() {
+        String nombre = "Sistema";
+        String dni = "";
+        try {
+            var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null) {
+                String principal = auth.getName();
+                if (principal != null && !principal.isBlank()) {
+                    Usuario usuario = usuarioRepository.findByDniOrCorreo(principal, principal).orElse(null);
+                    if (usuario != null) {
+                        nombre = usuario.getNombre() + " " + usuario.getApellido();
+                        dni = usuario.getDni();
+                    } else {
+                        nombre = principal;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // Usar valores por defecto
+        }
+        Map<String, String> data = new java.util.HashMap<>();
+        data.put("nombre", nombre);
+        data.put("dni", dni);
+        return data;
+    }
+
+    private void agregarDatosBaseReporte(Map<String, Object> data) {
+        Instituto instituto = institutoService.obtenerInstituto();
+        String nombreInstituto = instituto != null && instituto.getNombreInstituto() != null && !instituto.getNombreInstituto().isBlank()
+                ? instituto.getNombreInstituto()
+                : "Instituto";
+
+        List<String> colores = instituto != null ? instituto.getColores() : null;
+        String colorPrimario = (colores != null && colores.size() > 0 && colores.get(0) != null && !colores.get(0).isBlank())
+                ? colores.get(0) : "#E5383B";
+        String colorSecundario = (colores != null && colores.size() > 1 && colores.get(1) != null && !colores.get(1).isBlank())
+                ? colores.get(1) : "#0D1B2A";
+        String colorTexto = (colores != null && colores.size() > 2 && colores.get(2) != null && !colores.get(2).isBlank())
+                ? colores.get(2) : "#374151";
+
+        Map<String, String> gen = obtenerDatosGenerador();
+
+        data.put("instituto", instituto);
+        data.put("institutoNombre", nombreInstituto);
+        data.put("logoBase64", obtenerLogoBase64(instituto));
+        data.put("razonSocial", instituto != null ? instituto.getRazonSocial() : null);
+        data.put("cuit", instituto != null ? instituto.getCuil() : null);
+        data.put("colorPrimario", colorPrimario);
+        data.put("colorSecundario", colorSecundario);
+        data.put("colorTexto", colorTexto);
+        data.put("generadoPorNombre", gen.get("nombre"));
+        data.put("generadoPorDni", gen.get("dni"));
+        data.put("generadoPor", gen.get("nombre") + (gen.get("dni") != null && !gen.get("dni").isBlank() ? " (DNI: " + gen.get("dni") + ")" : ""));
+    }
+
+    private String calcularMotivoBajaDemanda(OfertaAcademica oferta, int minAlumnos) {
+        if (oferta == null) return "Baja por baja demanda";
+        int inscripcionesCount = inscripcionRepository.countByOfertaAndEstadoInscripcionTrue(oferta);
+        LocalDate hoy = LocalDate.now();
+        if (oferta.getFechaInicio() != null) {
+            long diasParaInicio = java.time.temporal.ChronoUnit.DAYS.between(hoy, oferta.getFechaInicio());
+            if (diasParaInicio >= 1 && diasParaInicio <= 3 && inscripcionesCount <= minAlumnos) {
+                return "Inicio inminente (" + diasParaInicio + " días) con matrícula insuficiente (" + inscripcionesCount + " inscritos. Mínimo: " + minAlumnos + ")";
+            }
+        }
+        if (oferta.getEstado() == EstadoOferta.ENCURSO && inscripcionesCount < minAlumnos) {
+            return "Matrícula insuficiente durante el cursado (" + inscripcionesCount + " inscritos. Mínimo: " + minAlumnos + ")";
+        }
+        return "Baja por baja demanda (inscriptos: " + inscripcionesCount + ", mínimo: " + minAlumnos + ")";
+    }
+
+    private List<Map<String, Object>> obtenerBajasPorAnalisis(List<OfertaAcademica> ofertas) {
+        if (ofertas == null || ofertas.isEmpty()) return new java.util.ArrayList<>();
+        List<Long> idsFiltrados = ofertas.stream()
+            .map(OfertaAcademica::getIdOferta)
+            .toList();
+
+        Map<Long, Map<String, Object>> resultById = new java.util.LinkedHashMap<>();
+        Map<Long, OfertaAcademica> ofertasById = ofertas.stream()
+            .collect(java.util.stream.Collectors.toMap(OfertaAcademica::getIdOferta, o -> o, (a, b) -> a));
+        Instituto instituto = institutoService.obtenerInstituto();
+        int minAlumnos = instituto != null && instituto.getMinimoAlumnoBaja() != null ? instituto.getMinimoAlumnoBaja() : 5;
+
+        // 1) Bajas automáticas (cron)
+        List<AuditLog> autoLogs = auditLogService.obtenerPorAccion("BAJA_AUTOMATICA_OFERTA");
+        for (AuditLog log : autoLogs) {
+            if (log.getDetalles() == null) continue;
+            String detalles = log.getDetalles();
+            Long id = null;
+            String nombre = null;
+            String motivo = null;
+            try {
+                // Formato: ID:123 | Nombre:xxx | Motivo:yyy
+                String[] parts = detalles.split("\\|");
+                for (String part : parts) {
+                    String p = part.trim();
+                    if (p.startsWith("ID:")) {
+                        id = Long.parseLong(p.substring(3).trim());
+                    } else if (p.startsWith("Nombre:")) {
+                        nombre = p.substring(7).trim();
+                    } else if (p.startsWith("Motivo:")) {
+                        motivo = p.substring(7).trim();
+                    }
+                }
+            } catch (Exception e) {
+                // Ignorar parseos inválidos
+            }
+            if (id != null && idsFiltrados.contains(id) && !resultById.containsKey(id)) {
+                Map<String, Object> row = new java.util.HashMap<>();
+                OfertaAcademica oferta = ofertasById.get(id);
+                row.put("id", id);
+                row.put("nombre", nombre != null ? nombre : (oferta != null ? oferta.getNombre() : ("ID " + id)));
+                row.put("motivo", calcularMotivoBajaDemanda(oferta, minAlumnos));
+                resultById.put(id, row);
+            }
+        }
+
+        // 2) Bajas confirmadas manualmente desde el análisis (reportes)
+        List<AuditLog> manualLogs = auditLogService.obtenerPorAccion("DAR_DE_BAJA_OFERTAS_MANUAL");
+        Pattern pattern = Pattern.compile("BAJA APLICADA:\\s*(.*?)\\s*\\(ID:\\s*(\\d+)\\)");
+        for (AuditLog log : manualLogs) {
+            if (log.getDetalles() == null) continue;
+            String detalles = log.getDetalles();
+            Matcher matcher = pattern.matcher(detalles);
+            while (matcher.find()) {
+                String nombre = matcher.group(1).trim();
+                Long id = null;
+                try {
+                    id = Long.parseLong(matcher.group(2));
+                } catch (Exception e) {
+                    id = null;
+                }
+                if (id != null && idsFiltrados.contains(id) && !resultById.containsKey(id)) {
+                    Map<String, Object> row = new java.util.HashMap<>();
+                    OfertaAcademica oferta = ofertasById.get(id);
+                    row.put("id", id);
+                    row.put("nombre", nombre != null && !nombre.isEmpty() ? nombre : (oferta != null ? oferta.getNombre() : ("ID " + id)));
+                    row.put("motivo", calcularMotivoBajaDemanda(oferta, minAlumnos));
+                    resultById.put(id, row);
+                }
+            }
+        }
+
+        return new java.util.ArrayList<>(resultById.values());
     }
 
     /**
@@ -136,6 +355,11 @@ public class ReporteService {
                 true,
                 false);
 
+            // Mostrar valores en las etiquetas del gráfico (nombre + cantidad)
+            PiePlot plot = (PiePlot) chart.getPlot();
+            plot.setSimpleLabels(false);
+            plot.setLabelGenerator(new StandardPieSectionLabelGenerator("{0}: {1}"));
+
             BufferedImage image = chart.createBufferedImage(600, 400);
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             javax.imageio.ImageIO.write(image, "png", baos);
@@ -144,6 +368,46 @@ public class ReporteService {
             return Base64.getEncoder().encodeToString(bytes);
         } catch (Exception e) {
             e.printStackTrace();
+            return null;
+        }
+    }
+
+    /**
+     * Genera un gráfico de barras (Categorías) y lo devuelve como String Base64
+     */
+    public String generarGraficoBarrasBase64(Map<String, Number> datasetValues, String titulo) {
+        try {
+            DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+            for (Map.Entry<String, Number> entry : datasetValues.entrySet()) {
+                dataset.addValue(entry.getValue(), "Inscripciones", entry.getKey());
+            }
+
+            JFreeChart chart = ChartFactory.createBarChart(
+                    titulo,
+                    "Categoría",
+                    "Cantidad",
+                    dataset,
+                    PlotOrientation.VERTICAL,
+                    false,
+                    true,
+                    false
+            );
+
+            CategoryPlot plot = chart.getCategoryPlot();
+            NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
+            rangeAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
+            BarRenderer renderer = (BarRenderer) plot.getRenderer();
+            renderer.setDrawBarOutline(false);
+            renderer.setShadowVisible(false);
+            renderer.setItemMargin(0.05);
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            int width = 900;
+            int height = 420;
+            org.jfree.chart.ChartUtils.writeChartAsPNG(baos, chart, width, height);
+            return Base64.getEncoder().encodeToString(baos.toByteArray());
+        } catch (Exception e) {
+            log.error("Error al generar gráfico de barras", e);
             return null;
         }
     }
@@ -851,7 +1115,7 @@ public class ReporteService {
     }
 
     public ByteArrayInputStream generarComprobantePagoPDF(Pago pago) {
-        Document document = new Document(PageSize.A4);
+        Document document = new Document(PageSize.A4, 36, 36, 36, 36);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         try {
@@ -861,8 +1125,11 @@ public class ReporteService {
             // Estilos
             com.lowagie.text.Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18);
             com.lowagie.text.Font headerFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12);
-            com.lowagie.text.Font normalFont = FontFactory.getFont(FontFactory.HELVETICA, 12);
-            com.lowagie.text.Font smallFont = FontFactory.getFont(FontFactory.HELVETICA, 10);
+            com.lowagie.text.Font normalFont = FontFactory.getFont(FontFactory.HELVETICA, 11);
+            com.lowagie.text.Font smallFont = FontFactory.getFont(FontFactory.HELVETICA, 9);
+            com.lowagie.text.Font labelFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10);
+            com.lowagie.text.Font whiteSmall = FontFactory.getFont(FontFactory.HELVETICA, 9, Color.WHITE);
+            com.lowagie.text.Font whiteBold = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, Color.WHITE);
 
             // Datos del emisor (parametrizable)
             Instituto instituto = null;
@@ -878,63 +1145,166 @@ public class ReporteService {
             String razonSocial = instituto != null && instituto.getRazonSocial() != null && !instituto.getRazonSocial().isBlank()
                 ? instituto.getRazonSocial()
                 : (instituto != null && instituto.getNombreInstituto() != null ? instituto.getNombreInstituto() : "AUREA");
-            String cuil = instituto != null && instituto.getCuil() != null ? instituto.getCuil() : "N/A";
+            String nombreInstituto = instituto != null && instituto.getNombreInstituto() != null && !instituto.getNombreInstituto().isBlank()
+                ? instituto.getNombreInstituto()
+                : "Instituto";
+            String cuit = instituto != null && instituto.getCuil() != null ? instituto.getCuil() : "N/A";
             LocalDateTime inicioActividad = instituto != null ? instituto.getInicioActividad() : null;
+            Color primary = new Color(12, 24, 43);
+            Color secondary = new Color(23, 45, 84);
+            Color text = new Color(39, 53, 78);
 
-            // Título
-            Paragraph title = new Paragraph(razonSocial + " - Comprobante de Pago", titleFont);
-            title.setAlignment(Element.ALIGN_CENTER);
-            document.add(title);
-            document.add(Chunk.NEWLINE);
-            document.add(Chunk.NEWLINE);
-
-            // Datos del Emisor
-            document.add(new Paragraph("Datos del Emisor:", headerFont));
-            document.add(new Paragraph("Razón Social: " + razonSocial, normalFont));
-            document.add(new Paragraph("CUIL: " + cuil, normalFont));
-            document.add(new Paragraph("Inicio de Actividad: " + (inicioActividad != null ? inicioActividad.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : "N/A"), normalFont));
-            document.add(Chunk.NEWLINE);
-
-            // Datos del Alumno
-            document.add(new Paragraph("Datos del Alumno:", headerFont));
-            document.add(new Paragraph("Nombre: " + (pago.getUsuario() != null ? pago.getUsuario().getNombre() + " " + pago.getUsuario().getApellido() : "N/A"), normalFont));
-            document.add(new Paragraph("DNI: " + (pago.getUsuario() != null ? pago.getUsuario().getDni() : "N/A"), normalFont));
-            document.add(new Paragraph("Email: " + (pago.getEmailPagador() != null ? pago.getEmailPagador() : "N/A"), normalFont));
-            document.add(Chunk.NEWLINE);
-
-            // Datos del Pago
-            document.add(new Paragraph("Detalles de la Transacción:", headerFont));
-            
-            PdfPTable table = new PdfPTable(2);
-            table.setWidthPercentage(100);
-            table.setSpacingBefore(10f);
-            table.setSpacingAfter(10f);
-
-            addTableRow(table, "Concepto:", pago.getDescripcion() != null ? pago.getDescripcion() : "Inscripción");
-            addTableRow(table, "Oferta Académica:", pago.getOferta() != null ? pago.getOferta().getNombre() : "N/A");
-            addTableRow(table, "Referencia de Pago:", pago.getExternalReference() != null ? pago.getExternalReference() : "N/A");
-            addTableRow(table, "ID Transacción (MP):", pago.getPaymentId() != null ? pago.getPaymentId().toString() : "N/A");
-            addTableRow(table, "Método de Pago:", pago.getTipoPago() != null ? pago.getTipoPago() : "N/A");
+            LocalDateTime fechaEmision = LocalDateTime.now();
             LocalDateTime fechaPago = pago.getFechaAprobacion() != null ? pago.getFechaAprobacion() : pago.getFechaPago();
-            addTableRow(table, "Fecha de Pago:", fechaPago != null ? fechaPago.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : LocalDate.now().toString());
-            
-            // Monto destacado
-            PdfPCell cellLabel = new PdfPCell(new Phrase("Monto Pagado:", headerFont));
-            cellLabel.setBorder(0);
-            cellLabel.setPadding(5);
-            table.addCell(cellLabel);
+            String comprobanteCodigo = pago.getComprobante() != null && !pago.getComprobante().isBlank()
+                ? pago.getComprobante()
+                : "CP-" + pago.getIdPago() + "-" + fechaEmision.format(DateTimeFormatter.ofPattern("yyyyMMddHHmm"));
 
-            PdfPCell cellValue = new PdfPCell(new Phrase(formatearMontoComa(pago.getMonto()), titleFont));
-            cellValue.setBorder(0);
-            cellValue.setPadding(5);
-            table.addCell(cellValue);
+            // Header estilo ejemplo
+            PdfPTable header = new PdfPTable(new float[]{3.5f, 2.5f});
+            header.setWidthPercentage(100);
+            header.setSpacingAfter(12f);
 
-            document.add(table);
-            document.add(Chunk.NEWLINE);
+            PdfPCell headerLeft = new PdfPCell();
+            headerLeft.setBorder(0);
+            headerLeft.setPadding(12);
+            headerLeft.setBackgroundColor(primary);
 
-            // Pie de página
-            Paragraph footer = new Paragraph("Este documento es un comprobante válido de pago emitido por Aurea.", smallFont);
+            PdfPTable brand = new PdfPTable(new float[]{1f, 4f});
+            brand.setWidthPercentage(100);
+            PdfPCell brandLogo = new PdfPCell();
+            brandLogo.setBorder(0);
+            brandLogo.setPadding(2);
+            try {
+                String logoBase64 = obtenerLogoBase64(instituto);
+                if (logoBase64 != null && logoBase64.contains("base64,")) {
+                    String base64Data = logoBase64.substring(logoBase64.indexOf("base64,") + 7);
+                    byte[] logoBytes = Base64.getDecoder().decode(base64Data);
+                    com.lowagie.text.Image img = com.lowagie.text.Image.getInstance(logoBytes);
+                    img.scaleToFit(42, 42);
+                    brandLogo.addElement(img);
+                }
+            } catch (Exception ignored) {
+            }
+            brand.addCell(brandLogo);
+            PdfPCell brandText = new PdfPCell();
+            brandText.setBorder(0);
+            brandText.addElement(new Paragraph(nombreInstituto, whiteBold));
+            brandText.addElement(new Paragraph("CUIT: " + cuit, whiteSmall));
+            brand.addCell(brandText);
+            headerLeft.addElement(brand);
+            header.addCell(headerLeft);
+
+            PdfPCell headerRight = new PdfPCell();
+            headerRight.setBorder(0);
+            headerRight.setPadding(12);
+            headerRight.setBackgroundColor(primary);
+            Paragraph compTitle = new Paragraph("COMPROBANTE", whiteBold);
+            compTitle.setAlignment(Element.ALIGN_RIGHT);
+            headerRight.addElement(compTitle);
+            Paragraph compCode = new Paragraph("# " + comprobanteCodigo, whiteSmall);
+            compCode.setAlignment(Element.ALIGN_RIGHT);
+            headerRight.addElement(compCode);
+            header.addCell(headerRight);
+
+            document.add(header);
+
+            // Info bloques: emitido / detalles / estado
+            PdfPTable info = new PdfPTable(new float[]{2.4f, 2.4f, 1.2f});
+            info.setWidthPercentage(100);
+            info.setSpacingAfter(12f);
+
+            PdfPCell emitido = new PdfPCell();
+            emitido.setBorderColor(text);
+            emitido.setPadding(8);
+            Paragraph emitTitle = new Paragraph("EMITIDO PARA", headerFont);
+            emitTitle.setSpacingAfter(6f);
+            emitido.addElement(emitTitle);
+            String alumnoNombre = pago.getUsuario() != null ? pago.getUsuario().getNombre() + " " + pago.getUsuario().getApellido() : "N/A";
+            emitido.addElement(new Paragraph(alumnoNombre, normalFont));
+            emitido.addElement(new Paragraph((pago.getEmailPagador() != null ? pago.getEmailPagador() : "N/A"), smallFont));
+            emitido.addElement(new Paragraph("DNI: " + (pago.getUsuario() != null ? pago.getUsuario().getDni() : "N/A"), smallFont));
+            info.addCell(emitido);
+
+            PdfPCell detalles = new PdfPCell();
+            detalles.setBorderColor(text);
+            detalles.setPadding(8);
+            Paragraph detTitle = new Paragraph("DETALLES DEL PAGO", headerFont);
+            detTitle.setSpacingAfter(6f);
+            detalles.addElement(detTitle);
+            detalles.addElement(new Paragraph("Fecha: " + (fechaPago != null ? fechaPago.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "N/A"), smallFont));
+            detalles.addElement(new Paragraph("Emision: " + fechaEmision.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")), smallFont));
+            detalles.addElement(new Paragraph("Metodo: " + formatearMetodoPago(pago.getTipoPago()), smallFont));
+            detalles.addElement(new Paragraph("Ref: " + (pago.getExternalReference() != null ? pago.getExternalReference() : "N/A"), smallFont));
+            detalles.addElement(new Paragraph("Transaccion: " + (pago.getPaymentId() != null ? pago.getPaymentId().toString() : "N/A"), smallFont));
+            info.addCell(detalles);
+
+            PdfPCell estado = new PdfPCell();
+            estado.setBorderColor(text);
+            estado.setPadding(8);
+            PdfPTable badgeTable = new PdfPTable(1);
+            badgeTable.setWidthPercentage(100);
+            PdfPCell badge = new PdfPCell(new Phrase("PAGADO", whiteBold));
+            badge.setBorder(0);
+            badge.setBackgroundColor(secondary);
+            badge.setHorizontalAlignment(Element.ALIGN_CENTER);
+            badge.setPadding(6);
+            badgeTable.addCell(badge);
+            estado.addElement(badgeTable);
+            info.addCell(estado);
+
+            document.add(info);
+
+            // Datos del instituto antes de la descripcion
+            PdfPTable institutoTable = new PdfPTable(2);
+            institutoTable.setWidthPercentage(100);
+            institutoTable.setSpacingAfter(12f);
+            addTableRow(institutoTable, "Razon Social:", razonSocial);
+            addTableRow(institutoTable, "CUIT:", cuit);
+            addTableRow(institutoTable, "Inicio Actividad:", inicioActividad != null ? inicioActividad.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : "N/A");
+            Paragraph instTitle = new Paragraph("DATOS DEL INSTITUTO", headerFont);
+            instTitle.setSpacingAfter(6f);
+            document.add(instTitle);
+            document.add(institutoTable);
+
+            // Tabla de conceptos
+            PdfPTable items = new PdfPTable(new float[]{4.2f, 1f, 1.4f, 1.4f});
+            items.setWidthPercentage(100);
+            items.setSpacingAfter(12f);
+            addHeaderCell(items, "Descripcion", secondary, Color.WHITE);
+            addHeaderCell(items, "Cant.", secondary, Color.WHITE);
+            addHeaderCell(items, "Unitario", secondary, Color.WHITE);
+            addHeaderCell(items, "Total", secondary, Color.WHITE);
+            String concepto = pago.getDescripcion() != null ? pago.getDescripcion() : "Inscripcion";
+            String oferta = pago.getOferta() != null ? " (" + pago.getOferta().getNombre() + ")" : "";
+            addBodyCell(items, concepto + oferta, normalFont);
+            addBodyCell(items, "1", normalFont, Element.ALIGN_CENTER);
+            addBodyCell(items, formatearMontoComa(pago.getMonto()), normalFont, Element.ALIGN_RIGHT);
+            addBodyCell(items, formatearMontoComa(pago.getMonto()), normalFont, Element.ALIGN_RIGHT);
+            document.add(items);
+
+            // Totales
+            PdfPTable totals = new PdfPTable(new float[]{4f, 2f});
+            totals.setWidthPercentage(100);
+            addTotalRow(totals, "Subtotal", formatearMontoComa(pago.getMonto()), normalFont);
+            addTotalRow(totals, "Impuestos", "$ 0,00", normalFont);
+            addTotalRow(totals, "Descuento", "$ 0,00", normalFont);
+            PdfPCell totalLabel = new PdfPCell(new Phrase("Total", headerFont));
+            totalLabel.setBorder(0);
+            totalLabel.setHorizontalAlignment(Element.ALIGN_RIGHT);
+            totalLabel.setPadding(6);
+            PdfPCell totalValue = new PdfPCell(new Phrase(formatearMontoComa(pago.getMonto()), titleFont));
+            totalValue.setHorizontalAlignment(Element.ALIGN_RIGHT);
+            totalValue.setBorder(0);
+            totalValue.setPadding(6);
+            totals.addCell(totalLabel);
+            totals.addCell(totalValue);
+            document.add(totals);
+
+            // Footer
+            Paragraph footer = new Paragraph("Comprobante generado automaticamente por " + nombreInstituto + ".", smallFont);
             footer.setAlignment(Element.ALIGN_CENTER);
+            footer.setSpacingBefore(16f);
             document.add(footer);
 
             document.close();
@@ -1019,6 +1389,8 @@ public class ReporteService {
         data.put("detalleCuotas", detalleCuotasList); // Pasamos la nueva lista al contexto
         data.put("chartImage", chartBase64);
         data.put("estilos", cargarEstilos());
+        data.put("mostrarFiscalEnHeader", true);
+        agregarDatosBaseReporte(data);
 
         return generarReportePdfDesdePlantilla("reporte/reportePagos", data);
     }
@@ -1069,6 +1441,49 @@ public class ReporteService {
 
         String chartBase64 = generarGraficoTortaBase64(datosGrafico, "Distribución por Tipo");
 
+        // --- Inscripciones por Categoría ---
+        Map<String, Long> inscripcionesPorCategoria = new LinkedHashMap<>();
+        List<Categoria> categoriasSistema = categoriaRepository.findAll();
+        for (Categoria categoria : categoriasSistema) {
+            if (categoria != null && categoria.getNombre() != null && !categoria.getNombre().isBlank()) {
+                inscripcionesPorCategoria.put(categoria.getNombre(), 0L);
+            }
+        }
+        for (OfertaAcademica oferta : ofertas) {
+            long insc = oferta.getInscripciones() != null ? oferta.getInscripciones().size() : 0;
+            List<Categoria> categorias = oferta.getCategorias();
+            if (categorias == null || categorias.isEmpty()) {
+                inscripcionesPorCategoria.merge("Sin categorías", insc, Long::sum);
+                continue;
+            }
+            for (Categoria categoria : categorias) {
+                String nombre = (categoria != null && categoria.getNombre() != null && !categoria.getNombre().isBlank())
+                        ? categoria.getNombre()
+                        : "Sin categoría";
+                inscripcionesPorCategoria.merge(nombre, insc, Long::sum);
+            }
+        }
+
+        List<Map<String, Object>> inscripcionesPorCategoriaList = inscripcionesPorCategoria.entrySet().stream()
+                .sorted((a, b) -> {
+                    int cmp = Long.compare(b.getValue(), a.getValue());
+                    if (cmp != 0) return cmp;
+                    return a.getKey().compareToIgnoreCase(b.getKey());
+                })
+                .map(e -> {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("categoria", e.getKey());
+                    m.put("inscritos", e.getValue());
+                    return m;
+                })
+                .collect(Collectors.toList());
+
+        Map<String, Number> inscripcionesPorCategoriaChart = new LinkedHashMap<>();
+        for (Map.Entry<String, Long> entry : inscripcionesPorCategoria.entrySet()) {
+            inscripcionesPorCategoriaChart.put(entry.getKey(), entry.getValue());
+        }
+        String chartCategoriasBase64 = generarGraficoBarrasBase64(inscripcionesPorCategoriaChart, "Inscripciones por Categoría");
+
         // --- Contexto ---
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
         
@@ -1102,6 +1517,12 @@ public class ReporteService {
         data.put("ingresosEstimados", String.format("$ %.2f", ingresosEstimados));
         data.put("chartImage", chartBase64);
         data.put("estilos", cargarEstilos());
+        List<Map<String, Object>> bajasAutomaticas = obtenerBajasPorAnalisis(ofertas);
+        data.put("bajasAutomaticas", bajasAutomaticas);
+        data.put("bajasAutomaticasCount", bajasAutomaticas.size());
+        data.put("inscripcionesPorCategoria", inscripcionesPorCategoriaList);
+        data.put("chartCategorias", chartCategoriasBase64);
+        agregarDatosBaseReporte(data);
 
         return generarReportePdfDesdePlantilla("reporte/reporteOfertas", data);
     }
@@ -1173,8 +1594,56 @@ public class ReporteService {
         data.put("nuevosIngresos", nuevosIngresos);
         data.put("chartImage", chartBase64);
         data.put("estilos", cargarEstilos());
+        agregarDatosBaseReporte(data);
 
         return generarReportePdfDesdePlantilla("reporte/reporteUsuarios", data);
+    }
+
+    public ByteArrayInputStream generarReporteUsuariosExcel(List<Usuario> usuarios) throws IOException {
+        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet("Usuarios");
+
+            String[] columns = {"ID", "DNI", "Nombre", "Apellido", "Correo", "Teléfono", "Roles", "Estado", "Fecha Registro"};
+            Row headerRow = sheet.createRow(0);
+
+            CellStyle headerStyle = workbook.createCellStyle();
+            org.apache.poi.ss.usermodel.Font font = workbook.createFont();
+            font.setBold(true);
+            headerStyle.setFont(font);
+
+            for (int i = 0; i < columns.length; i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(columns[i]);
+                cell.setCellStyle(headerStyle);
+            }
+
+            int rowIdx = 1;
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
+            for (Usuario usuario : usuarios) {
+                Row row = sheet.createRow(rowIdx++);
+                row.createCell(0).setCellValue(usuario.getId() != null ? usuario.getId().toString() : "");
+                row.createCell(1).setCellValue(usuario.getDni() != null ? usuario.getDni() : "");
+                row.createCell(2).setCellValue(usuario.getNombre() != null ? usuario.getNombre() : "");
+                row.createCell(3).setCellValue(usuario.getApellido() != null ? usuario.getApellido() : "");
+                row.createCell(4).setCellValue(usuario.getCorreo() != null ? usuario.getCorreo() : "");
+                row.createCell(5).setCellValue(usuario.getNumTelefono() != null ? usuario.getNumTelefono() : "");
+
+                String roles = usuario.getRoles() != null && !usuario.getRoles().isEmpty()
+                    ? usuario.getRoles().stream().map(r -> r.getNombre()).collect(Collectors.joining(", "))
+                    : "";
+                row.createCell(6).setCellValue(roles);
+                row.createCell(7).setCellValue(usuario.isEstado() ? "ACTIVO" : "INACTIVO");
+                row.createCell(8).setCellValue(usuario.getFechaRegistro() != null ? usuario.getFechaRegistro().format(formatter) : "");
+            }
+
+            for (int i = 0; i < columns.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
+            workbook.write(out);
+            return new ByteArrayInputStream(out.toByteArray());
+        }
     }
 
 
@@ -1191,6 +1660,66 @@ public class ReporteService {
         cell2.setBorder(0);
         cell2.setPadding(5);
         table.addCell(cell2);
+    }
+
+    private Color parseHexColor(String hex, Color fallback) {
+        if (hex == null || hex.isBlank()) return fallback;
+        String h = hex.trim().replace("#", "");
+        if (h.length() != 6) return fallback;
+        try {
+            int r = Integer.parseInt(h.substring(0, 2), 16);
+            int g = Integer.parseInt(h.substring(2, 4), 16);
+            int b = Integer.parseInt(h.substring(4, 6), 16);
+            return new Color(r, g, b);
+        } catch (Exception e) {
+            return fallback;
+        }
+    }
+
+    private void addHeaderCell(PdfPTable table, String text, Color bg, Color fg) {
+        com.lowagie.text.Font font = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, fg);
+        PdfPCell cell = new PdfPCell(new Phrase(text, font));
+        cell.setBackgroundColor(bg);
+        cell.setHorizontalAlignment(Element.ALIGN_CENTER);
+        cell.setPadding(6);
+        table.addCell(cell);
+    }
+
+    private void addBodyCell(PdfPTable table, String text, com.lowagie.text.Font font) {
+        addBodyCell(table, text, font, Element.ALIGN_LEFT);
+    }
+
+    private void addBodyCell(PdfPTable table, String text, com.lowagie.text.Font font, int align) {
+        PdfPCell cell = new PdfPCell(new Phrase(text, font));
+        cell.setHorizontalAlignment(align);
+        cell.setPadding(6);
+        table.addCell(cell);
+    }
+
+    private void addTotalRow(PdfPTable table, String label, String value, com.lowagie.text.Font font) {
+        PdfPCell cellLabel = new PdfPCell(new Phrase(label, font));
+        cellLabel.setBorder(0);
+        cellLabel.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        cellLabel.setPadding(4);
+        PdfPCell cellValue = new PdfPCell(new Phrase(value, font));
+        cellValue.setBorder(0);
+        cellValue.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        cellValue.setPadding(4);
+        table.addCell(cellLabel);
+        table.addCell(cellValue);
+    }
+
+    private String formatearMetodoPago(String tipoPago) {
+        if (tipoPago == null || tipoPago.isBlank()) return "N/A";
+        String t = tipoPago.trim().toLowerCase(Locale.ROOT);
+        return switch (t) {
+            case "account_money" -> "Transferencia Mercado Pago";
+            case "credit_card" -> "Tarjeta de Credito";
+            case "debit_card" -> "Tarjeta de Debito";
+            case "bank_transfer" -> "Transferencia Bancaria";
+            case "atm" -> "Pago por Cajero";
+            default -> tipoPago;
+        };
     }
 
     private String formatearMontoComa(java.math.BigDecimal monto) {
