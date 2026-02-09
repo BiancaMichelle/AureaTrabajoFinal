@@ -108,6 +108,7 @@
             filter: blur(1.5px);
             user-select: none;
         }
+
         .mora-locked {
             overflow: hidden;
         }
@@ -160,8 +161,15 @@
         }
 
         @keyframes slideInRight {
-            from { transform: translateX(120%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
+            from {
+                transform: translateX(120%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
         }
 
         .edit-icon {
@@ -339,7 +347,8 @@
         }
 
         body {
-            background-color: #f2f2f2; /* Light gray background like Moodle */
+            background-color: #f2f2f2;
+            /* Light gray background like Moodle */
             color: var(--moodle-text);
         }
 
@@ -351,7 +360,7 @@
             margin-bottom: 2rem;
         }
 
-        .breadcrumb-item + .breadcrumb-item::before {
+        .breadcrumb-item+.breadcrumb-item::before {
             content: "/";
             color: #6c757d;
         }
@@ -360,7 +369,7 @@
         .course-header-card {
             background: white;
             border-radius: 0.5rem;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
             padding: 2rem;
             margin-bottom: 2rem;
             border-left: 5px solid var(--moodle-primary);
@@ -372,12 +381,12 @@
             border: 1px solid var(--moodle-border);
             border-radius: 0.5rem;
             margin-bottom: 1.5rem;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
             transition: all 0.2s ease;
         }
 
         .moodle-module:hover {
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
         }
 
         .module-header {
@@ -430,12 +439,35 @@
             flex-shrink: 0;
         }
 
-        .activity-icon-container.pdf { background-color: #ffebee; color: #c62828; }
-        .activity-icon-container.video { background-color: #e3f2fd; color: #1565c0; }
-        .activity-icon-container.quiz { background-color: #f3e5f5; color: #7b1fa2; }
-        .activity-icon-container.assignment { background-color: #e8f5e9; color: #2e7d32; }
-        .activity-icon-container.folder { background-color: #fff8e1; color: #fbc02d; }
-        .activity-icon-container.generic { background-color: #eceff1; color: #546e7a; }
+        .activity-icon-container.pdf {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+
+        .activity-icon-container.video {
+            background-color: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .activity-icon-container.quiz {
+            background-color: #f3e5f5;
+            color: #7b1fa2;
+        }
+
+        .activity-icon-container.assignment {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .activity-icon-container.folder {
+            background-color: #fff8e1;
+            color: #fbc02d;
+        }
+
+        .activity-icon-container.generic {
+            background-color: #eceff1;
+            color: #546e7a;
+        }
 
         .activity-icon {
             font-size: 1.5rem;
@@ -466,7 +498,8 @@
         .edit-controls {
             display: flex;
             gap: 0.5rem;
-            opacity: 0; /* Hidden by default */
+            opacity: 0;
+            /* Hidden by default */
             transition: opacity 0.2s;
         }
 
@@ -549,7 +582,7 @@
                     <textarea name="descripcion" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
                         rows="3" placeholder="Describe el contenido del módulo..." required></textarea>
                 </div>
-                
+
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700">
                         <i class="fas fa-bullseye me-1"></i>Objetivos
@@ -616,8 +649,7 @@
     </div>
 
     <!-- Modal para editar módulo -->
-    <div id="editModuleModal"
-        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div id="editModuleModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
         <div class="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div class="flex items-start justify-between mb-4">
                 <h3 class="text-lg font-semibold">
@@ -651,7 +683,7 @@
                         class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
                         placeholder="Describe el contenido del módulo"></textarea>
                 </div>
-                
+
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700">
                         <i class="fas fa-bullseye me-1"></i>Objetivos
@@ -711,8 +743,7 @@
                         class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md">
                         <i class="fas fa-times me-1"></i>Cancelar
                     </button>
-                    <button type="submit"
-                        class="px-4 py-2 bg-customBlue text-white rounded-md hover:bg-blue-700">
+                    <button type="submit" class="px-4 py-2 bg-customBlue text-white rounded-md hover:bg-blue-700">
                         <i class="fas fa-save me-1"></i>Actualizar módulo
                     </button>
                 </div>
@@ -721,7 +752,8 @@
     </div>
 
     <!-- Modal de confirmación para eliminar -->
-    <div id="deleteConfirmModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div id="deleteConfirmModal"
+        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
         <div class="bg-white rounded-lg p-6 w-full max-w-md">
             <div class="flex items-start mb-4">
                 <div class="flex-shrink-0 w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mr-4">
@@ -730,7 +762,7 @@
                 <div class="flex-1">
                     <h3 class="text-lg font-semibold text-gray-900 mb-2">¿Estás seguro?</h3>
                     <p class="text-sm text-gray-600">
-                        ¿Estás seguro de que deseas eliminar 
+                        ¿Estás seguro de que deseas eliminar
                         <span id="deleteItemType">este elemento</span>
                         "<span id="deleteItemName" class="font-semibold"></span>"?
                         Esta acción no se puede deshacer.
@@ -754,40 +786,47 @@
     <header class="bg-customGrayDark text-white p-4 py-8 shadow-md relative z-10">
         <div class="max-w-7xl mx-auto flex justify-between items-center relative gap-4">
             <div>
-                 <h1 class="text-3xl font-bold tracking-wider" th:text="${curso.nombre}">IMAGEN DEL CURSO</h1>
-                 <p class="text-gray-300 text-sm mt-1" th:text="${curso.descripcion}">Descripción</p>
+                <h1 class="text-3xl font-bold tracking-wider" th:text="${curso.nombre}">IMAGEN DEL CURSO</h1>
+                <p class="text-gray-300 text-sm mt-1" th:text="${curso.descripcion}">Descripción</p>
             </div>
-            
+
             <div class="flex items-center gap-4">
                 <!-- Info Fechas y Horarios -->
-                <div class="hidden md:flex flex-col bg-gray-800/60 backdrop-blur-sm px-4 py-2 rounded-lg border border-gray-600 text-xs shadow-sm">
+                <div
+                    class="hidden md:flex flex-col bg-gray-800/60 backdrop-blur-sm px-4 py-2 rounded-lg border border-gray-600 text-xs shadow-sm">
                     <div class="flex items-center gap-2 mb-1" title="Vigencia del Cursado">
                         <i class="fas fa-calendar-alt text-green-400"></i>
                         <span class="font-mono text-gray-200">
-                            <span th:text="${#temporals.format(curso.fechaInicio, 'dd/MM/yyyy')}">01/01</span> 
-                            <span class="mx-1 text-gray-500">➜</span> 
+                            <span th:text="${#temporals.format(curso.fechaInicio, 'dd/MM/yyyy')}">01/01</span>
+                            <span class="mx-1 text-gray-500">➜</span>
                             <span th:text="${#temporals.format(curso.fechaFin, 'dd/MM/yyyy')}">31/12</span>
                         </span>
                     </div>
-                    <div th:if="${not #lists.isEmpty(curso.horarios)}" class="flex items-start gap-2 border-t border-gray-700 pt-1 mt-1">
+                    <div th:if="${not #lists.isEmpty(curso.horarios)}"
+                        class="flex items-start gap-2 border-t border-gray-700 pt-1 mt-1">
                         <i class="fas fa-clock text-blue-400 mt-0.5"></i>
                         <div class="flex flex-col gap-0.5">
                             <span th:each="h : ${curso.horarios}" class="font-mono text-gray-300">
                                 <span th:text="${#strings.substring(h.dia, 0, 3)}">LUN</span>
-                                <span th:text="|${#strings.substring(h.horaInicio, 0, 5)} - ${#strings.substring(h.horaFin, 0, 5)}|">09:00 - 11:00</span>
+                                <span
+                                    th:text="|${#strings.substring(h.horaInicio, 0, 5)} - ${#strings.substring(h.horaFin, 0, 5)}|">09:00
+                                    - 11:00</span>
                             </span>
                         </div>
                     </div>
                 </div>
 
                 <div th:if="${puedeModificar}" class="flex items-center gap-2 flex-shrink-0">
-                    <form th:action="@{/docente/aula/{ofertaId}/analizar-rendimiento(ofertaId=${curso.idOferta})}" method="post" class="inline">
-                        <button type="submit" class="bg-yellow-600/80 hover:bg-yellow-600 text-white px-4 py-2 rounded-md shadow transition-colors text-sm font-medium flex items-center border border-yellow-500/50"
-                                onclick="return confirm('¿Estás seguro de iniciar el análisis de rendimiento? Se enviarán alertas a los docentes.')">
+                    <form th:action="@{/docente/aula/{ofertaId}/analizar-rendimiento(ofertaId=${curso.idOferta})}"
+                        method="post" class="inline">
+                        <button type="submit"
+                            class="bg-yellow-600/80 hover:bg-yellow-600 text-white px-4 py-2 rounded-md shadow transition-colors text-sm font-medium flex items-center border border-yellow-500/50"
+                            onclick="return confirm('¿Estás seguro de iniciar el análisis de rendimiento? Se enviarán alertas a los docentes.')">
                             <i class="fas fa-chart-line me-2"></i> Analizar
                         </button>
                     </form>
-                    <button id="modifyCourseButton" class="bg-blue-600/80 hover:bg-blue-600 text-white px-4 py-2 rounded-md shadow transition-colors text-sm font-medium flex items-center border border-blue-500/50">
+                    <button id="modifyCourseButton"
+                        class="bg-blue-600/80 hover:bg-blue-600 text-white px-4 py-2 rounded-md shadow transition-colors text-sm font-medium flex items-center border border-blue-500/50">
                         <i class="fas fa-edit me-2"></i> Activar Edición
                     </button>
                 </div>
@@ -801,32 +840,34 @@
             <div class="flex items-center space-x-6">
                 <!-- Ícono de búsqueda -->
                 <div class="py-3 px-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                 </div>
-                
+
                 <!-- 1. Contenido (Activo) -->
                 <a href="#" class="py-3 px-1 border-b-2 border-white text-white font-semibold text-sm nav-tab-active">
                     Contenido
                 </a>
-                
+
                 <!-- 2. Participantes (Solo Docente/Admin) -->
                 <a sec:authorize="hasAnyAuthority('DOCENTE', 'ADMIN')"
-                   th:href="@{/aula/oferta/{id}/participantes(id=${curso.idOferta})}" 
-                   class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
+                    th:href="@{/aula/oferta/{id}/participantes(id=${curso.idOferta})}"
+                    class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
                     Participantes
                 </a>
 
                 <!-- 3. Asistencia -->
-                <a th:href="@{/aula/oferta/{id}/asistencia(id=${curso.idOferta})}" 
-                   class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
+                <a th:href="@{/aula/oferta/{id}/asistencia(id=${curso.idOferta})}"
+                    class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
                     Asistencia
                 </a>
 
                 <!-- 4. Calificaciones -->
-                <a th:href="@{/aula/oferta/{id}/calificaciones(id=${curso.idOferta})}" 
-                   class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
+                <a th:href="@{/aula/oferta/{id}/calificaciones(id=${curso.idOferta})}"
+                    class="py-3 px-1 border-b-2 border-transparent text-gray-100 hover:border-gray-300 hover:text-white font-medium text-sm transition-colors duration-200 nav-tab-inactive">
                     Calificaciones
                 </a>
 
@@ -842,10 +883,10 @@
 
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                
+
                 <!-- Columna Principal (Contenido) -->
                 <div class="lg:col-span-3">
-                    
+
                     <!-- Old Course Header Removed -->
 
                     <!-- Navegación de Gestión (Docente) - Removed as integrated in Top Nav -->
@@ -859,8 +900,7 @@
                     <!-- Lista de Módulos -->
                     <div id="courseContent">
                         <div th:each="modulo, moduloStat : ${modulos}" class="moodle-module editable-block"
-                            th:data-modulo-id="${modulo.idModulo}"
-                            th:data-modulo-nombre="${modulo.nombre}"
+                            th:data-modulo-id="${modulo.idModulo}" th:data-modulo-nombre="${modulo.nombre}"
                             th:data-modulo-descripcion="${modulo.descripcion != null ? modulo.descripcion : ''}"
                             th:data-modulo-objetivos="${modulo.objetivos != null ? modulo.objetivos : ''}"
                             th:data-modulo-temario="${modulo.temario != null ? modulo.temario : ''}"
@@ -868,28 +908,30 @@
                             th:data-modulo-inicio="${#temporals.format(modulo.fechaInicioModulo, 'yyyy-MM-dd')}"
                             th:data-modulo-fin="${#temporals.format(modulo.fechaFinModulo, 'yyyy-MM-dd')}"
                             th:data-modulo-visible="${modulo.visibilidad != null ? modulo.visibilidad : false}">
-                            
+
                             <!-- Cabecera del Módulo -->
                             <div class="module-header">
                                 <div>
                                     <h3 class="module-title" th:text="${modulo.nombre}">Módulo 1</h3>
-                                    <span class="text-xs text-gray-500 font-medium uppercase tracking-wider" 
-                                          th:text="${#temporals.format(modulo.fechaInicioModulo, 'dd/MM/yyyy')} + ' - ' + ${#temporals.format(modulo.fechaFinModulo, 'dd/MM/yyyy')}">
+                                    <span class="text-xs text-gray-500 font-medium uppercase tracking-wider"
+                                        th:text="${#temporals.format(modulo.fechaInicioModulo, 'dd/MM/yyyy')} + ' - ' + ${#temporals.format(modulo.fechaFinModulo, 'dd/MM/yyyy')}">
                                         Fechas
                                     </span>
                                 </div>
-                                <button type="button" class="module-visibility-toggle text-gray-500 hover:text-blue-600" 
+                                <button type="button" class="module-visibility-toggle text-gray-500 hover:text-blue-600"
                                     th:if="${puedeModificar}"
                                     th:attr="data-visible=${modulo.visibilidad != null ? modulo.visibilidad : false}">
-                                    <i class="fas" th:classappend="${modulo.visibilidad != null ? (modulo.visibilidad ? ' fa-eye' : ' fa-eye-slash') : ' fa-eye-slash'}"></i>
+                                    <i class="fas"
+                                        th:classappend="${modulo.visibilidad != null ? (modulo.visibilidad ? ' fa-eye' : ' fa-eye-slash') : ' fa-eye-slash'}"></i>
                                 </button>
                                 <div class="edit-controls">
-                                    <button type="button" class="edit-icon text-blue-600 hover:text-blue-800" data-edit-type="module"
-                                        th:data-modulo-id="${modulo.idModulo}">
+                                    <button type="button" class="edit-icon text-blue-600 hover:text-blue-800"
+                                        data-edit-type="module" th:data-modulo-id="${modulo.idModulo}">
                                         <i class="fas fa-pen"></i>
                                     </button>
-                                    <button type="button" class="delete-icon text-red-500 hover:text-red-700" data-delete-type="modulo"
-                                        th:data-modulo-id="${modulo.idModulo}" th:data-modulo-nombre="${modulo.nombre}">
+                                    <button type="button" class="delete-icon text-red-500 hover:text-red-700"
+                                        data-delete-type="modulo" th:data-modulo-id="${modulo.idModulo}"
+                                        th:data-modulo-nombre="${modulo.nombre}">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </div>
@@ -898,71 +940,88 @@
                             <div class="module-content">
                                 <!-- Metadata Módulo (Top) -->
                                 <div class="bg-blue-50/50 rounded-lg p-4 mb-6 border border-blue-100"
-                                     th:if="${(modulo.descripcion != null and !modulo.descripcion.isEmpty()) or (modulo.objetivos != null and !modulo.objetivos.isEmpty()) or (modulo.fechaInicioModulo != null)}">
-                                    
-                                    <div th:if="${modulo.descripcion != null and !modulo.descripcion.isEmpty()}" class="mb-3">
-                                        <h6 class="text-xs font-bold text-gray-700 uppercase mb-1 flex items-center gap-2">
+                                    th:if="${(modulo.descripcion != null and !modulo.descripcion.isEmpty()) or (modulo.objetivos != null and !modulo.objetivos.isEmpty()) or (modulo.fechaInicioModulo != null)}">
+
+                                    <div th:if="${modulo.descripcion != null and !modulo.descripcion.isEmpty()}"
+                                        class="mb-3">
+                                        <h6
+                                            class="text-xs font-bold text-gray-700 uppercase mb-1 flex items-center gap-2">
                                             <i class="fas fa-info-circle text-blue-500"></i> Descripción
                                         </h6>
-                                        <p class="text-gray-600 text-sm leading-relaxed" th:text="${modulo.descripcion}"></p>
-                                    </div>
-                                    
-                                    <div th:if="${modulo.objetivos != null and !modulo.objetivos.isEmpty()}" class="mb-3">
-                                        <h6 class="text-xs font-bold text-gray-700 uppercase mb-1 flex items-center gap-2">
-                                            <i class="fas fa-bullseye text-blue-500"></i> Objetivos
-                                        </h6>
-                                        <div class="text-gray-600 text-sm leading-relaxed" th:utext="${modulo.objetivos}"></div>
+                                        <p class="text-gray-600 text-sm leading-relaxed"
+                                            th:text="${modulo.descripcion}"></p>
                                     </div>
 
-                                    <div th:if="${modulo.fechaInicioModulo != null}" class="flex items-center gap-2 text-xs text-gray-500 pt-2 border-t border-blue-100 mt-2">
+                                    <div th:if="${modulo.objetivos != null and !modulo.objetivos.isEmpty()}"
+                                        class="mb-3">
+                                        <h6
+                                            class="text-xs font-bold text-gray-700 uppercase mb-1 flex items-center gap-2">
+                                            <i class="fas fa-bullseye text-blue-500"></i> Objetivos
+                                        </h6>
+                                        <div class="text-gray-600 text-sm leading-relaxed"
+                                            th:utext="${modulo.objetivos}"></div>
+                                    </div>
+
+                                    <div th:if="${modulo.fechaInicioModulo != null}"
+                                        class="flex items-center gap-2 text-xs text-gray-500 pt-2 border-t border-blue-100 mt-2">
                                         <i class="far fa-calendar-alt text-blue-500"></i>
                                         <span class="font-medium">Vigencia:</span>
-                                        <span th:text="${#temporals.format(modulo.fechaInicioModulo, 'dd/MM/yyyy')}"></span>
+                                        <span
+                                            th:text="${#temporals.format(modulo.fechaInicioModulo, 'dd/MM/yyyy')}"></span>
                                         <span th:if="${modulo.fechaFinModulo != null}" class="mx-1">-</span>
-                                        <span th:if="${modulo.fechaFinModulo != null}" th:text="${#temporals.format(modulo.fechaFinModulo, 'dd/MM/yyyy')}"></span>
+                                        <span th:if="${modulo.fechaFinModulo != null}"
+                                            th:text="${#temporals.format(modulo.fechaFinModulo, 'dd/MM/yyyy')}"></span>
                                     </div>
                                 </div>
 
                                 <!-- Clases -->
                                 <div th:if="${not #lists.isEmpty(modulo.clases)}" class="mb-6">
-                                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 ml-2">Clases en Vivo</h4>
+                                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 ml-2">
+                                        Clases en Vivo</h4>
                                     <div class="space-y-2">
                                         <div th:each="clase : ${modulo.clases}" class="activity-item editable-block"
-                                            th:data-clase-id="${clase.idClase}"
-                                            th:data-clase-titulo="${clase.titulo}"
+                                            th:data-clase-id="${clase.idClase}" th:data-clase-titulo="${clase.titulo}"
                                             th:data-clase-descripcion="${clase.descripcion}"
                                             th:data-clase-inicio="${#temporals.format(clase.inicio, 'yyyy-MM-dd''T''HH:mm')}"
                                             th:data-clase-fin="${#temporals.format(clase.fin, 'yyyy-MM-dd''T''HH:mm')}">
-                                            
+
                                             <div class="activity-icon-container video">
                                                 <i class="fas fa-video activity-icon"></i>
                                             </div>
-                                            
+
                                             <div class="flex-1 activity-details">
                                                 <div class="flex justify-between items-start">
                                                     <div>
                                                         <h5 th:text="${clase.titulo}">Título Clase</h5>
                                                         <p th:text="${clase.descripcion}">Descripción</p>
                                                         <div class="activity-meta">
-                                                            <span><i class="far fa-calendar me-1"></i> <span th:text="${#temporals.format(clase.inicio, 'dd/MM/yyyy HH:mm')}"></span></span>
-                                                            <span th:if="${clase.meetingUrl}" class="text-green-600 font-medium"><i class="fas fa-circle text-[8px] me-1"></i> En vivo</span>
+                                                            <span><i class="far fa-calendar me-1"></i> <span
+                                                                    th:text="${#temporals.format(clase.inicio, 'dd/MM/yyyy HH:mm')}"></span></span>
+                                                            <span th:if="${clase.meetingUrl}"
+                                                                class="text-green-600 font-medium"><i
+                                                                    class="fas fa-circle text-[8px] me-1"></i> En
+                                                                vivo</span>
                                                         </div>
                                                     </div>
-                                                    <a href="#" 
-                                                       th:data-id="${clase.idClase}"
-                                                       th:data-titulo="${clase.titulo}"
-                                                       onclick="iniciarIngresoClase(this.getAttribute('data-id'), this.getAttribute('data-titulo')); return false;"
-                                                       class="btn btn-sm rounded-pill px-3"
-                                                       th:classappend="${docente != null} ? 'btn-primary text-white' : 'btn-outline-primary'"
-                                                       th:text="${docente != null} ? 'Iniciar Clase' : 'Entrar'">
+                                                    <a href="#" th:data-id="${clase.idClase}"
+                                                        th:data-titulo="${clase.titulo}"
+                                                        onclick="iniciarIngresoClase(this.getAttribute('data-id'), this.getAttribute('data-titulo')); return false;"
+                                                        class="btn btn-sm rounded-pill px-3"
+                                                        th:classappend="${docente != null} ? 'btn-primary text-white' : 'btn-outline-primary'"
+                                                        th:text="${docente != null} ? 'Iniciar Clase' : 'Entrar'">
                                                         Entrar
                                                     </a>
                                                 </div>
                                             </div>
 
                                             <div class="edit-controls ml-3">
-                                                <button type="button" class="edit-icon text-blue-600" data-edit-type="clase" th:data-clase-id="${clase.idClase}"><i class="fas fa-pen"></i></button>
-                                                <button type="button" class="delete-icon text-red-500" data-delete-type="clase" th:data-clase-id="${clase.idClase}" th:data-clase-nombre="${clase.titulo}"><i class="fas fa-trash"></i></button>
+                                                <button type="button" class="edit-icon text-blue-600"
+                                                    data-edit-type="clase" th:data-clase-id="${clase.idClase}"><i
+                                                        class="fas fa-pen"></i></button>
+                                                <button type="button" class="delete-icon text-red-500"
+                                                    data-delete-type="clase" th:data-clase-id="${clase.idClase}"
+                                                    th:data-clase-nombre="${clase.titulo}"><i
+                                                        class="fas fa-trash"></i></button>
                                             </div>
                                         </div>
                                     </div>
@@ -970,7 +1029,8 @@
 
                                 <!-- Actividades -->
                                 <div th:if="${not #lists.isEmpty(modulo.actividades)}">
-                                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 ml-2">Recursos y Actividades</h4>
+                                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 ml-2">
+                                        Recursos y Actividades</h4>
                                     <div class="space-y-2">
                                         <div th:each="actividad : ${modulo.actividades}"
                                             th:if="${actividad instanceof T(com.example.demo.model.Material) ? actividad.carpeta == null : true}"
@@ -984,7 +1044,7 @@
                                             th:data-actividad-url="${actividad.urlActividad}"
                                             th:data-actividad-apertura="${actividad.fechaAperturaActividad != null ? #temporals.format(actividad.fechaAperturaActividad, 'yyyy-MM-dd''T''HH:mm:ss') : ''}"
                                             th:data-actividad-apertura-text="${actividad.fechaAperturaActividad != null ? #temporals.format(actividad.fechaAperturaActividad, 'dd/MM/yyyy HH:mm') : ''}">
-                                            
+
                                             <!-- Icono Dinámico -->
                                             <div class="activity-icon-container"
                                                 th:if="${!(actividad instanceof T(com.example.demo.model.Recurso) and actividad.tipo.name() == 'TEXTO')}"
@@ -993,7 +1053,7 @@
                                                                  (actividad instanceof T(com.example.demo.model.Carpeta) ? 'folder' : 
                                                                  (actividad instanceof T(com.example.demo.model.Recurso) and actividad.tipo.name() == 'ENLACE' ? 'generic' : 'pdf')))}">
                                                 <i class="fas"
-                                                   th:classappend="${actividad instanceof T(com.example.demo.model.Examen) ? 'fa-clipboard-check' : 
+                                                    th:classappend="${actividad instanceof T(com.example.demo.model.Examen) ? 'fa-clipboard-check' : 
                                                                     (actividad instanceof T(com.example.demo.model.Tarea) ? 'fa-tasks' : 
                                                                     (actividad instanceof T(com.example.demo.model.Carpeta) ? 'fa-folder' : 
                                                                     (actividad instanceof T(com.example.demo.model.Recurso) and actividad.tipo.name() == 'ENLACE' ? 'fa-link' : 'fa-file-alt')))}"></i>
@@ -1002,83 +1062,103 @@
                                             <div class="flex-1 activity-details">
                                                 <div class="flex justify-between items-start">
                                                     <div class="w-full">
-                                                        <th:block th:unless="${actividad instanceof T(com.example.demo.model.Recurso) and actividad.tipo.name() == 'TEXTO'}">
-                                                            <h5 th:if="${!(actividad instanceof T(com.example.demo.model.Recurso) and actividad.tipo.name() == 'ENLACE')}" th:text="${actividad.titulo}">Título Actividad</h5>
-                                                            <h5 th:if="${actividad instanceof T(com.example.demo.model.Recurso) and actividad.tipo.name() == 'ENLACE'}">
-                                                                <a th:href="${actividad.url}" target="_blank" class="text-blue-600 hover:underline js-actividad-enlace">
-                                                                    <i class="fas fa-external-link-alt text-xs me-1"></i> <span th:text="${actividad.titulo}">Link</span>
+                                                        <th:block
+                                                            th:unless="${actividad instanceof T(com.example.demo.model.Recurso) and actividad.tipo.name() == 'TEXTO'}">
+                                                            <h5 th:if="${!(actividad instanceof T(com.example.demo.model.Recurso) and actividad.tipo.name() == 'ENLACE')}"
+                                                                th:text="${actividad.titulo}">Título Actividad</h5>
+                                                            <h5
+                                                                th:if="${actividad instanceof T(com.example.demo.model.Recurso) and actividad.tipo.name() == 'ENLACE'}">
+                                                                <a th:href="${actividad.url}" target="_blank"
+                                                                    class="text-blue-600 hover:underline js-actividad-enlace">
+                                                                    <i
+                                                                        class="fas fa-external-link-alt text-xs me-1"></i>
+                                                                    <span th:text="${actividad.titulo}">Link</span>
                                                                 </a>
                                                             </h5>
                                                             <p th:text="${actividad.descripcion}">Descripción</p>
                                                         </th:block>
 
-                                                        <div th:if="${actividad instanceof T(com.example.demo.model.Recurso) and actividad.tipo.name() == 'TEXTO'}" class="mb-2">
-                                                            <h5 th:if="${actividad.titulo != null and !actividad.titulo.isEmpty()}" th:text="${actividad.titulo}" class="font-bold mb-2"></h5>
-                                                            <div th:utext="${actividad.contenidoTexto}" class="text-gray-700"></div>
+                                                        <div th:if="${actividad instanceof T(com.example.demo.model.Recurso) and actividad.tipo.name() == 'TEXTO'}"
+                                                            class="mb-2">
+                                                            <h5 th:if="${actividad.titulo != null and !actividad.titulo.isEmpty()}"
+                                                                th:text="${actividad.titulo}" class="font-bold mb-2">
+                                                            </h5>
+                                                            <div th:utext="${actividad.contenidoTexto}"
+                                                                class="text-gray-700"></div>
                                                         </div>
-                                                        
+
                                                         <!-- Detalles específicos -->
-                                                        <div th:if="${actividad instanceof T(com.example.demo.model.Material)}" class="mt-1">
-                                                            <div th:each="archivo : ${actividad.archivos}" class="text-xs text-gray-500 flex items-center gap-1">
-                                                                <i class="fas fa-paperclip"></i> <span th:text="${archivo.nombre}">archivo.pdf</span>
+                                                        <div th:if="${actividad instanceof T(com.example.demo.model.Material)}"
+                                                            class="mt-1">
+                                                            <div th:each="archivo : ${actividad.archivos}"
+                                                                class="text-xs text-gray-500 flex items-center gap-1">
+                                                                <i class="fas fa-paperclip"></i> <span
+                                                                    th:text="${archivo.nombre}">archivo.pdf</span>
                                                             </div>
                                                         </div>
-                                                        
-                                                        <div th:if="${actividad instanceof T(com.example.demo.model.Examen)}" class="activity-meta">
-                                                            <span th:if="${actividad.fechaApertura}">Abre: <span th:text="${#temporals.format(actividad.fechaApertura, 'dd/MM/yyyy HH:mm')}"></span></span>
-                                                            <span th:if="${actividad.tiempoRealizacion}"> • <span th:text="${actividad.tiempoRealizacion}"></span> min</span>
+
+                                                        <div th:if="${actividad instanceof T(com.example.demo.model.Examen)}"
+                                                            class="activity-meta">
+                                                            <span th:if="${actividad.fechaApertura}">Abre: <span
+                                                                    th:text="${#temporals.format(actividad.fechaApertura, 'dd/MM/yyyy HH:mm')}"></span></span>
+                                                            <span th:if="${actividad.tiempoRealizacion}"> • <span
+                                                                    th:text="${actividad.tiempoRealizacion}"></span>
+                                                                min</span>
                                                         </div>
                                                     </div>
 
                                                     <!-- Botones de Acción -->
                                                     <div>
-                                                        <button th:if="${actividad instanceof T(com.example.demo.model.Material)}"
+                                                        <button
+                                                            th:if="${actividad instanceof T(com.example.demo.model.Material)}"
                                                             th:attr="data-material-id=${actividad.idActividad}, data-material-nombre=${actividad.titulo}"
                                                             onclick="descargarMaterial(this)"
                                                             class="btn btn-sm btn-light text-gray-600 hover:text-blue-600">
                                                             <i class="fas fa-download"></i>
                                                         </button>
-                                                        
-                                                        <th:block th:if="${actividad instanceof T(com.example.demo.model.Tarea)}">
-                                                                                                                         <button 
-                                                               th:data-id="${actividad.idActividad}"
-                                                               th:data-titulo="${actividad.titulo}"
-                                                               th:data-descripcion="${actividad.descripcion}"
-                                                               th:data-limite="${actividad.limiteEntrega}"
-                                                               th:data-tardias="${actividad.entregasTardias}"
-                                                               th:data-modificaciones="${actividad.modificaciones}"
-                                                               th:data-entrega-id="${tareasEntregas != null && tareasEntregas.containsKey(actividad.idActividad) ? tareasEntregas.get(actividad.idActividad).idEntrega : ''}"
-                                                               th:data-entrega-fecha="${tareasEntregas != null && tareasEntregas.containsKey(actividad.idActividad) ? tareasEntregas.get(actividad.idActividad).fechaEntrega : ''}"
-                                                               th:data-entrega-calif="${tareasEntregas != null && tareasEntregas.containsKey(actividad.idActividad) ? tareasEntregas.get(actividad.idActividad).calificacion : ''}"
+
+                                                        <th:block
+                                                            th:if="${actividad instanceof T(com.example.demo.model.Tarea)}">
+                                                            <button th:data-id="${actividad.idActividad}"
+                                                                th:data-titulo="${actividad.titulo}"
+                                                                th:data-descripcion="${actividad.descripcion}"
+                                                                th:data-limite="${actividad.limiteEntrega}"
+                                                                th:data-tardias="${actividad.entregasTardias}"
+                                                                th:data-modificaciones="${actividad.modificaciones}"
+                                                                th:data-entrega-id="${tareasEntregas != null && tareasEntregas.containsKey(actividad.idActividad) ? tareasEntregas.get(actividad.idActividad).idEntrega : ''}"
+                                                                th:data-entrega-fecha="${tareasEntregas != null && tareasEntregas.containsKey(actividad.idActividad) ? tareasEntregas.get(actividad.idActividad).fechaEntrega : ''}"
+                                                                th:data-entrega-calif="${tareasEntregas != null && tareasEntregas.containsKey(actividad.idActividad) ? tareasEntregas.get(actividad.idActividad).calificacion : ''}"
                                                                 th:data-entrega-archivo="${tareasEntregas != null && tareasEntregas.containsKey(actividad.idActividad) ? tareasEntregas.get(actividad.idActividad).nombreArchivo : ''}"
                                                                 th:data-entrega-texto="${tareasEntregas != null && tareasEntregas.containsKey(actividad.idActividad) ? tareasEntregas.get(actividad.idActividad).contenido : ''}"
-                                                               th:data-tipo-entrega="${#strings.listJoin(actividad.tipoEntrega, ',')}"
-                                                               onclick="abrirModalTarea(this)"
-                                                                                                                             class="btn btn-sm btn-outline-primary rounded-pill px-3 js-ver-tarea">
+                                                                th:data-tipo-entrega="${#strings.listJoin(actividad.tipoEntrega, ',')}"
+                                                                onclick="abrirModalTarea(this)"
+                                                                class="btn btn-sm btn-outline-primary rounded-pill px-3 js-ver-tarea">
                                                                 Ver Tarea
                                                             </button>
                                                             <a th:if="${puedeModificar}"
-                                                               th:href="@{/entrega/lista/{id}(id=${actividad.idActividad})}"
-                                                               class="btn btn-sm btn-outline-success rounded-pill px-3 ml-1"
-                                                               title="Corregir Entregas">
+                                                                th:href="@{/entrega/lista/{id}(id=${actividad.idActividad})}"
+                                                                class="btn btn-sm btn-outline-success rounded-pill px-3 ml-1"
+                                                                title="Corregir Entregas">
                                                                 <i class="fas fa-check-double mr-1"></i>Corregir
                                                             </a>
                                                         </th:block>
 
-                                                        <th:block th:if="${actividad instanceof T(com.example.demo.model.Examen)}">
-                                                                                <button th:unless="${puedeModificar}" type="button"
-                                                                                    th:attr="data-examen-url=@{/examen/realizar/{id}(id=${actividad.idActividad})}"
-                                                                                    class="btn btn-sm btn-outline-primary rounded-pill px-3 js-ver-examen">
+                                                        <th:block
+                                                            th:if="${actividad instanceof T(com.example.demo.model.Examen)}">
+                                                            <button th:unless="${puedeModificar}" type="button"
+                                                                th:attr="data-examen-url=@{/examen/realizar/{id}(id=${actividad.idActividad})}"
+                                                                class="btn btn-sm btn-outline-primary rounded-pill px-3 js-ver-examen">
                                                                 Ver Examen
                                                             </button>
                                                             <a th:if="${puedeModificar}"
-                                                               th:href="@{/examen/detalle/{id}(id=${actividad.idActividad})}"
-                                                               class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                                                th:href="@{/examen/detalle/{id}(id=${actividad.idActividad})}"
+                                                                class="btn btn-sm btn-outline-primary rounded-pill px-3">
                                                                 Ver Examen
                                                             </a>
                                                         </th:block>
-                                                        
-                                                        <button th:if="${actividad instanceof T(com.example.demo.model.Carpeta)}"
+
+                                                        <button
+                                                            th:if="${actividad instanceof T(com.example.demo.model.Carpeta)}"
                                                             th:attr="data-carpeta-id=${actividad.idActividad}"
                                                             onclick="toggleCarpetaInline(this)"
                                                             class="btn btn-sm btn-light text-yellow-600 toggle-folder-btn js-toggle-carpeta">
@@ -1088,21 +1168,31 @@
                                                 </div>
                                             </div>
 
-                                            <button type="button" class="activity-visibility-toggle text-gray-500 hover:text-blue-600" 
+                                            <button type="button"
+                                                class="activity-visibility-toggle text-gray-500 hover:text-blue-600"
                                                 th:if="${puedeModificar}"
                                                 th:attr="data-visible=${actividad.visibilidad != null ? actividad.visibilidad : false}">
-                                                <i class="fas" th:classappend="${actividad.visibilidad != null ? (actividad.visibilidad ? ' fa-eye' : ' fa-eye-slash') : ' fa-eye-slash'}"></i>
+                                                <i class="fas"
+                                                    th:classappend="${actividad.visibilidad != null ? (actividad.visibilidad ? ' fa-eye' : ' fa-eye-slash') : ' fa-eye-slash'}"></i>
                                             </button>
 
                                             <div class="edit-controls ml-3">
-                                                <button type="button" class="edit-icon text-blue-600" data-edit-type="actividad" th:data-actividad-id="${actividad.idActividad}" th:if="${!(actividad instanceof T(com.example.demo.model.Material))}"><i class="fas fa-pen"></i></button>
-                                                <button type="button" class="delete-icon text-red-500" data-delete-type="actividad" th:data-actividad-id="${actividad.idActividad}" th:data-actividad-nombre="${actividad.titulo}"><i class="fas fa-trash"></i></button>
+                                                <button type="button" class="edit-icon text-blue-600"
+                                                    data-edit-type="actividad"
+                                                    th:data-actividad-id="${actividad.idActividad}"
+                                                    th:if="${!(actividad instanceof T(com.example.demo.model.Material))}"><i
+                                                        class="fas fa-pen"></i></button>
+                                                <button type="button" class="delete-icon text-red-500"
+                                                    data-delete-type="actividad"
+                                                    th:data-actividad-id="${actividad.idActividad}"
+                                                    th:data-actividad-nombre="${actividad.titulo}"><i
+                                                        class="fas fa-trash"></i></button>
                                             </div>
 
                                             <!-- Contenedor desplegable para Carpeta -->
                                             <div th:if="${actividad instanceof T(com.example.demo.model.Carpeta)}"
-                                                 th:id="'carpeta-content-' + ${actividad.idActividad}"
-                                                 class="w-full hidden mt-3 pl-4 border-l-4 border-yellow-100 bg-gray-50/50 rounded-r-lg">
+                                                th:id="'carpeta-content-' + ${actividad.idActividad}"
+                                                class="w-full hidden mt-3 pl-4 border-l-4 border-yellow-100 bg-gray-50/50 rounded-r-lg">
                                                 <div class="py-4 text-center text-gray-500 text-sm">
                                                     <i class="fas fa-spinner fa-spin me-2"></i>Cargando contenido...
                                                 </div>
@@ -1112,9 +1202,10 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <!-- Empty State -->
-                        <div th:if="${#lists.isEmpty(modulos)}" class="text-center py-12 bg-white rounded-lg border border-dashed border-gray-300">
+                        <div th:if="${#lists.isEmpty(modulos)}"
+                            class="text-center py-12 bg-white rounded-lg border border-dashed border-gray-300">
                             <i class="fas fa-book-open text-4xl text-gray-300 mb-3"></i>
                             <p class="text-gray-500">Este curso aún no tiene contenido.</p>
                         </div>
@@ -1127,9 +1218,11 @@
                     <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200" th:if="${!puedeModificar}">
                         <h4 class="font-bold text-gray-700 mb-3 text-sm uppercase">Tu Progreso</h4>
                         <div class="w-full bg-gray-200 rounded-full h-2.5 mb-1">
-                            <div class="bg-blue-600 h-2.5 rounded-full" th:style="'width: ' + ${progreso != null ? progreso : 0} + '%'"></div>
+                            <div class="bg-blue-600 h-2.5 rounded-full"
+                                th:style="'width: ' + ${progreso != null ? progreso : 0} + '%'"></div>
                         </div>
-                        <div class="text-right text-xs text-gray-500"><span th:text="${progreso != null ? progreso : 0} + '%'">0%</span> Completado</div>
+                        <div class="text-right text-xs text-gray-500"><span
+                                th:text="${progreso != null ? progreso : 0} + '%'">0%</span> Completado</div>
                     </div>
 
                     <!-- Widget: Anuncios Recientes -->
@@ -1230,24 +1323,24 @@
             <p class="text-sm text-gray-600 mb-4">
                 El sistema solicita validación para ingresar a la clase <strong id="modalClaseTitulo"></strong>.
             </p>
-            
+
             <form id="ingresoForm" onsubmit="validarIngreso(event)">
                 <input type="hidden" id="modalClaseId">
-                
+
                 <div class="mb-3">
                     <label class="block text-xs font-semibold text-gray-500 uppercase">DNI</label>
-                    <input type="text" id="inputDniIngreso" required class="w-full border rounded px-3 py-2 mt-1" 
-                           th:value="${alumno != null ? alumno.dni : (docente != null ? docente.dni : '')}">
+                    <input type="text" id="inputDniIngreso" required class="w-full border rounded px-3 py-2 mt-1"
+                        th:value="${alumno != null ? alumno.dni : (docente != null ? docente.dni : '')}">
                 </div>
-                
+
                 <div class="mb-4">
                     <label class="block text-xs font-semibold text-gray-500 uppercase">Contraseña</label>
                     <input type="password" id="inputPassIngreso" required class="w-full border rounded px-3 py-2 mt-1">
                 </div>
-                
+
                 <div class="flex justify-end gap-2">
-                    <button type="button" onclick="document.getElementById('ingresoModal').classList.add('hidden')" 
-                            class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">
+                    <button type="button" onclick="document.getElementById('ingresoModal').classList.add('hidden')"
+                        class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">
                         Cancelar
                     </button>
                     <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
@@ -1408,7 +1501,7 @@
 
                 card.dataset.moduloVisible = String(nextVisible);
                 card.setAttribute('data-modulo-visible', String(nextVisible));
-                
+
                 // Update button dataset to keep sync
                 button.dataset.visible = String(nextVisible);
 
@@ -1465,12 +1558,12 @@
 
             const card = button.closest('.activity-item');
             const actividadId = card ? card.getAttribute('data-actividad-id') : null;
-            
+
             if (!actividadId) {
                 console.error("No se encontró el ID de la actividad");
                 return;
             }
-            
+
             const currentVisible = parseVisibilityFlag(button.dataset.visible);
             const nextVisible = !currentVisible;
 
@@ -1750,7 +1843,7 @@
 
                     const card = event.currentTarget.closest('.activity-item');
                     const aperturaIso = card ? card.getAttribute('data-actividad-apertura') : null;
-                    
+
                     if (!aperturaIso) {
                         const url = button.getAttribute('data-examen-url');
                         if (url) window.location.href = url;
@@ -1759,7 +1852,7 @@
 
                     const apertura = new Date(aperturaIso);
                     const ahora = new Date();
-                    
+
                     if (apertura > ahora) {
                         const textoApertura = card.getAttribute('data-actividad-apertura-text') || apertura.toLocaleString('es-AR');
                         mostrarToast(`El examen aún no está abierto. Intenta el ${textoApertura}.`, 'warning');
@@ -2280,7 +2373,7 @@
             }
 
             document.body.insertAdjacentHTML('beforeend', formularioHTML);
-            
+
             // Agregar event listeners según el tipo
             setTimeout(() => {
                 if (tipo === 'carpeta') {
@@ -2310,7 +2403,7 @@
                 });
 
                 const data = await response.json();
-                
+
                 if (data.success) {
                     alert('Carpeta creada exitosamente');
                     cerrarFormularioCarpeta();
@@ -2339,7 +2432,7 @@
             const urlValor = opciones.url || '';
             const contenidoValor = opciones.contenido || '';
             const formAction = esEdicion ? `/recurso/editar/${opciones.id}` : '/recurso/crear';
-            
+
             return `
                 <div id="recursoModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
                     <div class="bg-white rounded-lg shadow-xl w-full max-w-lg overflow-hidden animate-fade-in-up">
@@ -2423,12 +2516,12 @@
 
             document.body.insertAdjacentHTML('beforeend', modalHTML);
         }
-        
+
         async function guardarRecurso(form) {
             const formData = new FormData(form);
             const btnSubmit = form.querySelector('button[type="submit"]');
             const originalText = btnSubmit.innerHTML;
-            
+
             btnSubmit.disabled = true;
             btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
 
@@ -2437,9 +2530,9 @@
                     method: 'POST',
                     body: formData
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (data.success) {
                     window.location.reload();
                 } else {
@@ -3007,12 +3100,12 @@
                         const formData = new FormData(e.target);
                         // Asociar el pool a la oferta actual
                         formData.append('ofertaId', OFERTA_ID);
-                        
+
                         const esIA = document.getElementById('inputEsIA').value === 'true';
-                        
+
                         if (esIA) {
                             const temas = document.getElementById('iaTemas').value;
-                            
+
                             // Obtener materiales seleccionados
                             const materialesSeleccionados = Array.from(document.querySelectorAll('input[name="materialesIA"]:checked')).map(cb => cb.value);
 
@@ -3020,7 +3113,7 @@
                                 temas: temas,
                                 materialesIds: materialesSeleccionados, // Nuevo campo
                                 cantidad: formData.get('cantidadPreguntas'),
-                                tipos: ["MULTIPLE_CHOICE"] 
+                                tipos: ["MULTIPLE_CHOICE"]
                             };
                             formData.append('iaParams', JSON.stringify(iaParams));
                         }
@@ -3047,7 +3140,7 @@
                                         preguntas: [],
                                         esIA: esIA // Flag frontend
                                     };
-                                    
+
                                     // Si es IA y status es PENDING, iniciamos polling
                                     if (esIA && data.iaStatus === 'PENDING') {
                                         nuevoPool.iaStatus = 'PENDING';
@@ -3079,16 +3172,16 @@
                     alert('Error al cargar los pools existentes');
                 });
         }
-        
+
         function toggleModoCreacion(modo) {
             const esIA = modo === 'ia';
             document.getElementById('inputEsIA').value = esIA;
-            
+
             const seccionIA = document.getElementById('seccionIA');
             const txtAyudaManual = document.getElementById('txtAyudaManual');
             const txtAyudaIA = document.getElementById('txtAyudaIA');
             const btnCrear = document.getElementById('txtBtnCrear');
-            
+
             if (esIA) {
                 seccionIA.classList.remove('hidden');
                 txtAyudaManual.classList.add('hidden');
@@ -3102,7 +3195,7 @@
                 btnCrear.textContent = 'Crear Pool';
             }
         }
-        
+
         function iniciarPollingIA(pool) {
             const intervalId = setInterval(() => {
                 fetch(`/pool/estado/${pool.idReal}`)
@@ -3110,7 +3203,7 @@
                     .then(data => {
                         console.log(`Polling IA pool ${pool.idReal}: ${data.status}`);
                         pool.iaStatus = data.status;
-                        
+
                         if (data.status === 'READY') {
                             clearInterval(intervalId);
                             // Cargar preguntas generadas
@@ -3118,7 +3211,7 @@
                                 .then(r => r.json())
                                 .then(d => {
                                     if (d.success && d.preguntas) {
-                                        pool.preguntas = d.preguntas; 
+                                        pool.preguntas = d.preguntas;
                                         pool.preguntasCount = d.preguntas.length;
                                         actualizarListaPools();
                                         alert(`✅ Preguntas generadas para el pool "${pool.nombre}"`);
@@ -3130,7 +3223,7 @@
                             actualizarListaPools();
                             alert(`❌ Error al generar preguntas para "${pool.nombre}": ${data.errorMessage}`);
                         }
-                        
+
                         actualizarListaPools(); // Actualizar UI (spinner, etc)
                     })
                     .catch(e => {
@@ -3146,12 +3239,12 @@
         function cargarMaterialesIA() {
             const container = document.getElementById('listaMaterialesContainer');
             const msg = document.getElementById('msgCargandoMateriales');
-            
+
             if (materialesCache) {
                 renderizarMateriales(materialesCache);
                 return;
             }
-            
+
             if (msg) msg.textContent = 'Cargando materiales...';
 
             fetch(`/pool/materiales/${OFERTA_ID}`)
@@ -3172,7 +3265,7 @@
                 container.innerHTML = '<p class="text-xs text-gray-400 text-center py-2">No hay materiales disponibles en este curso.</p>';
                 return;
             }
-            
+
             container.innerHTML = materiales.map(m => `
                 <div class="flex items-center mb-2 last:mb-0">
                     <input type="checkbox" name="materialesIA" value="${m.id}" id="mat_${m.id}" 
@@ -3189,36 +3282,36 @@
         function editarPoolExistente(idPool, nombre, descripcion, cantidadPreguntas) {
             // Cambiar a la pestaña de crear (que usaremos para editar)
             cambiarTabPool('crear');
-            
+
             // Llenar el formulario
             const form = document.getElementById('formPool');
             form.nombrePool.value = nombre;
             form.descripcionPool.value = descripcion;
             form.cantidadPreguntas.value = cantidadPreguntas;
-            
+
             // Cambiar título y botón
             const tabCrearBtn = document.getElementById('tabCrear');
             tabCrearBtn.innerHTML = '<i class="fas fa-edit me-1"></i>Editar Pool';
-            
+
             const submitBtn = form.querySelector('button[type="submit"]');
             submitBtn.innerHTML = '<i class="fas fa-save me-1"></i>Guardar Cambios';
             submitBtn.classList.remove('bg-purple-600', 'hover:bg-purple-700');
             submitBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
-            
+
             // Reemplazar el handler del submit
             // Clonamos el nodo para eliminar listeners anteriores
             const newForm = form.cloneNode(true);
             form.parentNode.replaceChild(newForm, form);
-            
+
             // Reasignar valores porque cloneNode no copia valores de inputs modificados por JS
             newForm.nombrePool.value = nombre;
             newForm.descripcionPool.value = descripcion;
             newForm.cantidadPreguntas.value = cantidadPreguntas;
-            
-            newForm.addEventListener('submit', function(e) {
+
+            newForm.addEventListener('submit', function (e) {
                 e.preventDefault();
                 const formData = new FormData(e.target);
-                
+
                 fetch(`/pool/editar/${idPool}`, {
                     method: 'POST',
                     headers: {
@@ -3226,21 +3319,21 @@
                     },
                     body: formData
                 })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('✅ Pool actualizado exitosamente');
-                        cerrarModalPool();
-                        // Recargar modal para ver cambios
-                        setTimeout(mostrarModalPool, 300);
-                    } else {
-                        alert('❌ Error: ' + data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Error al actualizar el pool');
-                });
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('✅ Pool actualizado exitosamente');
+                            cerrarModalPool();
+                            // Recargar modal para ver cambios
+                            setTimeout(mostrarModalPool, 300);
+                        } else {
+                            alert('❌ Error: ' + data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Error al actualizar el pool');
+                    });
             });
         }
 
@@ -3265,13 +3358,22 @@
                 alert('⚠️ Este pool ya ha sido agregado al examen.');
                 return;
             }
-            
+
+            const maxDisponible = typeof preguntasCount === 'number' ? preguntasCount : 0;
+            let cantidadSeleccionada = parseInt(cantidadPreguntas, 10);
+            if (isNaN(cantidadSeleccionada) || cantidadSeleccionada < 1) {
+                cantidadSeleccionada = maxDisponible > 0 ? 1 : 0;
+            }
+            if (maxDisponible > 0 && cantidadSeleccionada > maxDisponible) {
+                cantidadSeleccionada = maxDisponible;
+            }
+
             const nuevoPool = {
                 id: Date.now(),
                 idReal: idPool,
                 nombre: nombre,
                 descripcion: descripcion,
-                cantidadPreguntas: cantidadPreguntas,
+                cantidadPreguntas: cantidadSeleccionada,
                 preguntas: [], // Se cargarán del backend si hiciera falta
                 preguntasCount: typeof preguntasCount === 'number' ? preguntasCount : 0,
                 esExistente: true
@@ -3287,12 +3389,44 @@
             document.getElementById('modalPool')?.remove();
         }
 
+        function obtenerMaxPreguntas(pool) {
+            const count = pool.esExistente
+                ? (typeof pool.preguntasCount === 'number'
+                    ? pool.preguntasCount
+                    : (pool.preguntas ? pool.preguntas.length : 0))
+                : (pool.preguntas ? pool.preguntas.length : 0);
+            return typeof count === 'number' ? count : 0;
+        }
+
+        function normalizarCantidadPool(pool) {
+            if (pool.iaStatus === 'GENERATING' || pool.iaStatus === 'PENDING') {
+                return obtenerMaxPreguntas(pool);
+            }
+
+            const max = obtenerMaxPreguntas(pool);
+            if (!max || max < 1) {
+                pool.cantidadPreguntas = 0;
+                return max;
+            }
+
+            let valor = parseInt(pool.cantidadPreguntas, 10);
+            if (isNaN(valor) || valor < 1) valor = 1;
+            if (valor > max) valor = max;
+            pool.cantidadPreguntas = valor;
+            return max;
+        }
+
         function actualizarListaPools() {
             const poolsList = document.getElementById('poolsList');
             const noPoolsMsg = document.getElementById('noPoolsMessage');
 
             if (examenPools.length === 0) {
                 noPoolsMsg?.classList.remove('hidden');
+                if (poolsList) {
+                    poolsList.innerHTML = '';
+                }
+                document.getElementById('totalPreguntas').textContent = '0';
+                document.getElementById('poolsData').value = JSON.stringify([]);
                 return;
             }
 
@@ -3303,6 +3437,12 @@
                 let actionButtons = '';
                 let preguntaCountText = '';
                 let isGenerating = pool.iaStatus === 'GENERATING' || pool.iaStatus === 'PENDING';
+                const maxPreguntas = normalizarCantidadPool(pool);
+                const cantidadActual = typeof pool.cantidadPreguntas === 'number'
+                    ? pool.cantidadPreguntas
+                    : (parseInt(pool.cantidadPreguntas, 10) || 0);
+                const minCantidad = maxPreguntas > 0 ? 1 : 0;
+                const inputDisabled = isGenerating || maxPreguntas < 1;
 
                 if (isGenerating) {
                     badgeStatus = `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800 ml-2">
@@ -3319,13 +3459,18 @@
                                 title="Generando preguntas...">
                             <i class="fas fa-spinner fa-spin"></i>
                         </button>
+                        <button type="button" onclick="eliminarPool(${index})" 
+                                class="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+                                title="Eliminar pool">
+                            <i class="fas fa-trash"></i>
+                        </button>
                     `;
                 } else if (pool.iaStatus === 'FAILED') {
-                     badgeStatus = `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 ml-2">
+                    badgeStatus = `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 ml-2">
                         <i class="fas fa-exclamation-triangle mr-1"></i> Falló IA
                     </span>`;
                     preguntaCountText = `${typeof pool.preguntasCount === 'number' ? pool.preguntasCount : (pool.preguntas ? pool.preguntas.length : 0)} pregunta(s)`;
-                     actionButtons = `
+                    actionButtons = `
                         <button type="button" onclick="mostrarModalPreguntas(${pool.id}, '${pool.idReal || ''}')" 
                                 class="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
                                 title="Gestionar preguntas">
@@ -3338,7 +3483,7 @@
                         </button>
                     `;
                 } else {
-                     if (pool.generatedByIA) {
+                    if (pool.generatedByIA) {
                         badgeStatus = `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 ml-2">
                             <i class="fas fa-robot mr-1"></i> IA
                         </span>`;
@@ -3357,7 +3502,7 @@
                         </button>
                     `;
                 }
-                
+
                 return `
                 <div class="border border-purple-200 rounded-lg p-3 bg-purple-50 transition-all duration-300">
                     <div class="flex justify-between items-start">
@@ -3372,10 +3517,18 @@
                                     <i class="fas fa-question-circle me-1"></i>
                                     ${preguntaCountText}
                                 </span>
-                                <span>
+                                <label class="flex items-center gap-2">
                                     <i class="fas fa-random me-1"></i>
-                                    Se tomarán ${pool.cantidadPreguntas} en el examen
-                                </span>
+                                    Tomar
+                                    <input type="number"
+                                           min="${minCantidad}"
+                                           max="${maxPreguntas}"
+                                           value="${cantidadActual}"
+                                           onchange="actualizarCantidadPool(${index}, this.value)"
+                                           ${inputDisabled ? 'disabled' : ''}
+                                           class="w-16 border border-gray-300 rounded px-1 py-0.5 text-xs text-center ${inputDisabled ? 'bg-gray-100 text-gray-400' : ''}">
+                                    <span class="text-gray-400">/ ${maxPreguntas}</span>
+                                </label>
                             </div>
                         </div>
                         <div class="flex space-x-1 ml-2">
@@ -3395,6 +3548,35 @@
             document.getElementById('poolsData').value = JSON.stringify(examenPools);
         }
 
+        function actualizarCantidadPool(index, valor) {
+            const pool = examenPools[index];
+            if (!pool) return;
+
+            const max = obtenerMaxPreguntas(pool);
+            let nuevaCantidad = parseInt(valor, 10);
+            if (isNaN(nuevaCantidad)) nuevaCantidad = 1;
+
+            if (max < 1) {
+                nuevaCantidad = 0;
+            } else {
+                if (nuevaCantidad < 1) nuevaCantidad = 1;
+                if (nuevaCantidad > max) nuevaCantidad = max;
+            }
+
+            pool.cantidadPreguntas = nuevaCantidad;
+            actualizarListaPools();
+        }
+
+        function actualizarCantidadPoolPorId(poolId, inputEl) {
+            const index = examenPools.findIndex(p => p.id === poolId);
+            if (index === -1) return;
+            const valor = inputEl ? inputEl.value : undefined;
+            actualizarCantidadPool(index, valor);
+            if (inputEl) {
+                inputEl.value = examenPools[index].cantidadPreguntas;
+            }
+        }
+
         function eliminarPool(index) {
             ModalConfirmacion.show(
                 'Eliminar Pool',
@@ -3410,14 +3592,56 @@
             const pool = examenPools.find(p => p.id === poolId);
             if (!pool) return;
 
+            if (pool.esExistente && poolIdReal && !pool.preguntasLoaded) {
+                if (pool.cargandoPreguntas) return;
+                pool.cargandoPreguntas = true;
+
+                fetch(`/pool/detalle/${poolIdReal}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && Array.isArray(data.preguntas)) {
+                            pool.preguntas = data.preguntas.map(p => ({
+                                enunciado: p.enunciado,
+                                tipoPregunta: p.tipoPregunta,
+                                puntaje: p.puntaje,
+                                opciones: p.opciones || []
+                            }));
+                            pool.preguntasCount = pool.preguntas.length;
+                        }
+                        pool.preguntasLoaded = true;
+                    })
+                    .catch(error => {
+                        console.error('Error al cargar preguntas del pool:', error);
+                        pool.preguntasLoaded = true;
+                    })
+                    .finally(() => {
+                        pool.cargandoPreguntas = false;
+                        mostrarModalPreguntas(poolId, poolIdReal);
+                    });
+
+                return;
+            }
+
+            const maxPreguntas = normalizarCantidadPool(pool);
+            const minCantidad = maxPreguntas > 0 ? 1 : 0;
+            const cantidadActual = typeof pool.cantidadPreguntas === 'number'
+                ? pool.cantidadPreguntas
+                : (parseInt(pool.cantidadPreguntas, 10) || 0);
+            const inputDisabled = maxPreguntas < 1;
+
             const modalHTML = `
                 <div id="modalPreguntas" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] overflow-y-auto">
                     <div class="bg-white rounded-lg p-6 w-full max-w-3xl my-8 max-h-[90vh] overflow-y-auto">
                         <h3 class="text-lg font-semibold mb-2 text-blue-600">
                             <i class="fas fa-question-circle me-2"></i>Preguntas del Pool: ${pool.nombre}
                         </h3>
-                        <p class="text-sm text-gray-500 mb-4">
-                            Se tomarán ${pool.cantidadPreguntas} pregunta(s) de este pool en el examen
+                        <p class="text-sm text-gray-500 mb-4 flex items-center gap-2">
+                            Se tomar?n
+                            <input type="number" min="${minCantidad}" max="${maxPreguntas}" value="${cantidadActual}"
+                                   onchange="actualizarCantidadPoolPorId(${poolId}, this)"
+                                   ${inputDisabled ? 'disabled' : ''}
+                                   class="w-16 border border-gray-300 rounded px-1 py-0.5 text-xs text-center ${inputDisabled ? 'bg-gray-100 text-gray-400' : ''}">
+                            de ${maxPreguntas} pregunta(s) de este pool en el examen
                         </p>
                         
                         <div id="preguntasList" class="space-y-2 mb-4 max-h-60 overflow-y-auto">
@@ -3687,6 +3911,9 @@
             }
 
             pool.preguntas.push(nuevaPregunta);
+            if (pool.esExistente) {
+                pool.preguntasCount = pool.preguntas.length;
+            }
 
             // Persistir pregunta en el backend si el pool ya está guardado
             if (window.currentPoolIdReal) {
@@ -3736,20 +3963,20 @@
                 cerrarModalPreguntas();
                 return;
             }
-            
+
             // Validar que el pool tenga al menos 1 pregunta
-            const preguntasCount = pool.esExistente ? 
-                (typeof pool.preguntasCount === 'number' ? pool.preguntasCount : 0) : 
+            const preguntasCount = pool.esExistente ?
+                (typeof pool.preguntasCount === 'number' ? pool.preguntasCount : 0) :
                 (pool.preguntas ? pool.preguntas.length : 0);
-            
+
             if (preguntasCount === 0) {
                 alert('⚠️ Debes agregar al menos 1 pregunta al pool antes de finalizar.');
                 return;
             }
-            
+
             cerrarModalPreguntas();
         }
-        
+
         function cerrarModalPreguntas() {
             document.getElementById('modalPreguntas')?.remove();
             actualizarListaPools();
@@ -3763,17 +3990,20 @@
                     '¿Eliminar esta pregunta?',
                     () => {
                         pool.preguntas.splice(index, 1);
+                        if (pool.esExistente) {
+                            pool.preguntasCount = pool.preguntas.length;
+                        }
                         cerrarModalPreguntas();
                         setTimeout(() => mostrarModalPreguntas(poolId), 100);
                     }
                 );
             }
         }
-        
+
         // Función para ver todos los pools disponibles con sus detalles
         function verPoolsDisponibles() {
             console.log('📋 Cargando pools disponibles para oferta:', OFERTA_ID);
-            
+
             fetch(`/pool/listar/${OFERTA_ID}`)
                 .then(response => response.json())
                 .then(pools => {
@@ -3784,7 +4014,7 @@
                     alert('Error al cargar los pools disponibles');
                 });
         }
-        
+
         function mostrarModalPoolsDisponibles(pools) {
             const modalHTML = `
                 <div id="modalPoolsDisponibles" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] overflow-y-auto">
@@ -3846,21 +4076,21 @@
                     </div>
                 </div>
             `;
-            
+
             document.body.insertAdjacentHTML('beforeend', modalHTML);
         }
-        
+
         function cargarDetallePool(poolId) {
             const detalleDiv = document.getElementById(`detallePool_${poolId}`);
-            
+
             // Si ya está visible, ocultarlo
             if (!detalleDiv.classList.contains('hidden')) {
                 detalleDiv.classList.add('hidden');
                 return;
             }
-            
+
             detalleDiv.classList.remove('hidden');
-            
+
             // Cargar las preguntas del pool
             fetch(`/pool/detalle/${poolId}`)
                 .then(response => response.json())
@@ -3876,15 +4106,15 @@
                     detalleDiv.innerHTML = '<p class="text-sm text-red-500 py-2">Error al cargar las preguntas</p>';
                 });
         }
-        
+
         function mostrarPreguntasPool(poolId, preguntas) {
             const detalleDiv = document.getElementById(`detallePool_${poolId}`);
-            
+
             if (preguntas.length === 0) {
                 detalleDiv.innerHTML = '<p class="text-sm text-gray-500 italic py-2">No hay preguntas en este pool</p>';
                 return;
             }
-            
+
             const preguntasHTML = preguntas.map((pregunta, index) => `
                 <div class="bg-gray-50 rounded p-3 mb-2">
                     <div class="flex justify-between items-start mb-2">
@@ -3920,7 +4150,7 @@
                     ` : ''}
                 </div>
             `).join('');
-            
+
             detalleDiv.innerHTML = `
                 <h5 class="font-semibold text-gray-700 mb-3">
                     <i class="fas fa-list-ul me-1"></i>Preguntas del Pool (${preguntas.length})
@@ -3930,7 +4160,7 @@
                 </div>
             `;
         }
-        
+
         function cerrarModalPoolsDisponibles() {
             document.getElementById('modalPoolsDisponibles')?.remove();
         }
@@ -4109,18 +4339,18 @@
             }
             if (e.target.id === 'formTarea') {
                 e.preventDefault();
-                
+
                 // Validar que al menos un tipo de entrega esté seleccionado
                 const tiposEntregaCheckboxes = document.querySelectorAll('.tipo-entrega-checkbox:checked');
                 if (tiposEntregaCheckboxes.length === 0) {
                     alert('⚠️ Debes seleccionar al menos un tipo de entrega (texto o archivos)');
                     return;
                 }
-                
+
                 const formData = new FormData(e.target);
                 const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
                 const csrfHeader = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
-                
+
                 // Enviar la tarea al backend
                 fetch('/actividad/crearTarea', {
                     method: 'POST',
@@ -4129,20 +4359,20 @@
                     },
                     body: formData
                 })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('✅ ' + data.message);
-                        cerrarFormularioTarea();
-                        window.location.reload();
-                    } else {
-                        alert('❌ Error: ' + data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('❌ Error al crear la tarea. Por favor, intenta nuevamente.');
-                });
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('✅ ' + data.message);
+                            cerrarFormularioTarea();
+                            window.location.reload();
+                        } else {
+                            alert('❌ Error: ' + data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('❌ Error al crear la tarea. Por favor, intenta nuevamente.');
+                    });
             }
 
             if (e.target.id === 'formModificarEntrega') {
@@ -4284,22 +4514,22 @@
 
             if (e.target.id === 'formMaterial') {
                 e.preventDefault();
-                
+
                 // Mostrar botón de carga
                 const btnSubir = document.getElementById('btnSubirMaterial');
                 const btnCargando = document.getElementById('btnCargandoMaterial');
                 btnSubir.style.display = 'none';
                 btnCargando.style.display = 'inline-flex';
-                
+
                 const formData = new FormData(e.target);
                 const moduloId = formData.get('moduloId');
-                
+
                 // Determinar si es una carpeta (Long) o un módulo (UUID)
                 const esCarpeta = /^\d+$/.test(moduloId); // Si son solo dígitos, es carpeta
-                const endpoint = esCarpeta 
+                const endpoint = esCarpeta
                     ? `/carpeta/${moduloId}/material`
                     : `/actividad/modulo/${moduloId}/material`;
-                
+
                 const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
                 const csrfHeader = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
 
@@ -4310,43 +4540,43 @@
                     },
                     body: formData
                 })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('Material creado exitosamente');
-                        cerrarFormularioMaterial();
-                        window.location.reload();
-                    } else {
-                        alert('Error: ' + data.message);
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Material creado exitosamente');
+                            cerrarFormularioMaterial();
+                            window.location.reload();
+                        } else {
+                            alert('Error: ' + data.message);
+                            // Restaurar botón
+                            btnSubir.style.display = 'inline-flex';
+                            btnCargando.style.display = 'none';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Error al crear material');
                         // Restaurar botón
                         btnSubir.style.display = 'inline-flex';
                         btnCargando.style.display = 'none';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Error al crear material');
-                    // Restaurar botón
-                    btnSubir.style.display = 'inline-flex';
-                    btnCargando.style.display = 'none';
-                });
+                    });
             }
         });
 
         // ========================================
         // GESTIÓN DE CARPETAS Y ARCHIVOS
         // ========================================
-        window.toggleCarpetaInline = function(button) {
+        window.toggleCarpetaInline = function (button) {
             const carpetaId = button.getAttribute('data-carpeta-id');
             const container = document.getElementById('carpeta-content-' + carpetaId);
             const icon = button.querySelector('i');
-            
+
             if (container.classList.contains('hidden')) {
                 // Abrir
                 container.classList.remove('hidden');
                 icon.classList.remove('fa-folder');
                 icon.classList.add('fa-folder-open');
-                
+
                 // Cargar contenido si no se ha cargado (verificado por el spinner)
                 if (container.querySelector('.fa-spinner')) {
                     cargarContenidoCarpetaInline(carpetaId, container);
@@ -4364,9 +4594,9 @@
                 .then(response => response.json())
                 .then(data => {
                     let html = '<div class="space-y-3 py-3 pr-3">';
-                    
+
                     if (PUEDE_MODIFICAR) {
-                         html += `
+                        html += `
                             <div class="flex justify-end mb-2">
                                 <button onclick="abrirFormularioMaterialEnCarpeta(${carpetaId}, 'Carpeta')" 
                                         class="text-xs bg-green-50 text-green-600 hover:bg-green-100 px-2 py-1 rounded border border-green-200">
@@ -4409,11 +4639,11 @@
 
                     // 2. Mostrar Archivos Directos (Lista simple)
                     if (data.archivos && data.archivos.length > 0) {
-                         // Separador si hay ambos
+                        // Separador si hay ambos
                         if (data.materiales && data.materiales.length > 0) {
-                             html += '<hr class="my-3 border-gray-200">';
+                            html += '<hr class="my-3 border-gray-200">';
                         }
-                        
+
                         html += '<h6 class="text-xs font-bold text-gray-400 uppercase mb-2">Archivos Sueltos</h6>';
                         html += '<div class="grid grid-cols-1 gap-2">';
                         data.archivos.forEach(arch => {
@@ -4439,7 +4669,7 @@
                         });
                         html += '</div>';
                     }
-                    
+
                     if ((!data.materiales || data.materiales.length === 0) && (!data.archivos || data.archivos.length === 0)) {
                         html += `<div class="text-center text-gray-400 text-sm italic py-2">Carpeta vacía</div>`;
                     }
@@ -4453,7 +4683,7 @@
                 });
         }
 
-        window.abrirCarpeta = function(button) {
+        window.abrirCarpeta = function (button) {
             const carpetaId = button.getAttribute('data-carpeta-id');
             const carpetaNombre = button.getAttribute('data-carpeta-nombre');
             mostrarModalCarpeta(carpetaId, carpetaNombre);
@@ -4546,28 +4776,28 @@
 
         function cargarContenidoCarpeta(carpetaId) {
             const listaArchivos = document.getElementById('listaArchivos');
-            
+
             // Cargar archivos y materiales en paralelo
             Promise.all([
                 fetch(`/carpeta/${carpetaId}/archivos`).then(r => r.json()),
                 fetch(`/carpeta/${carpetaId}/materiales`).then(r => r.json())
             ])
-            .then(([archivos, materiales]) => {
-                if (archivos.length === 0 && materiales.length === 0) {
-                    listaArchivos.innerHTML = `
+                .then(([archivos, materiales]) => {
+                    if (archivos.length === 0 && materiales.length === 0) {
+                        listaArchivos.innerHTML = `
                         <div class="text-center text-gray-400 py-8">
                             <i class="fas fa-folder-open text-4xl mb-2"></i>
                             <p>No hay contenido en esta carpeta</p>
                         </div>
                     `;
-                    return;
-                }
+                        return;
+                    }
 
-                let html = '';
+                    let html = '';
 
-                // Mostrar materiales
-                if (materiales.length > 0) {
-                    html += materiales.map(material => `
+                    // Mostrar materiales
+                    if (materiales.length > 0) {
+                        html += materiales.map(material => `
                         <div class="p-3 border-l-4 border-green-500 bg-green-50 rounded-lg mb-2">
                             <div class="flex items-start justify-between">
                                 <div class="flex-1">
@@ -4583,11 +4813,11 @@
                             </div>
                         </div>
                     `).join('');
-                }
+                    }
 
-                // Mostrar archivos
-                if (archivos.length > 0) {
-                    html += archivos.map(archivo => `
+                    // Mostrar archivos
+                    if (archivos.length > 0) {
+                        html += archivos.map(archivo => `
                         <div class="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
                             <div class="flex items-center flex-1">
                                 <i class="fas fa-file-pdf text-red-600 text-2xl mr-3"></i>
@@ -4610,22 +4840,22 @@
                             </div>
                         </div>
                     `).join('');
-                }
+                    }
 
-                listaArchivos.innerHTML = html;
-            })
-            .catch(error => {
-                console.error('Error al cargar contenido:', error);
-                listaArchivos.innerHTML = `
+                    listaArchivos.innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Error al cargar contenido:', error);
+                    listaArchivos.innerHTML = `
                     <div class="text-center text-red-500 py-8">
                         <i class="fas fa-exclamation-triangle text-3xl mb-2"></i>
                         <p>Error al cargar contenido</p>
                     </div>
                 `;
-            });
+                });
         }
 
-        window.subirArchivo = function(carpetaId) {
+        window.subirArchivo = function (carpetaId) {
             const fileInput = document.getElementById('archivoInput');
             const file = fileInput.files[0];
 
@@ -4652,23 +4882,23 @@
                 },
                 body: formData
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    fileInput.value = '';
-                    cargarArchivos(carpetaId);
-                    alert('Archivo subido exitosamente');
-                } else {
-                    alert('Error: ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error al subir archivo');
-            });
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        fileInput.value = '';
+                        cargarArchivos(carpetaId);
+                        alert('Archivo subido exitosamente');
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al subir archivo');
+                });
         };
 
-        window.eliminarArchivo = function(archivoId, carpetaId) {
+        window.eliminarArchivo = function (archivoId, carpetaId) {
             ModalConfirmacion.show(
                 'Eliminar Archivo',
                 '¿Estás seguro de eliminar este archivo?',
@@ -4677,7 +4907,7 @@
                     // ... rest of the logic or re-write it correctly below if the read missed specific lines
                     // Since I don't have the rest, I should probably read more to match better or rewrite the fetch too.
                     /* Re-implementing fetch to be safe since I need inside the callback */
-                     const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content') || 'X-CSRF-TOKEN';
+                    const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content') || 'X-CSRF-TOKEN';
 
                     fetch(`/aula/archivos/${archivoId}`, {
                         method: 'DELETE',
@@ -4686,18 +4916,18 @@
                             [csrfHeader]: csrfToken
                         }
                     })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            cargarArchivos(carpetaId);
-                        } else {
-                            alert('Error: ' + data.message);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('Error al eliminar archivo');
-                    });
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                cargarArchivos(carpetaId);
+                            } else {
+                                alert('Error: ' + data.message);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            alert('Error al eliminar archivo');
+                        });
                 }
             );
         };
@@ -4706,12 +4936,12 @@
             const previewArea = document.getElementById('previewArea');
             const filePreview = document.getElementById('filePreview');
             const filesList = document.getElementById('filesList');
-            
+
             if (input.files && input.files.length > 0) {
                 // Ocultar área de carga y mostrar preview
                 previewArea.classList.add('hidden');
                 filePreview.classList.remove('hidden');
-                
+
                 filesList.innerHTML = '';
                 Array.from(input.files).forEach(file => {
                     const fileItem = document.createElement('div');
@@ -4731,18 +4961,18 @@
                 filePreview.classList.add('hidden');
             }
         }
-        
+
         function limpiarArchivo(event) {
             event.preventDefault();
             event.stopPropagation();
-            
+
             const input = document.getElementById('archivoMaterial');
             input.value = '';
-            
+
             const previewArea = document.getElementById('previewArea');
             const filePreview = document.getElementById('filePreview');
             const filesList = document.getElementById('filesList');
-            
+
             previewArea.classList.remove('hidden');
             filePreview.classList.add('hidden');
             filesList.innerHTML = '';
@@ -4751,17 +4981,17 @@
         function cerrarModalCarpeta() {
             document.getElementById('carpetaModal')?.remove();
         }
-        
+
         function cerrarModalMaterial() {
             document.getElementById('materialModal')?.remove();
         }
-        
-        window.descargarMaterial = function(button) {
+
+        window.descargarMaterial = function (button) {
             const materialId = button.getAttribute('data-material-id');
             const materialNombre = button.getAttribute('data-material-nombre');
             mostrarModalMaterial(materialId, materialNombre);
         };
-        
+
         function mostrarModalMaterial(materialId, materialNombre) {
             const modalHTML = `
                 <div id="materialModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -4793,16 +5023,16 @@
             document.body.insertAdjacentHTML('beforeend', modalHTML);
             cargarArchivosMaterial(materialId);
         }
-        
+
         function cargarArchivosMaterial(materialId) {
             const listaArchivos = document.getElementById('listaArchivosMaterial');
-            
+
             fetch(`/actividad/material/${materialId}/archivos`)
-            .then(response => response.json())
-            .then(data => {
-                // Verificar si está bloqueado por mora
-                if (data.bloqueado === true) {
-                    listaArchivos.innerHTML = `
+                .then(response => response.json())
+                .then(data => {
+                    // Verificar si está bloqueado por mora
+                    if (data.bloqueado === true) {
+                        listaArchivos.innerHTML = `
                         <div class="bg-white rounded-lg p-8 text-center">
                             <div class="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4" 
                                  style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
@@ -4840,20 +5070,20 @@
                             </div>
                         </div>
                     `;
-                    return;
-                }
-                
-                // Si no está bloqueado, mostrar archivos normalmente
-                const archivos = data;
-                if (archivos.length === 0) {
-                    listaArchivos.innerHTML = `
+                        return;
+                    }
+
+                    // Si no está bloqueado, mostrar archivos normalmente
+                    const archivos = data;
+                    if (archivos.length === 0) {
+                        listaArchivos.innerHTML = `
                         <div class="text-center text-gray-400 py-8">
                             <i class="fas fa-inbox text-3xl mb-2"></i>
                             <p>No hay archivos disponibles</p>
                         </div>
                     `;
-                } else {
-                    const html = archivos.map(archivo => `
+                    } else {
+                        const html = archivos.map(archivo => `
                         <div class="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
                             <div class="flex items-center space-x-3">
                                 <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -4878,25 +5108,25 @@
                             </div>
                         </div>
                     `).join('');
-                    
-                    listaArchivos.innerHTML = html;
-                }
-            })
-            .catch(error => {
-                console.error('Error al cargar archivos:', error);
-                listaArchivos.innerHTML = `
+
+                        listaArchivos.innerHTML = html;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error al cargar archivos:', error);
+                    listaArchivos.innerHTML = `
                     <div class="text-center text-red-500 py-8">
                         <i class="fas fa-exclamation-triangle text-3xl mb-2"></i>
                         <p>Error al cargar archivos</p>
                     </div>
                 `;
-            });
+                });
         }
 
-        window.abrirFormularioMaterialEnCarpeta = function(carpetaId, carpetaNombre) {
+        window.abrirFormularioMaterialEnCarpeta = function (carpetaId, carpetaNombre) {
             // Primero cerramos el modal de carpeta
             cerrarModalCarpeta();
-            
+
             // Luego abrimos el formulario de material, pasando el ID de la carpeta como módulo
             const formularioHTML = crearFormularioMaterial(carpetaId, carpetaNombre);
             document.body.insertAdjacentHTML('beforeend', formularioHTML);
@@ -4909,11 +5139,11 @@
         }
 
         function formatearFecha(fechaStr) {
-            if(!fechaStr) return '';
+            if (!fechaStr) return '';
             const fecha = new Date(fechaStr);
-            return fecha.toLocaleDateString('es-ES', { 
-                day: '2-digit', 
-                month: '2-digit', 
+            return fecha.toLocaleDateString('es-ES', {
+                day: '2-digit',
+                month: '2-digit',
                 year: 'numeric',
                 hour: '2-digit',
                 minute: '2-digit'
@@ -4921,7 +5151,7 @@
         }
 
         function confirmarEliminarEntrega(idEntrega) {
-            if(confirm('¿Estás seguro de que deseas eliminar tu entrega? Esta acción no se puede deshacer.')) {
+            if (confirm('¿Estás seguro de que deseas eliminar tu entrega? Esta acción no se puede deshacer.')) {
                 eliminarEntrega(idEntrega);
             }
         }
@@ -4930,16 +5160,16 @@
             try {
                 const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
                 const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
-                
+
                 const response = await fetch('/entrega/eliminar/' + idEntrega, {
                     method: 'DELETE',
                     headers: {
                         [csrfHeader]: csrfToken
                     }
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (response.ok && data.success) {
                     alert(data.message);
                     window.location.reload();
@@ -4954,13 +5184,13 @@
 
         async function abrirModalTarea(btn) {
             const id = btn.getAttribute('data-id');
-            
+
             // Validar mora antes de abrir el modal (solo alumnos)
             if (!PUEDE_MODIFICAR) {
                 try {
                     const response = await fetch(`/clase/validar-mora/${id}`);
                     const data = await response.json();
-                    
+
                     if (data.bloqueado === true) {
                         // Mostrar modal de bloqueo con el mismo estilo de examen
                         const modalBloqueado = `
@@ -5019,7 +5249,7 @@
                     // Continuar con el modal normal si falla la validación
                 }
             }
-            
+
             // Si no está bloqueado, continuar con el modal normal
             const titulo = btn.getAttribute('data-titulo');
             const descripcion = btn.getAttribute('data-descripcion');
@@ -5037,14 +5267,14 @@
             const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
 
             let contenidoEntrega = '';
-            
+
             if (entregaId) {
                 // CU-11: Ya existe una entrega, verificar si se puede modificar
                 const ahora = new Date();
                 const fechaLimite = limite ? new Date(limite) : null;
                 const fueraDePlazo = fechaLimite && ahora > fechaLimite;
                 const puedeModificar = modificaciones && (!fueraDePlazo || (fueraDePlazo && tardias));
-                
+
                 contenidoEntrega = `
                     <div class="bg-green-50 p-4 rounded-lg border border-green-200 mb-4">
                         <div class="flex items-center text-green-700 font-medium mb-2">
@@ -5148,7 +5378,7 @@
                     </div>
                 </div>
             `;
-            
+
             document.body.insertAdjacentHTML('beforeend', modalHTML);
 
             const modalEl = document.getElementById('tareaModal');
@@ -5187,19 +5417,19 @@
                 }
             });
         }
-        
+
         function escapeHtml(text) {
-          if (!text) return "";
-          return text
-              .replace(/&/g, "&amp;")
-              .replace(/</g, "&lt;")
-              .replace(/>/g, "&gt;")
-              .replace(/"/g, "&quot;")
-              .replace(/'/g, "&#039;");
+            if (!text) return "";
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
         }
 
         function mostrarModalAviso(titulo, mensaje, iconoClass = 'text-yellow-500 fas fa-exclamation-triangle') {
-             const modalHTML = `
+            const modalHTML = `
                 <div id="avisoModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[120]">
                     <div class="bg-white rounded-lg p-6 w-96 shadow-xl transform transition-all scale-100">
                         <div class="text-center">
@@ -5218,7 +5448,7 @@
         }
 
         async function iniciarIngresoClase(claseId) {
-             try {
+            try {
                 console.log('🔵 Iniciando proceso de ingreso a clase:', claseId);
                 // Mostrar indicador de carga (opcional)
                 document.body.style.cursor = 'wait';
@@ -5227,7 +5457,7 @@
                 console.log('🔍 Validando mora antes de entrar...');
                 const moraResponse = await fetch('/clase/validar-mora-aula/' + claseId);
                 const moraData = await moraResponse.json();
-                
+
                 console.log('📊 Respuesta de mora:', moraData);
 
                 if (moraData.bloqueado === true) {
@@ -5299,8 +5529,8 @@
                 document.body.style.cursor = 'default';
 
                 if (estado.finalizada) {
-                     mostrarModalAviso('Clase Finalizada', 'Esta clase ya realizó y ha finalizado.', 'text-red-500 fas fa-door-closed');
-                     return;
+                    mostrarModalAviso('Clase Finalizada', 'Esta clase ya realizó y ha finalizado.', 'text-red-500 fas fa-door-closed');
+                    return;
                 }
 
                 if (!estado.esHoy) {
@@ -5309,7 +5539,7 @@
                     // Capitalizar primera letra
                     let fechaStr = fechaInicio.toLocaleDateString('es-ES', opcionesFecha);
                     fechaStr = fechaStr.charAt(0).toUpperCase() + fechaStr.slice(1);
-                    
+
                     mostrarModalAviso('Fecha Incorrecta', `Esta clase está programada para el ${fechaStr}.`, 'text-blue-500 fas fa-calendar-alt');
                     return;
                 }
@@ -5325,50 +5555,51 @@
                 console.log('🚀 Redirigiendo a la videoconferencia...');
                 window.location.href = '/clase/unirse/' + claseId;
 
-             } catch (error) {
-                 document.body.style.cursor = 'default';
-                 console.error('❌ Error en validación:', error);
-                 // Fallback: intentar entrar de todos modos si falla la validación previa, 
-                 // el servidor detendrá si es crítico.
-                 console.log('⚠️ Fallback: intentando redirigir de todos modos...');
-                 window.location.href = '/clase/unirse/' + claseId;
-             }
+            } catch (error) {
+                document.body.style.cursor = 'default';
+                console.error('❌ Error en validación:', error);
+                // Fallback: intentar entrar de todos modos si falla la validación previa, 
+                // el servidor detendrá si es crítico.
+                console.log('⚠️ Fallback: intentando redirigir de todos modos...');
+                window.location.href = '/clase/unirse/' + claseId;
+            }
         }
 
         function validarIngreso(event) {
-             // Deprecated
+            // Deprecated
         }
-    /*]]>*/
+        /*]]>*/
     </script>
-    
+
     <script th:if="${success != null}" th:inline="javascript">
         /*<![CDATA[*/
         document.addEventListener('DOMContentLoaded', () => {
-             console.log("Auto-opening AI chat for analysis result...");
-             setTimeout(() => {
-                 // Abrir el chat
-                 if (window.aiChat && typeof window.aiChat.openChat === 'function') {
-                     window.aiChat.openChat();
-                     // Forzar chequeo inmediato de notificaciones para traer el mensaje desde el servidor
-                     if (typeof window.aiChat.checkNotifications === 'function') {
+            console.log("Auto-opening AI chat for analysis result...");
+            setTimeout(() => {
+                // Abrir el chat
+                if (window.aiChat && typeof window.aiChat.openChat === 'function') {
+                    window.aiChat.openChat();
+                    // Forzar chequeo inmediato de notificaciones para traer el mensaje desde el servidor
+                    if (typeof window.aiChat.checkNotifications === 'function') {
                         window.aiChat.checkNotifications();
-                     }
-                 } else if (window.simpleChatInstance && typeof window.simpleChatInstance.openChat === 'function') {
-                     window.simpleChatInstance.openChat();
-                     if (typeof window.simpleChatInstance.checkNotifications === 'function') {
+                    }
+                } else if (window.simpleChatInstance && typeof window.simpleChatInstance.openChat === 'function') {
+                    window.simpleChatInstance.openChat();
+                    if (typeof window.simpleChatInstance.checkNotifications === 'function') {
                         window.simpleChatInstance.checkNotifications();
-                     }
-                 } else {
-                     const btn = document.getElementById('chat-button-simple');
-                     if(btn) btn.click();
-                 }
-                 // NOTA: Ya no inyectamos manualmente el mensaje aquí para evitar duplicados, 
-                 // puesto que el backend ya generó la notificación correspondiente.
-             }, 1000);
+                    }
+                } else {
+                    const btn = document.getElementById('chat-button-simple');
+                    if (btn) btn.click();
+                }
+                // NOTA: Ya no inyectamos manualmente el mensaje aquí para evitar duplicados, 
+                // puesto que el backend ya generó la notificación correspondiente.
+            }, 1000);
         });
         /*]]>*/
     </script>"},{
     <!-- Incluir modal de crear clase -->
 
 </body>
+
 </html>

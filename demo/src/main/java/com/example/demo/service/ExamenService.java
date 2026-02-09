@@ -120,6 +120,21 @@ public class ExamenService {
                                 + "' aún se está generando con IA. Espera a que termine.");
                     }
 
+                    Integer cantidadSolicitada = poolDTO.getCantidadPreguntas();
+                    if (cantidadSolicitada != null) {
+                        int disponibles = poolGuardado.getPreguntas() != null ? poolGuardado.getPreguntas().size() : 0;
+                        if (cantidadSolicitada < 1) {
+                            throw new RuntimeException("El pool '" + poolGuardado.getNombre()
+                                    + "' debe tomar al menos 1 pregunta.");
+                        }
+                        if (disponibles > 0 && cantidadSolicitada > disponibles) {
+                            throw new RuntimeException("El pool '" + poolGuardado.getNombre()
+                                    + "' no puede tomar " + cantidadSolicitada
+                                    + " preguntas porque solo tiene " + disponibles + ".");
+                        }
+                        poolGuardado.setCantidadPreguntas(cantidadSolicitada);
+                    }
+
                 } else {
                     // Validaciones para pool nuevo
                     if (poolDTO.getPreguntas() == null || poolDTO.getPreguntas().isEmpty()) {
@@ -127,11 +142,26 @@ public class ExamenService {
                     }
 
                     // Crear un nuevo pool y asociarlo a la oferta del módulo
+                    int disponibles = poolDTO.getPreguntas().size();
+                    Integer cantidadSolicitada = poolDTO.getCantidadPreguntas();
+                    if (cantidadSolicitada == null) {
+                        cantidadSolicitada = disponibles;
+                    }
+                    if (cantidadSolicitada < 1) {
+                        throw new RuntimeException("El nuevo pool '" + poolDTO.getNombre()
+                                + "' debe tomar al menos 1 pregunta.");
+                    }
+                    if (cantidadSolicitada > disponibles) {
+                        throw new RuntimeException("El nuevo pool '" + poolDTO.getNombre()
+                                + "' no puede tomar " + cantidadSolicitada
+                                + " preguntas porque solo tiene " + disponibles + ".");
+                    }
+
                     Pool pool = new Pool();
                     pool.setIdPool(UUID.randomUUID());
                     pool.setNombre(poolDTO.getNombre());
                     pool.setDescripcion(poolDTO.getDescripcion());
-                    pool.setCantidadPreguntas(poolDTO.getCantidadPreguntas());
+                    pool.setCantidadPreguntas(cantidadSolicitada);
                     pool.setOferta(modulo.getCurso());
 
                     // Guardar el pool
