@@ -204,7 +204,7 @@
                                     <input type="number" id="diasMoraBloqueoAula" name="diasMoraBloqueoAula" 
                                            class="form-control" min="0" placeholder="Ej: 15"
                                            th:value="${instituto?.diasMoraBloqueoAula}">
-                                    <div class="form-text">Si la mora supera estos días, el alumno no podrá acceder al aula hasta regularizar el pago.</div>
+                                    <div class="form-text">Si la mora supera estos dÃ­as, el alumno no podrÃ¡ acceder al aula hasta regularizar el pago.</div>
                                 </div>
                             </div>
                         </div>
@@ -278,49 +278,49 @@
                             
                             <!-- Mostrar mensajes de éxito/error -->
                             <div th:if="${param.success != null}" class="alert alert-success">
-                                <span th:if="${param.success[0] == 'upload'}">✓ Imágenes subidas exitosamente</span>
-                                <span th:if="${param.success[0] == 'delete'}">✓ Imagen eliminada exitosamente</span>
+                                <span th:if="${param.success[0] == 'upload'}">âœ“ ImÃ¡genes subidas exitosamente</span>
+                                <span th:if="${param.success[0] == 'delete'}">âœ“ Imagen eliminada exitosamente</span>
                             </div>
                             
                             <div th:if="${param.error != null}" class="alert alert-danger">
-                                <span th:if="${param.error[0] == 'nofiles'}">⚠ No se han seleccionado imágenes</span>
-                                <span th:if="${param.error[0] == 'processing'}">⚠ Error al procesar las imágenes</span>
-                                <span th:if="${param.error[0] == 'server'}">⚠ Error interno del servidor</span>
-                                <span th:if="${param.error[0] == 'notfound'}">⚠ Imagen no encontrada</span>
-                                <span th:if="${param.error[0] == 'deletefail'}">⚠ Error al eliminar la imagen</span>
+                                <span th:if="${param.error[0] == 'nofiles'}">âš  No se han seleccionado imÃ¡genes</span>
+                                <span th:if="${param.error[0] == 'processing'}">âš  Error al procesar las imÃ¡genes</span>
+                                <span th:if="${param.error[0] == 'server'}">âš  Error interno del servidor</span>
+                                <span th:if="${param.error[0] == 'notfound'}">âš  Imagen no encontrada</span>
+                                <span th:if="${param.error[0] == 'deletefail'}">âš  Error al eliminar la imagen</span>
                             </div>
                             
                             <div class="carrusel-management">
-                                <!-- Área de subida de imágenes (AJAX) -->
+                                <!-- Ãrea de subida de imÃ¡genes (AJAX) -->
                                 <div class="upload-form">
                                     <div class="upload-area">
                                         <div class="upload-content">
                                             <i class="fas fa-cloud-upload-alt upload-icon"></i>
-                                            <h5>Subir Imágenes al Carrusel</h5>
-                                            <p>Haz clic aquí para seleccionar imágenes</p>
-                                            <span class="upload-hint">O arrastra los archivos aquí</span>
+                                            <h5>Subir ImÃ¡genes al Carrusel</h5>
+                                            <p>Haz clic aquÃ­ para seleccionar imÃ¡genes</p>
+                                            <span class="upload-hint">O arrastra los archivos aquÃ­</span>
                                             <div class="upload-specs">
-                                                <small>Formatos: JPG, PNG, GIF • Máximo 10MB por imagen</small>
+                                                <small>Formatos: JPG, PNG, GIF â€¢ MÃ¡ximo 10MB por imagen</small>
                                             </div>
                                         </div>
                                     </div>
                                     <input type="file" id="imageFiles" name="imagenes" multiple accept="image/*" 
                                            style="display: none;">
                                     
-                                    <!-- Preview de imágenes seleccionadas -->
+                                    <!-- Preview de imÃ¡genes seleccionadas -->
                                     <div id="preview-container" style="display: none; margin: 15px 0;">
                                         <h6><i class="fas fa-eye"></i> Vista previa:</h6>
                                         <div id="preview-grid" class="preview-grid"></div>
                                     </div>
                                     
                                     <button type="button" id="upload-btn" class="btn-upload" style="display: none;">
-                                        <i class="fas fa-upload"></i> Subir Imágenes al Carrusel
+                                        <i class="fas fa-upload"></i> Subir ImÃ¡genes al Carrusel
                                     </button>
                                 </div>
                                 
-                                <!-- Lista de imágenes actuales -->
+                                <!-- Lista de imÃ¡genes actuales -->
                                 <div class="current-images">
-                                    <h5>Imágenes actuales del carrusel:</h5>
+                                    <h5>ImÃ¡genes actuales del carrusel:</h5>
                                     <div class="images-grid">
                                         <div th:each="imagen : ${imagenesCarrusel}" class="image-item">
                                             <div class="image-preview" onclick="openImageModal(this)">
@@ -344,7 +344,7 @@
                                     
                                     <div th:if="${#lists.isEmpty(imagenesCarrusel)}" class="no-images">
                                         <i class="fas fa-image"></i>
-                                        <p>No hay imágenes en el carrusel. Sube algunas para comenzar.</p>
+                                        <p>No hay imÃ¡genes en el carrusel. Sube algunas para comenzar.</p>
                                     </div>
                                 </div>
 
@@ -358,15 +358,15 @@
                                 <div class="carrusel-instructions">
                                     <div class="instruction-item">
                                         <i class="fas fa-info-circle"></i>
-                                        <span>Las imágenes se mostrarán en orden en la página principal</span>
+                                        <span>Las imÃ¡genes se mostrarÃ¡n en orden en la pÃ¡gina principal</span>
                                     </div>
                                     <div class="instruction-item">
                                         <i class="fas fa-file-image"></i>
-                                        <span>Formatos soportados: JPG, PNG, GIF (máx. 10MB cada una)</span>
+                                        <span>Formatos soportados: JPG, PNG, GIF (mÃ¡x. 10MB cada una)</span>
                                     </div>
                                     <div class="instruction-item">
                                         <i class="fas fa-database"></i>
-                                        <span>Las imágenes se almacenan de forma segura en la base de datos</span>
+                                        <span>Las imÃ¡genes se almacenan de forma segura en la base de datos</span>
                                     </div>
                                 </div>
                             </div>
@@ -423,6 +423,12 @@
                                 </label>
                             </div>
                         </div>
+                            <div style="margin: 8px 0 16px 38px;">
+                                <button type="button" id="btn-ejecutar-reportes-semanales" class="btn btn-secondary" style="padding: 6px 12px; border-radius: 6px;">
+                                    <i class="fas fa-clock"></i> Simular sabado y generar reportes
+                                </button>
+                                <div class="form-text" style="margin-top: 4px;">Genera los 3 reportes y envia el aviso al chat del admin.</div>
+                            </div>
                     </div>
                 </div>
                 
