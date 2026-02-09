@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import com.example.demo.repository.UsuarioRepository;
 import com.example.demo.service.RecuperarContraseñaService;
 
 @Controller
@@ -16,10 +17,13 @@ public class LoginController {
     private String baseUrl;
 
     private final RecuperarContraseñaService passwordRecoveryService;
+    private final UsuarioRepository usuarioRepository;
     
     // Inyectar el servicio en el constructor
-    public LoginController(RecuperarContraseñaService passwordRecoveryService) {
+    public LoginController(RecuperarContraseñaService passwordRecoveryService,
+                           UsuarioRepository usuarioRepository) {
         this.passwordRecoveryService = passwordRecoveryService;
+        this.usuarioRepository = usuarioRepository;
     }
     
     @GetMapping("/login")
@@ -43,15 +47,18 @@ public class LoginController {
     @PostMapping("/forgot-password")
     public String handleForgotPassword(@RequestParam("recovery-identifier") String dniOCorreo, 
                                      Model model) {
-        System.out.println("🔐 Procesando recuperación para: " + dniOCorreo);
-        
+        System.out.println("Procesando recuperacion para: " + dniOCorreo);
+
+        boolean existeUsuario = usuarioRepository.findByDniOrCorreo(dniOCorreo, dniOCorreo).isPresent();
+        if (!existeUsuario) {
+            return "redirect:/login?mensaje=No encontramos un usuario con ese DNI o correo. Si aun no tienes cuenta, te recomendamos registrarte.&tipo=warning";
+        }
+
         boolean solicitudExitosa = passwordRecoveryService.iniciarRecuperacionPassword(dniOCorreo);
-        
         if (solicitudExitosa) {
             return "redirect:/login?mensaje=Se ha enviado un correo con instrucciones para recuperar tu clave de acceso.&tipo=success";
-        } else {
-            // Por seguridad, mostramos el mismo mensaje aunque no exista
-            return "redirect:/login?mensaje=Si el DNI o correo existen, recibirás un email con instrucciones.&tipo=info";
         }
+
+        return "redirect:/login?mensaje=No pudimos iniciar la recuperacion. Intenta nuevamente en unos minutos.&tipo=error";
     }
 }

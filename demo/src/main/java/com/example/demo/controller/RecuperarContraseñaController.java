@@ -1,4 +1,4 @@
-package com.example.demo.controller;
+﻿package com.example.demo.controller;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -36,20 +36,15 @@ public class RecuperarContraseñaController {
      */
     @GetMapping("/confirmar")
     public String confirmarRecuperacion(@RequestParam("token") String token) {
-        System.out.println("✅ Confirmando recuperación con token: " + token);
-        
-        boolean confirmacionExitosa = passwordRecoveryService.confirmarRecuperacion(token);
-        
-        if (confirmacionExitosa) {
-            return "redirect:/login?mensaje=¡Clave de acceso actualizada exitosamente! Ya puedes iniciar con tu nueva clave.&tipo=success";
-        } else {
-            return "redirect:/login?mensaje=El enlace de recuperacion ha expirado o no es válido. Por favor, solicita uno nuevo.&tipo=error";
+        System.out.println("Validando enlace de recuperacion con token: " + token);
+
+        if (!passwordRecoveryService.validarToken(token)) {
+            return "redirect:/login?mensaje=El enlace de recuperacion ha expirado o no es valido. Por favor, solicita uno nuevo.&tipo=error";
         }
+
+        return "redirect:/recuperacion/nueva?token=" + token;
     }
 
-    /**
-     * Muestra el formulario para restablecer la contraseña
-     */
     @GetMapping("/nueva")
     public String mostrarFormularioNueva(@RequestParam("token") String token,
                                          @RequestParam(value = "error", required = false) String error,
@@ -98,11 +93,11 @@ public class RecuperarContraseñaController {
 
     private String redirigirSegunRol(Authentication auth) {
         boolean esAdmin = auth.getAuthorities().stream().anyMatch(a -> "ADMIN".equals(a.getAuthority()));
-        if (esAdmin) return "redirect:/admin/panelAdmin";
+        if (esAdmin) return "redirect:/admin/dashboard";
         boolean esDocente = auth.getAuthorities().stream().anyMatch(a -> "DOCENTE".equals(a.getAuthority()));
         if (esDocente) return "redirect:/docente/mi-espacio";
         boolean esAlumno = auth.getAuthorities().stream().anyMatch(a -> "ALUMNO".equals(a.getAuthority()));
-        if (esAlumno) return "redirect:/alumno/perfil";
+        if (esAlumno) return "redirect:/alumno/mi-espacio";
         return "redirect:/";
     }
 }
