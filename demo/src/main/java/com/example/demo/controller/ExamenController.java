@@ -266,9 +266,14 @@ public class ExamenController {
             // Asegurar carga de Respuestas (Lazy)
             intento.getRespuestas().size();
 
+            int totalPreguntasConfiguradas = calcularTotalPreguntasExamen(examen);
+            float puntajePorPregunta = calcularPuntajePorPregunta(totalPreguntasConfiguradas);
+
             model.addAttribute("examen", examen);
             model.addAttribute("intento", intento);
             model.addAttribute("respuestas", intento.getRespuestas());
+
+            model.addAttribute("puntajeMax", puntajePorPregunta);
 
             return "examen-revision";
         } catch (Exception e) {
@@ -362,6 +367,10 @@ public class ExamenController {
             response.put("tiempoRealizacion",
                     examen.getTiempoRealizacion() != null ? examen.getTiempoRealizacion() : 60);
 
+            // Calcular puntaje por pregunta para que el examen totalice 10 puntos
+            int totalPreguntasConfiguradas = calcularTotalPreguntasExamen(examen);
+            float puntajePorPregunta = calcularPuntajePorPregunta(totalPreguntasConfiguradas);
+
             // Construir preguntas desde todos los pools (con selección aleatoria y límite)
             List<Map<String, Object>> preguntasDTO = examen.getPoolPreguntas().stream()
                     .flatMap(pool -> {
@@ -380,7 +389,7 @@ public class ExamenController {
                             preguntaMap.put("id", pregunta.getIdPregunta().toString());
                             preguntaMap.put("tipo", pregunta.getTipoPregunta().name());
                             preguntaMap.put("texto", pregunta.getEnunciado());
-                            preguntaMap.put("puntaje", pregunta.getPuntaje());
+                            preguntaMap.put("puntaje", puntajePorPregunta);
 
                             // Si tiene opciones, agregarlas
                             if (pregunta.getOpciones() != null && !pregunta.getOpciones().isEmpty()) {
@@ -441,6 +450,9 @@ public class ExamenController {
             float puntajeTotal = 0;
             boolean requiereRevision = false;
 
+            int totalPreguntasConfiguradas = calcularTotalPreguntasExamen(examen);
+            float puntajePorPregunta = calcularPuntajePorPregunta(totalPreguntasConfiguradas);
+
             for (Map<String, Object> resp : respuestas) {
                 String preguntaId = (String) resp.get("preguntaId");
                 Object respuestaUsuarioObj = resp.get("respuesta");
@@ -473,7 +485,7 @@ public class ExamenController {
                     } else {
                         boolean esCorrecta = corregirAutomatica(pregunta, respuestaUsuarioObj);
                         respuestaIntento.setEsCorrecta(esCorrecta);
-                        respuestaIntento.setPuntajeObtenido(esCorrecta ? pregunta.getPuntaje() : 0f);
+                        respuestaIntento.setPuntajeObtenido(esCorrecta ? puntajePorPregunta : 0f);
                         respuestaIntento.setRequiereRevisionManual(false);
                         puntajeTotal += respuestaIntento.getPuntajeObtenido();
                     }
@@ -487,6 +499,10 @@ public class ExamenController {
             }
 
             intento.setRespuestas(respuestasIntento);
+            if (puntajeTotal > 10f) {
+                puntajeTotal = 10f;
+            }
+
             intento.setCalificacion(puntajeTotal);
 
             if (requiereRevision) {
@@ -496,22 +512,10 @@ public class ExamenController {
             intentoRepository.save(intento);
 
             // NUEVA LÓGICA: Generar feedback SIEMPRE que el alumno repruebe
+            // Escala 0-10: el examen totaliza 10 puntos
+            boolean reprobo = puntajeTotal < 6.0f;
+            System.out.println("FEEDBACK DEBUG: Escala 0-10. Puntaje: " + puntajeTotal + ", Reprobo: " + reprobo);
 
-            // Detectar escala automáticamente y determinar si reprobó
-            boolean reprobo;
-            if (puntajeTotal >= 10.0f) {
-                // Escala 0-100: reprueba con menos de 60
-                reprobo = puntajeTotal < 60.0f;
-                // log.info("🔍 Escala 0-100. Puntaje: {}, Reprobó: {}", puntajeTotal, reprobo);
-                System.out
-                        .println("🔍 FEEDBACK DEBUG: Escala 0-100. Puntaje: " + puntajeTotal + ", Reprobó: " + reprobo);
-            } else {
-                // Escala 0-10: reprueba con menos de 6
-                reprobo = puntajeTotal < 6.0f;
-                // log.info("🔍 Escala 0-10. Puntaje: {}, Reprobó: {}", puntajeTotal, reprobo);
-                System.out
-                        .println("🔍 FEEDBACK DEBUG: Escala 0-10. Puntaje: " + puntajeTotal + ", Reprobó: " + reprobo);
-            }
 
             if (reprobo) {
                 String nombreAlumno = alumno.getNombre() + " " + alumno.getApellido();
@@ -684,6 +688,9 @@ public class ExamenController {
         Intento intento = intentoRepository.findByIdIntentoAndExamen_IdActividad(intentoId, examenId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Intento no encontrado"));
 
+        int totalPreguntasConfiguradas = calcularTotalPreguntasExamen(examen);
+        float puntajePorPregunta = calcularPuntajePorPregunta(totalPreguntasConfiguradas);
+
         List<Map<String, Object>> respuestasDetalle = new ArrayList<>();
         if (intento.getRespuestas() != null) {
             for (RespuestaIntento respuesta : intento.getRespuestas()) {
@@ -692,6 +699,7 @@ public class ExamenController {
                 detalle.put("respuestaTexto", formatearRespuestaUsuario(respuesta.getRespuestaUsuario()));
                 detalle.put("respuestaLista", obtenerRespuestaComoLista(respuesta.getRespuestaUsuario()));
                 detalle.put("puntaje", respuesta.getPuntajeObtenido());
+                detalle.put("puntajeMax", puntajePorPregunta);
                 detalle.put("esCorrecta", respuesta.getEsCorrecta());
                 detalle.put("requiereRevision", respuesta.getRequiereRevisionManual());
                 respuestasDetalle.add(detalle);
@@ -718,6 +726,9 @@ public class ExamenController {
         Intento intento = intentoRepository.findById(intentoId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Intento no encontrado"));
 
+        int totalPreguntasConfiguradas = calcularTotalPreguntasExamen(intento.getExamen());
+        float puntajePorPregunta = calcularPuntajePorPregunta(totalPreguntasConfiguradas);
+
         float puntajeTotal = 0;
 
         if (intento.getRespuestas() != null) {
@@ -727,8 +738,8 @@ public class ExamenController {
                     try {
                         float puntaje = Float.parseFloat(allParams.get(paramName));
                         // Validar que no exceda el puntaje de la pregunta
-                        if (puntaje > respuesta.getPregunta().getPuntaje()) {
-                            puntaje = respuesta.getPregunta().getPuntaje();
+                        if (puntaje > puntajePorPregunta) {
+                            puntaje = puntajePorPregunta;
                         }
                         if (puntaje < 0) {
                             puntaje = 0;
@@ -737,7 +748,7 @@ public class ExamenController {
                         respuesta.setPuntajeObtenido(puntaje);
                         // Se considera correcta si obtuvo el puntaje máximo, o parcial.
                         // Para simplificar: >= puntaje máximo es FULL correct.
-                        respuesta.setEsCorrecta(puntaje >= respuesta.getPregunta().getPuntaje());
+                        respuesta.setEsCorrecta(puntaje >= puntajePorPregunta);
                         respuesta.setRequiereRevisionManual(false);
 
                         puntajeTotal += puntaje;
@@ -746,6 +757,10 @@ public class ExamenController {
                     }
                 }
             }
+        }
+
+        if (puntajeTotal > 10f) {
+            puntajeTotal = 10f;
         }
 
         intento.setCalificacion(puntajeTotal);
@@ -1062,4 +1077,34 @@ public class ExamenController {
                     "message", "Error al publicar pre-examen: " + e.getMessage()));
         }
     }
+
+    private int calcularTotalPreguntasExamen(Examen examen) {
+        if (examen == null || examen.getPoolPreguntas() == null) {
+            return 0;
+        }
+
+        int total = 0;
+        for (Pool pool : examen.getPoolPreguntas()) {
+            int disponibles = pool.getPreguntas() != null ? pool.getPreguntas().size() : 0;
+            int cantidad = pool.getCantidadPreguntas() != null ? pool.getCantidadPreguntas() : disponibles;
+            if (cantidad > disponibles) {
+                cantidad = disponibles;
+            }
+            if (cantidad < 0) {
+                cantidad = 0;
+            }
+            total += cantidad;
+        }
+        return total;
+    }
+
+    private float calcularPuntajePorPregunta(int totalPreguntas) {
+        if (totalPreguntas <= 0) {
+            return 0f;
+        }
+        return new java.math.BigDecimal("10")
+                .divide(new java.math.BigDecimal(totalPreguntas), 4, java.math.RoundingMode.HALF_UP)
+                .floatValue();
+    }
+
 }

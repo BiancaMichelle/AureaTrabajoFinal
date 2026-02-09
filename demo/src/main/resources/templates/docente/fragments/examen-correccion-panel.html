@@ -59,11 +59,11 @@
                     <label class="text-xs font-semibold text-slate-600">Puntaje Asignado:</label>
                     <div class="flex items-center gap-2">
                         <input type="number" step="0.01" min="0" 
-                               th:max="${detalle['pregunta'].puntaje}"
+                               th:max="${detalle['puntajeMax']}"
                                th:name="'puntaje_' + ${detalle['pregunta'].idPregunta}"
                                th:value="${detalle['puntaje']}"
                                class="w-20 text-sm border-slate-300 rounded-md shadow-sm focus:border-primary-500 focus:ring-primary-500 text-right font-bold text-slate-800 input-puntaje">
-                        <span class="text-xs text-slate-400">/ <span th:text="${detalle['pregunta'].puntaje}">10</span></span>
+                        <span class="text-xs text-slate-400">/ <span th:text="${detalle['puntajeMax']}">10</span></span>
                     </div>
                 </div>
             </div>
