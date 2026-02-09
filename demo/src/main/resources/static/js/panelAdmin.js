@@ -535,10 +535,7 @@ function mostrarNotificacion(mensaje, tipo = 'success') {
         notification.classList.add('show');
     }, 10);
     
-    // Auto-ocultar despu�s de 5 segundos
-    setTimeout(() => {
-        ocultarNotificacion();
-    }, 5000);
+    // Auto-ocultar deshabilitado: solo cerrar con la X
 }
 
 // Funci�n para ocultar notificaci�n
