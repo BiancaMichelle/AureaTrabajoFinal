@@ -623,7 +623,8 @@ input:checked + .slider:after {
                                 <label for="categoria-select">Seleccionar Categorías</label>
                                 <p class="field-description">Seleccione una o más categorías que describan esta oferta académica</p>
                                 <div class="categoria-input-group">
-                                    <select id="categoria-select" class="form-control categoria-select">
+                                    <input type="text" id="categoria-search" class="form-control" placeholder="Buscar categoria..." style="margin-bottom: 6px; margin-top: 14px; max-width: 260px; height: 32px; padding: 4px 8px; font-size: 0.9rem;">
+                                    <select id="categoria-select" class="form-control categoria-select" size="6" style="min-height: 160px;">
                                         <option value="">-- Seleccione una categoría --</option>
                                         <!-- Las categorías se cargarán dinámicamente desde la base de datos -->
                                     </select>
@@ -1673,6 +1674,7 @@ input:checked + .slider:after {
             const btnGestionarCategorias = document.getElementById('btn-gestionar-categorias');
             const categoriasFilterInput = document.getElementById('categorias-filter-input');
             const categoriasFilterClear = document.getElementById('categorias-filter-clear');
+            const categoriaSearchInput = document.getElementById('categoria-search');
             
             console.log('Elementos encontrados:', {
                 btnShowForm: !!btnShowForm,
@@ -1684,6 +1686,10 @@ input:checked + .slider:after {
 
             if (categoriasFilterInput) {
                 categoriasFilterInput.addEventListener('input', aplicarFiltroCategorias);
+            }
+            
+            if (categoriaSearchInput) {
+                categoriaSearchInput.addEventListener('input', filtrarCategoriasSelect);
             }
 
             if (categoriasFilterClear) {
@@ -2587,27 +2593,46 @@ input:checked + .slider:after {
                 });
         }
         
+        let categoriasSelectCache = [];
+
+        function renderCategoriasSelect(listado) {
+            const select = document.getElementById('categoria-select');
+            if (!select) return;
+            // Limpiar opciones existentes (excepto la primera)
+            while (select.children.length > 1) {
+                select.removeChild(select.lastChild);
+            }
+            listado.forEach(categoria => {
+                const option = document.createElement('option');
+                option.value = categoria.idCategoria;
+                option.textContent = categoria.nombre;
+                select.appendChild(option);
+            });
+        }
+
+        function filtrarCategoriasSelect() {
+            const input = document.getElementById('categoria-search');
+            const query = (input && input.value ? input.value : '').toLowerCase().trim();
+            if (!query) {
+                renderCategoriasSelect(categoriasSelectCache);
+                return;
+            }
+            const filtradas = categoriasSelectCache.filter(c => {
+                const nombre = (c.nombre || '').toLowerCase();
+                return nombre.includes(query);
+            });
+            renderCategoriasSelect(filtradas);
+        }
+
         function cargarCategoriasSelect() {
             console.log('🔄 Cargando categorías para select...');
             
             fetch('/api/categorias')
                 .then(response => response.json())
                 .then(categorias => {
-                    const select = document.getElementById('categoria-select');
-                    if (select) {
-                        // Limpiar opciones existentes (excepto la primera)
-                        while (select.children.length > 1) {
-                            select.removeChild(select.lastChild);
-                        }
-                        
-                        // Agregar categorías
-                        categorias.forEach(categoria => {
-                            const option = document.createElement('option');
-                            option.value = categoria.idCategoria;
-                            option.textContent = categoria.nombre;
-                            select.appendChild(option);
-                        });
-                    }
+                    categoriasSelectCache = Array.isArray(categorias) ? categorias : [];
+                    renderCategoriasSelect(categoriasSelectCache);
+                    filtrarCategoriasSelect();
                 })
                 .catch(error => {
                     console.error('❌ Error al cargar categorías para select:', error);
@@ -3324,6 +3349,23 @@ if (typeof window.mostrarNotificacion !== 'function') {
         
 
         
+        function limpiarCategoriasSeleccionadas() {
+            categoriasSeleccionadas = [];
+            const selectedContainer = document.getElementById('selected-categories');
+            const selectedChips = document.getElementById('selected-chips');
+            const formCategorias = document.getElementById('categorias');
+            const select = document.getElementById('categoria-select');
+            const searchInput = document.getElementById('categoria-search');
+            if (selectedChips) selectedChips.innerHTML = '';
+            if (selectedContainer) selectedContainer.style.display = 'none';
+            if (formCategorias) formCategorias.value = '';
+            if (select) select.selectedIndex = 0;
+            if (searchInput) searchInput.value = '';
+            if (typeof renderCategoriasSelect === 'function') {
+                renderCategoriasSelect(categoriasSelectCache);
+            }
+        }
+
         // Función para limpiar formulario completo
         function limpiarFormularioCompleto() {
             const formulario = document.getElementById('oferta-form');
@@ -3331,6 +3373,7 @@ if (typeof window.mostrarNotificacion !== 'function') {
             
             // Limpiar datos específicos
             limpiarDatosFormulario();
+            limpiarCategoriasSeleccionadas();
             
             // Ocultar todas las secciones específicas
             const seccionesEspecificas = document.querySelectorAll('.tipo-specific');
@@ -5005,6 +5048,7 @@ if (typeof window.mostrarNotificacion !== 'function') {
             
             // Limpiar ID de oferta
             document.getElementById('idOfertaModificar').value = '';
+            limpiarCategoriasSeleccionadas();
         }
         
         // Modificar la función de envío del formulario para manejar actualizaciones
