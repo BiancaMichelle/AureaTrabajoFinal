@@ -10,7 +10,7 @@
         <header class="main-header">
             <h1><i class="fas fa-credit-card"></i> Gestión de Pagos</h1>
             <div class="header-actions">
-                <a th:href="@{/admin/pagos/reporte(estado=${estadoSeleccionado}, dni=${dniBusqueda})}" class="btn-primary" target="_blank">
+                <a th:href="@{/admin/pagos/reporte(estado=${estadoSeleccionado}, dni=${dniBusqueda}, fechaInicio=${fechaInicioSeleccionada}, fechaFin=${fechaFinSeleccionada}, tipo=${tipoSeleccionado}, cursoId=${ofertaSeleccionada})}" class="btn-primary" target="_blank">
                     <i class="fas fa-file-pdf"></i> Generar Reporte
                 </a>
             </div>
@@ -21,7 +21,7 @@
                 <h2>Filtros</h2>
             </div>
             <div class="card-body">
-                <form th:action="@{/admin/pagos}" method="get" class="search-form" style="display: flex; gap: 15px; align-items: flex-end;">
+                <form th:action="@{/admin/pagos}" method="get" class="search-form" style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
                     <div class="form-group" style="flex: 1;">
                         <label for="dni">DNI del Alumno:</label>
                         <input type="text" id="dni" name="dni" class="form-control" th:value="${dniBusqueda}" placeholder="Buscar por DNI...">
@@ -36,6 +36,32 @@
                                     th:selected="${estadoSeleccionado == est.name()}"></option>
                         </select>
                     </div>
+                    <div class="form-group" style="flex: 1; min-width: 180px;">
+                        <label for="fechaInicio">Fecha de Pago (Desde):</label>
+                        <input type="date" id="fechaInicio" name="fechaInicio" class="form-control" th:value="${fechaInicioSeleccionada}">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 180px;">
+                        <label for="fechaFin">Fecha de Pago (Hasta):</label>
+                        <input type="date" id="fechaFin" name="fechaFin" class="form-control" th:value="${fechaFinSeleccionada}">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 180px;">
+                        <label for="tipo">Tipo:</label>
+                        <select id="tipo" name="tipo" class="form-control">
+                            <option value="">Todos</option>
+                            <option value="INSCRIPCION" th:selected="${tipoSeleccionado == 'INSCRIPCION'}">Inscripción</option>
+                            <option value="CUOTA" th:selected="${tipoSeleccionado == 'CUOTA'}">Cuota</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 220px;">
+                        <label for="oferta">Oferta:</label>
+                        <select id="oferta" name="ofertaId" class="form-control">
+                            <option value="">Todas</option>
+                            <option th:each="oferta : ${ofertas}"
+                                    th:value="${oferta.idOferta}"
+                                    th:text="${oferta.nombre}"
+                                    th:selected="${ofertaSeleccionada == oferta.idOferta}"></option>
+                        </select>
+                    </div>
                     <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Filtrar</button>
                     <a th:href="@{/admin/pagos}" class="btn btn-secondary"><i class="fas fa-eraser"></i> Limpiar</a>
                 </form>
@@ -44,8 +70,8 @@
 
         <div class="admin-card mt-4">
             <div class="card-header">
-                <h2>Pagos por Alumno</h2>
-                <p style="color: #cec0fc; font-size: 0.9rem; margin: 5px 0 0 0;">Haz clic en un alumno para ver sus pagos</p>
+                <h2>Pagos</h2>
+                <p style="color: #cec0fc; font-size: 0.9rem; margin: 5px 0 0 0;">Haz clic en un pago para ver su detalle</p>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -54,39 +80,38 @@
                             <tr>
                                 <th>DNI</th>
                                 <th>Alumno</th>
-                                <th style="text-align: center;">Total Pagos</th>
-                                <th style="text-align: right;">Monto Total Pagado</th>
+                                <th style="text-align: center;">Fecha</th>
+                                <th style="text-align: center;">Estado</th>
+                                <th style="text-align: right;">Monto</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <th:block th:each="entry : ${pagosPorAlumno}">
-                                <tr class="alumno-row" th:data-alumno="${entry.key}" onclick="togglePagos(this)" style="background-color: #2a1a4d; cursor: pointer;">
-                                    <td th:text="${entry.value.dni}">12345678</td>
+                            <th:block th:each="pago : ${pagos}">
+                                <tr class="pago-row" th:data-pago="${pago.idPago}" onclick="togglePagos(this)" style="background-color: #2a1a4d; cursor: pointer;">
+                                    <td th:text="${pago.usuario != null ? pago.usuario.dni : '-'}">12345678</td>
                                     <td style="font-weight: bold;">
-                                        <span th:text="${entry.value.nombre}">Juan Pérez</span>
+                                        <span th:text="${pago.usuario != null ? pago.usuario.nombre + ' ' + pago.usuario.apellido : '-'}">Juan Pérez</span>
                                     </td>
                                     <td style="text-align: center;">
-                                        <span class="badge bg-success" th:text="${entry.value.totalPagos}">5</span>
+                                        <span th:text="${#temporals.format(pago.fechaPago, 'dd/MM/yyyy HH:mm')}">01/01/2026</span>
                                     </td>
-                                    <td style="text-align: right; font-weight: bold;" th:text="${#numbers.formatCurrency(entry.value.montoTotal)}">$5000.00</td>
+                                    <td style="text-align: center;">
+                                        <span th:with="estadoKey=${estadoPagoVisual[pago.idPago]}"
+                                              th:text="${estadoKey == 'PAGADO' ? 'Pagado' : (estadoKey == 'PAGADO_CON_MORA' ? 'Pagado con mora' : (estadoKey == 'MORA' ? 'Mora' : 'Pendiente'))}"
+                                              th:class="'badge ' + (estadoKey == 'PAGADO' ? 'bg-success' : (estadoKey == 'PAGADO_CON_MORA' ? 'bg-warning' : (estadoKey == 'MORA' ? 'bg-danger' : 'bg-secondary')))"
+                                              style="padding: 6px 10px; font-size: 0.75rem;"></span>
+                                    </td>
+                                    <td style="text-align: right; font-weight: bold;" th:text="${#numbers.formatCurrency(pago.monto)}">$5000.00</td>
                                 </tr>
-                                <!-- Pagos detallados (ocultos por defecto) -->
-                                <tr th:each="pago : ${entry.value.pagos}" 
-                                    class="pago-detail" 
-                                    th:data-alumno="${entry.key}" 
-                                    style="display: none; background-color: #1a0d33;">
-                                    <td colspan="4" style="padding: 12px 20px;">
+                                <tr class="pago-detail" th:data-pago="${pago.idPago}" style="display: none; background-color: #1a0d33;">
+                                    <td colspan="5" style="padding: 12px 20px;">
                                         <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-                                            <div style="flex: 0 0 160px;">
-                                                <small style="color: #cec0fc; display: block; margin-bottom: 4px;">Fecha:</small>
-                                                <strong th:text="${#temporals.format(pago.fechaPago, 'dd/MM/yyyy HH:mm')}">01/01/2026</strong>
-                                            </div>
                                             <div style="flex: 0 0 110px;">
                                                 <small style="color: #cec0fc; display: block; margin-bottom: 4px;">Tipo:</small>
                                                 <span th:if="${!#lists.isEmpty(pago.cuotas)}" class="badge bg-info">Cuota</span>
                                                 <span th:unless="${!#lists.isEmpty(pago.cuotas)}" class="badge bg-primary">Inscripción</span>
                                             </div>
-                                            <div style="flex: 1 1 auto; min-width: 180px; max-width: 300px; overflow: hidden; text-overflow: ellipsis;">
+                                            <div style="flex: 1 1 auto; min-width: 180px; max-width: 320px; overflow: hidden; text-overflow: ellipsis;">
                                                 <small style="color: #cec0fc; display: block; margin-bottom: 4px;">Oferta:</small>
                                                 <strong style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;" 
                                                         th:if="${pago.oferta != null}" 
@@ -96,10 +121,6 @@
                                                         th:unless="${pago.oferta != null}" 
                                                         th:text="${pago.descripcion}" 
                                                         th:title="${pago.descripcion}">Descripción</strong>
-                                            </div>
-                                            <div style="flex: 0 0 120px; text-align: right;">
-                                                <small style="color: #cec0fc; display: block; margin-bottom: 4px;">Monto:</small>
-                                                <strong style="font-size: 1.1em;" th:text="${#numbers.formatCurrency(pago.monto)}">$100.00</strong>
                                             </div>
                                             <div style="flex: 0 0 120px; text-align: center;">
                                                 <small style="color: #cec0fc; display: block; margin-bottom: 4px;">Método:</small>
@@ -117,8 +138,8 @@
                                     </td>
                                 </tr>
                             </th:block>
-                            <tr th:if="${#maps.isEmpty(pagosPorAlumno)}">
-                                <td colspan="4" class="text-center">No se encontraron pagos completados con los filtros seleccionados.</td>
+                            <tr th:if="${#lists.isEmpty(pagos)}">
+                                <td colspan="5" class="text-center">No se encontraron pagos con los filtros seleccionados.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -128,8 +149,8 @@
 
         <script th:inline="javascript">
             window.togglePagos = function(row) {
-                const alumnoDni = row.getAttribute('data-alumno');
-                const pagoRows = document.querySelectorAll(`.pago-detail[data-alumno="${alumnoDni}"]`);
+                const pagoId = row.getAttribute('data-pago');
+                const pagoRows = document.querySelectorAll(`.pago-detail[data-pago="${pagoId}"]`);
                 
                 pagoRows.forEach(pagoRow => {
                     if (pagoRow.style.display === 'none' || pagoRow.style.display === '') {
