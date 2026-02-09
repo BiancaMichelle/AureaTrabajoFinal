@@ -110,19 +110,6 @@
             </div>
         </div>
 
-        <!-- Aviso de asistencia automática por tiempo (solo alumnos) -->
-        <div id="asistenciaAutoAviso"
-            class="hidden bg-amber-50 border border-amber-200 text-amber-800 px-5 py-4 rounded-xl mb-6">
-            <div class="flex items-center gap-3">
-                <i class="fas fa-stopwatch text-amber-600 text-lg"></i>
-                <div class="text-sm">
-                    <strong>Asistencia automática:</strong>
-                    Debés permanecer al menos <span id="minutosRequeridosAviso" class="font-semibold">-</span> minutos
-                    para que se registre tu asistencia.
-                </div>
-            </div>
-        </div>
-
         <!-- Mensaje de error -->
         <div th:if="${error}" class="bg-red-50 border border-red-300 text-red-800 px-5 py-4 rounded-xl mb-6">
             <div class="flex items-center">
@@ -269,6 +256,10 @@
             const defaultRoomName = /*[[${clase.roomName}]]*/ 'SalaPrueba';
             const isTeacher = /*[[${esDocente}]]*/ false;
             const transcripcionHabilitada = /*[[${clase.transcripcionHabilitada != null ? clase.transcripcionHabilitada : false}]]*/ false;
+            const permisoMicrofono = /*[[${clase.permisoMicrofono != null ? clase.permisoMicrofono : true}]]*/ true;
+            const permisoCamara = /*[[${clase.permisoCamara != null ? clase.permisoCamara : true}]]*/ true;
+            const permisoCompartirPantalla = /*[[${clase.permisoCompartirPantalla != null ? clase.permisoCompartirPantalla : true}]]*/ true;
+            const permisoChat = /*[[${clase.permisoChat != null ? clase.permisoChat : true}]]*/ true;
             const claseId = /*[[${clase.idClase}]]*/ '';
             const claseDuracionMinutos = /*[[${duracionMinutos != null ? duracionMinutos : 0}]]*/ 0;
             const claseInicioIso = /*[[${clase.inicio != null ? #temporals.format(clase.inicio, 'yyyy-MM-dd''T''HH:mm:ss') : ''}]]*/ '';
@@ -299,6 +290,35 @@
                 }
             }
 
+            const toolbarButtonsBase = [
+                'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
+                'fodeviceselection', 'hangup', 'profile', 'chat', 'recording',
+                'livestreaming', 'etherpad', 'sharedvideo', 'settings', 'raisehand',
+                'videoquality', 'filmstrip', 'invite', 'feedback', 'stats', 'shortcuts',
+                'tileview', 'videobackgroundblur', 'download', 'help', 'mute-everyone',
+                'security'
+            ];
+
+            function construirToolbarButtons() {
+                if (isTeacher) {
+                    return toolbarButtonsBase;
+                }
+                let buttons = [...toolbarButtonsBase];
+                if (!permisoMicrofono) {
+                    buttons = buttons.filter(b => b !== 'microphone');
+                }
+                if (!permisoCamara) {
+                    buttons = buttons.filter(b => b !== 'camera');
+                }
+                if (!permisoCompartirPantalla) {
+                    buttons = buttons.filter(b => b !== 'desktop');
+                }
+                if (!permisoChat) {
+                    buttons = buttons.filter(b => b !== 'chat');
+                }
+                return buttons;
+            }
+
             const options = {
                 roomName: roomName,
                 width: '100%',
@@ -308,18 +328,11 @@
                 configOverwrite: {
                     prejoinPageEnabled: false,
                     startWithAudioMuted: true,
-                    startWithVideoMuted: false
+                    startWithVideoMuted: !isTeacher && !permisoCamara
                 },
                 interfaceConfigOverwrite: {
                     // Opciones de interfaz
-                    TOOLBAR_BUTTONS: [
-                        'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
-                        'fodeviceselection', 'hangup', 'profile', 'chat', 'recording',
-                        'livestreaming', 'etherpad', 'sharedvideo', 'settings', 'raisehand',
-                        'videoquality', 'filmstrip', 'invite', 'feedback', 'stats', 'shortcuts',
-                        'tileview', 'videobackgroundblur', 'download', 'help', 'mute-everyone',
-                        'security'
-                    ]
+                    TOOLBAR_BUTTONS: construirToolbarButtons()
                 },
                 userInfo: {
                     displayName: isTeacher ? usuarioNombre + ' (Docente)' : usuarioNombre,
@@ -655,23 +668,6 @@
                 return Math.floor(claseDuracionMinutos / 2) + 1; // más de la mitad
             }
 
-            function mostrarAvisoAsistenciaAutomatica() {
-                const aviso = document.getElementById('asistenciaAutoAviso');
-                const valor = document.getElementById('minutosRequeridosAviso');
-                if (!aviso || !valor) return;
-                if (isTeacher || !asistenciaAutomatica || preguntasAleatorias) {
-                    aviso.classList.add('hidden');
-                    return;
-                }
-                const minutosRequeridos = obtenerMinutosRequeridos();
-                if (!minutosRequeridos) {
-                    aviso.classList.add('hidden');
-                    return;
-                }
-                valor.textContent = minutosRequeridos;
-                aviso.classList.remove('hidden');
-            }
-
             async function marcarIngresoAsistenciaTiempo() {
                 try {
                     await fetch(`/api/clase/${claseId}/asistencia/ingreso`, {
@@ -783,7 +779,6 @@
                 }
             }
 
-            mostrarAvisoAsistenciaAutomatica();
             if (typeof programarCierreClase === 'function') {
                 programarCierreClase();
             }
