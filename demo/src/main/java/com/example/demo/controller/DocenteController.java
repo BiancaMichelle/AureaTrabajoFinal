@@ -26,6 +26,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.web.csrf.CsrfToken;
 
+import com.example.demo.enums.Dias;
 import com.example.demo.enums.EstadoOferta;
 import com.example.demo.enums.EstadoCuota;
 import com.example.demo.enums.EstadoPago;
@@ -61,6 +62,8 @@ public class DocenteController {
     private final EntregaRepository entregaRepository;
     private final ClaseRepository claseRepository;
     private final IntentoRepository intentoRepository;
+    private final DocenteRepository docenteRepository;
+    private final HorarioRepository horarioRepository;
     private final ObjectMapper objectMapper;
     
     @Autowired
@@ -92,6 +95,8 @@ public class DocenteController {
                            EntregaRepository entregaRepository,
                            ClaseRepository claseRepository,
                            IntentoRepository intentoRepository,
+                           DocenteRepository docenteRepository,
+                           HorarioRepository horarioRepository,
                            ObjectMapper objectMapper) {
         this.cursoRepository = cursoRepository;
         this.formacionRepository = formacionRepository;
@@ -104,6 +109,8 @@ public class DocenteController {
         this.entregaRepository = entregaRepository;
         this.claseRepository = claseRepository;
         this.intentoRepository = intentoRepository;
+        this.docenteRepository = docenteRepository;
+        this.horarioRepository = horarioRepository;
         this.objectMapper = objectMapper;
     }
 
@@ -248,6 +255,35 @@ public class DocenteController {
                  .limit(5)
                  .collect(Collectors.toList());
 
+            // 5. Horarios del docente con oferta asociada
+            List<Map<String, String>> horariosDocente = new ArrayList<>();
+            Docente docenteEntity = docenteRepository.findByDni(docente.getDni()).orElse(null);
+            if (docenteEntity != null) {
+                List<Horario> horarios = horarioRepository.findByDocente(docenteEntity);
+                Map<Dias, Integer> ordenDias = Map.of(
+                        Dias.LUNES, 1,
+                        Dias.MARTES, 2,
+                        Dias.MIERCOLES, 3,
+                        Dias.JUEVES, 4,
+                        Dias.VIERNES, 5,
+                        Dias.SABADO, 6,
+                        Dias.DOMINGO, 7
+                );
+
+                horarios.stream()
+                        .sorted(Comparator
+                                .comparing((Horario h) -> ordenDias.getOrDefault(h.getDia(), 99))
+                                .thenComparing(h -> h.getHoraInicio() != null ? h.getHoraInicio().toLocalTime() : LocalDateTime.MIN.toLocalTime()))
+                        .forEach(h -> {
+                            Map<String, String> item = new HashMap<>();
+                            item.put("dia", h.getDia() != null ? h.getDia().name() : "");
+                            item.put("inicio", h.getHoraInicio() != null ? h.getHoraInicio().toLocalTime().toString().substring(0, 5) : "");
+                            item.put("fin", h.getHoraFin() != null ? h.getHoraFin().toLocalTime().toString().substring(0, 5) : "");
+                            OfertaAcademica ofertaHorario = h.getOfertaAcademica();
+                            item.put("oferta", ofertaHorario != null ? ofertaHorario.getNombre() : "Sin oferta");
+                            horariosDocente.add(item);
+                        });
+            }
 
             model.addAttribute("docente", docente);
             model.addAttribute("esDocente", true);
@@ -266,6 +302,7 @@ public class DocenteController {
             model.addAttribute("proximosExamenes", proximosExamenes);
             model.addAttribute("proximasTareas", proximasTareas);
             model.addAttribute("proximasClases", proximasClasesPanel);
+            model.addAttribute("horariosDocente", horariosDocente);
 
             return "docente/mi-espacio";
             

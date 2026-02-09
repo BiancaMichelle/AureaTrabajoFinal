@@ -385,6 +385,26 @@
             <div class="sidebar-panels">
                 <div class="panel">
                     <div class="panel-header">
+                        <i class="fas fa-clock"></i>
+                        <h3>Mis Horarios</h3>
+                    </div>
+                    <div>
+                        <div th:each="h : ${horariosDocente}" class="event-item">
+                            <div class="event-time">
+                                <i class="fas fa-calendar-week"></i>
+                                <span th:text="${#strings.capitalize(#strings.toLowerCase(h.dia))}">D?a</span>
+                                <span th:text="${h.inicio}">00:00</span> - <span th:text="${h.fin}">00:00</span>
+                            </div>
+                            <div class="event-description" th:text="${h.oferta}">Oferta Acad?mica</div>
+                        </div>
+                        <div th:if="${#lists.isEmpty(horariosDocente)}" class="text-center text-gray-500 py-4">
+                            No hay horarios asignados
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">
                         <i class="fas fa-video"></i>
                         <h3>Próximas Clases</h3>
                     </div>
