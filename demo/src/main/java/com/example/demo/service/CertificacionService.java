@@ -90,7 +90,7 @@ public class CertificacionService {
             cert.setPorcentajeAsistencia(calcularPorcentajeAsistencia(inscripcion, oferta));
             cert.setTareasEntregadas(contarTareasEntregadas(inscripcion, oferta));
             cert.setTareasTotales(contarTareasTotales(oferta));
-            cert.setExamenesAprobados(contarExamenesAprobados(inscripcion, oferta));
+            cert.setExamenesAprobados(contarExamenesAprobados(inscripcion, oferta, promedioMinimo));
             cert.setExamenesTotales(contarExamenesTotales(oferta));
             
             // Verificar si cumple criterios
@@ -194,10 +194,10 @@ public class CertificacionService {
         return total;
     }
     
-    private Integer contarExamenesAprobados(Inscripciones inscripcion, OfertaAcademica oferta) {
+    private Integer contarExamenesAprobados(Inscripciones inscripcion, OfertaAcademica oferta, double promedioMinimo) {
         List<Intento> intentos = intentoRepository.findByAlumno(inscripcion.getAlumno());
         return (int) intentos.stream()
-            .filter(i -> i.getCalificacion() != null && i.getCalificacion() >= 7.0)
+            .filter(i -> i.getCalificacion() != null && i.getCalificacion() >= promedioMinimo)
             .map(i -> i.getExamen().getIdActividad())
             .distinct()
             .count();
