@@ -562,7 +562,10 @@
             <h3 class="text-lg font-semibold mb-4">
                 <i class="fas fa-folder-plus me-2"></i>Crear Nuevo Módulo
             </h3>
-            <form th:action="@{/crearModulo}" method="post">
+            <form id="createModuleForm"
+                th:action="@{/crearModulo}" method="post"
+                th:attr="data-curso-inicio=${curso.fechaInicio != null ? #temporals.format(curso.fechaInicio, 'yyyy-MM-dd') : ''},
+                         data-curso-fin=${curso.fechaFin != null ? #temporals.format(curso.fechaFin, 'yyyy-MM-dd') : ''}">
                 <input type="hidden" name="cursoId" th:value="${curso.idOferta}">
                 <input type="hidden" name="_csrf" th:value="${_csrf.token}">
 
@@ -661,7 +664,9 @@
                 </button>
             </div>
 
-            <form id="editModuleForm" th:action="@{/modulo/actualizar}" method="post">
+            <form id="editModuleForm" th:action="@{/modulo/actualizar}" method="post"
+                th:attr="data-curso-inicio=${curso.fechaInicio != null ? #temporals.format(curso.fechaInicio, 'yyyy-MM-dd') : ''},
+                         data-curso-fin=${curso.fechaFin != null ? #temporals.format(curso.fechaFin, 'yyyy-MM-dd') : ''}">
                 <input type="hidden" name="_csrf" th:value="${_csrf.token}">
                 <input type="hidden" name="cursoId" th:value="${curso.idOferta}">
                 <input type="hidden" name="moduloId" value="">
@@ -5872,6 +5877,128 @@
             }
         });
         /*]]>*/
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const createForm = document.getElementById('createModuleForm');
+            const editForm = document.getElementById('editModuleForm');
+
+            const confirmarAccion = (titulo, mensaje, onConfirm) => {
+                if (typeof mostrarConfirmacionGlobal === 'function') {
+                    mostrarConfirmacionGlobal(titulo, mensaje, onConfirm, { confirmText: 'Confirmar', cancelText: 'Cancelar', type: 'info' });
+                    return;
+                }
+                if (window.ModalConfirmacion && typeof ModalConfirmacion.show === 'function') {
+                    ModalConfirmacion.show(titulo, mensaje, onConfirm, { confirmText: 'Confirmar', cancelText: 'Cancelar', type: 'info' });
+                    return;
+                }
+                if (confirm(mensaje)) onConfirm();
+            };
+
+            const mostrarError = (mensaje) => {
+                if (window.ModalConfirmacion && typeof ModalConfirmacion.show === 'function') {
+                    ModalConfirmacion.show('Error de validación', mensaje, null, { type: 'error', confirmText: 'Aceptar', showCancel: false });
+                    return;
+                }
+                alert(mensaje);
+            };
+
+            const parseDate = (value) => {
+                if (!value) return null;
+                const d = new Date(value + 'T00:00:00');
+                return Number.isNaN(d.getTime()) ? null : d;
+            };
+
+            const formatDate = (value) => {
+                if (!value) return '-';
+                const parts = value.split('-');
+                if (parts.length !== 3) return value;
+                return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            };
+
+            const validarFechasModulo = (form) => {
+                const nombre = (form.querySelector('[name="nombre"]')?.value || '').trim();
+                const inicioVal = (form.querySelector('[name="fechaInicio"]')?.value || '').trim();
+                const finVal = (form.querySelector('[name="fechaFin"]')?.value || '').trim();
+                const inicio = parseDate(inicioVal);
+                const fin = parseDate(finVal);
+
+                if (inicio && fin && fin < inicio) {
+                    return { ok: false, message: 'La fecha de fin no puede ser anterior a la fecha de inicio.' };
+                }
+
+                const cursoInicioVal = form.getAttribute('data-curso-inicio') || '';
+                const cursoFinVal = form.getAttribute('data-curso-fin') || '';
+                const cursoInicio = parseDate(cursoInicioVal);
+                const cursoFin = parseDate(cursoFinVal);
+
+                if (inicio && cursoInicio && inicio < cursoInicio) {
+                    return { ok: false, message: 'La fecha de inicio del módulo debe estar dentro de las fechas de dictado de la oferta.' };
+                }
+                if (inicio && cursoFin && inicio > cursoFin) {
+                    return { ok: false, message: 'La fecha de inicio del módulo debe estar dentro de las fechas de dictado de la oferta.' };
+                }
+                if (fin && cursoInicio && fin < cursoInicio) {
+                    return { ok: false, message: 'La fecha de fin del módulo debe estar dentro de las fechas de dictado de la oferta.' };
+                }
+                if (fin && cursoFin && fin > cursoFin) {
+                    return { ok: false, message: 'La fecha de fin del módulo debe estar dentro de las fechas de dictado de la oferta.' };
+                }
+
+                if (inicio && fin) {
+                    const moduloIdActual = form.querySelector('[name="moduloId"]')?.value || '';
+                    const modulos = document.querySelectorAll('div.editable-block[data-modulo-id][data-modulo-inicio][data-modulo-fin]');
+                    for (const modulo of modulos) {
+                        const id = modulo.getAttribute('data-modulo-id') || '';
+                        if (moduloIdActual && id === moduloIdActual) continue;
+                        const inicioExistenteVal = modulo.getAttribute('data-modulo-inicio') || '';
+                        const finExistenteVal = modulo.getAttribute('data-modulo-fin') || '';
+                        const inicioExistente = parseDate(inicioExistenteVal);
+                        const finExistente = parseDate(finExistenteVal);
+                        if (!inicioExistente || !finExistente) continue;
+
+                        const seSuperpone = inicio <= finExistente && fin >= inicioExistente;
+                        if (seSuperpone) {
+                            const nombreExistente = modulo.getAttribute('data-modulo-nombre') || 'otro módulo';
+                            const rangoExistente = `${formatDate(inicioExistenteVal)} - ${formatDate(finExistenteVal)}`;
+                            return {
+                                ok: false,
+                                message: `Las fechas del módulo se superponen con "${nombreExistente}" (${rangoExistente}). Ajusta las fechas para que los módulos no se solapen.`
+                            };
+                        }
+                    }
+                }
+
+                return { ok: true, nombre, inicioVal, finVal };
+            };
+
+            const attachHandler = (form, tituloConfirmacion) => {
+                if (!form) return;
+                form.addEventListener('submit', (event) => {
+                    event.preventDefault();
+                    const resultado = validarFechasModulo(form);
+                    if (!resultado.ok) {
+                        mostrarError(resultado.message);
+                        return;
+                    }
+
+                    const nombre = resultado.nombre || 'Nuevo módulo';
+                    const inicioTxt = resultado.inicioVal ? formatDate(resultado.inicioVal) : 'Sin fecha';
+                    const finTxt = resultado.finVal ? formatDate(resultado.finVal) : 'Sin fecha';
+                    const mensaje = `Vas a ${tituloConfirmacion.toLowerCase()} "${nombre}".\nFechas: ${inicioTxt} - ${finTxt}.\n¿Deseas continuar?`;
+
+                    confirmarAccion(
+                        tituloConfirmacion,
+                        mensaje,
+                        () => form.submit()
+                    );
+                });
+            };
+
+            attachHandler(createForm, 'Crear módulo');
+            attachHandler(editForm, 'Guardar cambios del módulo');
+        });
     </script>"},{
     <!-- Incluir modal de crear clase -->
 

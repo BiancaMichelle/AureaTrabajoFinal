@@ -349,6 +349,9 @@ public class AdminController {
         try {
             System.out.println("🔍 Iniciando gestionOfertas...");
 
+            // Asegurar estados actualizados por fecha (finalizadas/encurso)
+            ofertaAcademicaService.actualizarEstadosPorFecha();
+
             // RESTAURADO: Cargar ofertas desde la base de datos con validación de nulos
             List<OfertaAcademica> ofertas = ofertaAcademicaService.obtenerTodas();
 

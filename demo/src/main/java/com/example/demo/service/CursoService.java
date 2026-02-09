@@ -428,19 +428,19 @@ public class CursoService {
 
         if (fechaInicio != null) {
             if (ofertaInicio != null && fechaInicio.isBefore(ofertaInicio)) {
-                throw new IllegalArgumentException("La fecha de inicio del m??dulo debe estar dentro de las fechas de dictado de la oferta.");
+            throw new IllegalArgumentException("La fecha de inicio del módulo debe estar dentro de las fechas de dictado de la oferta.");
             }
             if (ofertaFin != null && fechaInicio.isAfter(ofertaFin)) {
-                throw new IllegalArgumentException("La fecha de inicio del m??dulo debe estar dentro de las fechas de dictado de la oferta.");
+            throw new IllegalArgumentException("La fecha de inicio del módulo debe estar dentro de las fechas de dictado de la oferta.");
             }
         }
 
         if (fechaFin != null) {
             if (ofertaInicio != null && fechaFin.isBefore(ofertaInicio)) {
-                throw new IllegalArgumentException("La fecha de fin del m??dulo debe estar dentro de las fechas de dictado de la oferta.");
+            throw new IllegalArgumentException("La fecha de fin del módulo debe estar dentro de las fechas de dictado de la oferta.");
             }
             if (ofertaFin != null && fechaFin.isAfter(ofertaFin)) {
-                throw new IllegalArgumentException("La fecha de fin del m??dulo debe estar dentro de las fechas de dictado de la oferta.");
+            throw new IllegalArgumentException("La fecha de fin del módulo debe estar dentro de las fechas de dictado de la oferta.");
             }
         }
 
@@ -462,8 +462,8 @@ public class CursoService {
 
             boolean seSuperpone = fechaInicio.isBefore(finExistente) && fechaFin.isAfter(inicioExistente);
             if (seSuperpone) {
-                throw new IllegalArgumentException("Las fechas del m??dulo se superponen con " + "\"" + existente.getNombre()
-                        + "\"" + ". Ajusta las fechas para que los m??dulos no se solapen.");
+                throw new IllegalArgumentException("Las fechas del módulo se superponen con " + "\"" + existente.getNombre()
+                        + "\"" + ". Ajusta las fechas para que los módulos no se solapen.");
             }
         }
     }

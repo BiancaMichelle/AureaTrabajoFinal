@@ -1,4 +1,4 @@
-package com.example.demo.service;
+﻿package com.example.demo.service;
 
 import java.text.Normalizer;
 import java.util.ArrayList;
@@ -70,7 +70,7 @@ public class OfertaAcademicaService {
             }
         }
 
-        // 2. Validar docentes/disertantes según tipo
+        // 2. Validar docentes/disertantes segÃºn tipo
         if (oferta instanceof Curso) {
             Curso curso = (Curso) oferta;
             if (curso.getDocentes() == null || curso.getDocentes().isEmpty()) {
@@ -111,7 +111,7 @@ public class OfertaAcademicaService {
         throw new IllegalArgumentException("Tipo de oferta no soportado");
     }
     /**
-     * Realiza una baja lógica de la oferta (cambia estado a DE_BAJA)
+     * Realiza una baja lÃ³gica de la oferta (cambia estado a DE_BAJA)
      */
     @Transactional
     public void eliminar(Long id, String tipo) {
@@ -124,7 +124,7 @@ public class OfertaAcademicaService {
     }
 
     /**
-     * Obtiene una oferta específica por ID y tipo
+     * Obtiene una oferta especÃ­fica por ID y tipo
      */
     public Optional<OfertaAcademica> obtenerPorId(Long id, String tipo) {
         switch (tipo.toUpperCase()) {
@@ -142,7 +142,7 @@ public class OfertaAcademicaService {
     }
 
     /**
-     * Obtiene una oferta por ID, detectando automáticamente el tipo
+     * Obtiene una oferta por ID, detectando automÃ¡ticamente el tipo
      */
     public Optional<OfertaAcademica> obtenerPorId(Long id) {
         // Buscar en todos los repositorios
@@ -159,7 +159,7 @@ public class OfertaAcademicaService {
     }
 
     /**
-     * Cambia el estado de una oferta académica
+     * Cambia el estado de una oferta acadÃ©mica
      */
     @Transactional
     public boolean cambiarEstado(Long id, EstadoOferta nuevoEstado) {
@@ -171,7 +171,7 @@ public class OfertaAcademicaService {
         
         OfertaAcademica oferta = ofertaOpt.get();
         
-        // Usar el método del modelo para validar y cambiar estado
+        // Usar el mÃ©todo del modelo para validar y cambiar estado
         boolean exito = oferta.cambiarEstado(nuevoEstado);
         
         if (exito) {
@@ -182,7 +182,7 @@ public class OfertaAcademicaService {
     }
 
     /**
-     * Da de baja una oferta académica
+     * Da de baja una oferta acadÃ©mica
      */
     @Transactional
     public boolean darDeBaja(Long id) {
@@ -190,7 +190,7 @@ public class OfertaAcademicaService {
     }
 
     /**
-     * Da de alta una oferta académica
+     * Da de alta una oferta acadÃ©mica
      */
     @Transactional
     public boolean darDeAlta(Long id) {
@@ -211,7 +211,7 @@ public class OfertaAcademicaService {
     }
 
     /**
-     * Elimina una oferta con validaciones (Baja lógica)
+     * Elimina una oferta con validaciones (Baja lÃ³gica)
      */
     @Transactional
     public boolean eliminarConValidacion(Long id) {
@@ -227,16 +227,16 @@ public class OfertaAcademicaService {
             return false;
         }
         
-        // Baja lógica
+        // Baja lÃ³gica
         oferta.setEstado(EstadoOferta.DE_BAJA);
         guardar(oferta);
         return true;
     }
 
     /**
-     * Modifica una oferta académica
+     * Modifica una oferta acadÃ©mica
      */
-    @Auditable(action = "MODIFICAR", entity = "OfertaAcadémica")
+    @Auditable(action = "MODIFICAR", entity = "OfertaAcadÃ©mica")
     @Transactional
     public boolean modificar(Long id, OfertaAcademica datosNuevos) {
         Optional<OfertaAcademica> ofertaOpt = obtenerPorId(id);
@@ -258,7 +258,7 @@ public class OfertaAcademicaService {
             return false;
         }
         
-        // Aplicar modificaciones básicas
+        // Aplicar modificaciones bÃ¡sicas
         ofertaExistente.modificarDatosBasicos(
             datosNuevos.getNombre(),
             datosNuevos.getDescripcion(),
@@ -277,7 +277,7 @@ public class OfertaAcademicaService {
             datosNuevos.getFechaFinInscripcion()
         );
         
-        // Aplicar modificaciones específicas según el tipo
+        // Aplicar modificaciones especÃ­ficas segÃºn el tipo
         if (ofertaExistente instanceof Curso && datosNuevos instanceof Curso) {
             Curso cursoExistente = (Curso) ofertaExistente;
             Curso cursoNuevo = (Curso) datosNuevos;
@@ -352,53 +352,60 @@ public class OfertaAcademicaService {
     }
 
     /**
-     * Tarea programada para verificar y actualizar estados de ofertas finalizadas
-     * Se ejecuta cada 10 minutos (600000 ms)
+     * Actualiza estados por fecha (FINALIZADA/ENCURSO) y publica eventos.
+     * Devuelve la cantidad de ofertas actualizadas.
      */
-    @Scheduled(fixedRate = 600000)
     @Transactional
-    public void verificarOfertasFinalizadas() {
+    public int actualizarEstadosPorFecha() {
         List<OfertaAcademica> todas = obtenerTodas();
         int actualizadas = 0;
         List<OfertaAcademica> recienFinalizadas = new ArrayList<>();
-        
+
         for (OfertaAcademica oferta : todas) {
             try {
                 EstadoOferta estadoAnterior = oferta.getEstado();
-                
+
                 if (oferta.actualizarEstadoSiFinalizada()) {
                     guardar(oferta);
                     actualizadas++;
-                    
-                    // Si cambió a FINALIZADA, publicar evento
-                    if (oferta.getEstado() == EstadoOferta.FINALIZADA && 
-                        estadoAnterior != EstadoOferta.FINALIZADA) {
+
+                    if (oferta.getEstado() == EstadoOferta.FINALIZADA && estadoAnterior != EstadoOferta.FINALIZADA) {
                         recienFinalizadas.add(oferta);
-                        System.out.println("🎓 Oferta finalizada detectada: " + oferta.getNombre());
+                        System.out.println("Oferta finalizada detectada: " + oferta.getNombre());
                     }
                 }
             } catch (Exception e) {
                 System.err.println("Error al actualizar estado de la oferta ID: " + oferta.getIdOferta() + " (" + oferta.getNombre() + "): " + e.getMessage());
             }
         }
-        
+
         if (actualizadas > 0) {
-            System.out.println("🔄 Se actualizaron " + actualizadas + " ofertas (FINALIZADA/EN CURSO)");
+            System.out.println("Se actualizaron " + actualizadas + " ofertas (FINALIZADA/EN CURSO)");
         }
-        
-        // Publicar eventos para ofertas recién finalizadas
+
         for (OfertaAcademica oferta : recienFinalizadas) {
             try {
-                System.out.println("📢 Publicando evento de finalización para: " + oferta.getNombre());
+                System.out.println("Publicando evento de finalizacion para: " + oferta.getNombre());
                 eventPublisher.publishEvent(new OfertaFinalizadaEvent(this, oferta));
             } catch (Exception e) {
-                System.err.println("❌ Error al publicar evento: " + e.getMessage());
+                System.err.println("Error al publicar evento: " + e.getMessage());
             }
         }
+
+        return actualizadas;
     }
 
     /**
-     * Calcula el progreso de un alumno en una oferta académica.
+     * Tarea programada para verificar y actualizar estados de ofertas finalizadas
+     * Se ejecuta cada 10 minutos (600000 ms)
+     */
+    @Scheduled(fixedRate = 600000)
+    @Transactional
+    public void verificarOfertasFinalizadas() {
+        actualizarEstadosPorFecha();
+    }
+    /**
+     * Calcula el progreso de un alumno en una oferta acadÃ©mica.
      * Basado en tiempo transcurrido (50%) y actividades completadas (50%).
      */
     @Transactional(readOnly = true)
@@ -437,7 +444,7 @@ public class OfertaAcademicaService {
         long totalActividades = tareas.size() + examenes.size();
         System.out.println("DEBUG PROGRESO: Total Actividades=" + totalActividades + " (Tareas=" + tareas.size() + ", Examenes=" + examenes.size() + ")");
         
-        // Optimización: Usar IDs para evitar lazy loading traversal
+        // OptimizaciÃ³n: Usar IDs para evitar lazy loading traversal
         java.util.Set<Long> tareaIds = tareas.stream().map(t -> t.getIdActividad()).collect(java.util.stream.Collectors.toSet());
         
         long entregasCompletas = 0;
@@ -472,7 +479,7 @@ public class OfertaAcademicaService {
         }
         System.out.println("DEBUG PROGRESO: ActivityProgress=" + activityProgress);
 
-        // 3. Ponderación (50% tiempo, 50% actividades)
+        // 3. PonderaciÃ³n (50% tiempo, 50% actividades)
         if (totalActividades == 0) {
             return Math.round(timeProgress * 100.0);
         }
@@ -484,3 +491,5 @@ public class OfertaAcademicaService {
 
     
 }
+
+

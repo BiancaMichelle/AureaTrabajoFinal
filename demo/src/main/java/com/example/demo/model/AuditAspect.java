@@ -48,10 +48,12 @@ public class AuditAspect {
 
         if (result instanceof ResponseEntity) {
             ResponseEntity<?> response = (ResponseEntity<?>) result;
-            if (!response.getStatusCode().is2xxSuccessful()) {
+            boolean non2xx = !response.getStatusCode().is2xxSuccessful();
+            if (non2xx) {
                 exito = false;
-                detalles.append(" | Status: ").append(response.getStatusCode());
             }
+
+            String bodyMessage = null;
             if (response.getBody() instanceof Map) {
                 Map<?, ?> body = (Map<?, ?>) response.getBody();
                 Object auditDetails = body.get("auditDetails");
@@ -64,9 +66,25 @@ public class AuditAspect {
                 }
                 if (Boolean.FALSE.equals(body.get("success"))) {
                     exito = false;
-                    if (body.containsKey("error")) {
-                        detalles.append(" | Error: ").append(body.get("error"));
+                }
+                if (body.containsKey("message")) {
+                    Object msg = body.get("message");
+                    if (msg != null && !msg.toString().trim().isEmpty()) {
+                        bodyMessage = msg.toString().trim();
                     }
+                } else if (body.containsKey("error")) {
+                    Object err = body.get("error");
+                    if (err != null && !err.toString().trim().isEmpty()) {
+                        bodyMessage = err.toString().trim();
+                    }
+                }
+            }
+
+            if (non2xx) {
+                if (bodyMessage != null) {
+                    detalles.append(" | ").append(bodyMessage);
+                } else {
+                    detalles.append(" | Status: ").append(response.getStatusCode());
                 }
             }
         }

@@ -191,7 +191,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 // SI EL USUARIO ESTÁ INACTIVO -> DAR DE ALTA
                 if (!isActive) {
-                    ModalConfirmacion.show(
+                    confirmAction(
                         'Reactivar Usuario',
                         '¿Está seguro de que desea reactivar este usuario? Tendrá acceso nuevamente al sistema.',
                         () => {
@@ -227,7 +227,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 // 3. Mostrar modal de confirmación
                 // Usamos callback ya que ModalConfirmacion.show no devuelve una promesa
-                ModalConfirmacion.show(
+                confirmAction(
                     'Confirmar Baja de Usuario',
                     mensaje,
                     () => {
@@ -2197,7 +2197,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const displayName = nombre || 'usuario';
         const label = dni || identifier;
 
-        ModalConfirmacion.show(
+        confirmAction(
             'Confirmar Baja',
             `¿Está seguro de que desea dar de baja al usuario "${displayName}" (ID: ${label})?`,
             () => {

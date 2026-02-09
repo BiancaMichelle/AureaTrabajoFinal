@@ -120,9 +120,9 @@ public class DataSeeder implements CommandLineRunner {
     public void run(String... args) throws Exception {
         crearRolesYUsuarios();
         crearInstitutoDefault();
-        // seedMasUsuarios();
-        // seedOfertas();
-        // repararHorariosHuerfanos();
+        seedMasUsuarios();
+        seedOfertas();
+        repararHorariosHuerfanos();
     }
 
     // Método para corregir ofertas existentes con horarios sin docente
@@ -432,9 +432,7 @@ public class DataSeeder implements CommandLineRunner {
                     
                     // Guardamos el modulo explícitamente
                     mod = moduloRepository.save(mod);
-                    
-                    // No necesitamos setModulos(list) en cursoRiesgo para la persistencia
-                    // porque la relación es gestionada por el lado 'many' (Modulo)
+
                     
                     // 2. Inscribir Alumno
                     Inscripciones inscRiesgo = new Inscripciones();
@@ -860,7 +858,6 @@ public class DataSeeder implements CommandLineRunner {
             usuarioRepository.save(admin);
         }
 
-        /*
         // ✅ CREAR DOCENTE CON DNI 12345678
         crearUsuarioDocente("12345678", "Roberto", "García", "roberto.garcia@gmail.com");
 
@@ -871,7 +868,7 @@ public class DataSeeder implements CommandLineRunner {
 
         // Crear otro docente de prueba
         crearUsuarioDocente("55555555", "Ana", "Martínez", "ana@gmail.com");
-        */
+        
     }
 
     private void crearUsuarioAlumno(String dni, String nombre, String apellido, String email) {

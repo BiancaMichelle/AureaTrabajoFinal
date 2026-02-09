@@ -24,7 +24,22 @@ function setupWeeklyReportsSimulation() {
     const btn = document.getElementById('btn-ejecutar-reportes-semanales');
     if (!btn) return;
 
+    const reportesCheckbox = document.getElementById('reportesAutomaticos');
+
+    const updateButtonState = () => {
+        const enabled = !!(reportesCheckbox && reportesCheckbox.checked);
+        btn.disabled = !enabled;
+        btn.classList.toggle('is-disabled', !enabled);
+        btn.setAttribute('aria-disabled', String(!enabled));
+    };
+
+    updateButtonState();
+    if (reportesCheckbox) {
+        reportesCheckbox.addEventListener('change', updateButtonState);
+    }
+
     btn.addEventListener('click', () => {
+        if (btn.disabled) return;
         const ejecutar = () => {
             btn.disabled = true;
             const original = btn.innerHTML;
@@ -53,7 +68,7 @@ function setupWeeklyReportsSimulation() {
             })
             .catch(() => showNotification('Error de conexión al generar reportes semanales', 'error'))
             .finally(() => {
-                btn.disabled = false;
+                updateButtonState();
                 btn.innerHTML = original;
             });
         };

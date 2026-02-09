@@ -823,7 +823,8 @@
                                     </label>
                                 </div>
                                 <button type="button" id="btn-clear-image"
-                                    class="btn btn-outline-secondary btn-sm mt-2">
+                                    class="btn-clear-image mt-2">
+                                    <i class="fas fa-trash-alt"></i>
                                     Borrar imagen
                                 </button>
                             </div>
@@ -2236,7 +2237,12 @@
                     seccionUbicacion.style.display = 'block';
                     grupoLugar.style.display = 'block';
                     grupoEnlace.style.display = 'none';
-                } else if (modalidad === 'VIRTUAL' || modalidad === 'HIBRIDA') {
+                } else if (modalidad === 'VIRTUAL') {
+                    // Solo enlace, sin ubicación
+                    seccionUbicacion.style.display = 'block';
+                    grupoLugar.style.display = 'none';
+                    grupoEnlace.style.display = 'block';
+                } else if (modalidad === 'HIBRIDA') {
                     // Ubicación y enlace
                     seccionUbicacion.style.display = 'block';
                     grupoLugar.style.display = 'block';
