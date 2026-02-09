@@ -200,7 +200,7 @@
     <div id="globalConfirmationModal" class="modal-overlay" style="display: none;">
         <div class="modal-content modal-confirmation">
             <div class="modal-header">
-                <h3><i class="fas fa-exclamation-circle" style="color: #f59e0b;"></i> <span id="confTitle">Confirmación</span></h3>
+                <h3><i id="confIcon" class="fas fa-exclamation-circle" style="color: #f59e0b;"></i> <span id="confTitle">Confirmación</span></h3>
                 <button type="button" class="btn-close" onclick="closeConfirmModal()">
                     <i class="fas fa-times"></i>
                 </button>
@@ -209,7 +209,7 @@
                 <p id="confirmationMessage">¿Está seguro de realizar esta acción?</p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeConfirmModal()" style="padding: 8px 16px; border-radius: 6px; cursor: pointer; border: 1px solid #ccc; background: #fff; color: #333;">Cancelar</button>
+                <button type="button" id="btnCancelConfirm" class="btn btn-secondary" onclick="closeConfirmModal()" style="padding: 8px 16px; border-radius: 6px; cursor: pointer; border: 1px solid #ccc; background: #fff; color: #333;">Cancelar</button>
                 <button type="button" class="btn btn-danger" id="btnAcceptConfirm" style="padding: 8px 16px; border-radius: 6px; cursor: pointer; background-color: #ef4444; color: white; border: none;">Confirmar</button>
             </div>
         </div>

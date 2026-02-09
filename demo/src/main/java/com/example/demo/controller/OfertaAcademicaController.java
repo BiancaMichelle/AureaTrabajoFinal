@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.example.demo.model.Auditable;
 import com.example.demo.model.Curso;
@@ -122,16 +123,22 @@ public class OfertaAcademicaController {
             @RequestParam(required = false) String fechaFin,
             @RequestParam(required = false, defaultValue = "false") Boolean visibilidad,
             @RequestParam Long cursoId,
-            Authentication auth) {
+            Authentication auth,
+            RedirectAttributes redirectAttributes) {
         Long cursoIdSeguro = Objects.requireNonNull(cursoId, "El identificador de la oferta no puede ser nulo");
         
         // Validación de permisos antes de crear (Precondición CU-23)
         validarPermisoDocenteOferta(auth, cursoIdSeguro);
 
-        LocalDate fechaInicioDate = parseFechaModulo(fechaInicio);
-        LocalDate fechaFinDate = parseFechaModulo(fechaFin);
-
-        cursoService.crearModulo(nombre, descripcion, objetivos, temario, bibliografia, fechaInicioDate, fechaFinDate, visibilidad, cursoIdSeguro);
+        try {
+            LocalDate fechaInicioDate = parseFechaModulo(fechaInicio);
+            LocalDate fechaFinDate = parseFechaModulo(fechaFin);
+            cursoService.crearModulo(nombre, descripcion, objetivos, temario, bibliografia, fechaInicioDate, fechaFinDate, visibilidad, cursoIdSeguro);
+        } catch (IllegalArgumentException ex) {
+            redirectAttributes.addFlashAttribute("moduloError", ex.getMessage());
+        } catch (Exception ex) {
+            redirectAttributes.addFlashAttribute("moduloError", "No se pudo crear el módulo. Verifica los datos ingresados.");
+        }
         // ✅ Redirigir de vuelta al curso específico
         return "redirect:/ofertaAcademica/" + cursoIdSeguro;
     }
@@ -148,15 +155,21 @@ public class OfertaAcademicaController {
             @RequestParam(required = false) String fechaInicio,
             @RequestParam(required = false) String fechaFin,
             @RequestParam(required = false, defaultValue = "false") Boolean visibilidad,
-            Authentication auth) {
+            Authentication auth,
+            RedirectAttributes redirectAttributes) {
         Long cursoIdSeguro = Objects.requireNonNull(cursoId, "El identificador de la oferta no puede ser nulo");
         
         validarPermisoDocenteOferta(auth, cursoIdSeguro);
 
-        LocalDate fechaInicioDate = parseFechaModulo(fechaInicio);
-        LocalDate fechaFinDate = parseFechaModulo(fechaFin);
-
-        cursoService.actualizarModulo(moduloId, nombre, descripcion, objetivos, temario, bibliografia, fechaInicioDate, fechaFinDate, visibilidad, cursoIdSeguro);
+        try {
+            LocalDate fechaInicioDate = parseFechaModulo(fechaInicio);
+            LocalDate fechaFinDate = parseFechaModulo(fechaFin);
+            cursoService.actualizarModulo(moduloId, nombre, descripcion, objetivos, temario, bibliografia, fechaInicioDate, fechaFinDate, visibilidad, cursoIdSeguro);
+        } catch (IllegalArgumentException ex) {
+            redirectAttributes.addFlashAttribute("moduloError", ex.getMessage());
+        } catch (Exception ex) {
+            redirectAttributes.addFlashAttribute("moduloError", "No se pudo actualizar el módulo. Verifica los datos ingresados.");
+        }
         return "redirect:/ofertaAcademica/" + cursoIdSeguro;
     }
 

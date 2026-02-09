@@ -1449,6 +1449,22 @@
             setTimeout(close, duracion);
         }
 
+        function mostrarConfirmacionGlobal(titulo, mensaje, onConfirm, options) {
+            if (window.ModalConfirmacion && typeof ModalConfirmacion.show === 'function') {
+                ModalConfirmacion.show(titulo, mensaje, onConfirm, options);
+            } else if (confirm(mensaje)) {
+                if (onConfirm) onConfirm();
+            }
+        }
+
+        function mostrarNotificacionGlobal(titulo, mensaje, tipo = 'success', onConfirm = null) {
+            mostrarConfirmacionGlobal(titulo, mensaje, onConfirm, {
+                type: tipo,
+                confirmText: 'Aceptar',
+                showCancel: false
+            });
+        }
+
         async function updateModuleVisibilityOnServer(moduloId, visible) {
             if (!moduloId) {
                 throw new Error('Falta el identificador del módulo');
@@ -1866,13 +1882,50 @@
             });
         }
 
-        let pendingDeleteType = null;
-        let pendingDeleteId = null;
+        async function eliminarElemento(tipo, id, nombre) {
+            try {
+                const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+                const csrfHeader = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
+
+                let endpoint = '';
+                let etiqueta = '';
+                if (tipo === 'modulo') {
+                    endpoint = '/modulo/' + id + '/eliminar';
+                    etiqueta = 'módulo';
+                } else if (tipo === 'clase') {
+                    endpoint = '/clase/' + id + '/eliminar';
+                    etiqueta = 'clase';
+                } else if (tipo === 'actividad') {
+                    endpoint = '/actividad/' + id + '/eliminar';
+                    etiqueta = 'actividad';
+                }
+
+                const response = await fetch(endpoint, {
+                    method: 'DELETE',
+                    headers: {
+                        [csrfHeader]: csrfToken
+                    }
+                });
+
+                if (response.ok) {
+                    mostrarNotificacionGlobal('Eliminado', `Se eliminó el ${etiqueta} "${nombre}".`, 'success', () => {
+                        window.location.reload();
+                    });
+                } else {
+                    const data = await response.json().catch(() => ({}));
+                    mostrarNotificacionGlobal('Error', data.error || 'Error al eliminar. Por favor intenta nuevamente.', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarNotificacionGlobal('Error', 'Error al eliminar. Por favor intenta nuevamente.', 'error');
+            }
+        }
 
         function closeDeleteModal() {
-            document.getElementById('deleteConfirmModal').classList.add('hidden');
-            pendingDeleteType = null;
-            pendingDeleteId = null;
+            const modal = document.getElementById('deleteConfirmModal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
         }
 
         function registerDeleteButtons() {
@@ -1885,11 +1938,12 @@
                     event.stopPropagation();
                     const moduloId = button.getAttribute('data-modulo-id');
                     const moduloNombre = button.getAttribute('data-modulo-nombre') || 'este módulo';
-                    pendingDeleteType = 'modulo';
-                    pendingDeleteId = moduloId;
-                    document.getElementById('deleteItemName').textContent = moduloNombre;
-                    document.getElementById('deleteItemType').textContent = 'módulo';
-                    document.getElementById('deleteConfirmModal').classList.remove('hidden');
+                    mostrarConfirmacionGlobal(
+                        'Eliminar módulo',
+                        `¿Estás seguro de eliminar el módulo "${moduloNombre}"? Esta acción no se puede deshacer.`,
+                        () => eliminarElemento('modulo', moduloId, moduloNombre),
+                        { confirmText: 'Eliminar', cancelText: 'Cancelar', type: 'warning' }
+                    );
                 });
             });
 
@@ -1902,11 +1956,12 @@
                     event.stopPropagation();
                     const claseId = button.getAttribute('data-clase-id');
                     const claseNombre = button.getAttribute('data-clase-nombre') || 'esta clase';
-                    pendingDeleteType = 'clase';
-                    pendingDeleteId = claseId;
-                    document.getElementById('deleteItemName').textContent = claseNombre;
-                    document.getElementById('deleteItemType').textContent = 'clase';
-                    document.getElementById('deleteConfirmModal').classList.remove('hidden');
+                    mostrarConfirmacionGlobal(
+                        'Eliminar clase',
+                        `¿Estás seguro de eliminar la clase "${claseNombre}"? Esta acción no se puede deshacer.`,
+                        () => eliminarElemento('clase', claseId, claseNombre),
+                        { confirmText: 'Eliminar', cancelText: 'Cancelar', type: 'warning' }
+                    );
                 });
             });
 
@@ -1919,51 +1974,13 @@
                     event.stopPropagation();
                     const actividadId = button.getAttribute('data-actividad-id');
                     const actividadNombre = button.getAttribute('data-actividad-nombre') || 'esta actividad';
-                    pendingDeleteType = 'actividad';
-                    pendingDeleteId = actividadId;
-                    document.getElementById('deleteItemName').textContent = actividadNombre;
-                    document.getElementById('deleteItemType').textContent = 'actividad';
-                    document.getElementById('deleteConfirmModal').classList.remove('hidden');
+                    mostrarConfirmacionGlobal(
+                        'Eliminar actividad',
+                        `¿Estás seguro de eliminar la actividad "${actividadNombre}"? Esta acción no se puede deshacer.`,
+                        () => eliminarElemento('actividad', actividadId, actividadNombre),
+                        { confirmText: 'Eliminar', cancelText: 'Cancelar', type: 'warning' }
+                    );
                 });
-            });
-
-            document.getElementById('confirmDeleteButton').addEventListener('click', async () => {
-                if (!pendingDeleteType || !pendingDeleteId) {
-                    return;
-                }
-
-                try {
-                    const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
-                    const csrfHeader = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
-
-                    let endpoint = '';
-                    if (pendingDeleteType === 'modulo') {
-                        endpoint = '/modulo/' + pendingDeleteId + '/eliminar';
-                    } else if (pendingDeleteType === 'clase') {
-                        endpoint = '/clase/' + pendingDeleteId + '/eliminar';
-                    } else if (pendingDeleteType === 'actividad') {
-                        endpoint = '/actividad/' + pendingDeleteId + '/eliminar';
-                    }
-
-                    const response = await fetch(endpoint, {
-                        method: 'DELETE',
-                        headers: {
-                            [csrfHeader]: csrfToken
-                        }
-                    });
-
-                    if (response.ok) {
-                        window.location.reload();
-                    } else {
-                        const data = await response.json().catch(() => ({}));
-                        alert(data.error || 'Error al eliminar. Por favor intente nuevamente.');
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                    alert('Error al eliminar. Por favor intente nuevamente.');
-                }
-
-                closeDeleteModal();
             });
         }
 
@@ -3118,53 +3135,67 @@
                             formData.append('iaParams', JSON.stringify(iaParams));
                         }
 
-                        // Persistir pool en el backend
-                        fetch('/pool/crear', {
-                            method: 'POST',
-                            headers: {
-                                'X-XSRF-TOKEN': document.querySelector('meta[name="_csrf"]')?.getAttribute('content') || ''
-                            },
-                            body: formData
-                        })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.success) {
-                                    const poolIdReal = data.idPool;
-
-                                    const nuevoPool = {
-                                        id: Date.now(), // ID temporal para el frontend
-                                        idReal: poolIdReal, // ID real del backend
-                                        nombre: formData.get('nombrePool'),
-                                        descripcion: formData.get('descripcionPool'),
-                                        cantidadPreguntas: parseInt(formData.get('cantidadPreguntas')),
-                                        preguntas: [],
-                                        esIA: esIA // Flag frontend
-                                    };
-
-                                    // Si es IA y status es PENDING, iniciamos polling
-                                    if (esIA && data.iaStatus === 'PENDING') {
-                                        nuevoPool.iaStatus = 'PENDING';
-                                        iniciarPollingIA(nuevoPool);
-                                    }
-
-                                    examenPools.push(nuevoPool);
-                                    actualizarListaPools();
-                                    cerrarModalPool();
-
-                                    alert(esIA ? '🤖 Generando preguntas con IA...' : '✅ Pool creado y guardado exitosamente');
-
-                                    if (!esIA) {
-                                        // Abrir modal de preguntas para este pool
-                                        setTimeout(() => mostrarModalPreguntas(nuevoPool.id, poolIdReal), 300);
-                                    }
-                                } else {
-                                    alert('❌ Error: ' + data.message);
-                                }
+                        const ejecutarCreacionPool = () => {
+                            fetch('/pool/crear', {
+                                method: 'POST',
+                                headers: {
+                                    'X-XSRF-TOKEN': document.querySelector('meta[name="_csrf"]')?.getAttribute('content') || ''
+                                },
+                                body: formData
                             })
-                            .catch(error => {
-                                console.error('Error al crear pool:', error);
-                                alert('❌ Error al crear el pool. Por favor, intenta de nuevo.');
-                            });
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.success) {
+                                        const poolIdReal = data.idPool;
+
+                                        const nuevoPool = {
+                                            id: Date.now(), // ID temporal para el frontend
+                                            idReal: poolIdReal, // ID real del backend
+                                            nombre: formData.get('nombrePool'),
+                                            descripcion: formData.get('descripcionPool'),
+                                            cantidadPreguntas: parseInt(formData.get('cantidadPreguntas')),
+                                            preguntas: [],
+                                            esIA: esIA // Flag frontend
+                                        };
+
+                                        // Si es IA y status es PENDING, iniciamos polling
+                                        if (esIA && data.iaStatus === 'PENDING') {
+                                            nuevoPool.iaStatus = 'PENDING';
+                                            iniciarPollingIA(nuevoPool);
+                                        }
+
+                                        examenPools.push(nuevoPool);
+                                        actualizarListaPools();
+                                        cerrarModalPool();
+
+                                        if (esIA) {
+                                            mostrarNotificacionGlobal('Pool en proceso', 'Generando preguntas con IA...', 'info');
+                                        } else {
+                                            mostrarNotificacionGlobal('Pool creado', 'Pool creado y guardado exitosamente.', 'success', () => {
+                                                mostrarModalPreguntas(nuevoPool.id, poolIdReal);
+                                            });
+                                        }
+                                    } else {
+                                        alert('❌ Error: ' + data.message);
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error('Error al crear pool:', error);
+                                    alert('❌ Error al crear el pool. Por favor, intenta de nuevo.');
+                                });
+                        };
+
+                        const mensajeConfirmacion = esIA
+                            ? '¿Confirmas generar este pool con IA?'
+                            : '¿Confirmas la creación de este pool?';
+                        const textoConfirmar = esIA ? 'Generar' : 'Crear';
+
+                        mostrarConfirmacionGlobal(
+                            'Crear pool',
+                            mensajeConfirmacion,
+                            ejecutarCreacionPool,
+                            { confirmText: textoConfirmar, cancelText: 'Cancelar', type: 'info' }
+                        );
                     });
                 })
                 .catch(error => {
@@ -3214,7 +3245,7 @@
                                         pool.preguntas = d.preguntas;
                                         pool.preguntasCount = d.preguntas.length;
                                         actualizarListaPools();
-                                        alert(`✅ Preguntas generadas para el pool "${pool.nombre}"`);
+                                        mostrarNotificacionGlobal('Preguntas generadas', `Preguntas generadas para el pool "${pool.nombre}"`, 'success');
                                     }
                                 });
                         } else if (data.status === 'FAILED') {
@@ -3312,28 +3343,38 @@
                 e.preventDefault();
                 const formData = new FormData(e.target);
 
-                fetch(`/pool/editar/${idPool}`, {
-                    method: 'POST',
-                    headers: {
-                        'X-XSRF-TOKEN': document.querySelector('meta[name="_csrf"]')?.getAttribute('content') || ''
-                    },
-                    body: formData
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            alert('✅ Pool actualizado exitosamente');
-                            cerrarModalPool();
-                            // Recargar modal para ver cambios
-                            setTimeout(mostrarModalPool, 300);
-                        } else {
-                            alert('❌ Error: ' + data.message);
-                        }
+                const ejecutarEdicionPool = () => {
+                    fetch(`/pool/editar/${idPool}`, {
+                        method: 'POST',
+                        headers: {
+                            'X-XSRF-TOKEN': document.querySelector('meta[name="_csrf"]')?.getAttribute('content') || ''
+                        },
+                        body: formData
                     })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('Error al actualizar el pool');
-                    });
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                cerrarModalPool();
+                                mostrarNotificacionGlobal('Pool actualizado', 'Pool actualizado exitosamente.', 'success', () => {
+                                    // Recargar modal para ver cambios
+                                    setTimeout(mostrarModalPool, 300);
+                                });
+                            } else {
+                                alert('❌ Error: ' + data.message);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            alert('Error al actualizar el pool');
+                        });
+                };
+
+                mostrarConfirmacionGlobal(
+                    'Actualizar pool',
+                    '¿Confirmas guardar los cambios del pool?',
+                    ejecutarEdicionPool,
+                    { confirmText: 'Guardar', cancelText: 'Cancelar', type: 'info' }
+                );
             });
         }
 
@@ -3382,7 +3423,7 @@
             examenPools.push(nuevoPool);
             actualizarListaPools();
             cerrarModalPool();
-            alert('✅ Pool agregado al examen');
+            mostrarNotificacionGlobal('Pool agregado', 'Pool agregado al examen.', 'success');
         }
 
         function cerrarModalPool() {
@@ -3578,13 +3619,14 @@
         }
 
         function eliminarPool(index) {
-            ModalConfirmacion.show(
-                'Eliminar Pool',
+            mostrarConfirmacionGlobal(
+                'Eliminar pool',
                 '¿Estás seguro de eliminar este pool?',
                 () => {
                     examenPools.splice(index, 1);
                     actualizarListaPools();
-                }
+                },
+                { confirmText: 'Eliminar', cancelText: 'Cancelar', type: 'warning' }
             );
         }
 
@@ -4351,104 +4393,121 @@
                 const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
                 const csrfHeader = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
 
-                // Enviar la tarea al backend
-                fetch('/actividad/crearTarea', {
-                    method: 'POST',
-                    headers: {
-                        [csrfHeader]: csrfToken
-                    },
-                    body: formData
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            alert('✅ ' + data.message);
-                            cerrarFormularioTarea();
-                            window.location.reload();
-                        } else {
-                            alert('❌ Error: ' + data.message);
-                        }
+                const ejecutarCreacionTarea = () => {
+                    fetch('/actividad/crearTarea', {
+                        method: 'POST',
+                        headers: {
+                            [csrfHeader]: csrfToken
+                        },
+                        body: formData
                     })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('❌ Error al crear la tarea. Por favor, intenta nuevamente.');
-                    });
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                mostrarNotificacionGlobal('Tarea creada', data.message || 'Tarea creada exitosamente.', 'success', () => {
+                                    cerrarFormularioTarea();
+                                    window.location.reload();
+                                });
+                            } else {
+                                alert('❌ Error: ' + data.message);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            alert('❌ Error al crear la tarea. Por favor, intenta nuevamente.');
+                        });
+                };
+
+                mostrarConfirmacionGlobal(
+                    'Crear tarea',
+                    '¿Confirmas la creación de esta tarea?',
+                    ejecutarCreacionTarea,
+                    { confirmText: 'Crear', cancelText: 'Cancelar', type: 'info' }
+                );
             }
 
             if (e.target.id === 'formModificarEntrega') {
                 e.preventDefault();
                 const form = e.target;
                 const submitBtn = form.querySelector('button[type="submit"]') || form.querySelector('button');
-                if (submitBtn) submitBtn.disabled = true;
-                const fd = new FormData(form);
-                const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
-                const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
-                try {
-                    const res = await fetch(form.action, {
-                        method: 'POST',
-                        headers: {
-                            [csrfHeader]: csrfToken,
-                            'X-Requested-With': 'XMLHttpRequest'
-                        },
-                        body: fd
-                    });
-                    const data = await res.json().catch(() => null);
-                    if (res.ok && data && data.success) {
-                        // Mensaje no bloqueante
-                        console.info('✅ ' + (data.message || 'Modificación guardada'));
 
-                        // cerrar modal
-                        const tareaId = form.querySelector('input[name="idTarea"]')?.value;
-                        document.getElementById('tareaModal')?.remove();
+                const ejecutarModificacionEntrega = async () => {
+                    if (submitBtn) submitBtn.disabled = true;
+                    const fd = new FormData(form);
+                    const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+                    const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+                    try {
+                        const res = await fetch(form.action, {
+                            method: 'POST',
+                            headers: {
+                                [csrfHeader]: csrfToken,
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            body: fd
+                        });
+                        const data = await res.json().catch(() => null);
+                        if (res.ok && data && data.success) {
+                            // Mensaje no bloqueante
+                            console.info('✅ ' + (data.message || 'Modificación guardada'));
 
-                        if (tareaId) {
-                            // Actualizar todos los elementos que correspondan a esta tarea
-                            const openers = Array.from(document.querySelectorAll(`[data-id="${tareaId}"]`));
-                            openers.forEach(opener => {
-                                if (data.entregaId) opener.setAttribute('data-entrega-id', data.entregaId);
-                                if (data.entregaFecha) opener.setAttribute('data-entrega-fecha', data.entregaFecha);
-                                if (data.nombreArchivo !== undefined) opener.setAttribute('data-entrega-archivo', data.nombreArchivo || '');
-                                if (data.contenido !== undefined) opener.setAttribute('data-entrega-texto', data.contenido || '');
-                                if (data.calificacion !== undefined && data.calificacion !== null) opener.setAttribute('data-entrega-calif', data.calificacion);
+                            // cerrar modal
+                            const tareaId = form.querySelector('input[name="idTarea"]')?.value;
+                            document.getElementById('tareaModal')?.remove();
 
-                                // Añadir badge si no existe
-                                if (!opener.querySelector('.entrega-badge')) {
-                                    const badge = document.createElement('span');
-                                    badge.className = 'entrega-badge ms-2 small text-success';
-                                    badge.textContent = 'Enviado';
-                                    opener.appendChild(badge);
-                                }
+                            if (tareaId) {
+                                // Actualizar todos los elementos que correspondan a esta tarea
+                                const openers = Array.from(document.querySelectorAll(`[data-id="${tareaId}"]`));
+                                openers.forEach(opener => {
+                                    if (data.entregaId) opener.setAttribute('data-entrega-id', data.entregaId);
+                                    if (data.entregaFecha) opener.setAttribute('data-entrega-fecha', data.entregaFecha);
+                                    if (data.nombreArchivo !== undefined) opener.setAttribute('data-entrega-archivo', data.nombreArchivo || '');
+                                    if (data.contenido !== undefined) opener.setAttribute('data-entrega-texto', data.contenido || '');
+                                    if (data.calificacion !== undefined && data.calificacion !== null) opener.setAttribute('data-entrega-calif', data.calificacion);
 
-                                // Actualizar o insertar info visible junto al opener (fecha y archivo)
-                                let info = opener.parentElement.querySelector(`.entrega-info[data-tarea-id="${tareaId}"]`);
-                                if (!info) {
-                                    info = document.createElement('div');
-                                    info.className = 'entrega-info text-muted small';
-                                    info.setAttribute('data-tarea-id', tareaId);
-                                    opener.parentElement.appendChild(info);
-                                }
+                                    // Añadir badge si no existe
+                                    if (!opener.querySelector('.entrega-badge')) {
+                                        const badge = document.createElement('span');
+                                        badge.className = 'entrega-badge ms-2 small text-success';
+                                        badge.textContent = 'Enviado';
+                                        opener.appendChild(badge);
+                                    }
 
-                                const parts = [];
-                                if (data.entregaFecha) parts.push('Fecha: ' + data.entregaFecha);
-                                if (data.nombreArchivo) parts.push('Archivo: ' + data.nombreArchivo);
-                                if (data.calificacion !== undefined && data.calificacion !== null) parts.push('Calificación: ' + data.calificacion);
-                                info.textContent = parts.join(' • ');
-                            });
+                                    // Actualizar o insertar info visible junto al opener (fecha y archivo)
+                                    let info = opener.parentElement.querySelector(`.entrega-info[data-tarea-id="${tareaId}"]`);
+                                    if (!info) {
+                                        info = document.createElement('div');
+                                        info.className = 'entrega-info text-muted small';
+                                        info.setAttribute('data-tarea-id', tareaId);
+                                        opener.parentElement.appendChild(info);
+                                    }
+
+                                    const parts = [];
+                                    if (data.entregaFecha) parts.push('Fecha: ' + data.entregaFecha);
+                                    if (data.nombreArchivo) parts.push('Archivo: ' + data.nombreArchivo);
+                                    if (data.calificacion !== undefined && data.calificacion !== null) parts.push('Calificación: ' + data.calificacion);
+                                    info.textContent = parts.join(' • ');
+                                });
+                            }
+
+                            mostrarNotificacionGlobal('Modificación guardada', data.message || 'Modificación guardada.', 'success');
+                        } else {
+                            const msg = data?.message || await res.text();
+                            alert('❌ Error: ' + (msg || 'Error desconocido'));
                         }
-
-                        // Mostrar notificación breve
-                        alert(data.message || '✅ Modificación guardada');
-
-                    } else {
-                        const msg = data?.message || await res.text();
-                        alert('❌ Error: ' + (msg || 'Error desconocido'));
+                    } catch (err) {
+                        console.error(err);
+                        alert('❌ Error de red. Intenta nuevamente.');
+                    } finally {
+                        if (submitBtn) submitBtn.disabled = false;
                     }
-                } catch (err) {
-                    console.error(err);
-                    alert('❌ Error de red. Intenta nuevamente.');
-                } finally {
-                    if (submitBtn) submitBtn.disabled = false;
-                }
+                };
+
+                mostrarConfirmacionGlobal(
+                    'Guardar cambios',
+                    '¿Confirmas actualizar la entrega?',
+                    ejecutarModificacionEntrega,
+                    { confirmText: 'Guardar', cancelText: 'Cancelar', type: 'info' }
+                );
             }
 
             if (e.target.id === 'formExamen') {
@@ -4479,28 +4538,37 @@
 
                 console.log('📋 Enviando examen con pools:', examenPools);
 
-                // Enviar al backend
-                fetch('/actividad/crearExamen', {
-                    method: 'POST',
-                    headers: {
-                        'X-XSRF-TOKEN': document.querySelector('meta[name="_csrf"]')?.getAttribute('content') || ''
-                    },
-                    body: formData
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            alert('✅ Examen creado exitosamente');
-                            cerrarFormularioExamen();
-                            location.reload(); // Recargar para mostrar el examen en el módulo
-                        } else {
-                            alert('❌ Error: ' + data.message);
-                        }
+                const ejecutarCreacionExamen = () => {
+                    fetch('/actividad/crearExamen', {
+                        method: 'POST',
+                        headers: {
+                            'X-XSRF-TOKEN': document.querySelector('meta[name="_csrf"]')?.getAttribute('content') || ''
+                        },
+                        body: formData
                     })
-                    .catch(error => {
-                        console.error('Error al crear examen:', error);
-                        alert('❌ Error al crear el examen. Por favor, intenta de nuevo.');
-                    });
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                mostrarNotificacionGlobal('Examen creado', 'Examen creado exitosamente.', 'success', () => {
+                                    cerrarFormularioExamen();
+                                    location.reload();
+                                });
+                            } else {
+                                alert('❌ Error: ' + data.message);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error al crear examen:', error);
+                            alert('❌ Error al crear el examen. Por favor, intenta de nuevo.');
+                        });
+                };
+
+                mostrarConfirmacionGlobal(
+                    'Crear examen',
+                    '¿Confirmas la creación de este examen?',
+                    ejecutarCreacionExamen,
+                    { confirmText: 'Crear', cancelText: 'Cancelar', type: 'info' }
+                );
             }
 
             if (e.target.id === 'formCarpeta') {
@@ -5151,9 +5219,12 @@
         }
 
         function confirmarEliminarEntrega(idEntrega) {
-            if (confirm('¿Estás seguro de que deseas eliminar tu entrega? Esta acción no se puede deshacer.')) {
-                eliminarEntrega(idEntrega);
-            }
+            mostrarConfirmacionGlobal(
+                'Eliminar entrega',
+                '¿Estás seguro de que deseas eliminar tu entrega? Esta acción no se puede deshacer.',
+                () => eliminarEntrega(idEntrega),
+                { confirmText: 'Eliminar', cancelText: 'Cancelar', type: 'warning' }
+            );
         }
 
         async function eliminarEntrega(idEntrega) {
@@ -5171,8 +5242,9 @@
                 const data = await response.json();
 
                 if (response.ok && data.success) {
-                    alert(data.message);
-                    window.location.reload();
+                    mostrarNotificacionGlobal('Entrega eliminada', data.message || 'Entrega eliminada correctamente.', 'success', () => {
+                        window.location.reload();
+                    });
                 } else {
                     alert('Error: ' + (data.error || 'No se pudo eliminar la entrega'));
                 }
@@ -5595,6 +5667,25 @@
                 // NOTA: Ya no inyectamos manualmente el mensaje aquí para evitar duplicados, 
                 // puesto que el backend ya generó la notificación correspondiente.
             }, 1000);
+        });
+        /*]]>*/
+    </script>
+
+    <script th:if="${moduloError != null}" th:inline="javascript">
+        /*<![CDATA[*/
+        document.addEventListener('DOMContentLoaded', () => {
+            const mensaje = /*[[${moduloError}]]*/ '';
+            if (!mensaje) return;
+            if (window.ModalConfirmacion && typeof ModalConfirmacion.show === 'function') {
+                ModalConfirmacion.show(
+                    'Error de validación',
+                    mensaje,
+                    null,
+                    { type: 'error', confirmText: 'Aceptar', showCancel: false }
+                );
+            } else {
+                alert(mensaje);
+            }
         });
         /*]]>*/
     </script>"},{
