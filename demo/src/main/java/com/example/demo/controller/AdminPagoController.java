@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.LinkedHashMap;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,11 +21,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import com.example.demo.enums.EstadoPago;
-import com.example.demo.enums.EstadoCuota;
 import com.example.demo.model.Pago;
-import com.example.demo.model.Cuota;
 import com.example.demo.repository.PagoRepository;
-import com.example.demo.repository.OfertaAcademicaRepository;
 import com.example.demo.service.ReporteService;
 import com.example.demo.service.AuditLogService;
 import com.example.demo.model.AuditLog;
@@ -44,9 +42,6 @@ public class AdminPagoController {
 
     @Autowired
     private PagoRepository pagoRepository;
-
-    @Autowired
-    private OfertaAcademicaRepository ofertaAcademicaRepository;
     
     @Autowired
     private ReporteService reporteService;
@@ -57,14 +52,15 @@ public class AdminPagoController {
     @GetMapping
     public String listarPagos(Model model, 
                               @RequestParam(required = false) String estado,
-                              @RequestParam(required = false) String dni,
-                              @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
-                              @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
-                              @RequestParam(required = false) String tipo,
-                              @RequestParam(required = false) Long ofertaId) {
+                              @RequestParam(required = false) String dni) {
         
         // Obtener todos los pagos ordenados por fecha descendente
         List<Pago> pagos = pagoRepository.findAll(Sort.by(Sort.Direction.DESC, "fechaPago"));
+
+        // Filtrar solo pagos COMPLETADOS
+        pagos = pagos.stream()
+            .filter(p -> p.getEstadoPago() == EstadoPago.COMPLETADO)
+            .collect(Collectors.toList());
 
         // Filtrado por estado (si se especifica)
         if (estado != null && !estado.isEmpty()) {
@@ -80,81 +76,42 @@ public class AdminPagoController {
                 .collect(Collectors.toList());
         }
 
-        if (fechaInicio != null) {
-            pagos = pagos.stream()
-                .filter(p -> p.getFechaPago() != null && !p.getFechaPago().toLocalDate().isBefore(fechaInicio))
-                .collect(Collectors.toList());
-        }
-
-        if (fechaFin != null) {
-            pagos = pagos.stream()
-                .filter(p -> p.getFechaPago() != null && !p.getFechaPago().toLocalDate().isAfter(fechaFin))
-                .collect(Collectors.toList());
-        }
-
-        if (tipo != null && !tipo.isBlank()) {
-            pagos = pagos.stream()
-                .filter(p -> {
-                    boolean esCuota = p.getCuotas() != null && !p.getCuotas().isEmpty();
-                    if ("CUOTA".equalsIgnoreCase(tipo)) return esCuota;
-                    if ("INSCRIPCION".equalsIgnoreCase(tipo)) return !esCuota;
-                    return true;
-                })
-                .collect(Collectors.toList());
-        }
-
-        if (ofertaId != null) {
-            pagos = pagos.stream()
-                .filter(p -> p.getOferta() != null && p.getOferta().getIdOferta().equals(ofertaId))
-                .collect(Collectors.toList());
-        }
-
-        Map<Long, String> estadoPagoVisual = new LinkedHashMap<>();
+        // Agrupar pagos por alumno
+        Map<String, Map<String, Object>> pagosPorAlumno = new LinkedHashMap<>();
+        
         for (Pago pago : pagos) {
-            if (pago == null) continue;
-            estadoPagoVisual.put(pago.getIdPago(), resolverEstadoVisualPago(pago));
+            if (pago.getUsuario() == null) continue;
+            
+            String alumnoKey = pago.getUsuario().getDni();
+            
+            if (!pagosPorAlumno.containsKey(alumnoKey)) {
+                Map<String, Object> alumnoData = new LinkedHashMap<>();
+                alumnoData.put("nombre", pago.getUsuario().getNombre() + " " + pago.getUsuario().getApellido());
+                alumnoData.put("dni", pago.getUsuario().getDni());
+                alumnoData.put("pagos", new ArrayList<Pago>());
+                alumnoData.put("totalPagos", 0);
+                alumnoData.put("montoTotal", 0.0);
+                pagosPorAlumno.put(alumnoKey, alumnoData);
+            }
+            
+            Map<String, Object> alumnoData = pagosPorAlumno.get(alumnoKey);
+            @SuppressWarnings("unchecked")
+            List<Pago> alumnoPagos = (List<Pago>) alumnoData.get("pagos");
+            alumnoPagos.add(pago);
+            
+            // Actualizar contadores (solo completados)
+            alumnoData.put("totalPagos", (int) alumnoData.get("totalPagos") + 1);
+            double montoActual = (double) alumnoData.get("montoTotal");
+            double montoPago = pago.getMonto() != null ? pago.getMonto().doubleValue() : 0.0;
+            alumnoData.put("montoTotal", montoActual + montoPago);
         }
 
-        model.addAttribute("pagos", pagos);
-        model.addAttribute("estadoPagoVisual", estadoPagoVisual);
-        model.addAttribute("ofertas", ofertaAcademicaRepository.findAll(Sort.by(Sort.Direction.ASC, "nombre")));
+        model.addAttribute("pagosPorAlumno", pagosPorAlumno);
         model.addAttribute("estados", EstadoPago.values());
         model.addAttribute("estadoSeleccionado", estado);
         model.addAttribute("dniBusqueda", dni);
-        model.addAttribute("fechaInicioSeleccionada", fechaInicio);
-        model.addAttribute("fechaFinSeleccionada", fechaFin);
-        model.addAttribute("tipoSeleccionado", tipo);
-        model.addAttribute("ofertaSeleccionada", ofertaId);
         
         return "admin/gestionPagos";
-    }
-
-    private String resolverEstadoVisualPago(Pago pago) {
-        boolean enMora = false;
-        if (pago != null && pago.getCuotas() != null && !pago.getCuotas().isEmpty()) {
-            LocalDate hoy = LocalDate.now();
-            for (Cuota cuota : pago.getCuotas()) {
-                if (cuota == null) continue;
-                if (cuota.getEstado() == EstadoCuota.VENCIDA) {
-                    enMora = true;
-                    break;
-                }
-                if (cuota.getEstado() == EstadoCuota.PENDIENTE 
-                        && cuota.getFechaVencimiento() != null 
-                        && cuota.getFechaVencimiento().isBefore(hoy)) {
-                    enMora = true;
-                    break;
-                }
-            }
-        }
-
-        if (pago != null && pago.getEstadoPago() == EstadoPago.COMPLETADO) {
-            return enMora ? "PAGADO_CON_MORA" : "PAGADO";
-        }
-        if (enMora) {
-            return "MORA";
-        }
-        return "PENDIENTE";
     }
 
     @GetMapping("/reporte")
@@ -162,7 +119,6 @@ public class AdminPagoController {
             @RequestParam(required = false) String estado,
             @RequestParam(required = false) String dni,
             @RequestParam(required = false) Long cursoId,
-            @RequestParam(required = false) String tipo,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
             HttpServletRequest request) {
@@ -188,17 +144,6 @@ public class AdminPagoController {
                     .collect(Collectors.toList());
             }
 
-            if (tipo != null && !tipo.isBlank()) {
-                pagos = pagos.stream()
-                    .filter(p -> {
-                        boolean esCuota = p.getCuotas() != null && !p.getCuotas().isEmpty();
-                        if ("CUOTA".equalsIgnoreCase(tipo)) return esCuota;
-                        if ("INSCRIPCION".equalsIgnoreCase(tipo)) return !esCuota;
-                        return true;
-                    })
-                    .collect(Collectors.toList());
-            }
-
             if (fechaInicio != null) {
                 pagos = pagos.stream()
                     .filter(p -> p.getFechaPago().toLocalDate().isAfter(fechaInicio.minusDays(1)))
@@ -209,16 +154,6 @@ public class AdminPagoController {
                 pagos = pagos.stream()
                     .filter(p -> p.getFechaPago().toLocalDate().isBefore(fechaFin.plusDays(1)))
                     .collect(Collectors.toList());
-            }
-
-            String periodoTexto = "Histórico completo";
-            if (fechaInicio != null && fechaFin != null) {
-                periodoTexto = fechaInicio.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"))
-                        + " al " + fechaFin.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-            } else if (fechaInicio != null) {
-                periodoTexto = "Desde " + fechaInicio.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-            } else if (fechaFin != null) {
-                periodoTexto = "Hasta " + fechaFin.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
             }
 
             java.io.ByteArrayInputStream pdfStream = reporteService.generarReportePagosPDF(pagos, cursoId);
@@ -254,7 +189,7 @@ public class AdminPagoController {
                     }
                     log.setAccion("EXPORTAR_REPORTE");
                     log.setAfecta("Reportes Pagos");
-                    log.setDetalles("Archivo: " + savedFile + " | Exportación de pagos. Periodo: " + periodoTexto + "."); 
+                    log.setDetalles("Archivo: " + savedFile + " | Exportación de pagos."); 
                     log.setExito(true);
                     log.setIp(request.getRemoteAddr());
                     

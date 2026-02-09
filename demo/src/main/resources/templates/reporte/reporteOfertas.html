@@ -7,24 +7,6 @@
             size: A4;
             margin: 1.5cm;
         }
-        .layout-table {
-            margin-bottom: 14px !important;
-            border-spacing: 6px 10px !important;
-        }
-        .layout-table td {
-            vertical-align: top !important;
-        }
-        .summary-box {
-            padding: 10px !important;
-            height: 70px !important;
-        }
-        .summary-label {
-            font-size: 8pt !important;
-        }
-        .summary-value {
-            font-size: 14pt !important;
-            margin: 2px 0 !important;
-        }
         .data-table, .data-table th, .data-table td {
             font-family: Arial, sans-serif !important;
             font-size: 8pt !important; /* Letra más chica */
@@ -113,56 +95,6 @@
     <div class="chart-container" th:if="${chartImage != null}">
         <h3>Distribución por Tipo de Oferta</h3>
         <img th:src="'data:image/png;base64,' + ${chartImage}" alt="Gráfico de Ofertas" style="width: 100%; max-height: 300px; object-fit: contain;"/>
-    </div>
-    <!-- Inscripciones por categoría -->
-    <div class="auto-baja-section" style="margin-top: 20px;">
-        <h3>Inscripciones por Categoría</h3>
-        <table class="data-table" th:if="${inscripcionesPorCategoria != null and !inscripcionesPorCategoria.isEmpty()}">
-            <thead>
-                <tr>
-                    <th style="width: 70%;">Categoría</th>
-                    <th style="width: 30%; text-align: center;">Inscripciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr th:each="item : ${inscripcionesPorCategoria}">
-                    <td th:text="${item.categoria}">Categoría</td>
-                    <td style="text-align: center;" th:text="${item.inscritos}">0</td>
-                </tr>
-            </tbody>
-        </table>
-        <p th:if="${inscripcionesPorCategoria == null or inscripcionesPorCategoria.isEmpty()}" style="font-size: 9pt; color: #666;">
-            No hay inscripciones registradas por categoría en este reporte.
-        </p>
-        <div class="chart-container" th:if="${chartCategorias != null}" style="margin-top: 12px;">
-            <img th:src="'data:image/png;base64,' + ${chartCategorias}" alt="Gráfico de Inscripciones por Categoría" style="width: 100%; max-height: 320px; object-fit: contain;"/>
-        </div>
-    </div>
-
-    <!-- Bajas por análisis de baja demanda (automáticas o confirmadas) -->
-    <div class="auto-baja-section" style="margin-top: 20px;">
-        <h3>Bajas por Baja Demanda</h3>
-        <p style="font-size: 9pt; color: #666;">
-            Total de ofertas dadas de baja automáticamente: 
-            <strong th:text="${bajasAutomaticasCount}">0</strong>
-        </p>
-        <table class="data-table" th:if="${bajasAutomaticas != null and !bajasAutomaticas.isEmpty()}">
-            <thead>
-                <tr>
-                    <th style="width: 35%;">Oferta</th>
-                    <th>Motivo</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr th:each="item : ${bajasAutomaticas}">
-                    <td th:text="${item.nombre}">Oferta</td>
-                    <td th:text="${item.motivo}">Motivo</td>
-                </tr>
-            </tbody>
-        </table>
-        <p th:if="${bajasAutomaticas == null or bajasAutomaticas.isEmpty()}" style="font-size: 9pt; color: #666;">
-            No se registran bajas automáticas para este reporte.
-        </p>
     </div>
 
     <div class="page-break"></div>

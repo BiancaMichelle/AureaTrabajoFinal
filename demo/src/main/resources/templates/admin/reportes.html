@@ -106,12 +106,9 @@
                                     <option value="ADMIN">Administrador</option>
                                 </select>
                             </div>
-                            <div class="tw-flex tw-items-center tw-justify-between tw-pt-3">
-                                <button type="submit" name="formato" value="pdf" class="tw-bg-purple-600 hover:tw-bg-purple-700 tw-text-white tw-px-4 tw-py-2 tw-rounded-md tw-text-sm tw-font-medium tw-transition-colors">
-                                    <i class="fas fa-file-pdf tw-mr-2"></i>PDF
-                                </button>
-                                <button type="submit" name="formato" value="excel" class="tw-bg-green-600 hover:tw-bg-green-700 tw-text-white tw-px-4 tw-py-2 tw-rounded-md tw-text-sm tw-font-medium tw-transition-colors">
-                                    <i class="fas fa-file-excel tw-mr-2"></i>Excel
+                            <div class="tw-pt-3">
+                                <button type="submit" class="tw-w-full tw-bg-purple-600 hover:tw-bg-purple-700 tw-text-white tw-px-4 tw-py-2 tw-rounded-md tw-text-sm tw-font-medium tw-transition-colors">
+                                    <i class="fas fa-file-pdf tw-mr-2"></i>Generar Reporte
                                 </button>
                             </div>
                         </div>
@@ -191,14 +188,7 @@
                                 <td class="tw-px-6 tw-py-4 tw-text-sm tw-font-medium tw-text-gray-800">
                                     <div class="tw-flex tw-flex-col">
                                         <span th:text="${reporte.afecta}">Tipo</span>
-                                        <span class="tw-text-xs tw-text-gray-500"
-                                              th:with="det=${reporte.detalles},
-                                                       periodoRaw=${det != null && #strings.contains(det, 'Periodo: ') ? #strings.substringAfter(det, 'Periodo: ') : ''},
-                                                       periodo=${periodoRaw != null && #strings.contains(periodoRaw, '.') ? #strings.substringBefore(periodoRaw, '.') : periodoRaw},
-                                                       tipo=${reporte.afecta != null ? reporte.afecta : ''}"
-                                              th:text="${det != null && (#strings.contains(det, 'Exportación') || #strings.contains(det, 'Exportaci')) ? 'Reporte generado' + (tipo != '' ? ' (' + tipo + ')' : '') + ': ' + ((periodo != null && !#strings.isEmpty(periodo)) ? periodo : 'Histórico completo') : det}">
-                                            Detalles...
-                                        </span>
+                                        <span class="tw-text-xs tw-text-gray-500" th:text="${reporte.detalles}">Detalles...</span>
                                     </div>
                                 </td>
                                 <td class="tw-px-6 tw-py-4 tw-text-sm tw-text-gray-500">

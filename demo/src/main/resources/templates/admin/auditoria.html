@@ -22,26 +22,15 @@
                 <label for="filter-accion">Acción</label>
                 <select id="filter-accion" class="filter-input">
                     <option value="">Todas las acciones</option>
-                    <option value="INICIO_SESION">Inicios de Sesión</option>
-                    <option value="CIERRE_SESION">Cierres de Sesión</option>
-                    <option value="ALTA_USUARIO">Crear Usuario</option>
-                    <option value="MODIFICACION_USUARIO">Actualizar Usuario</option>
-                    <option value="BAJA_USUARIO">Dar de Baja Usuario</option>
-                    <option value="REACTIVAR_USUARIO">Reactivar Usuario</option>
+                    <option value="LOGIN">Inicios de Sesión</option>
+                    <option value="LOGOUT">Cierres de Sesión</option>
+                    <option value="CREAR_USUARIO">Crear Usuario</option>
+                    <option value="ACTUALIZAR_USUARIO">Actualizar Usuario</option>
+                    <option value="ELIMINAR_USUARIO">Eliminar Usuario</option>
+                    <option value="CAMBIAR_ROL">Cambiar Rol</option>
                     <option value="CREAR_OFERTA">Crear Oferta</option>
                     <option value="MODIFICAR_OFERTA">Modificar Oferta</option>
                     <option value="ELIMINAR_OFERTA">Eliminar Oferta</option>
-                    <option value="CAMBIAR_ESTADO_OFERTA">Cambiar Estado Oferta</option>
-                    <option value="EXPORTAR_REPORTE">Exportar Reporte</option>
-                </select>
-            </div>
-
-            <div class="filter-group">
-                <label for="filter-estado">Estado</label>
-                <select id="filter-estado" class="filter-input">
-                    <option value="">Todos</option>
-                    <option value="true">Exitoso</option>
-                    <option value="false">Fallido</option>
                 </select>
             </div>
 
@@ -224,7 +213,6 @@
             if (currentFilters.entidad) params.append('entidad', currentFilters.entidad);
             if (currentFilters.fechaDesde) params.append('fechaDesde', currentFilters.fechaDesde);
             if (currentFilters.fechaHasta) params.append('fechaHasta', currentFilters.fechaHasta);
-            if (currentFilters.estado !== null && currentFilters.estado !== undefined) params.append('exito', currentFilters.estado);
             
             const url = `/auditoria/api/logs?${params.toString()}`;
             console.log('Fetch URL:', url);
@@ -280,7 +268,7 @@
             const accion = formatearAccion(item.accion || '');
             const fecha = formatearFecha(item.fecha);
             const hora = formatearHora(item.hora);
-            const detalles = truncarTexto(formatearDetalleAuditoria(item.detalles, item.afecta), 80);
+            const detalles = truncarTexto(item.detalles || '', 80);
             const exito = item.exito;
             
             return `
@@ -292,7 +280,7 @@
                     <td><span class="action-badge">${accion}</span></td>
                     <td>${fecha}</td>
                     <td><strong>${hora}</strong></td>
-                    <td title="${formatearDetalleAuditoria(item.detalles, item.afecta)}">${detalles}</td>
+                    <td title="${item.detalles || ''}">${detalles}</td>
                     <td>
                         <span class="status-badge ${exito ? 'success' : 'error'}">
                             <i class="fas fa-${exito ? 'check' : 'times'}"></i>
@@ -441,7 +429,7 @@
         }
 
         const detalleEl = document.getElementById('audit-modal-detalle');
-        if (detalleEl) detalleEl.textContent = formatearDetalleAuditoria(item.detalles, item.afecta);
+        if (detalleEl) detalleEl.textContent = item.detalles || 'N/A';
 
         modal.style.display = 'flex';
     };
@@ -450,27 +438,6 @@
         const modal = document.getElementById('audit-detail-modal');
         if (modal) modal.style.display = 'none';
     };
-
-    function formatearDetalleAuditoria(detalles, afecta) {
-        const texto = detalles || 'N/A';
-        if (!texto) return 'N/A';
-
-        const lower = texto.toLowerCase();
-        if (lower.includes('exportación') || lower.includes('exportacion')) {
-            const tipo = afecta ? ` (${afecta})` : '';
-            let periodo = '';
-            const marker = 'Periodo: ';
-            const idx = texto.indexOf(marker);
-            if (idx !== -1) {
-                const after = texto.substring(idx + marker.length);
-                const dot = after.indexOf('.');
-                periodo = dot !== -1 ? after.substring(0, dot).trim() : after.trim();
-            }
-            return `Reporte generado${tipo}: ${periodo || 'Histórico completo'}`;
-        }
-
-        return texto;
-    }
 
     // === CAMBIAR PÁGINA ===
     window.cambiarPagina = function(nuevaPagina) {
@@ -489,15 +456,13 @@
         const filterEntidad = document.getElementById('filter-entidad');
         const filterDesde = document.getElementById('filter-fecha-desde');
         const filterHasta = document.getElementById('filter-fecha-hasta');
-        const filterEstado = document.getElementById('filter-estado');
         
         currentFilters = {
             usuario: filterUsuario ? filterUsuario.value.trim() || null : null,
             accion: filterAccion ? filterAccion.value || null : null,
             entidad: filterEntidad ? filterEntidad.value || null : null,
             fechaDesde: filterDesde ? filterDesde.value || null : null,
-            fechaHasta: filterHasta ? filterHasta.value || null : null,
-            estado: filterEstado && filterEstado.value !== '' ? filterEstado.value : null
+            fechaHasta: filterHasta ? filterHasta.value || null : null
         };
         
         console.log('Filtros:', currentFilters);
@@ -513,14 +478,12 @@
         const filterEntidad = document.getElementById('filter-entidad');
         const filterDesde = document.getElementById('filter-fecha-desde');
         const filterHasta = document.getElementById('filter-fecha-hasta');
-        const filterEstado = document.getElementById('filter-estado');
         
         if (filterUsuario) filterUsuario.value = '';
         if (filterAccion) filterAccion.value = '';
         if (filterEntidad) filterEntidad.value = '';
         if (filterDesde) filterDesde.value = '';
         if (filterHasta) filterHasta.value = '';
-        if (filterEstado) filterEstado.value = '';
         
         currentFilters = {};
         currentPage = 0;

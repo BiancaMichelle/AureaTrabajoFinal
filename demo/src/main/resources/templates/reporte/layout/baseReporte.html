@@ -3,91 +3,12 @@
 <head>
     <meta charset="UTF-8"/>
     <title>Reporte Institucional</title>
-    <!-- CSS incrustado dinÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡micamente -->
+    <!-- CSS incrustado dinámicamente -->
     <style th:utext="${estilos}">
         /* Fallback o estilos base si no carga el externo */
         body { font-family: sans-serif; }
     </style>
-    <style>
-        :root {
-            --primary-color: [[${colorPrimario}]];
-            --secondary-color: [[${colorSecundario}]];
-            --text-color: [[${colorTexto}]];
-        }
-        body { color: var(--text-color); }
-        .header-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 16px;
-            padding: 16px 0 12px 0;
-            border-bottom: 2px solid var(--primary-color);
-        }
-        .header-left {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-            flex: 1;
-        }
-        .header-right {
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            min-width: 240px;
-        }
-        .meta-container {
-            margin-top: 0;
-            text-align: right;
-        }
-        .header-text {
-            text-align: center;
-        }
-        .logo-box {
-            width: 64px;
-            height: 64px;
-            border: 1px solid rgba(0, 0, 0, 0.06);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--secondary-color);
-            padding: 6px;
-            box-sizing: border-box;
-        }
-        .logo-box img {
-            max-width: 54px;
-            max-height: 54px;
-            object-fit: contain;
-        }
-        .header-title {
-            margin: 0;
-            font-size: 20pt;
-            color: var(--primary-color);
-        }
-        .header-brand {
-            margin: 2px 0 0 0;
-            font-size: 9pt;
-            color: var(--text-color);
-            opacity: 0.8;
-        }
-        .report-meta p {
-            margin: 2px 0;
-            color: var(--text-color);
-        }
-        .report-meta strong {
-            color: var(--secondary-color);
-        }
-        .footer {
-            margin-top: 24px;
-            padding-top: 8px;
-            border-top: 1px solid #e5e7eb;
-            font-size: 9pt;
-            color: var(--text-color);
-            opacity: 0.8;
-        }
-    </style>
-    <!-- Estilos especÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ficos de la pÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡gina hija -->
+    <!-- Estilos específicos de la página hija -->
     <th:block th:replace="${styles}"></th:block>
 </head>
 <body>
@@ -95,40 +16,26 @@
     <!-- Encabezado General (Se repite o es fijo) -->
     <div class="header-container">
         <div class="header-left">
-            <div class="logo-box">
-                <img th:if="${logoBase64 != null}" th:src="${logoBase64}" alt="Logo" />
-            </div>
-            <div class="header-text">
-                <h1 class="header-title" th:text="${institutoNombre}"> Aurea</h1>
-                <p class="header-brand">Aurea</p>
-            </div>
+            <h1 style="margin: 0; font-size: 20pt; color: #2563eb;">Instituto Aurea</h1>
+            <p style="margin: 0; color: #64748b;">Excelencia Académica</p>
         </div>
         <div class="header-right">
-            <div class="meta-container">
-                <div class="report-meta">
-                    <p><strong>Fecha de Emision:</strong> <span th:text="${fechaEmision}">01/01/2026</span></p>
-                    <p><strong>Generado por:</strong> <span th:text="${generadoPorNombre}">Sistema</span>
-                        <span th:if="${generadoPorDni != null and !#strings.isEmpty(generadoPorDni)}"
-                              th:text="' (DNI: ' + ${generadoPorDni} + ')'"></span>
-                    </p>
-                    <p><strong>Reporte ID:</strong> <span th:text="${reporteId}">#0000</span></p>
-                    <div th:if="${mostrarFiscalEnHeader == true}" style="margin-top: 6px;">
-                        <p th:if="${razonSocial != null and !#strings.isEmpty(razonSocial)}"><strong>Razon Social:</strong> <span th:text="${razonSocial}">-</span></p>
-                        <p th:if="${cuit != null and !#strings.isEmpty(cuit)}"><strong>CUIT:</strong> <span th:text="${cuit}">-</span></p>
-                    </div>
-                </div>
+            <div class="report-meta">
+                <p><strong>Fecha de Emisión:</strong> <span th:text="${fechaEmision}">01/01/2026</span></p>
+                <p><strong>Generado por:</strong> <span th:text="${generadoPor}">Sistema</span></p>
+                <p><strong>Reporte ID:</strong> <span th:text="${reporteId}">#0000</span></p>
             </div>
         </div>
     </div>
 
-    <!-- Contenido DinÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡mico del Reporte -->
+    <!-- Contenido Dinámico del Reporte -->
     <div th:replace="${content}">
         <p>Contenido del reporte...</p>
     </div>
 
-    <!-- Pie de PÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡gina (Gestionado por CSS @page) -->
+    <!-- Pie de Página (Gestionado por CSS @page) -->
     <div class="footer">
-        <p th:text="${institutoNombre}">Aurea</p>
+        <p>Instituto Aurea - Av. Corrientes 1234, CABA - www.aurea.edu.ar</p>
     </div>
 </body>
 </html>

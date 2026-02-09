@@ -9,279 +9,301 @@
             box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25);
         }
 
-.horario-chip-editable.pinned {
-    border: 2px solid #f59e0b !important;
-    background: #fff7ed !important;
-    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25);
-}
+        .horario-chip-editable.pinned .pin-check {
+            accent-color: #f59e0b;
+        }
+
+        /* Estilos para el modal de error */
+        .error-content {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .error-icon {
+            font-size: 2rem;
+            color: #ffc107;
+            margin-top: 0.2rem;
+        }
+
+        .error-message h4 {
+            color: #dc3545;
+            margin: 0 0 0.5rem 0;
+            font-size: 1.2rem;
+        }
+
+        .error-message p {
+            margin: 0 0 1rem 0;
+            line-height: 1.5;
+            color: #333;
+        }
+
+        .error-suggestions {
+            background: #f8f9fa;
+            border-left: 4px solid #ffc107;
+            padding: 1rem;
+            border-radius: 0.375rem;
+            margin-top: 1rem;
+        }
+
+        .error-suggestions h5 {
+            color: #856404;
+            margin: 0 0 0.5rem 0;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .error-suggestions ul {
+            margin: 0;
+            padding-left: 1rem;
+        }
+
+        .error-suggestions li {
+            margin-bottom: 0.5rem;
+            color: #495057;
+        }
+
+        .error-suggestions li i {
+            color: #6c757d;
+            margin-right: 0.5rem;
+        }
+
+        .modal-md {
+            max-width: 500px;
+        }
+
+        .text-warning {
+            color: #ffc107 !important;
+        }
+
+        .text-danger {
+            color: #dc3545 !important;
+        }
+
         /* =========================================
    1. ESTILOS DEL SWITCH (MODO MANUAL/AUTO)
-            document.addEventListener('DOMContentLoaded', function () {
-                // Imagen: preview inmediato al seleccionar archivo
-                const imagenInput = document.getElementById('imagen');
-                const imagePreview = document.getElementById('image-preview');
-                const uploadPlaceholder = document.querySelector('.upload-placeholder');
+   ========================================= */
+        .switch-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 25px;
+            padding: 18px 20px;
+            background: linear-gradient(135deg, #f8fafc 0%, #eef2f7 100%);
+            border-radius: 14px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+        }
 
-                if (imagenInput && imagePreview && uploadPlaceholder) {
-                    imagenInput.addEventListener('change', function (event) {
-                        const file = event.target.files && event.target.files[0];
-                        if (!file) return;
-                        if (file.size > 5 * 1024 * 1024) {
-                            if (typeof mostrarNotificacion === 'function') {
-                                mostrarNotificacion('La imagen supera 5MB', 'warning');
-                            } else {
-                                alert('La imagen supera 5MB');
-                            }
-                            imagenInput.value = '';
-                            return;
-                        }
-                        const reader = new FileReader();
-                        reader.onload = function (e) {
-                            imagePreview.src = e.target.result;
-                            imagePreview.style.display = 'block';
-                            uploadPlaceholder.style.display = 'none';
-                        };
-                        reader.readAsDataURL(file);
-                    });
 
-                    const btnClearImage = document.getElementById('btn-clear-image');
-                    if (btnClearImage) {
-                        btnClearImage.addEventListener('click', function () {
-                            imagenInput.value = '';
-                            imagePreview.src = '';
-                            imagePreview.style.display = 'none';
-                            uploadPlaceholder.style.display = 'flex';
-                        });
-                    }
-                }
+        /* El contenedor del toggle */
+        .switch-toggle {
+            position: relative;
+            display: inline-block;
+            width: 74px;
+            height: 40px;
+            flex-shrink: 0;
+        }
 
-                console.log('✅ DOM CARGADO');
+        /* Ocultar el checkbox default */
+        .switch-toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
 
-                // Test: Verificar que los botones de ver detalle estén presentes
-                setTimeout(function () {
-                    const botonesVer = document.querySelectorAll('.btn-ver');
-                    console.log('🔍 Botones de ver encontrados:', botonesVer.length);
-                    botonesVer.forEach((btn, index) => {
-                        console.log(`- Botón ${index + 1}:`, btn.getAttribute('data-id'));
-                    });
-                }, 1000);
+        /* El deslizador (la parte visual) */
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #e5e7eb;
+            transition: all 0.25s ease;
+            border-radius: 999px;
+            border: 1px solid #d1d5db;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06);
+        }
 
-                // Referencias a elementos
-                const btnShowForm = document.getElementById('btn-show-form');
-                const formContainer = document.getElementById('form-container');
-                const btnCloseForm = document.getElementById('btn-close-form');
-                const btnCancelForm = document.getElementById('btn-cancel-form');
-                const btnGestionarCategorias = document.getElementById('btn-gestionar-categorias');
-                const categoriasFilterInput = document.getElementById('categorias-filter-input');
-                const categoriasFilterClear = document.getElementById('categorias-filter-clear');
-                const categoriaSearchInput = document.getElementById('categoria-search');
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 30px;
+            width: 30px;
+            left: 4px;
+            bottom: 4px;
+            background: #ffffff;
+            transition: all 0.25s ease;
+            border-radius: 50%;
+            box-shadow: 0 6px 14px rgba(15, 23, 42, 0.18);
+        }
 
-                console.log('Elementos encontrados:', {
-                    btnShowForm: !!btnShowForm,
-                    formContainer: !!formContainer,
-                    btnCloseForm: !!btnCloseForm,
-                    btnCancelForm: !!btnCancelForm,
-                    btnGestionarCategorias: !!btnGestionarCategorias
-                });
+        /* Estado Activo (Automático) */
+        input:checked+.slider {
+            background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+            border-color: #16a34a;
+        }
 
-                function confirmarCancelacionFormulario() {
-                    const estaEnEdicion = typeof modoEdicion !== 'undefined' && modoEdicion;
-                    const titulo = estaEnEdicion ? 'Cancelar Modificación' : 'Cancelar Registro';
-                    const mensaje = estaEnEdicion
-                        ? '¿Estás seguro que deseas cancelar la modificación? Los cambios no guardados se perderán.'
-                        : '¿Estás seguro que deseas cancelar el registro? Los datos ingresados se perderán.';
+        input:checked+.slider:before {
+            transform: translateX(34px);
+        }
 
-                    ModalConfirmacion.show(titulo, mensaje, () => {
-                        if (estaEnEdicion && typeof resetearModoEdicion === 'function') {
-                            resetearModoEdicion();
-                        }
-                        if (typeof limpiarFormularioCompleto === 'function') {
-                            limpiarFormularioCompleto();
-                        }
-                        formContainer?.classList.remove('show');
-                        setTimeout(() => {
-                            if (formContainer) formContainer.style.display = 'none';
-                        }, 500);
-                    }, 500);
-                }
+        /* Etiqueta dentro del toggle */
+        .slider:after {
+            content: "MAN";
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: .5px;
+            color: #6b7280;
+        }
 
-                if (categoriasFilterInput) {
-                    categoriasFilterInput.addEventListener('input', aplicarFiltroCategorias);
-                }
-                if (categoriaSearchInput) {
-                    categoriaSearchInput.addEventListener('input', filtrarCategoriasSelect);
-                }
-                if (categoriasFilterClear) {
-                    categoriasFilterClear.addEventListener('click', function () {
-                        if (categoriasFilterInput) {
-                            categoriasFilterInput.value = '';
-                            aplicarFiltroCategorias();
-                            categoriasFilterInput.focus();
-                        }
-                    });
-                }
+        input:checked+.slider:after {
+            content: "AUTO";
+            left: 10px;
+            right: auto;
+            color: #ffffff;
+        }
 
-                if (btnShowForm && formContainer) {
-                    btnShowForm.addEventListener('click', function (e) {
-                        e.preventDefault();
-                        if (typeof limpiarFormularioCompleto === 'function') {
-                            limpiarFormularioCompleto();
-                        }
-                        const hoy = new Date().toISOString().split('T')[0];
-                        const fechaInicioInput = document.getElementById('fechaInicio');
-                        const fechaFinInput = document.getElementById('fechaFin');
-                        if (fechaInicioInput) fechaInicioInput.setAttribute('min', hoy);
-                        if (fechaFinInput) fechaFinInput.setAttribute('min', hoy);
-                        formContainer.style.display = 'block';
-                        setTimeout(() => formContainer.classList.add('show'), 10);
-                    });
-                }
+        /* Focus */
+        .switch-toggle input:focus+.slider {
+            box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2);
+        }
 
-                if (btnCloseForm && formContainer) {
-                    btnCloseForm.addEventListener('click', function (e) {
-                        e.preventDefault();
-                        confirmarCancelacionFormulario();
-                    });
-                }
+        /* Textos del Switch */
+        .switch-labels {
+            display: flex;
+            flex-direction: column;
+        }
 
-                if (btnCancelForm && formContainer) {
-                    btnCancelForm.addEventListener('click', function (e) {
-                        e.preventDefault();
-                        confirmarCancelacionFormulario();
-                    });
-                }
+        .switch-title {
+            font-weight: 700;
+            color: #2c3e50;
+            font-size: 1.05rem;
+        }
 
-                if (btnGestionarCategorias) {
-                    btnGestionarCategorias.addEventListener('click', function (e) {
-                        e.preventDefault();
-                        const modal = document.getElementById('categoriaModal');
-                        if (modal) {
-                            modal.style.display = 'flex';
-                            if (categoriasFilterInput) categoriasFilterInput.value = '';
-                            cargarCategorias();
-                        }
-                    });
-                }
+        .switch-desc {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
 
-                const btnAddCategoria = document.getElementById('btn-add-categoria');
-                if (btnAddCategoria) {
-                    btnAddCategoria.addEventListener('click', function (e) {
-                        e.preventDefault();
-                        añadirCategoriaSeleccionada();
-                    });
-                }
+        /* =========================================
+   2. BARRA DE CONTROL (INPUTS)
+   ========================================= */
+        .control-panel {
+            display: flex;
+            align-items: flex-end;
+            gap: 15px;
+            background: white;
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            border: 1px solid #f1f3f5;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
 
-                const tipoOfertaSelect = document.getElementById('tipoOferta');
-                if (tipoOfertaSelect) {
-                    tipoOfertaSelect.addEventListener('change', function () {
-                        mostrarCamposEspecificos(this.value);
-                    });
-                }
+        .input-group-modern {
+            flex: 1;
+            min-width: 250px;
+        }
 
-                const modalidadSelect = document.getElementById('modalidad');
-                if (modalidadSelect) {
-                    modalidadSelect.addEventListener('change', function () {
-                        actualizarCamposModalidad();
-                    });
-                }
+        .input-group-modern label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #495057;
+            font-size: 0.95rem;
+        }
 
-                const fechaInicio = document.getElementById('fechaInicio');
-                const fechaFin = document.getElementById('fechaFin');
-                const diaVencimiento = document.getElementById('diaVencimiento');
+        .input-modern {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background-color: #fff;
+        }
 
-                if (fechaInicio) {
-                    fechaInicio.addEventListener('change', function () {
-                        const tipoOferta = document.getElementById('tipoOferta')?.value;
-                        if (tipoOferta === 'CURSO' || tipoOferta === 'FORMACION') {
-                            if (fechaFin && this.value) {
-                                fechaFin.disabled = false;
-                                fechaFin.setAttribute('min', this.value);
-                            }
-                            calcularNumeroCuotas();
-                        }
-                    });
-                }
-                if (fechaFin) {
-                    fechaFin.addEventListener('change', calcularNumeroCuotas);
-                }
-                if (diaVencimiento) {
-                    diaVencimiento.addEventListener('change', calcularNumeroCuotas);
-                }
+        .input-modern:focus {
+            border-color: #764ba2;
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(118, 75, 162, 0.1);
+        }
 
-                const disertantesCharlaInput = document.getElementById('disertantesCharlaInput');
-                if (disertantesCharlaInput) {
-                    disertantesCharlaInput.addEventListener('keypress', function (e) {
-                        if (e.key === 'Enter') {
-                            e.preventDefault();
-                            agregarDisertante('charla');
-                        }
-                    });
-                }
+        .btn-generate {
+            padding: 12px 28px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            height: 50px;
+            /* Altura para igualar al input */
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(118, 75, 162, 0.2);
+        }
 
-                const disertantesSeminarioInput = document.getElementById('disertantesSeminarioInput');
-                if (disertantesSeminarioInput) {
-                    disertantesSeminarioInput.addEventListener('keypress', function (e) {
-                        if (e.key === 'Enter') {
-                            e.preventDefault();
-                            agregarDisertante('seminario');
-                        }
-                    });
-                }
+        .btn-generate:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(118, 75, 162, 0.3);
+        }
 
-                cargarCategoriasSelect();
+        .btn-generate:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
 
-                const notificationClose = document.getElementById('notification-close');
-                if (notificationClose) {
-                    notificationClose.addEventListener('click', ocultarNotificacion);
-                }
+        /* =========================================
+   3. TARJETAS DE PROPUESTAS (GRID)
+   ========================================= */
+        .propuestas-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
+        }
 
-                const btnApplyFilters = document.getElementById('btn-apply-filters');
-                const btnClearFilters = document.getElementById('btn-clear-filters');
-
-                if (btnApplyFilters) {
-                    btnApplyFilters.addEventListener('click', aplicarFiltros);
-                }
-
-                if (btnClearFilters) {
-                    btnClearFilters.addEventListener('click', limpiarFiltros);
-                }
-
-                console.log('🎉 GESTIÓN DE OFERTAS INICIALIZADA');
-                actualizarTablaOfertas();
-    position: relative;
-    min-width: 0;
-    max-width: 100%;
-    box-sizing: border-box;
-    padding: 16px;
-}
-
-.propuesta-horarios {
-    width: 100%;
-}
-
-.propuesta-horarios > div {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-
-.propuesta-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-}
+        .propuesta-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+            border: 2px solid transparent;
+            /* Invisible por defecto */
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
 
         .propuesta-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
 
-/* Estado Seleccionado */
-.propuesta-card.card-selected {
-    border-color: #10b981 !important; /* Verde esmeralda */
-    background-color: #ecfdf5 !important;
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.45), 0 18px 30px rgba(16, 185, 129, 0.22);
-}
+        /* Estado Seleccionado */
+        .propuesta-card.card-selected {
+            border-color: #10b981;
+            /* Verde esmeralda */
+            background-color: #ecfdf5;
+        }
 
         .propuesta-card.card-selected .card-body {
             background-color: #ecfdf5;
@@ -301,36 +323,10 @@
             z-index: 10;
         }
 
-.propuesta-card.card-selected::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: 16px;
-    box-shadow: inset 0 0 0 2px rgba(16, 185, 129, 0.6);
-    pointer-events: none;
-}
-
-.propuesta-card.card-selected .propuesta-header {
-    background: linear-gradient(135deg, rgba(16,185,129,0.18), rgba(16,185,129,0.06));
-    border-bottom: 1px solid rgba(16, 185, 129, 0.25);
-    padding: 12px 16px;
-    margin: -16px -16px 16px -16px;
-    border-radius: 14px 14px 10px 10px;
-}
-
-.propuesta-card.card-selected {
-    border-left-width: 6px !important;
-    border-left-color: #10b981 !important;
-}
-
-.propuesta-card.card-selected .propuesta-title {
-    color: #047857;
-}
-
-.card-body {
-    padding: 24px;
-    flex: 1;
-}
+        .card-body {
+            padding: 24px;
+            flex: 1;
+        }
 
         .propuesta-header {
             display: flex;
@@ -402,70 +398,43 @@
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
         }
 
-.propuesta-card.card-selected .score-badge {
-    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
-}
+        /* Área del botón dentro de la carta */
+        .btn-select-area {
+            padding: 16px 24px;
+            background: #f9fafb;
+            border-top: 1px solid #f3f4f6;
+        }
 
-.propuesta-card.card-selected .horario-chip {
-    background: #ffffff;
-    border-color: #10b981;
-    color: #0f766e;
-}
+        .btn-seleccionar-propuesta {
+            width: 100%;
+            padding: 12px;
+            background: white;
+            color: #4f46e5;
+            border: 2px solid #e0e7ff;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
 
-.propuesta-card.card-selected .horario-chip-editable {
-    border-color: #10b981 !important;
-    background: #ecfdf5 !important;
-}
+        .btn-seleccionar-propuesta:hover {
+            background: #4f46e5;
+            color: white;
+            border-color: #4f46e5;
+        }
 
-.propuesta-card.card-selected .horario-chip-editable.pinned {
-    border-color: #f59e0b !important;
-    background: #fff7ed !important;
-    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25);
-}
-
-@media (max-width: 768px) {
-    .propuestas-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* Área del botón dentro de la carta */
-.btn-select-area {
-    padding: 16px 24px;
-    background: #f9fafb;
-    border-top: 1px solid #f3f4f6;
-}
-
-.btn-seleccionar-propuesta {
-    width: 100%;
-    padding: 12px;
-    background: linear-gradient(135deg, #1e3a8a, #2563eb);
-    color: #ffffff;
-    border: 1px solid #1e40af;
-    border-radius: 10px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 8px;
-}
-
-.btn-seleccionar-propuesta:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 10px 18px rgba(37, 99, 235, 0.25);
-}
-
-/* Estilo botón cuando está seleccionado */
-.propuesta-card.card-selected .btn-seleccionar-propuesta {
-    background: linear-gradient(135deg, #059669, #10b981);
-    border-color: #059669;
-    color: white;
-    pointer-events: none;
-    opacity: 1;
-    box-shadow: 0 10px 18px rgba(16, 185, 129, 0.25);
-}
+        /* Estilo botón cuando está seleccionado */
+        .propuesta-card.card-selected .btn-seleccionar-propuesta {
+            background: #10b981;
+            border-color: #10b981;
+            color: white;
+            pointer-events: none;
+            opacity: 1;
+        }
 
         /* Estilos para el input-group de videoconferencia */
         .input-group {
@@ -707,35 +676,12 @@
                                         </button>
                                     </div>
 
-
-
-                        <!-- Categorías -->
-                        <div class="form-section">
-                            <div class="categoria-header">
-                                <h4><i class="fas fa-tags"></i> Categorías</h4>
-                                <button type="button" id="btn-gestionar-categorias" class="btn-secondary btn-xs">
-                                    <i class="fas fa-cog"></i> Gestionar
-                                </button>
-                            </div>
-                            <div class="form-group">
-                                <label for="categoria-select">Seleccionar Categorías</label>
-                                <p class="field-description">Seleccione una o más categorías que describan esta oferta académica</p>
-                                <div class="categoria-input-group">
-                                    <input type="text" id="categoria-search" class="form-control" placeholder="Buscar categoria..." style="margin-bottom: 6px; margin-top: 14px; max-width: 260px; height: 32px; padding: 4px 8px; font-size: 0.9rem;">
-                                    <select id="categoria-select" class="form-control categoria-select" size="6" style="min-height: 160px;">
-                                        <option value="">-- Seleccione una categoría --</option>
-                                        <!-- Las categorías se cargarán dinámicamente desde la base de datos -->
-                                    </select>
-                                    <button type="button" id="btn-add-categoria" class="btn-add-categoria">
-                                        <i class="fas fa-plus"></i> Añadir
-                                    </button>
-                                </div>
-                                
-                                <!-- Categorías seleccionadas como chips -->
-                                <div class="selected-categories" id="selected-categories" style="display: none;">
-                                    <span class="selected-label">Categorías seleccionadas:</span>
-                                    <div class="selected-chips" id="selected-chips">
-                                        <!-- Las categorías seleccionadas aparecerán aquí como chips -->
+                                    <!-- Categorías seleccionadas como chips -->
+                                    <div class="selected-categories" id="selected-categories" style="display: none;">
+                                        <span class="selected-label">Categorías seleccionadas:</span>
+                                        <div class="selected-chips" id="selected-chips">
+                                            <!-- Las categorías seleccionadas aparecerán aquí como chips -->
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1067,178 +1013,15 @@
                     <input type="hidden" id="otorgaCertificadoHidden" name="otorgaCertificado" value="false">
                     <input type="hidden" id="idOfertaModificar" name="idOferta" value="">
 
-    <!-- CONTENEDOR MODO MANUAL (Sin cambios estructurales mayores, solo limpieza) -->
-    <div id="horarios-manual-container" class="horarios-container" style="display: block;">
-        <div class="horario-form">
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="dia-horario">Día de la semana</label>
-                    <select id="dia-horario" class="form-control">
-                        <option value="">Seleccionar día</option>
-                        <option value="LUNES">Lunes</option>
-                        <option value="MARTES">Martes</option>
-                        <option value="MIERCOLES">Miércoles</option>
-                        <option value="JUEVES">Jueves</option>
-                        <option value="VIERNES">Viernes</option>
-                        <option value="SABADO">Sábado</option>
-                        <option value="DOMINGO">Domingo</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="hora-inicio">Hora de inicio</label>
-                    <input type="time" id="hora-inicio" class="form-control">
-                </div>
-                <div class="form-group">
-                    <label for="hora-fin">Hora de fin</label>
-                    <input type="time" id="hora-fin" class="form-control">
-                </div>
-                <div class="form-group" style="align-self: flex-end;">
-                    <button type="button" class="btn-add-horario" onclick="agregarHorario()">
-                        <i class="fas fa-plus"></i> Agregar
-                    </button>
-                </div>
-            </div>
-        </div>
-        
-        <div class="horarios-list-container" style="margin-top: 15px;">
-            <h6 style="color: #666; font-size: 0.9rem; margin-bottom: 10px;">Horarios programados:</h6>
-            <div id="lista-horarios" class="horarios-chips">
-                <p class="no-horarios text-muted">No hay horarios programados</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- CONTENEDOR MODO AUTOMÁTICO (Rediseñado) -->
-    <div id="horarios-automatico-container" style="display: none;">
-        <div class="auto-horarios-shell">
-            <div class="auto-horarios-header">
-                <div class="auto-horarios-title">
-                    <i class="fas fa-robot"></i>
-                    <span>Generador Inteligente de Horarios</span>
-                </div>
-            </div>
-
-            <!-- Barra de Control (Inputs) -->
-            <div class="auto-horarios-controls">
-                <div class="auto-input">
-                    <label for="horas-semanales">Horas semanales requeridas</label>
-                    <input type="number" id="horas-semanales" placeholder="Ej: 6" min="1" step="0.5">
-                </div>
-
-                <div class="auto-input">
-                    <label for="max-horas-diarias">Máx horas por día</label>
-                    <input type="number" id="max-horas-diarias" placeholder="Ej: 4" min="1" max="12" value="4">
-                </div>
-                
-                <button type="button" class="btn-generate" onclick="generarPropuestasAutomaticas()">
-                    <i class="fas fa-magic"></i> Generar Propuestas
-                </button>
-            </div>
-
-            <!-- Información del/los docentes -->
-            <div id="info-docente-carga" class="auto-docentes-panel" style="display: none;">
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <i class="fas fa-user-tie" style="color:#93c5fd;"></i>
-                    <strong>Resumen de docentes</strong>
-                </div>
-                <div id="docentes-info-grid" class="auto-docentes-grid"></div>
-            </div>
-        </div>
-
-        <!-- Grid de Propuestas -->
-        <div id="propuestas-container" style="display: none;">
-            <div class="propuestas-header">
-                <i class="fas fa-lightbulb" style="color: #f59e0b; font-size: 1.2rem;"></i>
-                <h5 style="margin: 0;">Propuestas Disponibles</h5>
-            </div>
-            
-            <div id="preview-horarios-automaticos" style="display:none; margin-bottom:18px;">
-                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px;">
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <i class="fas fa-eye" style="color:#2563eb"></i>
-                        <strong style="color:#374151">Vista previa de la propuesta</strong>
-                        <small style="color:#6b7280;">(puedes editar y luego aplicar)</small>
+                    <div class="form-actions">
+                        <button type="submit" id="btn-submit-form" class="btn-submit">
+                            <i class="fas fa-save"></i> <span id="btn-submit-text">Registrar Oferta</span>
+                        </button>
+                        <button type="button" id="btn-cancel-form" class="btn-cancel">
+                            <i class="fas fa-times"></i> Cancelar
+                        </button>
                     </div>
-                    
-                </div>
-                <div id="preview-horarios-chips" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
-            </div>
-
-            <div id="lista-propuestas" class="propuestas-grid">
-                <!-- Aquí se inyectan las cartas vía JS -->
-            </div>
-        </div>
-    </div>
-</div>
-                
-                <!-- Campos ocultos para datos del formulario -->
-                <input type="hidden" id="categorias" name="categorias" value="">
-                <input type="hidden" id="docentesCurso" name="docentesCurso" value="">
-                <input type="hidden" id="docentesFormacion" name="docentesFormacion" value="">
-                <input type="hidden" id="horarios" name="horarios" value="">
-                <input type="hidden" id="otorgaCertificadoHidden" name="otorgaCertificado" value="false">
-                <input type="hidden" id="idOfertaModificar" name="idOferta" value="">
-                
-                <div class="form-actions">
-                    <button type="submit" id="btn-submit-form" class="btn-submit">
-                        <i class="fas fa-save"></i> <span id="btn-submit-text">Registrar Oferta</span>
-                    </button>
-                    <button type="button" id="btn-cancel-form" class="btn-cancel">
-                        <i class="fas fa-times"></i> Cancelar
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Sección de Filtros y Tabla -->
-    <div class="ofertas-table-section">
-        <div class="filters-section">
-            <div class="filters-header">
-                <h3><i class="fas fa-filter"></i> Filtros y Búsqueda</h3>
-            </div>
-            <div class="filters-content">
-                <div class="search-container">
-                    <div class="search-input-container">
-                        <input type="text" id="search-input" placeholder="Buscar por nombre de oferta..." class="search-input">
-                        <i class="fas fa-search search-icon"></i>
-                    </div>
-                </div>
-                <div class="filters-grid">
-                    <select id="filtro-tipo" class="filter-select">
-                        <option value="">Todos los tipos</option>
-                        <option value="CURSO">Curso</option>
-                        <option value="FORMACION">Formación</option>
-                        <option value="SEMINARIO">Seminario</option>
-                        <option value="CHARLA">Charla</option>
-                    </select>
-                    <select id="filtro-modalidad" class="filter-select">
-                        <option value="">Todas las modalidades</option>
-                        <option value="PRESENCIAL">Presencial</option>
-                        <option value="VIRTUAL">Virtual</option>
-                        <option value="HIBRIDA">Híbrida</option>
-                    </select>
-                    <select id="filtro-estado" class="filter-select">
-                        <option value="">Todos los estados</option>
-                        <option value="ENCURSO">En Curso</option>
-                        <option value="ACTIVA">Activo</option>
-                        <option value="FINALIZADA">Finalizado</option>
-                        <option value="DE_BAJA">De Baja</option>
-                    </select>
-                    <select id="filtro-certificado" class="filter-select">
-                        <option value="">Certificado</option>
-                        <option value="SI">Con certificado</option>
-                        <option value="NO">Sin certificado</option>
-                    </select>
-                </div>
-                <div class="filters-actions">
-                    <button id="btn-apply-filters" class="btn-secondary">
-                        <i class="fas fa-search"></i> Aplicar Filtros
-                    </button>
-                    <button id="btn-clear-filters" class="btn-outline">
-                        <i class="fas fa-times"></i> Limpiar
-                    </button>
-                </div>
+                </form>
             </div>
         </div>
 
@@ -1929,117 +1712,32 @@
                         uploadPlaceholder.style.display = 'flex';
                     });
                 }
-            console.log('✅ DOM CARGADO');
-            
-            // Test: Verificar que los botones de ver detalle estén presentes
-            setTimeout(function() {
-                const botonesVer = document.querySelectorAll('.btn-ver');
-                console.log('🔍 Botones de ver encontrados:', botonesVer.length);
-                botonesVer.forEach((btn, index) => {
-                    console.log(`- Botón ${index + 1}:`, btn.getAttribute('data-id'));
-                });
-            }, 1000);
-            
-            // Referencias a elementos
-            const btnShowForm = document.getElementById('btn-show-form');
-            const formContainer = document.getElementById('form-container');
-            const btnCloseForm = document.getElementById('btn-close-form');
-            const btnCancelForm = document.getElementById('btn-cancel-form');
-            const btnGestionarCategorias = document.getElementById('btn-gestionar-categorias');
-            const categoriasFilterInput = document.getElementById('categorias-filter-input');
-            const categoriasFilterClear = document.getElementById('categorias-filter-clear');
-            const categoriaSearchInput = document.getElementById('categoria-search');
-            
-            console.log('Elementos encontrados:', {
-                btnShowForm: !!btnShowForm,
-                formContainer: !!formContainer,
-                btnCloseForm: !!btnCloseForm,
-                btnCancelForm: !!btnCancelForm,
-                btnGestionarCategorias: !!btnGestionarCategorias
-            });
+                console.log('✅ DOM CARGADO');
 
-            if (categoriasFilterInput) {
-                categoriasFilterInput.addEventListener('input', aplicarFiltroCategorias);
-            }
-            
-            if (categoriaSearchInput) {
-                categoriaSearchInput.addEventListener('input', filtrarCategoriasSelect);
-            }
+                // Test: Verificar que los botones de ver detalle estén presentes
+                setTimeout(function () {
+                    const botonesVer = document.querySelectorAll('.btn-ver');
+                    console.log('🔍 Botones de ver encontrados:', botonesVer.length);
+                    botonesVer.forEach((btn, index) => {
+                        console.log(`- Botón ${index + 1}:`, btn.getAttribute('data-id'));
+                    });
+                }, 1000);
 
-            if (categoriasFilterClear) {
-                categoriasFilterClear.addEventListener('click', function() {
-                    if (categoriasFilterInput) {
-                        categoriasFilterInput.value = '';
-                        aplicarFiltroCategorias();
-                        categoriasFilterInput.focus();
-                    }
-                });
-            }
-            
-            // Manejador del botón mostrar formulario
-            if (btnShowForm && formContainer) {
-                btnShowForm.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    console.log('👆 CLICK EN NUEVA OFERTA');
-                    
-                    // Limpiar formulario para asegurar estado inicial
-                    if (typeof limpiarFormularioCompleto === 'function') {
-                        limpiarFormularioCompleto();
-                    }
-                    
-                     // Establecer fecha mínima en los inputs de fecha (hoy)
-                    const hoy = new Date().toISOString().split('T')[0];
-                    const fechaInicioInput = document.getElementById('fechaInicio');
-                    const fechaFinInput = document.getElementById('fechaFin');
-                    
-                    if (fechaInicioInput) fechaInicioInput.setAttribute('min', hoy);
-                    if (fechaFinInput) fechaFinInput.setAttribute('min', hoy);
-                    
-                    // Mostrar formulario con animación
-                    formContainer.style.display = 'block';
-                    
-                    setTimeout(() => {
-                        formContainer.classList.add('show');
-                        console.log('📝 FORMULARIO MOSTRADO');
-                    }, 10);
-                });
-            }
-            
-            function confirmarCancelacionFormulario() {
-                const estaEnEdicion = typeof modoEdicion !== 'undefined' && modoEdicion;
-                const titulo = estaEnEdicion ? 'Cancelar Modificación' : 'Cancelar Registro';
-                const mensaje = estaEnEdicion
-                    ? '¿Estás seguro que deseas cancelar la modificación? Los cambios no guardados se perderán.'
-                    : '¿Estás seguro que deseas cancelar el registro? Los datos ingresados se perderán.';
+                // Referencias a elementos
+                const btnShowForm = document.getElementById('btn-show-form');
+                const formContainer = document.getElementById('form-container');
+                const btnCloseForm = document.getElementById('btn-close-form');
+                const btnCancelForm = document.getElementById('btn-cancel-form');
+                const btnGestionarCategorias = document.getElementById('btn-gestionar-categorias');
+                const categoriasFilterInput = document.getElementById('categorias-filter-input');
+                const categoriasFilterClear = document.getElementById('categorias-filter-clear');
 
-                ModalConfirmacion.show(titulo, mensaje, () => {
-                    if (estaEnEdicion && typeof resetearModoEdicion === 'function') {
-                        resetearModoEdicion();
-                    }
-                    if (typeof limpiarFormularioCompleto === 'function') {
-                        limpiarFormularioCompleto();
-                    }
-                    console.log('❌ CERRANDO FORMULARIO');
-                    formContainer.classList.remove('show');
-                    setTimeout(() => {
-                        formContainer.style.display = 'none';
-                    }, 500);
-                });
-            }
-
-            // Manejador del botón cerrar formulario
-            if (btnCloseForm && formContainer) {
-                btnCloseForm.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    confirmarCancelacionFormulario();
-                });
-            }
-
-            // Manejador del botón cancelar formulario (botón inferior)
-            if (btnCancelForm && formContainer) {
-                btnCancelForm.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    confirmarCancelacionFormulario();
+                console.log('Elementos encontrados:', {
+                    btnShowForm: !!btnShowForm,
+                    formContainer: !!formContainer,
+                    btnCloseForm: !!btnCloseForm,
+                    btnCancelForm: !!btnCancelForm,
+                    btnGestionarCategorias: !!btnGestionarCategorias
                 });
 
                 if (categoriasFilterInput) {
@@ -2283,6 +1981,7 @@
 
                 // Cargar ofertas iniciales para paginación
                 actualizarTablaOfertas();
+            });
 
             // Función para mostrar campos específicos según tipo de oferta
             function mostrarCamposEspecificos(tipoOferta) {
@@ -2480,198 +2179,6 @@
                 grupoLugar.style.display = 'none';
                 grupoEnlace.style.display = 'none';
             }
-            
-            // Para CURSO y FORMACIÓN
-            if (tipoOferta === 'CURSO' || tipoOferta === 'FORMACION') {
-                grupoEnlace.style.display = 'none';
-                
-                // Mostrar ubicación solo para PRESENCIAL o HÍBRIDA
-                if (modalidad === 'PRESENCIAL' || modalidad === 'HIBRIDA') {
-                    seccionUbicacion.style.display = 'block';
-                    grupoLugar.style.display = 'block';
-                } else {
-                    seccionUbicacion.style.display = 'none';
-                    grupoLugar.style.display = 'none';
-                }
-                return;
-            }
-            
-            // Para CHARLA
-            if (tipoOferta === 'CHARLA') {
-                if (modalidad === 'PRESENCIAL') {
-                    // Solo ubicación, sin enlace
-                    seccionUbicacion.style.display = 'block';
-                    grupoLugar.style.display = 'block';
-                    grupoEnlace.style.display = 'none';
-                } else if (modalidad === 'VIRTUAL' || modalidad === 'HIBRIDA') {
-                    // Ubicación y enlace
-                    seccionUbicacion.style.display = 'block';
-                    grupoLugar.style.display = 'block';
-                    grupoEnlace.style.display = 'block';
-                } else {
-                    seccionUbicacion.style.display = 'none';
-                    grupoLugar.style.display = 'none';
-                    grupoEnlace.style.display = 'none';
-                }
-                return;
-            }
-
-            // Para SEMINARIO
-            if (tipoOferta === 'SEMINARIO') {
-                if (modalidad === 'PRESENCIAL') {
-                    // Solo ubicación, sin enlace
-                    seccionUbicacion.style.display = 'block';
-                    grupoLugar.style.display = 'block';
-                    grupoEnlace.style.display = 'none';
-                } else if (modalidad === 'VIRTUAL') {
-                    // Solo enlace, sin ubicación
-                    seccionUbicacion.style.display = 'block';
-                    grupoLugar.style.display = 'none';
-                    grupoEnlace.style.display = 'block';
-                } else if (modalidad === 'HIBRIDA') {
-                    // Ubicación y enlace
-                    seccionUbicacion.style.display = 'block';
-                    grupoLugar.style.display = 'block';
-                    grupoEnlace.style.display = 'block';
-                } else {
-                    seccionUbicacion.style.display = 'none';
-                    grupoLugar.style.display = 'none';
-                    grupoEnlace.style.display = 'none';
-                }
-                return;
-            }
-            
-            // Caso por defecto: ocultar todo
-            seccionUbicacion.style.display = 'none';
-            grupoLugar.style.display = 'none';
-            grupoEnlace.style.display = 'none';
-        }
-        
-        // Función para calcular número de cuotas automáticamente
-        function calcularNumeroCuotas() {
-            const fechaInicio = document.getElementById('fechaInicio');
-            const fechaFin = document.getElementById('fechaFin');
-            const diaVencimiento = document.getElementById('diaVencimiento');
-            const nrCuotas = document.getElementById('nrCuotas');
-            
-            if (!fechaInicio || !fechaFin || !diaVencimiento || !nrCuotas) return;
-            
-            const inicio = fechaInicio.value;
-            const fin = fechaFin.value;
-            const dia = parseInt(diaVencimiento.value);
-            
-            if (!inicio || !fin || !dia) return;
-            
-            const fechaInicioDate = new Date(inicio);
-            const fechaFinDate = new Date(fin);
-            
-            // Calcular meses completos
-            let meses = (fechaFinDate.getFullYear() - fechaInicioDate.getFullYear()) * 12;
-            meses += fechaFinDate.getMonth() - fechaInicioDate.getMonth();
-            
-            // Ajustar según el día de vencimiento y el día de inicio
-            const diaInicio = fechaInicioDate.getDate();
-            const diaFinalizacion = fechaFinDate.getDate();
-            
-            // Si el curso inicia después del día de vencimiento, se pierde una cuota de ese mes
-            let cuotas = meses;
-            
-            if (diaInicio > dia) {
-                // Si el curso empieza después del día de vencimiento, no se paga ese mes
-                // pero sí todos los siguientes hasta el mes de finalización
-                cuotas = meses;
-            } else {
-                // Si el curso empieza antes o en el día de vencimiento, se paga ese mes
-                cuotas = meses + 1;
-            }
-            
-            // Si el curso termina antes del día de vencimiento del último mes, no se cuenta esa cuota
-            if (diaFinalizacion < dia && cuotas > 1) {
-                cuotas--;
-            }
-            
-            // Mínimo 1 cuota
-            cuotas = Math.max(1, cuotas);
-            
-            nrCuotas.value = cuotas;
-        }
-        
-        // Función para generar videoconferencia
-        window.generarVideoconferencia = function() {
-            const tipoOferta = document.getElementById('tipoOferta').value;
-            const nombreOferta = document.getElementById('nombre').value;
-            
-            if (!nombreOferta) {
-                mostrarNotificacion('Por favor, ingresa el nombre de la oferta primero', 'warning');
-                return;
-            }
-            
-            // Validar fecha y hora según el tipo
-            let fecha, hora;
-            if (tipoOferta === 'CHARLA') {
-                fecha = document.getElementById('fechaCharla').value;
-                hora = document.getElementById('horaCharla').value;
-                
-                if (!fecha || !hora) {
-                    mostrarNotificacion('Por favor, ingresa la fecha y hora de la charla', 'warning');
-                    return;
-                }
-            } else if (tipoOferta === 'SEMINARIO') {
-                fecha = document.getElementById('fechaSeminario').value;
-                hora = document.getElementById('horaSeminario').value;
-                
-                if (!fecha || !hora) {
-                    mostrarNotificacion('Por favor, ingresa la fecha y hora del seminario', 'warning');
-                    return;
-                }
-            }
-            
-            // Obtener el primer disertante según el tipo
-            let disertante = null;
-            if (tipoOferta === 'CHARLA') {
-                if (disertantesCharla.length > 0) {
-                    disertante = disertantesCharla[0];
-                }
-            } else if (tipoOferta === 'SEMINARIO') {
-                if (disertantesSeminario.length > 0) {
-                    disertante = disertantesSeminario[0];
-                }
-            }
-            
-            if (!disertante) {
-                mostrarNotificacion('Por favor, ingresa al menos un disertante primero', 'warning');
-                return;
-            }
-            
-            // Generar el nombre de la sala (similar a como se hace en clases)
-            const roomName = nombreOferta.toLowerCase()
-                .replace(/[áàäâ]/g, 'a')
-                .replace(/[éèëê]/g, 'e')
-                .replace(/[íìïî]/g, 'i')
-                .replace(/[óòöô]/g, 'o')
-                .replace(/[úùüû]/g, 'u')
-                .replace(/ñ/g, 'n')
-                .replace(/\s+/g, '-')
-                .replace(/[^a-z0-9-]/g, '');
-            
-            const safeRoomName = 'aurea-charla-' + roomName;
-            
-            // URL hacia el HTML de Aurea que mostrará el iframe (será creado en el backend)
-            // Pasar la fecha y hora como parámetros
-            const videoUrl = `/charla/videoconferencia/${safeRoomName}?fecha=${fecha}&hora=${hora}&moderador=${encodeURIComponent(disertante)}`;
-            
-            // Establecer el enlace en el campo
-            document.getElementById('enlace').value = window.location.origin + videoUrl;
-            
-            mostrarNotificacion(`Videoconferencia programada para ${fecha} ${hora}. Moderador: ${disertante}`, 'success');
-            
-            console.log('🎥 Videoconferencia generada:');
-            console.log('   - Room: ' + safeRoomName);
-            console.log('   - Moderador: ' + disertante);
-            console.log('   - Fecha: ' + fecha);
-            console.log('   - Hora: ' + hora);
-            console.log('   - URL: ' + videoUrl);
-        };
 
             // Función para calcular número de cuotas automáticamente
             function calcularNumeroCuotas() {
@@ -3020,57 +2527,150 @@
                 `;
                     chipsContainer.appendChild(chip);
                 });
-        }
-        
-        let categoriasSelectCache = [];
 
-        function renderCategoriasSelect(listado) {
-            const select = document.getElementById('categoria-select');
-            if (!select) return;
-            // Limpiar opciones existentes (excepto la primera)
-            while (select.children.length > 1) {
-                select.removeChild(select.lastChild);
+                // Actualizar el campo hidden del formulario principal con IDs separados por coma
+                const formCategorias = document.getElementById('categorias');
+                if (formCategorias) {
+                    const ids = categoriasSeleccionadas.map(cat => cat.id).join(',');
+                    formCategorias.value = ids;
+                    console.log('Categorías actualizadas:', ids);
+                }
             }
-            listado.forEach(categoria => {
-                const option = document.createElement('option');
-                option.value = categoria.idCategoria;
-                option.textContent = categoria.nombre;
-                select.appendChild(option);
-            });
-        }
 
-        function filtrarCategoriasSelect() {
-            const input = document.getElementById('categoria-search');
-            const query = (input && input.value ? input.value : '').toLowerCase().trim();
-            if (!query) {
-                renderCategoriasSelect(categoriasSelectCache);
-                return;
+            // Función para actualizar campo hidden de categorías
+            function actualizarCategoriaHidden() {
+                const categoriasSeleccionadas = Array.from(document.querySelectorAll('#selected-chips .categoria-chip'))
+                    .map(chip => chip.dataset.categoriaId);
+
+                const formCategorias = document.getElementById('categorias');
+                if (formCategorias) {
+                    formCategorias.value = categoriasSeleccionadas.join(',');
+                    console.log('Categorías actualizadas en hidden field:', formCategorias.value);
+                }
             }
-            const filtradas = categoriasSelectCache.filter(c => {
-                const nombre = (c.nombre || '').toLowerCase();
-                return nombre.includes(query);
-            });
-            renderCategoriasSelect(filtradas);
-        }
 
-        function cargarCategoriasSelect() {
-            console.log('🔄 Cargando categorías para select...');
-            
-            fetch('/api/categorias')
-                .then(response => response.json())
-                .then(categorias => {
-                    categoriasSelectCache = Array.isArray(categorias) ? categorias : [];
-                    renderCategoriasSelect(categoriasSelectCache);
-                    filtrarCategoriasSelect();
-                })
-                .catch(error => {
-                    console.error('❌ Error al cargar categorías para select:', error);
+            // Función para actualizar campo hidden de certificado
+            function actualizarCertificadoHidden() {
+                const checkbox = document.getElementById('otorgaCertificado');
+                const hiddenField = document.getElementById('otorgaCertificadoHidden');
+
+                if (checkbox && hiddenField) {
+                    hiddenField.value = checkbox.checked ? 'true' : 'false';
+                    console.log('Certificado actualizado:', hiddenField.value);
+                }
+            }
+
+            // Función para actualizar campos hidden de disertantes
+            function actualizarDisertantesHidden(tipo) {
+                const hiddenId = tipo === 'charla' ? 'disertantesCharlaHidden' : 'disertantesSeminarioHidden';
+                const hiddenField = document.getElementById(hiddenId);
+
+                if (hiddenField) {
+                    const lista = tipo === 'charla' ? disertantesCharla : disertantesSeminario;
+                    hiddenField.value = JSON.stringify(lista);
+                }
+            }
+
+            // Función para actualizar campo hidden de horarios
+            function actualizarHorariosHidden() {
+                const hiddenField = document.getElementById('horarios');
+                if (hiddenField) {
+                    hiddenField.value = JSON.stringify(horariosSeleccionados);
+                }
+            }
+
+            // Función para remover categoría
+            function removerCategoria(index) {
+                categoriasSeleccionadas.splice(index, 1);
+                actualizarCategoriasChips();
+                console.log('❌ Categoría removida, total:', categoriasSeleccionadas.length);
+            }
+
+            // Funciones para gestión de categorías
+            let categoriasCache = [];
+
+            function aplicarFiltroCategorias() {
+                const input = document.getElementById('categorias-filter-input');
+                const termino = input ? input.value.trim().toLowerCase() : '';
+
+                if (!termino) {
+                    mostrarCategorias(categoriasCache);
+                    return;
+                }
+
+                const coincideNombre = categoriasCache.filter(categoria => {
+                    const nombre = (categoria.nombre || '').toLowerCase();
+                    return nombre.includes(termino);
                 });
-        }
-        
-        function mostrarCategorias(categorias, totalCategorias = null, filtroLabel = '') {
-            const tbody = document.getElementById('categoriasTableBody');
-            const contador = document.getElementById('contadorCategorias');
+
+                if (coincideNombre.length > 0) {
+                    mostrarCategorias(coincideNombre, categoriasCache.length, 'nombre');
+                    return;
+                }
+
+                const coincideDescripcion = categoriasCache.filter(categoria => {
+                    const descripcion = (categoria.descripcion || '').toLowerCase();
+                    return descripcion.includes(termino);
+                });
+
+                mostrarCategorias(coincideDescripcion, categoriasCache.length, 'descripcion');
+            }
+
+            function cargarCategorias() {
+                console.log('🔄 Cargando categorías...');
+
+                const loadingDiv = document.getElementById('categoriasLoading');
+                const errorDiv = document.getElementById('categoriasError');
+                const table = document.getElementById('categoriasTable');
+
+                if (loadingDiv) loadingDiv.style.display = 'block';
+                if (errorDiv) errorDiv.style.display = 'none';
+                if (table) table.style.display = 'none';
+
+                fetch('/api/categorias')
+                    .then(response => response.json())
+                    .then(categorias => {
+                        console.log('✅ Categorías cargadas:', categorias);
+
+                        if (loadingDiv) loadingDiv.style.display = 'none';
+
+                        categoriasCache = Array.isArray(categorias) ? categorias : [];
+                        aplicarFiltroCategorias();
+                        if (table) table.style.display = 'table';
+                    })
+                    .catch(error => {
+                        console.error('❌ Error:', error);
+                        if (loadingDiv) loadingDiv.style.display = 'none';
+                        mostrarError('Error de conexión al cargar categorías');
+                    });
+            }
+
+            function cargarCategoriasSelect() {
+                console.log('🔄 Cargando categorías para select...');
+
+                fetch('/api/categorias')
+                    .then(response => response.json())
+                    .then(categorias => {
+                        const select = document.getElementById('categoria-select');
+                        if (select) {
+                            // Limpiar opciones existentes (excepto la primera)
+                            while (select.children.length > 1) {
+                                select.removeChild(select.lastChild);
+                            }
+
+                            // Agregar categorías
+                            categorias.forEach(categoria => {
+                                const option = document.createElement('option');
+                                option.value = categoria.idCategoria;
+                                option.textContent = categoria.nombre;
+                                select.appendChild(option);
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('❌ Error al cargar categorías para select:', error);
+                    });
+            }
 
             function mostrarCategorias(categorias, totalCategorias = null, filtroLabel = '') {
                 const tbody = document.getElementById('categoriasTableBody');
@@ -3611,64 +3211,10 @@
                     return false;
                 }
 
-        
-        function limpiarCategoriasSeleccionadas() {
-            categoriasSeleccionadas = [];
-            const selectedContainer = document.getElementById('selected-categories');
-            const selectedChips = document.getElementById('selected-chips');
-            const formCategorias = document.getElementById('categorias');
-            const select = document.getElementById('categoria-select');
-            const searchInput = document.getElementById('categoria-search');
-            if (selectedChips) selectedChips.innerHTML = '';
-            if (selectedContainer) selectedContainer.style.display = 'none';
-            if (formCategorias) formCategorias.value = '';
-            if (select) select.selectedIndex = 0;
-            if (searchInput) searchInput.value = '';
-            if (typeof renderCategoriasSelect === 'function') {
-                renderCategoriasSelect(categoriasSelectCache);
-            }
-        }
-
-        // Función para limpiar formulario completo
-        function limpiarFormularioCompleto() {
-            const formulario = document.getElementById('oferta-form');
-            formulario.reset();
-            
-            // Limpiar datos específicos
-            limpiarDatosFormulario();
-            limpiarCategoriasSeleccionadas();
-            
-            // Ocultar todas las secciones específicas
-            const seccionesEspecificas = document.querySelectorAll('.tipo-specific');
-            seccionesEspecificas.forEach(seccion => {
-                seccion.style.display = 'none';
-            });
-            
-            // Ocultar sección de horarios
-            const seccionHorarios = document.getElementById('seccion-horarios');
-            if (seccionHorarios) {
-                seccionHorarios.style.display = 'none';
-            }
-            
-            console.log('🧹 Formulario limpiado completamente');
-        }
-        
-        // Función para cerrar formulario
-        function cerrarFormulario() {
-            const formContainer = document.getElementById('form-container');
-            if (formContainer) {
-                formContainer.classList.remove('show');
-                setTimeout(() => {
-                    formContainer.style.display = 'none';
-                }, 500);
-            }
-        }
-        
-        // Variables de paginación
-        let currentPage = 1;
-        const itemsPerPage = 10;
-        let allOfertas = [];
-        let filteredOfertas = [];
+                if (!fechaFin) {
+                    mostrarNotificacion('Por favor seleccione la fecha de fin', 'error');
+                    return false;
+                }
 
                 // ✅ Validar que las fechas no sean pasadas
                 const hoy = new Date();
@@ -4496,45 +4042,8 @@
                 } else {
                     disertantesContainer.innerHTML = '<span class="text-muted">Sin disertantes asignados</span>';
                 }
-            }
-        }
-        
-        // Función global para cerrar modal
-        window.cerrarModalDetalle = function() {
-            const modal = document.getElementById('modalDetalleOferta');
-            if (modal) {
-                modal.style.display = 'none';
-                document.body.style.overflow = 'auto';
-                ofertaActualId = null;
-                console.log('🔚 Modal cerrado');
-            }
-        };
-        
-        // Función para cambiar estado de la oferta
-        window.cambiarEstadoOferta = function() {
-            if (!ofertaActualId) {
-                const hiddenId = document.getElementById('idOfertaModificar')?.value;
-                if (hiddenId) {
-                    ofertaActualId = hiddenId;
-                }
-            }
-            if (!ofertaActualId) {
-                console.error('❌ No hay oferta seleccionada para cambiar estado');
-                mostrarNotificacion('Error: No hay oferta seleccionada', 'error');
-                return;
-            }
-            
-            console.log('🔄 Cambiando estado de oferta con ID:', ofertaActualId);
-            
-            // Obtener elementos del DOM
-            const btnCambiarEstado = document.getElementById('btn-cambiar-estado');
-            const textEstado = document.getElementById('text-estado');
-            
-            // Verificar que el botón existe
-            if (!btnCambiarEstado) {
-                console.error('❌ Botón cambiar estado no encontrado');
-                mostrarNotificacion('Error: Botón de estado no encontrado', 'error');
-                return;
+
+                console.log('🏛️ Datos de seminario cargados');
             }
 
             // Función para configurar botón de estado
@@ -5658,63 +5167,15 @@
                     }
                 });
             }
-        }
-        
-        /**
-         * Función para mostrar el formulario
-         */
-        function mostrarFormulario() {
-            const formContainer = document.getElementById('form-container');
-            if (formContainer) {
-                formContainer.style.display = 'block';
-                formContainer.classList.add('show');
-                
-                // ✅ Establecer fecha mínima como hoy
-                const hoy = new Date().toISOString().split('T')[0];
-                const fechaInicio = document.getElementById('fechaInicio');
-                const fechaFin = document.getElementById('fechaFin');
-                if (fechaInicio) fechaInicio.setAttribute('min', hoy);
-                if (fechaFin) fechaFin.setAttribute('min', hoy);
-                
-                // Scroll hasta el formulario
-                formContainer.scrollIntoView({ behavior: 'smooth' });
-            }
-        }
-        
-        /**
-         * Función para resetear el modo edición
-         */
-        function resetearModoEdicion() {
-            modoEdicion = false;
-            idOfertaModificar = null;
-            estadoOfertaEnEdicion = null;
-            
-            // Resetear el botón submit
-            const btnSubmit = document.getElementById('btn-submit-form');
-            const btnSubmitText = document.getElementById('btn-submit-text');
-            if (btnSubmit && btnSubmitText) {
-                btnSubmitText.textContent = 'Registrar Oferta';
-                btnSubmit.classList.remove('btn-update');
-            }
-            
-            // Limpiar ID de oferta
-            document.getElementById('idOfertaModificar').value = '';
-            limpiarCategoriasSeleccionadas();
-        }
-        
-        // Modificar la función de envío del formulario para manejar actualizaciones
-        const formularioOriginal = document.getElementById('oferta-form');
-        if (formularioOriginal) {
-            // Interceptar el envío del formulario
-            formularioOriginal.addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                // Sincronizar campos calculados antes de validar/enviar
-                const tipoOferta = document.getElementById('tipoOferta') ? document.getElementById('tipoOferta').value : '';
-                
-                console.log('🔍 Tipo de oferta:', tipoOferta);
-                
-                // Para CHARLA y SEMINARIO: copiar fechas específicas a campos generales PRIMERO
+
+            /**
+             * Función para enviar actualización de oferta
+             */
+            function enviarActualizacionOferta() {
+                console.log('Iniciando actualización de oferta');
+
+                // Sincronizar fechas para CHARLA y SEMINARIO antes de crear FormData
+                const tipoOferta = document.getElementById('tipoOferta')?.value;
                 if (tipoOferta === 'CHARLA') {
                     const fechaCharla = document.getElementById('fechaCharla')?.value;
                     if (fechaCharla) {
@@ -5753,180 +5214,91 @@
                     formData.append('idOferta', idOfertaModificar);
                 }
 
-                if (modoEdicion) {
-                    // Confirmación para modificar
-                    ModalConfirmacion.show(
-                        'Modificar Oferta',
-                        '¿Está seguro que desea modificar los datos de esta oferta?',
-                        () => {
-                            console.log('Enviando actualización de oferta');
-                            enviarActualizacionOferta();
-                        }
-                    );
-                } else {
-                    // Confirmación para registrar
-                    ModalConfirmacion.show(
-                        'Registrar Oferta',
-                        '¿Está seguro que desea registrar esta nueva oferta?',
-                        async () => {
-                            console.log('Enviando nueva oferta');
-                            enviarFormularioAjax(); // Función existente para crear
-                        }
-                    );
-                }
-            });
-        }
-        
-        /**
-         * Función para enviar actualización de oferta
-         */
-        function enviarActualizacionOferta() {
-            console.log('Iniciando actualización de oferta');
-            
-            // Sincronizar fechas para CHARLA y SEMINARIO antes de crear FormData
-            const tipoOferta = document.getElementById('tipoOferta')?.value;
-            if (tipoOferta === 'CHARLA') {
-                const fechaCharla = document.getElementById('fechaCharla')?.value;
-                if (fechaCharla) {
-                    const inputFechaInicio = document.getElementById('fechaInicio');
-                    const inputFechaFin = document.getElementById('fechaFin');
-                    
-                    // Habilitar campos antes de asignar valores
-                    inputFechaInicio.disabled = false;
-                    inputFechaFin.disabled = false;
-                    
-                    inputFechaInicio.value = fechaCharla;
-                    inputFechaFin.value = fechaCharla;
-                    console.log('✅ [EDICIÓN] Copiado fechaCharla:', fechaCharla);
-                }
-            } else if (tipoOferta === 'SEMINARIO') {
-                const fechaSeminario = document.getElementById('fechaSeminario')?.value;
-                if (fechaSeminario) {
-                    const inputFechaInicio = document.getElementById('fechaInicio');
-                    const inputFechaFin = document.getElementById('fechaFin');
-                    
-                    // Habilitar campos antes de asignar valores
-                    inputFechaInicio.disabled = false;
-                    inputFechaFin.disabled = false;
-                    
-                    inputFechaInicio.value = fechaSeminario;
-                    inputFechaFin.value = fechaSeminario;
-                    console.log('✅ [EDICIÓN] Copiado fechaSeminario:', fechaSeminario);
-                }
-            }
-            
-            const formulario = document.getElementById('oferta-form');
-            const formData = new FormData(formulario);
-            
-            // Agregar el ID de la oferta
-            if (typeof idOfertaModificar !== 'undefined' && idOfertaModificar) {
-                formData.append('idOferta', idOfertaModificar);
-            }
-            
-            // Mostrar loading
-            const btnSubmit = document.getElementById('btn-submit-form');
-            let textoOriginal = '';
-            if (btnSubmit) {
-                textoOriginal = btnSubmit.innerHTML;
-                btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Actualizando...';
-                btnSubmit.disabled = true;
-            }
-            
-            fetch('/admin/ofertas/modificar', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Respuesta del servidor:', data);
-                
-                if (data.success) {
-                    console.log('Oferta actualizada exitosamente. Estado original era:', estadoOfertaEnEdicion);
-                    mostrarNotificacion('Oferta actualizada exitosamente', 'success');
-                    const idOfertaActual = (data.oferta && (data.oferta.id || data.oferta.idOferta))
-                        || idOfertaModificar
-                        || document.getElementById('idOfertaModificar')?.value
-                        || ofertaActualId;
-                    if (idOfertaActual) {
-                        ofertaActualId = idOfertaActual;
-                    }
-                    
-                    // Verificar si estaba DE_BAJA para ofrecer dar de alta
-                    if (estadoOfertaEnEdicion === 'DE_BAJA') {
-                        console.log('💡 Oferta estaba DE_BAJA, preguntando si activar...');
-                        
-                        setTimeout(() => {
-                            ModalConfirmacion.show(
-                                'Activar Oferta',
-                                'La oferta se ha modificado correctamente. ¿Desea darla de alta ahora?',
-                                () => {
-                                    // Intentar dar de alta
-                                    const token = obtenerCsrfToken();
-                                    const headerName = obtenerCsrfHeaderName();
-                                    const headers = {
-                                        'Content-Type': 'application/json',
-                                        'X-Requested-With': 'XMLHttpRequest'
-                                    };
-                                    if (token && headerName) headers[headerName] = token;
-        
-                                    const idParaCambiar = idOfertaActual
-                                        || idOfertaModificar
-                                        || document.getElementById('idOfertaModificar')?.value
-                                        || ofertaActualId;
-                                    if (!idParaCambiar) {
-                                        mostrarNotificacion('Error: No se pudo determinar el ID de la oferta', 'error');
-                                        return;
-                                    }
-                                    fetch(`/admin/ofertas/cambiar-estado/${idParaCambiar}`, {
-                                        method: 'POST',
-                                        headers: headers
-                                    })
-                                    .then(r => r.json())
-                                    .then(resp => {
-                                        if (resp.success) {
-                                            mostrarNotificacion('Oferta activada correctamente', 'success');
-                                            cargarOfertas();
-                                        } else {
-                                            mostrarNotificacion('No se pudo activar la oferta: ' + resp.message, 'warning');
-                                        }
-                                    });
-                                }
-                            );
-                        }, 500);
-
-                        limpiarFormularioCompleto();
-                        resetearModoEdicion();
-                        cerrarFormulario();
-                        actualizarTablaOfertas();
-                    } else {
-                        limpiarFormularioCompleto();
-                        resetearModoEdicion();
-                        cerrarFormulario();
-                        actualizarTablaOfertas();
-                    }
-                } else {
-                    console.error('Error al actualizar:', data.message);
-                    mostrarNotificacion('Error al actualizar la oferta: ' + data.message, 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Error en la petición:', error);
-                mostrarNotificacion('Error de conexión al actualizar la oferta', 'error');
-            })
-            .finally(() => {
+                // Mostrar loading
+                const btnSubmit = document.getElementById('btn-submit-form');
+                let textoOriginal = '';
                 if (btnSubmit) {
-                    btnSubmit.innerHTML = textoOriginal;
-                    btnSubmit.disabled = false;
+                    textoOriginal = btnSubmit.innerHTML;
+                    btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Actualizando...';
+                    btnSubmit.disabled = true;
                 }
-            });
 
-        }
+                fetch('/admin/ofertas/modificar', {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Respuesta del servidor:', data);
+
+                        if (data.success) {
+                            console.log('Oferta actualizada exitosamente. Estado original era:', estadoOfertaEnEdicion);
+                            mostrarNotificacion('Oferta actualizada exitosamente', 'success');
+
+                            // Verificar si estaba DE_BAJA para ofrecer dar de alta
+                            if (estadoOfertaEnEdicion === 'DE_BAJA') {
+                                console.log('💡 Oferta estaba DE_BAJA, preguntando si activar...');
+
+                                setTimeout(() => {
+                                    ModalConfirmacion.show(
+                                        'Activar Oferta',
+                                        'La oferta se ha modificado correctamente. ¿Desea darla de alta ahora?',
+                                        () => {
+                                            // Intentar dar de alta
+                                            const token = obtenerCsrfToken();
+                                            const headerName = obtenerCsrfHeaderName();
+                                            const headers = {
+                                                'Content-Type': 'application/json',
+                                                'X-Requested-With': 'XMLHttpRequest'
+                                            };
+                                            if (token && headerName) headers[headerName] = token;
+
+                                            fetch(`/admin/ofertas/cambiar-estado/${idOfertaModificar}`, {
+                                                method: 'POST',
+                                                headers: headers
+                                            })
+                                                .then(r => r.json())
+                                                .then(resp => {
+                                                    if (resp.success) {
+                                                        mostrarNotificacion('Oferta activada correctamente', 'success');
+                                                        cargarOfertas();
+                                                    } else {
+                                                        mostrarNotificacion('No se pudo activar la oferta: ' + resp.message, 'warning');
+                                                    }
+                                                });
+                                        }
+                                    );
+                                }, 500);
+
+                                limpiarFormularioCompleto();
+                                resetearModoEdicion();
+                                cerrarFormulario();
+                                actualizarTablaOfertas();
+                            } else {
+                                limpiarFormularioCompleto();
+                                resetearModoEdicion();
+                                cerrarFormulario();
+                                actualizarTablaOfertas();
+                            }
+                        } else {
+                            console.error('Error al actualizar:', data.message);
+                            mostrarNotificacion('Error al actualizar la oferta: ' + data.message, 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error en la petición:', error);
+                        mostrarNotificacion('Error de conexión al actualizar la oferta', 'error');
+                    })
+                    .finally(() => {
+                        if (btnSubmit) {
+                            btnSubmit.innerHTML = textoOriginal;
+                            btnSubmit.disabled = false;
+                        }
+                    });
+            }
 
 
             console.log('🔄 Sistema de modificación de ofertas inicializado');
-
-            // Fin DOMContentLoaded
-            });
         </script>
 
 

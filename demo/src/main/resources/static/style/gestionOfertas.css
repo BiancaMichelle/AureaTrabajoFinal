@@ -520,14 +520,6 @@ input:checked + .slider:after {
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
-/* Asegurar contraste en el detalle de oferta */
-.categorias-list .categoria-chip {
-    background: #e3f2fd;
-    color: #1e3a8a;
-    border: 1px solid #90caf9;
-    box-shadow: none;
-}
-
 .docentes-list, .disertantes-list, .horarios-list {
     background: transparent !important;
     padding: 0 !important;

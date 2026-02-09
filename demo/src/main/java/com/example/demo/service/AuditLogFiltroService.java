@@ -36,7 +36,7 @@ public class AuditLogFiltroService {
      */
     public Page<AuditLogDTO> buscarConFiltros(
             String usuario, String accion, String entidad, 
-            Date fechaDesde, Date fechaHasta, Boolean exito, String ip, 
+            Date fechaDesde, Date fechaHasta, String ip, 
             Pageable pageable) {
         
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
@@ -80,10 +80,6 @@ public class AuditLogFiltroService {
         if (fechaHasta != null) {
             predicates.add(cb.lessThanOrEqualTo(root.get("fecha"), fechaHasta));
         }
-
-        if (exito != null) {
-            predicates.add(cb.equal(root.get("exito"), exito));
-        }
         
         // Filtro por IP
         if (ip != null && !ip.trim().isEmpty()) {
@@ -108,7 +104,7 @@ public class AuditLogFiltroService {
         TypedQuery<AuditLog> typedQuery = entityManager.createQuery(query);
         
         // Contar total de resultados
-        long total = contarResultadosConFiltros(usuario, accion, entidad, fechaDesde, fechaHasta, exito, ip);
+        long total = contarResultadosConFiltros(usuario, accion, entidad, fechaDesde, fechaHasta, ip);
         
         // Aplicar paginación
         typedQuery.setFirstResult((int) pageable.getOffset());
@@ -129,7 +125,7 @@ public class AuditLogFiltroService {
      */
     private long contarResultadosConFiltros(
             String usuario, String accion, String entidad, 
-            Date fechaDesde, Date fechaHasta, Boolean exito, String ip) {
+            Date fechaDesde, Date fechaHasta, String ip) {
         
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<Long> query = cb.createQuery(Long.class);
@@ -164,10 +160,6 @@ public class AuditLogFiltroService {
         if (fechaHasta != null) {
             predicates.add(cb.lessThanOrEqualTo(root.get("fecha"), fechaHasta));
         }
-
-        if (exito != null) {
-            predicates.add(cb.equal(root.get("exito"), exito));
-        }
         
         if (ip != null && !ip.trim().isEmpty()) {
             predicates.add(cb.like(root.get("ip"), "%" + ip + "%"));
@@ -188,10 +180,10 @@ public class AuditLogFiltroService {
      */
     public List<AuditLogDTO> obtenerTodosParaExportacion(
             String usuario, String accion, String entidad, 
-            Date fechaDesde, Date fechaHasta, Boolean exito, String ip) {
+            Date fechaDesde, Date fechaHasta, String ip) {
         
         // Si no hay filtros, obtener solo los últimos 1000 registros para evitar sobrecarga
-        if (todosFiltrosVacios(usuario, accion, entidad, fechaDesde, fechaHasta, exito, ip)) {
+        if (todosFiltrosVacios(usuario, accion, entidad, fechaDesde, fechaHasta, ip)) {
             fechaDesde = Date.valueOf(LocalDate.now().minusDays(30)); // Últimos 30 días por defecto
         }
         
@@ -232,10 +224,6 @@ public class AuditLogFiltroService {
         if (fechaHasta != null) {
             predicates.add(cb.lessThanOrEqualTo(root.get("fecha"), fechaHasta));
         }
-
-        if (exito != null) {
-            predicates.add(cb.equal(root.get("exito"), exito));
-        }
         
         if (ip != null && !ip.trim().isEmpty()) {
             predicates.add(cb.like(root.get("ip"), "%" + ip + "%"));
@@ -262,13 +250,12 @@ public class AuditLogFiltroService {
     }
     
     private boolean todosFiltrosVacios(String usuario, String accion, String entidad, 
-                                      Date fechaDesde, Date fechaHasta, Boolean exito, String ip) {
+                                      Date fechaDesde, Date fechaHasta, String ip) {
         return (usuario == null || usuario.trim().isEmpty()) &&
                (accion == null || accion.trim().isEmpty()) &&
                (entidad == null || entidad.trim().isEmpty()) &&
                fechaDesde == null &&
                fechaHasta == null &&
-               exito == null &&
                (ip == null || ip.trim().isEmpty());
     }
 }

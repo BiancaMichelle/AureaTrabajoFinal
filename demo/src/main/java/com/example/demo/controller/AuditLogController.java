@@ -63,7 +63,6 @@ public class AuditLogController {
             @RequestParam(required = false) String entidad,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date fechaDesde,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date fechaHasta,
-            @RequestParam(required = false) Boolean exito,
             @RequestParam(required = false) String ip) {
         
         try {
@@ -76,7 +75,6 @@ public class AuditLogController {
             System.out.println("- entidad: " + entidad);
             System.out.println("- fechaDesde: " + fechaDesde);
             System.out.println("- fechaHasta: " + fechaHasta);
-            System.out.println("- exito: " + exito);
             System.out.println("- ip: " + ip);
             
             // Verificar total de registros en la base de datos
@@ -101,17 +99,9 @@ public class AuditLogController {
             Pageable pageable = PageRequest.of(page, size, 
                 Sort.by(Sort.Direction.DESC, "fecha", "hora"));
             
-            // Normalizar acciones legacy
-            if (accion != null && !accion.isBlank()) {
-                if ("LOGIN".equalsIgnoreCase(accion)) accion = "INICIO_SESION";
-                if ("LOGOUT".equalsIgnoreCase(accion)) accion = "CIERRE_SESION";
-                if ("ELIMINAR_USUARIO".equalsIgnoreCase(accion)) accion = "BAJA_USUARIO";
-                if ("ACTUALIZAR_USUARIO".equalsIgnoreCase(accion)) accion = "MODIFICACION_USUARIO";
-            }
-
             // Aplicar filtros y obtener datos
             Page<AuditLogDTO> logs = aplicarFiltrosYObtenerDatos(
-                pageable, usuario, accion, entidad, fechaDesde, fechaHasta, exito, ip);
+                pageable, usuario, accion, entidad, fechaDesde, fechaHasta, ip);
             
             System.out.println("Registros encontrados: " + logs.getTotalElements());
             System.out.println("Contenido de la página: " + logs.getContent().size());
@@ -230,19 +220,11 @@ public class AuditLogController {
             @RequestParam(required = false) String entidad,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date fechaDesde,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date fechaHasta,
-            @RequestParam(required = false) Boolean exito,
             @RequestParam(required = false) String ip) {
         
         try {
-            if (accion != null && !accion.isBlank()) {
-                if ("LOGIN".equalsIgnoreCase(accion)) accion = "INICIO_SESION";
-                if ("LOGOUT".equalsIgnoreCase(accion)) accion = "CIERRE_SESION";
-                if ("ELIMINAR_USUARIO".equalsIgnoreCase(accion)) accion = "BAJA_USUARIO";
-                if ("ACTUALIZAR_USUARIO".equalsIgnoreCase(accion)) accion = "MODIFICACION_USUARIO";
-            }
-
             // Obtener todos los datos filtrados (sin paginación para export)
-            List<AuditLogDTO> logs = obtenerDatosFiltrados(usuario, accion, entidad, fechaDesde, fechaHasta, exito, ip);
+            List<AuditLogDTO> logs = obtenerDatosFiltrados(usuario, accion, entidad, fechaDesde, fechaHasta, ip);
             
             // Generar CSV
             String csv = generarCSV(logs);
@@ -268,10 +250,10 @@ public class AuditLogController {
     
     private Page<AuditLogDTO> aplicarFiltrosYObtenerDatos(
             Pageable pageable, String usuario, String accion, String entidad, 
-            Date fechaDesde, Date fechaHasta, Boolean exito, String ip) {
+            Date fechaDesde, Date fechaHasta, String ip) {
         
         // Si no hay filtros, usar consulta simple
-        if (todosFiltrosVacios(usuario, accion, entidad, fechaDesde, fechaHasta, exito, ip)) {
+        if (todosFiltrosVacios(usuario, accion, entidad, fechaDesde, fechaHasta, ip)) {
             System.out.println("Sin filtros - usando consulta simple");
             
             // Obtener datos directamente del servicio
@@ -288,27 +270,26 @@ public class AuditLogController {
             System.out.println("Con filtros - usando servicio de filtros");
             // Usar el servicio de filtros avanzados
             return auditLogFiltroService.buscarConFiltros(
-                usuario, accion, entidad, fechaDesde, fechaHasta, exito, ip, pageable);
+                usuario, accion, entidad, fechaDesde, fechaHasta, ip, pageable);
         }
     }
     
     private List<AuditLogDTO> obtenerDatosFiltrados(
             String usuario, String accion, String entidad, 
-            Date fechaDesde, Date fechaHasta, Boolean exito, String ip) {
+            Date fechaDesde, Date fechaHasta, String ip) {
         
         // Usar el servicio de filtros para exportación
         return auditLogFiltroService.obtenerTodosParaExportacion(
-            usuario, accion, entidad, fechaDesde, fechaHasta, exito, ip);
+            usuario, accion, entidad, fechaDesde, fechaHasta, ip);
     }
     
     private boolean todosFiltrosVacios(String usuario, String accion, String entidad, 
-                                      Date fechaDesde, Date fechaHasta, Boolean exito, String ip) {
+                                      Date fechaDesde, Date fechaHasta, String ip) {
         return (usuario == null || usuario.trim().isEmpty()) &&
                (accion == null || accion.trim().isEmpty()) &&
                (entidad == null || entidad.trim().isEmpty()) &&
                fechaDesde == null &&
                fechaHasta == null &&
-               exito == null &&
                (ip == null || ip.trim().isEmpty());
     }
     

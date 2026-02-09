@@ -10,7 +10,6 @@ function initializeConfiguraciones() {
     setupColorInputs();
     setupFileUpload();
     setupAutomaticConfigToggle();
-    setupWeeklyReportsSimulation();
     setupFormValidation();
     setupFormSubmission();
     setupColorPreview();
@@ -18,62 +17,6 @@ function initializeConfiguraciones() {
     ensureDefaultCurrency();
     console.log('✅ Configuraciones inicializadas correctamente');
 }
-
-// =================   REPORTES SEMANALES (SIMULACION)   =================
-function setupWeeklyReportsSimulation() {
-    const btn = document.getElementById('btn-ejecutar-reportes-semanales');
-    if (!btn) return;
-
-    btn.addEventListener('click', () => {
-        const ejecutar = () => {
-            btn.disabled = true;
-            const original = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
-
-            const token = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
-            const header = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
-            const headers = { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
-            if (token && header) headers[header] = token;
-
-            fetch('/admin/reportes/semanal/ejecutar', {
-                method: 'POST',
-                headers,
-                credentials: 'same-origin'
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    showNotification(data.message || 'Reportes semanales generados', 'success');
-                    if (data.resumen) {
-                        showNotification(data.resumen.replace(/\n/g, '<br>'), 'info', 0);
-                    }
-                } else {
-                    showNotification(data.message || 'Error al generar reportes semanales', 'error');
-                }
-            })
-            .catch(() => showNotification('Error de conexión al generar reportes semanales', 'error'))
-            .finally(() => {
-                btn.disabled = false;
-                btn.innerHTML = original;
-            });
-        };
-
-        if (typeof ModalConfirmacion !== 'undefined' && ModalConfirmacion.show) {
-            ModalConfirmacion.show(
-                'Simular sábado',
-                '¿Desea generar ahora los reportes semanales y notificar al admin?',
-                ejecutar
-            );
-        } else {
-            ejecutar();
-        }
-    });
-}
-const DEFAULT_COLORS = {
-    primary: '#E5383B',
-    secondary: '#0D1B2A',
-    text: '#374151'
-};
 
 function ensureDefaultCurrency() {
     const monedaSelect = document.getElementById('moneda');
@@ -222,7 +165,7 @@ function setupAutomaticConfigToggle() {
 // =================   VALIDACIÓN DEL FORMULARIO   =================
 function setupFormValidation() {
     const form = document.getElementById('config-form');
-    const inputs = form.querySelectorAll('input[required], select[required], textarea[required]');
+    const inputs = form.querySelectorAll('input[required], select[required]');
     
     inputs.forEach(input => {
         input.addEventListener('blur', validateField);
@@ -327,22 +270,10 @@ function setupFormSubmission() {
             return;
         }
 
-        const doSubmit = () => {
-            console.log('✅ Validación exitosa, enviando...');
-            // Mostrar loading y enviar
-            showLoadingState(true);
-            submitConfiguration();
-        };
-
-        if (typeof ModalConfirmacion !== 'undefined' && ModalConfirmacion.show) {
-            ModalConfirmacion.show(
-                'Confirmar Guardado',
-                '¿Estás seguro de que deseas guardar los cambios de la configuración?',
-                doSubmit
-            );
-        } else if (confirm('¿Estás seguro de que deseas guardar los cambios de la configuración?')) {
-            doSubmit();
-        }
+        console.log('✅ Validación exitosa, enviando...');
+        // Mostrar loading y enviar
+        showLoadingState(true);
+        submitConfiguration();
     };
 
     form.addEventListener('submit', function(e) {
@@ -398,7 +329,7 @@ function setupFormSubmission() {
 
 function validateForm() {
     const form = document.getElementById('config-form');
-    const requiredFields = form.querySelectorAll('input[required], select[required], textarea[required]');
+    const requiredFields = form.querySelectorAll('input[required], select[required]');
     let isValid = true;
     
     requiredFields.forEach(field => {
@@ -437,14 +368,6 @@ function submitConfiguration() {
         if (data.success) {
             showNotification('Configuración guardada exitosamente', 'success');
             updateSaveStatus('success');
-            // Aplicar colores en vivo al root (sin recargar)
-            const colorPrimario = document.getElementById('colorPrimario')?.value;
-            const colorSecundario = document.getElementById('colorSecundario')?.value;
-            const colorTexto = document.getElementById('colorTexto')?.value;
-            const root = document.documentElement;
-            if (colorPrimario) root.style.setProperty('--main-red', colorPrimario);
-            if (colorSecundario) root.style.setProperty('--dark-blue', colorSecundario);
-            if (colorTexto) root.style.setProperty('--text-color', colorTexto);
         } else {
             showNotification(data.message || 'Error al guardar la configuración', 'error');
             updateSaveStatus('error');
@@ -459,31 +382,23 @@ function submitConfiguration() {
 }
 
 function resetConfiguration() {
-    // Restablecer solo colores a los valores por defecto (DataSeeder)
-    const colorPrimario = document.getElementById('colorPrimario');
-    const colorSecundario = document.getElementById('colorSecundario');
-    const colorTexto = document.getElementById('colorTexto');
-    const colorTexts = document.querySelectorAll('.color-text');
-
-    if (colorPrimario) colorPrimario.value = DEFAULT_COLORS.primary;
-    if (colorSecundario) colorSecundario.value = DEFAULT_COLORS.secondary;
-    if (colorTexto) colorTexto.value = DEFAULT_COLORS.text;
-
-    // Sincronizar inputs de texto
-    colorTexts.forEach((input, idx) => {
-        if (idx === 0) input.value = DEFAULT_COLORS.primary;
-        if (idx === 1) input.value = DEFAULT_COLORS.secondary;
-        if (idx === 2) input.value = DEFAULT_COLORS.text;
-    });
-
-    // Aplicar a la vista previa y al root
+    const form = document.getElementById('config-form');
+    form.reset();
+    
+    // Restablecer vista previa de imagen
+    const logoPreview = document.getElementById('logo-preview');
+    const logoPlaceholder = document.getElementById('logo-placeholder');
+    logoPreview.style.display = 'none';
+    logoPlaceholder.style.display = 'block';
+    
+    // Restablecer colores
+    setupColorInputs();
     updateColorPreview();
-    const root = document.documentElement;
-    root.style.setProperty('--main-red', DEFAULT_COLORS.primary);
-    root.style.setProperty('--dark-blue', DEFAULT_COLORS.secondary);
-    root.style.setProperty('--text-color', DEFAULT_COLORS.text);
-
-    showNotification('Colores restablecidos a los valores por defecto', 'success');
+    
+    // Restablecer configuraciones automáticas
+    setupAutomaticConfigToggle();
+    
+    showNotification('Configuración restablecida', 'success');
 }
 
 // =================   ESTADO DE GUARDADO   =================
@@ -597,7 +512,7 @@ function loadSavedConfiguration() {
 }
 
 // =================   NOTIFICACIONES   =================
-function showNotification(message, type = 'success', autoCloseMs = 0) {
+function showNotification(message, type = 'success') {
     // Crear notificación
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
@@ -611,20 +526,15 @@ function showNotification(message, type = 'success', autoCloseMs = 0) {
         </div>
     `;
     
-    // Agregar al DOM y mostrar
+    // Agregar al DOM
     document.body.appendChild(notification);
-    setTimeout(() => {
-        notification.classList.add('show');
-    }, 10);
     
-    // Auto remover opcional (si autoCloseMs es 0 o negativo, solo manual)
-    if (autoCloseMs > 0) {
-        setTimeout(() => {
-            if (notification.parentElement) {
-                notification.remove();
-            }
-        }, autoCloseMs);
-    }
+    // Auto remover después de 5 segundos
+    setTimeout(() => {
+        if (notification.parentElement) {
+            notification.remove();
+        }
+    }, 5000);
 }
 
 // =================   UTILIDADES   =================

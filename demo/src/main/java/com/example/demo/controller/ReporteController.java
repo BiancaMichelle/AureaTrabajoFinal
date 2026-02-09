@@ -25,7 +25,6 @@ import jakarta.servlet.http.HttpServletRequest;
 
 import java.io.ByteArrayInputStream;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Collections;
 import java.nio.file.Files;
@@ -181,16 +180,6 @@ public class ReporteController {
         }
 
         List<OfertaAcademica> ofertas = reporteService.filtrarOfertas(nombre, estado, categoriaId, fechaInicio, fechaFin, tipos);
-
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-        String periodoTexto = "Histórico completo";
-        if (fechaInicio != null && fechaFin != null) {
-            periodoTexto = fechaInicio.format(formatter) + " al " + fechaFin.format(formatter);
-        } else if (fechaInicio != null) {
-            periodoTexto = "Desde " + fechaInicio.format(formatter);
-        } else if (fechaFin != null) {
-            periodoTexto = "Hasta " + fechaFin.format(formatter);
-        }
         
         ByteArrayInputStream stream;
         String filename;
@@ -237,8 +226,8 @@ public class ReporteController {
                 log.setAccion("EXPORTAR_REPORTE");
                 log.setAfecta("Reportes");
                 // Guardamos el nombre del archivo al inicio de los detalles para parsing fácil
-                log.setDetalles("Archivo: " + savedFile + " | Exportación de ofertas. Formato: " + (formato != null ? formato : "PDF") +
-                                ". Periodo: " + periodoTexto + ". Registros: " + ofertas.size());
+                log.setDetalles("Archivo: " + savedFile + " | Exportación de ofertas. Formato: " + (formato != null ? formato : "PDF") + 
+                                ". Registros: " + ofertas.size());
                 log.setExito(true);
                 log.setIp(request.getRemoteAddr());
                 
@@ -256,7 +245,6 @@ public class ReporteController {
 
     @GetMapping("/usuarios/descargar")
     public ResponseEntity<InputStreamResource> descargarReporteUsuarios(
-            @RequestParam(required = false) String formato,
             @RequestParam(required = false) String rol,
             @RequestParam(required = false) Boolean estado,
             @RequestParam(required = false) String nombre,
@@ -265,34 +253,10 @@ public class ReporteController {
             HttpServletRequest request
     ) throws java.io.IOException { // Added exception
         List<Usuario> usuarios = reporteService.filtrarUsuarios(rol, estado, nombre, fechaInicio, fechaFin);
-        DateTimeFormatter formatterUsuarios = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-        String periodoUsuarios = "Histórico completo";
-        if (fechaInicio != null && fechaFin != null) {
-            periodoUsuarios = fechaInicio.format(formatterUsuarios) + " al " + fechaFin.format(formatterUsuarios);
-        } else if (fechaInicio != null) {
-            periodoUsuarios = "Desde " + fechaInicio.format(formatterUsuarios);
-        } else if (fechaFin != null) {
-            periodoUsuarios = "Hasta " + fechaFin.format(formatterUsuarios);
-        }
-        ByteArrayInputStream stream;
-        String filename;
-        MediaType mediaType;
-        String extension;
-
-        if ("excel".equalsIgnoreCase(formato)) {
-            stream = reporteService.generarReporteUsuariosExcel(usuarios);
-            filename = "reporte_usuarios.xlsx";
-            mediaType = MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-            extension = "xlsx";
-        } else {
-            stream = reporteService.generarReporteUsuariosPDF(usuarios, fechaInicio, fechaFin);
-            filename = "reporte_usuarios.pdf";
-            mediaType = MediaType.APPLICATION_PDF;
-            extension = "pdf";
-        }
+        ByteArrayInputStream stream = reporteService.generarReporteUsuariosPDF(usuarios, fechaInicio, fechaFin);
         
         byte[] content = stream.readAllBytes();
-        String savedFile = guardarReporteEnDisco(content, "reporte_usuarios", extension);
+        String savedFile = guardarReporteEnDisco(content, "reporte_usuarios", "pdf");
 
         try {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -308,7 +272,7 @@ public class ReporteController {
                 }
                 log.setAccion("EXPORTAR_REPORTE");
                 log.setAfecta("Reportes Usuarios");
-                log.setDetalles("Archivo: " + savedFile + " | Exportación de usuarios. Formato: " + (formato != null ? formato : "PDF") + ". Periodo: " + periodoUsuarios + ". Registros: " + usuarios.size());
+                log.setDetalles("Archivo: " + savedFile + " | Exportación de usuarios. Registros: " + usuarios.size());
                 log.setExito(true);
                 log.setIp(request.getRemoteAddr());
                 auditLogService.registrar(log);
@@ -316,8 +280,8 @@ public class ReporteController {
         } catch (Exception e) {}
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
-                .contentType(mediaType)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=reporte_usuarios.pdf")
+                .contentType(MediaType.APPLICATION_PDF)
                 .body(new InputStreamResource(new ByteArrayInputStream(content)));
     }
 

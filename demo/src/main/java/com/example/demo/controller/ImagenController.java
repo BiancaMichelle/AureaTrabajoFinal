@@ -24,11 +24,9 @@ import org.springframework.web.multipart.MultipartFile;
 import com.example.demo.model.CarruselImagen;
 import com.example.demo.model.Instituto;
 import com.example.demo.model.OfertaImagen;
-import com.example.demo.model.InstitutoLogo;
 import com.example.demo.model.UsuarioImagen;
 import com.example.demo.service.ImagenService;
 import com.example.demo.service.InstitutoService;
-import com.example.demo.service.InstitutoLogoService;
 import com.example.demo.service.OfertaImagenService;
 import com.example.demo.service.UsuarioImagenService;
 import org.springframework.core.io.Resource;
@@ -51,9 +49,6 @@ public class ImagenController {
     
     @Autowired
     private UsuarioImagenService usuarioImagenService;
-    
-    @Autowired
-    private InstitutoLogoService institutoLogoService;
 
     // Endpoint principal para servir las imágenes del carrusel
     @GetMapping("/api/carrusel/imagen/{id}")
@@ -150,22 +145,6 @@ public class ImagenController {
             headers.setContentLength(img.getTamano());
             headers.setCacheControl("max-age=3600");
             
-            return new ResponseEntity<>(img.getDatos(), headers, HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-    }
-
-    // Endpoint para servir el logo institucional desde BD
-    @GetMapping("/api/instituto/logo/{id}")
-    public ResponseEntity<byte[]> obtenerLogoInstituto(@PathVariable Long id) {
-        Optional<InstitutoLogo> logo = institutoLogoService.obtenerPorId(id);
-        if (logo.isPresent()) {
-            InstitutoLogo img = logo.get();
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.parseMediaType(img.getTipoMime()));
-            headers.setContentLength(img.getTamanio());
-            headers.setCacheControl("max-age=3600");
             return new ResponseEntity<>(img.getDatos(), headers, HttpStatus.OK);
         } else {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);

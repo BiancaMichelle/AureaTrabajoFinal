@@ -17,7 +17,6 @@
 </head>
 
 <body>
-<<<<<<< HEAD
     <div class="dashboard-container dashboard-left-sidebar">
         <!-- Professional Admin Sidebar -->
         <aside class="sidebar">
@@ -100,90 +99,6 @@
                         </a>
                         <form th:action="@{/logout}" id="logoutFormAdmin" method="post" style="display: none;">
                             <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-=======
-<div class="dashboard-container dashboard-left-sidebar">
-    <!-- Professional Admin Sidebar -->
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <a href="#" class="sidebar-logo" id="sidebar-toggle">A</a>
-            <span class="sidebar-logo-text">Aurea</span>
-        </div>
-        <nav class="sidebar-nav">
-            <ul>
-                <li>
-                    <a th:href="@{/admin/dashboard}" href="#kpi-section">
-                        <i class="fas fa-tachometer-alt"></i> 
-                        <span>Panel Administrativo</span>
-                    </a>
-                </li>
-                <li>
-                    <a th:href="@{/admin/gestion-usuarios}">
-                        <i class="fas fa-users"></i> 
-                        <span>Gestión de Usuarios</span>
-                    </a>
-                </li>
-                <li>
-                    <a th:href="@{/admin/gestion-ofertas}">
-                        <i class="fas fa-graduation-cap"></i> 
-                        <span>Gestión de Ofertas</span>
-                    </a>
-                </li>
-                <li>
-                    <a th:href="@{/admin/estadisticas}">
-                        <i class="fas fa-chart-line"></i> 
-                        <span>Estadísticas</span>
-                    </a>
-                </li>
-                <li>
-                    <a th:href="@{/admin/certificaciones}">
-                        <i class="fas fa-certificate"></i> 
-                        <span>Certificaciones</span>
-                    </a>
-                </li>
-                <li>
-                    <a th:href="@{/auditoria}">
-                        <i class="fas fa-shield-alt"></i> 
-                        <span>Auditoría</span>
-                    </a>
-                </li>
-                <li>
-                    <a th:href="@{/admin/pagos}">
-                        <i class="fas fa-credit-card"></i> 
-                        <span>Gestión de Pagos</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="#activity-section">
-                        <i class="fas fa-clock"></i> 
-                        <span>Actividad Reciente</span>
-                    </a>
-                </li>
-                <li>
-                    <a th:href="@{/admin/reportes}">
-                        <i class="fas fa-file-alt"></i> 
-                        <span>Reportes</span>
-                    </a>
-                </li>
-                <li>
-                    <a th:href="@{/admin/configuracion}">
-                        <i class="fas fa-cogs"></i> 
-                        <span>Configuración</span>
-                    </a>
-                </li>
-                <li>
-                    <a th:href="@{/}">
-                        <i class="fas fa-home"></i> 
-                        <span>Vista Pública</span>
-                    </a>
-                </li>
-                <li>
-                    <a>
-                        <form th:action="@{/logout}" id="logoutFormAdmin" method="post" style="display: inline;">
-                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-                                <button type="button" class="btn-logout" onclick="confirmarSalidaAdmin()">
-                                    <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
-                                </button>
->>>>>>> origin/correcciones
                         </form>
                     </li>
                 </ul>
