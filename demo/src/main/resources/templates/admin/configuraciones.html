@@ -218,12 +218,16 @@
                             <div class="image-upload-container logo-photo-container" style="width: 100%; height: 250px; position: relative; overflow: hidden;">
                                 <input type="file" id="logo-input" name="logo" accept="image/*" class="image-input">
                                 <div class="image-upload-area" style="width: 100%; height: 250px; position: relative; overflow: hidden; padding: 0;" onclick="document.getElementById('logo-input').click()">
-                                    <div class="upload-placeholder" id="logo-placeholder">
+                                    <div class="upload-placeholder" id="logo-placeholder"
+                                         th:style="${instituto != null and instituto.logoPath != null and !#strings.isEmpty(instituto.logoPath)} ? 'display:none;' : ''">
                                         <i class="fas fa-cloud-upload-alt"></i>
                                         <p>Haga clic para subir el logo</p>
                                         <span>PNG, JPG hasta 5MB</span>
                                     </div>
-                                    <img id="logo-preview" style="display: none; width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; position: absolute; inset: 0; margin: auto; border-radius: 8px;" alt="Logo preview">
+                                    <img id="logo-preview"
+                                         th:src="${instituto != null ? instituto.logoPath : ''}"
+                                         th:style="${instituto != null and instituto.logoPath != null and !#strings.isEmpty(instituto.logoPath)} ? 'display:block; width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; position: absolute; inset: 0; margin: auto; border-radius: 8px;' : 'display:none; width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; position: absolute; inset: 0; margin: auto; border-radius: 8px;'"
+                                         alt="Logo preview">
                                 </div>
                             </div>
                         </div>
@@ -427,7 +431,7 @@
                         <i class="fas fa-save"></i> Guardar Configuración
                     </button>
                     <button type="button" id="btn-reset-config" class="btn-cancel">
-                        <i class="fas fa-undo"></i> Restablecer
+                        <i class="fas fa-undo"></i> Colores por defecto
                     </button>
                 </div>
             </form>

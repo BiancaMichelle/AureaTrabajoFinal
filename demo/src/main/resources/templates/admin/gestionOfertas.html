@@ -4039,88 +4039,94 @@
                         </div>
                     </div>
                 `).join('');
-                } else {
-                    disertantesContainer.innerHTML = '<span class="text-muted">Sin disertantes asignados</span>';
-                }
-
-                console.log('🏛️ Datos de seminario cargados');
+            } else {
+                disertantesContainer.innerHTML = '<span class="text-muted">Sin disertantes asignados</span>';
             }
-
-            // Función para configurar botón de estado
-            function configurarBotonEstado(estado) {
-                const btnCambiarEstado = document.getElementById('btn-cambiar-estado');
-                const iconEstado = document.getElementById('icon-estado');
-                const textEstado = document.getElementById('text-estado');
-
-                console.log('🎯 Configurando botón para estado:', estado);
-
-                if (btnCambiarEstado && iconEstado && textEstado) {
-                    // Resetear estado del botón
-                    btnCambiarEstado.disabled = false;
-
-                    if (estado === 'ACTIVA' || estado === 'ENCURSO') {
-                        btnCambiarEstado.className = 'btn-danger';  // Rojo para dar de baja
-                        iconEstado.className = 'fas fa-times-circle';
-                        textEstado.textContent = 'Dar de Baja';
-                        console.log('🔴 Botón configurado para dar de baja');
-                    } else if (estado === 'DE_BAJA') {
-                        btnCambiarEstado.className = 'btn-success';  // Verde para dar de alta
-                        iconEstado.className = 'fas fa-check-circle';
-                        textEstado.textContent = 'Dar de Alta';
-                        console.log('🟢 Botón configurado para dar de alta');
-                    } else if (estado === 'FINALIZADA') {
-                        btnCambiarEstado.className = 'btn-secondary';
-                        iconEstado.className = 'fas fa-flag-checkered';
-                        textEstado.textContent = 'Finalizada';
-                        btnCambiarEstado.disabled = true;
-                        console.log('🏁 Botón configurado como finalizada (deshabilitado)');
-                    } else {
-                        btnCambiarEstado.className = 'btn-secondary';
-                        iconEstado.className = 'fas fa-question-circle';
-                        textEstado.textContent = estado;
-                        console.log('⚠️ Estado desconocido:', estado);
-                    }
+            
+            console.log('🏛️ Datos de seminario cargados');
+        }
+        
+        // Función para configurar botón de estado
+        function configurarBotonEstado(estado) {
+            const btnCambiarEstado = document.getElementById('btn-cambiar-estado');
+            const iconEstado = document.getElementById('icon-estado');
+            const textEstado = document.getElementById('text-estado');
+            
+            console.log('🎯 Configurando botón para estado:', estado);
+            
+            if (btnCambiarEstado && iconEstado && textEstado) {
+                // Resetear estado del botón
+                btnCambiarEstado.disabled = false;
+                
+                if (estado === 'ACTIVA' || estado === 'ENCURSO') {
+                    btnCambiarEstado.className = 'btn-danger';  // Rojo para dar de baja
+                    iconEstado.className = 'fas fa-times-circle';
+                    textEstado.textContent = 'Dar de Baja';
+                    console.log('🔴 Botón configurado para dar de baja');
+                } else if (estado === 'DE_BAJA') {
+                    btnCambiarEstado.className = 'btn-success';  // Verde para dar de alta
+                    iconEstado.className = 'fas fa-check-circle';
+                    textEstado.textContent = 'Dar de Alta';
+                    console.log('🟢 Botón configurado para dar de alta');
+                } else if (estado === 'FINALIZADA') {
+                    btnCambiarEstado.className = 'btn-secondary';
+                    iconEstado.className = 'fas fa-flag-checkered';
+                    textEstado.textContent = 'Finalizada';
+                    btnCambiarEstado.disabled = true;
+                    console.log('🏁 Botón configurado como finalizada (deshabilitado)');
                 } else {
-                    console.error('❌ No se pudieron encontrar los elementos del botón de estado');
-                    console.log('Elementos encontrados:', {
-                        btnCambiarEstado: !!btnCambiarEstado,
-                        iconEstado: !!iconEstado,
-                        textEstado: !!textEstado
-                    });
+                    btnCambiarEstado.className = 'btn-secondary';
+                    iconEstado.className = 'fas fa-question-circle';
+                    textEstado.textContent = estado;
+                    console.log('⚠️ Estado desconocido:', estado);
+                }
+            } else {
+                console.error('❌ No se pudieron encontrar los elementos del botón de estado');
+                console.log('Elementos encontrados:', {
+                    btnCambiarEstado: !!btnCambiarEstado,
+                    iconEstado: !!iconEstado,
+                    textEstado: !!textEstado
+                });
+            }
+        }
+        
+        // Función global para cerrar modal
+        window.cerrarModalDetalle = function() {
+            const modal = document.getElementById('modalDetalleOferta');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = 'auto';
+                ofertaActualId = null;
+                console.log('🔚 Modal cerrado');
+            }
+        };
+        
+        // Función para cambiar estado de la oferta
+        window.cambiarEstadoOferta = function() {
+            if (!ofertaActualId) {
+                const hiddenId = document.getElementById('idOfertaModificar')?.value;
+                if (hiddenId) {
+                    ofertaActualId = hiddenId;
                 }
             }
-
-            // Función global para cerrar modal
-            window.cerrarModalDetalle = function () {
-                const modal = document.getElementById('modalDetalleOferta');
-                if (modal) {
-                    modal.style.display = 'none';
-                    document.body.style.overflow = 'auto';
-                    ofertaActualId = null;
-                    console.log('🔚 Modal cerrado');
-                }
-            };
-
-            // Función para cambiar estado de la oferta
-            window.cambiarEstadoOferta = function () {
-                if (!ofertaActualId) {
-                    console.error('❌ No hay oferta seleccionada para cambiar estado');
-                    mostrarNotificacion('Error: No hay oferta seleccionada', 'error');
-                    return;
-                }
-
-                console.log('🔄 Cambiando estado de oferta con ID:', ofertaActualId);
-
-                // Obtener elementos del DOM
-                const btnCambiarEstado = document.getElementById('btn-cambiar-estado');
-                const textEstado = document.getElementById('text-estado');
-
-                // Verificar que el botón existe
-                if (!btnCambiarEstado) {
-                    console.error('❌ Botón cambiar estado no encontrado');
-                    mostrarNotificacion('Error: Botón de estado no encontrado', 'error');
-                    return;
-                }
+            if (!ofertaActualId) {
+                console.error('❌ No hay oferta seleccionada para cambiar estado');
+                mostrarNotificacion('Error: No hay oferta seleccionada', 'error');
+                return;
+            }
+            
+            console.log('🔄 Cambiando estado de oferta con ID:', ofertaActualId);
+            
+            // Obtener elementos del DOM
+            const btnCambiarEstado = document.getElementById('btn-cambiar-estado');
+            const textEstado = document.getElementById('text-estado');
+            
+            // Verificar que el botón existe
+            if (!btnCambiarEstado) {
+                console.error('❌ Botón cambiar estado no encontrado');
+                mostrarNotificacion('Error: Botón de estado no encontrado', 'error');
+                return;
+            }
 
                 // Determinar acción y mensaje
                 let tituloAccion = 'Cambiar Estado';
@@ -5144,131 +5150,146 @@
                         return;
                     }
 
-                    if (modoEdicion) {
-                        // Confirmación para modificar
-                        ModalConfirmacion.show(
-                            'Modificar Oferta',
-                            '¿Está seguro que desea modificar los datos de esta oferta?',
-                            () => {
-                                console.log('Enviando actualización de oferta');
-                                enviarActualizacionOferta();
-                            }
-                        );
-                    } else {
-                        // Confirmación para registrar
-                        ModalConfirmacion.show(
-                            'Registrar Oferta',
-                            '¿Está seguro que desea registrar esta nueva oferta?',
-                            async () => {
-                                console.log('Enviando nueva oferta');
-                                enviarFormularioAjax(); // Función existente para crear
-                            }
-                        );
-                    }
-                });
+                if (modoEdicion) {
+                    // Confirmación para modificar
+                    ModalConfirmacion.show(
+                        'Modificar Oferta',
+                        '¿Está seguro que desea modificar los datos de esta oferta?',
+                        () => {
+                            console.log('Enviando actualización de oferta');
+                            enviarActualizacionOferta();
+                        }
+                    );
+                } else {
+                    // Confirmación para registrar
+                    ModalConfirmacion.show(
+                        'Registrar Oferta',
+                        '¿Está seguro que desea registrar esta nueva oferta?',
+                        async () => {
+                            console.log('Enviando nueva oferta');
+                            enviarFormularioAjax(); // Función existente para crear
+                        }
+                    );
+                }
+            });
+        }
+        
+        /**
+         * Función para enviar actualización de oferta
+         */
+        function enviarActualizacionOferta() {
+            console.log('Iniciando actualización de oferta');
+            
+            // Sincronizar fechas para CHARLA y SEMINARIO antes de crear FormData
+            const tipoOferta = document.getElementById('tipoOferta')?.value;
+            if (tipoOferta === 'CHARLA') {
+                const fechaCharla = document.getElementById('fechaCharla')?.value;
+                if (fechaCharla) {
+                    const inputFechaInicio = document.getElementById('fechaInicio');
+                    const inputFechaFin = document.getElementById('fechaFin');
+                    
+                    // Habilitar campos antes de asignar valores
+                    inputFechaInicio.disabled = false;
+                    inputFechaFin.disabled = false;
+                    
+                    inputFechaInicio.value = fechaCharla;
+                    inputFechaFin.value = fechaCharla;
+                    console.log('✅ [EDICIÓN] Copiado fechaCharla:', fechaCharla);
+                }
+            } else if (tipoOferta === 'SEMINARIO') {
+                const fechaSeminario = document.getElementById('fechaSeminario')?.value;
+                if (fechaSeminario) {
+                    const inputFechaInicio = document.getElementById('fechaInicio');
+                    const inputFechaFin = document.getElementById('fechaFin');
+                    
+                    // Habilitar campos antes de asignar valores
+                    inputFechaInicio.disabled = false;
+                    inputFechaFin.disabled = false;
+                    
+                    inputFechaInicio.value = fechaSeminario;
+                    inputFechaFin.value = fechaSeminario;
+                    console.log('✅ [EDICIÓN] Copiado fechaSeminario:', fechaSeminario);
+                }
             }
-
-            /**
-             * Función para enviar actualización de oferta
-             */
-            function enviarActualizacionOferta() {
-                console.log('Iniciando actualización de oferta');
-
-                // Sincronizar fechas para CHARLA y SEMINARIO antes de crear FormData
-                const tipoOferta = document.getElementById('tipoOferta')?.value;
-                if (tipoOferta === 'CHARLA') {
-                    const fechaCharla = document.getElementById('fechaCharla')?.value;
-                    if (fechaCharla) {
-                        const inputFechaInicio = document.getElementById('fechaInicio');
-                        const inputFechaFin = document.getElementById('fechaFin');
-
-                        // Habilitar campos antes de asignar valores
-                        inputFechaInicio.disabled = false;
-                        inputFechaFin.disabled = false;
-
-                        inputFechaInicio.value = fechaCharla;
-                        inputFechaFin.value = fechaCharla;
-                        console.log('✅ [EDICIÓN] Copiado fechaCharla:', fechaCharla);
+            
+            const formulario = document.getElementById('oferta-form');
+            const formData = new FormData(formulario);
+            
+            // Agregar el ID de la oferta
+            if (typeof idOfertaModificar !== 'undefined' && idOfertaModificar) {
+                formData.append('idOferta', idOfertaModificar);
+            }
+            
+            // Mostrar loading
+            const btnSubmit = document.getElementById('btn-submit-form');
+            let textoOriginal = '';
+            if (btnSubmit) {
+                textoOriginal = btnSubmit.innerHTML;
+                btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Actualizando...';
+                btnSubmit.disabled = true;
+            }
+            
+            fetch('/admin/ofertas/modificar', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Respuesta del servidor:', data);
+                
+                if (data.success) {
+                    console.log('Oferta actualizada exitosamente. Estado original era:', estadoOfertaEnEdicion);
+                    mostrarNotificacion('Oferta actualizada exitosamente', 'success');
+                    const idOfertaActual = (data.oferta && (data.oferta.id || data.oferta.idOferta))
+                        || idOfertaModificar
+                        || document.getElementById('idOfertaModificar')?.value
+                        || ofertaActualId;
+                    if (idOfertaActual) {
+                        ofertaActualId = idOfertaActual;
                     }
-                } else if (tipoOferta === 'SEMINARIO') {
-                    const fechaSeminario = document.getElementById('fechaSeminario')?.value;
-                    if (fechaSeminario) {
-                        const inputFechaInicio = document.getElementById('fechaInicio');
-                        const inputFechaFin = document.getElementById('fechaFin');
-
-                        // Habilitar campos antes de asignar valores
-                        inputFechaInicio.disabled = false;
-                        inputFechaFin.disabled = false;
-
-                        inputFechaInicio.value = fechaSeminario;
-                        inputFechaFin.value = fechaSeminario;
-                        console.log('✅ [EDICIÓN] Copiado fechaSeminario:', fechaSeminario);
-                    }
-                }
-
-                const formulario = document.getElementById('oferta-form');
-                const formData = new FormData(formulario);
-
-                // Agregar el ID de la oferta
-                if (typeof idOfertaModificar !== 'undefined' && idOfertaModificar) {
-                    formData.append('idOferta', idOfertaModificar);
-                }
-
-                // Mostrar loading
-                const btnSubmit = document.getElementById('btn-submit-form');
-                let textoOriginal = '';
-                if (btnSubmit) {
-                    textoOriginal = btnSubmit.innerHTML;
-                    btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Actualizando...';
-                    btnSubmit.disabled = true;
-                }
-
-                fetch('/admin/ofertas/modificar', {
-                    method: 'POST',
-                    body: formData
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        console.log('Respuesta del servidor:', data);
-
-                        if (data.success) {
-                            console.log('Oferta actualizada exitosamente. Estado original era:', estadoOfertaEnEdicion);
-                            mostrarNotificacion('Oferta actualizada exitosamente', 'success');
-
-                            // Verificar si estaba DE_BAJA para ofrecer dar de alta
-                            if (estadoOfertaEnEdicion === 'DE_BAJA') {
-                                console.log('💡 Oferta estaba DE_BAJA, preguntando si activar...');
-
-                                setTimeout(() => {
-                                    ModalConfirmacion.show(
-                                        'Activar Oferta',
-                                        'La oferta se ha modificado correctamente. ¿Desea darla de alta ahora?',
-                                        () => {
-                                            // Intentar dar de alta
-                                            const token = obtenerCsrfToken();
-                                            const headerName = obtenerCsrfHeaderName();
-                                            const headers = {
-                                                'Content-Type': 'application/json',
-                                                'X-Requested-With': 'XMLHttpRequest'
-                                            };
-                                            if (token && headerName) headers[headerName] = token;
-
-                                            fetch(`/admin/ofertas/cambiar-estado/${idOfertaModificar}`, {
-                                                method: 'POST',
-                                                headers: headers
-                                            })
-                                                .then(r => r.json())
-                                                .then(resp => {
-                                                    if (resp.success) {
-                                                        mostrarNotificacion('Oferta activada correctamente', 'success');
-                                                        cargarOfertas();
-                                                    } else {
-                                                        mostrarNotificacion('No se pudo activar la oferta: ' + resp.message, 'warning');
-                                                    }
-                                                });
+                    
+                    // Verificar si estaba DE_BAJA para ofrecer dar de alta
+                    if (estadoOfertaEnEdicion === 'DE_BAJA') {
+                        console.log('💡 Oferta estaba DE_BAJA, preguntando si activar...');
+                        
+                        setTimeout(() => {
+                            ModalConfirmacion.show(
+                                'Activar Oferta',
+                                'La oferta se ha modificado correctamente. ¿Desea darla de alta ahora?',
+                                () => {
+                                    // Intentar dar de alta
+                                    const token = obtenerCsrfToken();
+                                    const headerName = obtenerCsrfHeaderName();
+                                    const headers = {
+                                        'Content-Type': 'application/json',
+                                        'X-Requested-With': 'XMLHttpRequest'
+                                    };
+                                    if (token && headerName) headers[headerName] = token;
+        
+                                    const idParaCambiar = idOfertaActual
+                                        || idOfertaModificar
+                                        || document.getElementById('idOfertaModificar')?.value
+                                        || ofertaActualId;
+                                    if (!idParaCambiar) {
+                                        mostrarNotificacion('Error: No se pudo determinar el ID de la oferta', 'error');
+                                        return;
+                                    }
+                                    fetch(`/admin/ofertas/cambiar-estado/${idParaCambiar}`, {
+                                        method: 'POST',
+                                        headers: headers
+                                    })
+                                    .then(r => r.json())
+                                    .then(resp => {
+                                        if (resp.success) {
+                                            mostrarNotificacion('Oferta activada correctamente', 'success');
+                                            cargarOfertas();
+                                        } else {
+                                            mostrarNotificacion('No se pudo activar la oferta: ' + resp.message, 'warning');
                                         }
-                                    );
-                                }, 500);
+                                    });
+                                }
+                            );
+                        }, 500);
 
                                 limpiarFormularioCompleto();
                                 resetearModoEdicion();

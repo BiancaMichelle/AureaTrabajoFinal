@@ -77,6 +77,7 @@ import com.example.demo.service.DisponibilidadDocenteService;
 import com.example.demo.service.GeneradorHorariosService;
 import com.example.demo.service.ImagenService;
 import com.example.demo.service.InstitutoService;
+import com.example.demo.service.InstitutoLogoService;
 import com.example.demo.service.LocacionAPIService;
 import com.example.demo.service.OfertaAcademicaService;
 import com.example.demo.service.OfertaImagenService;
@@ -124,6 +125,9 @@ public class AdminController {
     @Autowired
     private InstitutoService institutoService;
 
+    @Autowired
+    private InstitutoLogoService institutoLogoService;
+    
     @Autowired
     private CarruselImagenRepository carruselImagenRepository;
 
@@ -3199,22 +3203,36 @@ public class AdminController {
     // ================= MÉTODOS AUXILIARES =================
 
     private String guardarLogo(MultipartFile logo) throws IOException {
-        // Crear directorio si no existe
-        Path directorioLogos = Paths.get("src/main/resources/static/img/logos");
-        if (!Files.exists(directorioLogos)) {
-            Files.createDirectories(directorioLogos);
+        Instituto instituto = institutoService.obtenerInstituto();
+        if (instituto == null) {
+            throw new IOException("Instituto no encontrado");
         }
 
-        // Generar nombre único
-        String nombreOriginal = logo.getOriginalFilename();
-        String extension = nombreOriginal != null ? nombreOriginal.substring(nombreOriginal.lastIndexOf(".")) : ".jpg";
-        String nombreArchivo = "logo_" + UUID.randomUUID().toString() + extension;
+        // Eliminar logo anterior si existía en BD
+        Long oldId = extraerIdLogoInstituto(instituto.getLogoPath());
+        if (oldId != null) {
+            try {
+                institutoLogoService.eliminar(oldId);
+            } catch (Exception e) {
+                // Continuar si no se pudo borrar el anterior
+            }
+        }
 
-        // Guardar archivo
-        Path rutaArchivo = directorioLogos.resolve(nombreArchivo);
-        Files.copy(logo.getInputStream(), rutaArchivo, StandardCopyOption.REPLACE_EXISTING);
+        var logoGuardado = institutoLogoService.guardarLogo(logo, instituto);
+        return "/api/instituto/logo/" + logoGuardado.getId();
+    }
 
-        return "/img/logos/" + nombreArchivo;
+    private Long extraerIdLogoInstituto(String logoUrl) {
+        String prefix = "/api/instituto/logo/";
+        if (logoUrl == null) return null;
+        int idx = logoUrl.indexOf(prefix);
+        if (idx == -1) return null;
+        String idPart = logoUrl.substring(idx + prefix.length());
+        try {
+            return Long.parseLong(idPart.trim());
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private String guardarImagenOferta(MultipartFile imagen) throws IOException {

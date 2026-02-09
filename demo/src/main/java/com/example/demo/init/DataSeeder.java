@@ -773,8 +773,8 @@ public class DataSeeder implements CommandLineRunner {
             instituto.setVision("Ser reconocidos como una institución líder en educación profesional, referente por nuestra excelencia académica, compromiso social y capacidad de adaptación a las necesidades del mercado laboral global.");
             instituto.setSobreNosotros("Fundado con la convicción de que la educación transforma vidas, el ICEP se ha dedicado a formar profesionales competentes y éticos. Nuestra historia está marcada por la innovación constante y el compromiso con la excelencia académica. Creemos en el potencial de cada estudiante y trabajamos incansablemente para proporcionarles las herramientas necesarias para triunfar en un mundo competitivo.");
 
-            // Colores predefinidos: Rojo (Primario) y Azul Oscuro (Secundario/Footer)
-            instituto.setColores(Arrays.asList("#E5383B", "#0D1B2A"));
+            // Colores predefinidos: Rojo (Primario), Azul Oscuro (Secundario/Footer), Gris (Texto)
+            instituto.setColores(Arrays.asList("#E5383B", "#0D1B2A", "#374151"));
             
             // Configuraciones automáticas
             instituto.setPermisoBajaAutomatica(true);
