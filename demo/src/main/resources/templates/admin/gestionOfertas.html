@@ -1836,37 +1836,21 @@ input:checked + .slider:after {
                 });
             }
             
-            // Manejador del botón cerrar formulario
-            if (btnCloseForm && formContainer) {
-                btnCloseForm.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    
-                    // Verificar si estamos en modo edición
-                    if (typeof modoEdicion !== 'undefined' && modoEdicion) {
-                        ModalConfirmacion.show(
-                            'Cancelar Modificación',
-                            '¿Estás seguro que deseas cancelar la modificación? Los cambios no guardados se perderán.',
-                            () => {
-                                // Si confirma, reseteamos el modo edición
-                                if (typeof resetearModoEdicion === 'function') {
-                                    resetearModoEdicion();
-                                }
-                                // Y limpiamos el formulario
-                                if (typeof limpiarFormularioCompleto === 'function') {
-                                    limpiarFormularioCompleto();
-                                }
-                                console.log('❌ CERRANDO FORMULARIO');
-                                formContainer.classList.remove('show');
-                                setTimeout(() => {
-                                    formContainer.style.display = 'none';
-                                }, 500);
-                            }
-                        );
-                        return;
+            function confirmarCancelacionFormulario() {
+                const estaEnEdicion = typeof modoEdicion !== 'undefined' && modoEdicion;
+                const titulo = estaEnEdicion ? 'Cancelar Modificación' : 'Cancelar Registro';
+                const mensaje = estaEnEdicion
+                    ? '¿Estás seguro que deseas cancelar la modificación? Los cambios no guardados se perderán.'
+                    : '¿Estás seguro que deseas cancelar el registro? Los datos ingresados se perderán.';
+
+                ModalConfirmacion.show(titulo, mensaje, () => {
+                    if (estaEnEdicion && typeof resetearModoEdicion === 'function') {
+                        resetearModoEdicion();
                     }
-                    
+                    if (typeof limpiarFormularioCompleto === 'function') {
+                        limpiarFormularioCompleto();
+                    }
                     console.log('❌ CERRANDO FORMULARIO');
-                    
                     formContainer.classList.remove('show');
                     setTimeout(() => {
                         formContainer.style.display = 'none';
@@ -1874,45 +1858,19 @@ input:checked + .slider:after {
                 });
             }
 
+            // Manejador del botón cerrar formulario
+            if (btnCloseForm && formContainer) {
+                btnCloseForm.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    confirmarCancelacionFormulario();
+                });
+            }
+
             // Manejador del botón cancelar formulario (botón inferior)
             if (btnCancelForm && formContainer) {
                 btnCancelForm.addEventListener('click', function(e) {
                     e.preventDefault();
-                    
-                    // Verificar si estamos en modo edición
-                    if (typeof modoEdicion !== 'undefined' && modoEdicion) {
-                        ModalConfirmacion.show(
-                            'Cancelar Modificación',
-                            '¿Estás seguro que deseas cancelar la modificación? Los cambios no guardados se perderán.',
-                            () => {
-                                // Si confirma, reseteamos el modo edición
-                                if (typeof resetearModoEdicion === 'function') {
-                                    resetearModoEdicion();
-                                }
-                                // Y limpiamos el formulario
-                                if (typeof limpiarFormularioCompleto === 'function') {
-                                    limpiarFormularioCompleto();
-                                }
-                                formContainer.classList.remove('show');
-                                setTimeout(() => {
-                                    formContainer.style.display = 'none';
-                                }, 500);
-                            }
-                        );
-                        return;
-                    }
-                    
-                    // Y limpiamos el formulario
-                    if (typeof limpiarFormularioCompleto === 'function') {
-                        limpiarFormularioCompleto();
-                    }
-                    
-                    console.log('❌ CANCELANDO FORMULARIO');
-                    
-                    formContainer.classList.remove('show');
-                    setTimeout(() => {
-                        formContainer.style.display = 'none';
-                    }, 500);
+                    confirmarCancelacionFormulario();
                 });
             }
             
