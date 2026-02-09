@@ -654,38 +654,38 @@
 
 
 
-                            <!-- Categorías -->
-                            <div class="form-section">
-                                <div class="categoria-header">
-                                    <h4><i class="fas fa-tags"></i> Categorías</h4>
-                                    <button type="button" id="btn-gestionar-categorias" class="btn-secondary btn-xs">
-                                        <i class="fas fa-cog"></i> Gestionar
+                        <!-- Categorías -->
+                        <div class="form-section">
+                            <div class="categoria-header">
+                                <h4><i class="fas fa-tags"></i> Categorías</h4>
+                                <button type="button" id="btn-gestionar-categorias" class="btn-secondary btn-xs">
+                                    <i class="fas fa-cog"></i> Gestionar
+                                </button>
+                            </div>
+                            <div class="form-group">
+                                <label for="categoria-select">Seleccionar Categorías</label>
+                                <p class="field-description">Seleccione una o más categorías que describan esta oferta académica</p>
+                                <div class="categoria-input-group">
+                                    <input type="text" id="categoria-search" class="form-control" placeholder="Buscar categoria..." style="margin-bottom: 6px; margin-top: 14px; max-width: 260px; height: 32px; padding: 4px 8px; font-size: 0.9rem;">
+                                    <select id="categoria-select" class="form-control categoria-select" size="6" style="min-height: 160px;">
+                                        <option value="">-- Seleccione una categoría --</option>
+                                        <!-- Las categorías se cargarán dinámicamente desde la base de datos -->
+                                    </select>
+                                    <button type="button" id="btn-add-categoria" class="btn-add-categoria">
+                                        <i class="fas fa-plus"></i> Añadir
                                     </button>
                                 </div>
-                                <div class="form-group">
-                                    <label for="categoria-select">Seleccionar Categorías</label>
-                                    <p class="field-description">Seleccione una o más categorías que describan esta
-                                        oferta académica</p>
-                                    <div class="categoria-input-group">
-                                        <select id="categoria-select" class="form-control categoria-select">
-                                            <option value="">-- Seleccione una categoría --</option>
-                                            <!-- Las categorías se cargarán dinámicamente desde la base de datos -->
-                                        </select>
-                                        <button type="button" id="btn-add-categoria" class="btn-add-categoria">
-                                            <i class="fas fa-plus"></i> Añadir
-                                        </button>
-                                    </div>
-
-                                    <!-- Categorías seleccionadas como chips -->
-                                    <div class="selected-categories" id="selected-categories" style="display: none;">
-                                        <span class="selected-label">Categorías seleccionadas:</span>
-                                        <div class="selected-chips" id="selected-chips">
-                                            <!-- Las categorías seleccionadas aparecerán aquí como chips -->
-                                        </div>
+                                
+                                <!-- Categorías seleccionadas como chips -->
+                                <div class="selected-categories" id="selected-categories" style="display: none;">
+                                    <span class="selected-label">Categorías seleccionadas:</span>
+                                    <div class="selected-chips" id="selected-chips">
+                                        <!-- Las categorías seleccionadas aparecerán aquí como chips -->
                                     </div>
                                 </div>
                             </div>
                         </div>
+                    </div>
 
                         <!-- Columna Derecha: Imagen y campos específicos -->
                         <div class="form-right-column">
@@ -1664,85 +1664,90 @@
                     </div>
                 </div>
 
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" onclick="cerrarModalError()">
-                        <i class="fas fa-check"></i> Entendido
-                    </button>
-                </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="cerrarModalError()">
+                    <i class="fas fa-check"></i> Entendido
+                </button>
             </div>
         </div>
-
-        <!-- SCRIPT COMPLETO INLINE - SIN ARCHIVOS EXTERNOS -->
-        <script>
-            console.log('🔥 SCRIPT INLINE CARGADO');
-
-            document.addEventListener('DOMContentLoaded', function () {
-                // Imagen: preview inmediato al seleccionar archivo
-                const imagenInput = document.getElementById('imagen');
-                const imagePreview = document.getElementById('image-preview');
-                const uploadPlaceholder = document.querySelector('.upload-placeholder');
-                if (imagenInput && imagePreview && uploadPlaceholder) {
-                    imagenInput.addEventListener('change', function (event) {
-                        const file = event.target.files && event.target.files[0];
-                        if (!file) return;
-                        if (file.size > 5 * 1024 * 1024) {
-                            if (typeof mostrarNotificacion === 'function') {
-                                mostrarNotificacion('La imagen supera 5MB', 'warning');
-                            } else {
-                                alert('La imagen supera 5MB');
-                            }
-                            imagenInput.value = '';
-                            return;
+    </div>
+    
+    <!-- SCRIPT COMPLETO INLINE - SIN ARCHIVOS EXTERNOS -->
+    <script>
+        console.log('🔥 SCRIPT INLINE CARGADO');
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Imagen: preview inmediato al seleccionar archivo
+            const imagenInput = document.getElementById('imagen');
+            const imagePreview = document.getElementById('image-preview');
+            const uploadPlaceholder = document.querySelector('.upload-placeholder');
+            if (imagenInput && imagePreview && uploadPlaceholder) {
+                imagenInput.addEventListener('change', function(event) {
+                    const file = event.target.files && event.target.files[0];
+                    if (!file) return;
+                    if (file.size > 5 * 1024 * 1024) {
+                        if (typeof mostrarNotificacion === 'function') {
+                            mostrarNotificacion('La imagen supera 5MB', 'warning');
+                        } else {
+                            alert('La imagen supera 5MB');
                         }
-                        const reader = new FileReader();
-                        reader.onload = function (e) {
-                            imagePreview.src = e.target.result;
-                            imagePreview.style.display = 'block';
-                            uploadPlaceholder.style.display = 'none';
-                        };
-                        reader.readAsDataURL(file);
-                    });
-                }
-                const btnClearImage = document.getElementById('btn-clear-image');
-                if (btnClearImage && imagenInput && imagePreview && uploadPlaceholder) {
-                    btnClearImage.addEventListener('click', function () {
                         imagenInput.value = '';
-                        imagePreview.src = '';
-                        imagePreview.style.display = 'none';
-                        uploadPlaceholder.style.display = 'flex';
-                    });
-                }
-                console.log('✅ DOM CARGADO');
-
-                // Test: Verificar que los botones de ver detalle estén presentes
-                setTimeout(function () {
-                    const botonesVer = document.querySelectorAll('.btn-ver');
-                    console.log('🔍 Botones de ver encontrados:', botonesVer.length);
-                    botonesVer.forEach((btn, index) => {
-                        console.log(`- Botón ${index + 1}:`, btn.getAttribute('data-id'));
-                    });
-                }, 1000);
-
-                // Referencias a elementos
-                const btnShowForm = document.getElementById('btn-show-form');
-                const formContainer = document.getElementById('form-container');
-                const btnCloseForm = document.getElementById('btn-close-form');
-                const btnCancelForm = document.getElementById('btn-cancel-form');
-                const btnGestionarCategorias = document.getElementById('btn-gestionar-categorias');
-                const categoriasFilterInput = document.getElementById('categorias-filter-input');
-                const categoriasFilterClear = document.getElementById('categorias-filter-clear');
-
-                console.log('Elementos encontrados:', {
-                    btnShowForm: !!btnShowForm,
-                    formContainer: !!formContainer,
-                    btnCloseForm: !!btnCloseForm,
-                    btnCancelForm: !!btnCancelForm,
-                    btnGestionarCategorias: !!btnGestionarCategorias
+                        return;
+                    }
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        imagePreview.src = e.target.result;
+                        imagePreview.style.display = 'block';
+                        uploadPlaceholder.style.display = 'none';
+                    };
+                    reader.readAsDataURL(file);
                 });
+            }
+            const btnClearImage = document.getElementById('btn-clear-image');
+            if (btnClearImage && imagenInput && imagePreview && uploadPlaceholder) {
+                btnClearImage.addEventListener('click', function() {
+                    imagenInput.value = '';
+                    imagePreview.src = '';
+                    imagePreview.style.display = 'none';
+                    uploadPlaceholder.style.display = 'flex';
+                });
+            }
+            console.log('✅ DOM CARGADO');
+            
+            // Test: Verificar que los botones de ver detalle estén presentes
+            setTimeout(function() {
+                const botonesVer = document.querySelectorAll('.btn-ver');
+                console.log('🔍 Botones de ver encontrados:', botonesVer.length);
+                botonesVer.forEach((btn, index) => {
+                    console.log(`- Botón ${index + 1}:`, btn.getAttribute('data-id'));
+                });
+            }, 1000);
+            
+            // Referencias a elementos
+            const btnShowForm = document.getElementById('btn-show-form');
+            const formContainer = document.getElementById('form-container');
+            const btnCloseForm = document.getElementById('btn-close-form');
+            const btnCancelForm = document.getElementById('btn-cancel-form');
+            const btnGestionarCategorias = document.getElementById('btn-gestionar-categorias');
+            const categoriasFilterInput = document.getElementById('categorias-filter-input');
+            const categoriasFilterClear = document.getElementById('categorias-filter-clear');
+            const categoriaSearchInput = document.getElementById('categoria-search');
+            
+            console.log('Elementos encontrados:', {
+                btnShowForm: !!btnShowForm,
+                formContainer: !!formContainer,
+                btnCloseForm: !!btnCloseForm,
+                btnCancelForm: !!btnCancelForm,
+                btnGestionarCategorias: !!btnGestionarCategorias
+            });
 
-                if (categoriasFilterInput) {
-                    categoriasFilterInput.addEventListener('input', aplicarFiltroCategorias);
-                }
+            if (categoriasFilterInput) {
+                categoriasFilterInput.addEventListener('input', aplicarFiltroCategorias);
+            }
+            
+            if (categoriaSearchInput) {
+                categoriaSearchInput.addEventListener('input', filtrarCategoriasSelect);
+            }
 
                 if (categoriasFilterClear) {
                     categoriasFilterClear.addEventListener('click', function () {
@@ -2616,65 +2621,84 @@
                 mostrarCategorias(coincideDescripcion, categoriasCache.length, 'descripcion');
             }
 
-            function cargarCategorias() {
-                console.log('🔄 Cargando categorías...');
+        function cargarCategorias() {
+            console.log('🔄 Cargando categorías...');
+            
+            const loadingDiv = document.getElementById('categoriasLoading');
+            const errorDiv = document.getElementById('categoriasError');
+            const table = document.getElementById('categoriasTable');
+            
+            if (loadingDiv) loadingDiv.style.display = 'block';
+            if (errorDiv) errorDiv.style.display = 'none';
+            if (table) table.style.display = 'none';
+            
+            fetch('/api/categorias')
+                .then(response => response.json())
+                .then(categorias => {
+                    console.log('✅ Categorías cargadas:', categorias);
+                    
+                    if (loadingDiv) loadingDiv.style.display = 'none';
+                    
+                    categoriasCache = Array.isArray(categorias) ? categorias : [];
+                    aplicarFiltroCategorias();
+                    if (table) table.style.display = 'table';
+                })
+                .catch(error => {
+                    console.error('❌ Error:', error);
+                    if (loadingDiv) loadingDiv.style.display = 'none';
+                    mostrarError('Error de conexión al cargar categorías');
+                });
+        }
+        
+        let categoriasSelectCache = [];
 
-                const loadingDiv = document.getElementById('categoriasLoading');
-                const errorDiv = document.getElementById('categoriasError');
-                const table = document.getElementById('categoriasTable');
-
-                if (loadingDiv) loadingDiv.style.display = 'block';
-                if (errorDiv) errorDiv.style.display = 'none';
-                if (table) table.style.display = 'none';
-
-                fetch('/api/categorias')
-                    .then(response => response.json())
-                    .then(categorias => {
-                        console.log('✅ Categorías cargadas:', categorias);
-
-                        if (loadingDiv) loadingDiv.style.display = 'none';
-
-                        categoriasCache = Array.isArray(categorias) ? categorias : [];
-                        aplicarFiltroCategorias();
-                        if (table) table.style.display = 'table';
-                    })
-                    .catch(error => {
-                        console.error('❌ Error:', error);
-                        if (loadingDiv) loadingDiv.style.display = 'none';
-                        mostrarError('Error de conexión al cargar categorías');
-                    });
+        function renderCategoriasSelect(listado) {
+            const select = document.getElementById('categoria-select');
+            if (!select) return;
+            // Limpiar opciones existentes (excepto la primera)
+            while (select.children.length > 1) {
+                select.removeChild(select.lastChild);
             }
+            listado.forEach(categoria => {
+                const option = document.createElement('option');
+                option.value = categoria.idCategoria;
+                option.textContent = categoria.nombre;
+                select.appendChild(option);
+            });
+        }
 
-            function cargarCategoriasSelect() {
-                console.log('🔄 Cargando categorías para select...');
-
-                fetch('/api/categorias')
-                    .then(response => response.json())
-                    .then(categorias => {
-                        const select = document.getElementById('categoria-select');
-                        if (select) {
-                            // Limpiar opciones existentes (excepto la primera)
-                            while (select.children.length > 1) {
-                                select.removeChild(select.lastChild);
-                            }
-
-                            // Agregar categorías
-                            categorias.forEach(categoria => {
-                                const option = document.createElement('option');
-                                option.value = categoria.idCategoria;
-                                option.textContent = categoria.nombre;
-                                select.appendChild(option);
-                            });
-                        }
-                    })
-                    .catch(error => {
-                        console.error('❌ Error al cargar categorías para select:', error);
-                    });
+        function filtrarCategoriasSelect() {
+            const input = document.getElementById('categoria-search');
+            const query = (input && input.value ? input.value : '').toLowerCase().trim();
+            if (!query) {
+                renderCategoriasSelect(categoriasSelectCache);
+                return;
             }
+            const filtradas = categoriasSelectCache.filter(c => {
+                const nombre = (c.nombre || '').toLowerCase();
+                return nombre.includes(query);
+            });
+            renderCategoriasSelect(filtradas);
+        }
 
-            function mostrarCategorias(categorias, totalCategorias = null, filtroLabel = '') {
-                const tbody = document.getElementById('categoriasTableBody');
-                const contador = document.getElementById('contadorCategorias');
+        function cargarCategoriasSelect() {
+            console.log('🔄 Cargando categorías para select...');
+            
+            fetch('/api/categorias')
+                .then(response => response.json())
+                .then(categorias => {
+                    categoriasSelectCache = Array.isArray(categorias) ? categorias : [];
+                    renderCategoriasSelect(categoriasSelectCache);
+                    filtrarCategoriasSelect();
+                })
+                .catch(error => {
+                    console.error('❌ Error al cargar categorías para select:', error);
+                });
+        }
+        
+        function mostrarCategorias(categorias, totalCategorias = null, filtroLabel = '') {
+            const tbody = document.getElementById('categoriasTableBody');
+            const contador = document.getElementById('contadorCategorias');
 
                 if (!tbody) return;
 
@@ -3404,46 +3428,64 @@
             }
 
 
-
-            // Función para limpiar formulario completo
-            function limpiarFormularioCompleto() {
-                const formulario = document.getElementById('oferta-form');
-                formulario.reset();
-
-                // Limpiar datos específicos
-                limpiarDatosFormulario();
-
-                // Ocultar todas las secciones específicas
-                const seccionesEspecificas = document.querySelectorAll('.tipo-specific');
-                seccionesEspecificas.forEach(seccion => {
-                    seccion.style.display = 'none';
-                });
-
-                // Ocultar sección de horarios
-                const seccionHorarios = document.getElementById('seccion-horarios');
-                if (seccionHorarios) {
-                    seccionHorarios.style.display = 'none';
-                }
-
-                console.log('🧹 Formulario limpiado completamente');
+        
+        function limpiarCategoriasSeleccionadas() {
+            categoriasSeleccionadas = [];
+            const selectedContainer = document.getElementById('selected-categories');
+            const selectedChips = document.getElementById('selected-chips');
+            const formCategorias = document.getElementById('categorias');
+            const select = document.getElementById('categoria-select');
+            const searchInput = document.getElementById('categoria-search');
+            if (selectedChips) selectedChips.innerHTML = '';
+            if (selectedContainer) selectedContainer.style.display = 'none';
+            if (formCategorias) formCategorias.value = '';
+            if (select) select.selectedIndex = 0;
+            if (searchInput) searchInput.value = '';
+            if (typeof renderCategoriasSelect === 'function') {
+                renderCategoriasSelect(categoriasSelectCache);
             }
+        }
 
-            // Función para cerrar formulario
-            function cerrarFormulario() {
-                const formContainer = document.getElementById('form-container');
-                if (formContainer) {
-                    formContainer.classList.remove('show');
-                    setTimeout(() => {
-                        formContainer.style.display = 'none';
-                    }, 500);
-                }
+        // Función para limpiar formulario completo
+        function limpiarFormularioCompleto() {
+            const formulario = document.getElementById('oferta-form');
+            formulario.reset();
+            
+            // Limpiar datos específicos
+            limpiarDatosFormulario();
+            limpiarCategoriasSeleccionadas();
+            
+            // Ocultar todas las secciones específicas
+            const seccionesEspecificas = document.querySelectorAll('.tipo-specific');
+            seccionesEspecificas.forEach(seccion => {
+                seccion.style.display = 'none';
+            });
+            
+            // Ocultar sección de horarios
+            const seccionHorarios = document.getElementById('seccion-horarios');
+            if (seccionHorarios) {
+                seccionHorarios.style.display = 'none';
             }
-
-            // Variables de paginación
-            let currentPage = 1;
-            const itemsPerPage = 10;
-            let allOfertas = [];
-            let filteredOfertas = [];
+            
+            console.log('🧹 Formulario limpiado completamente');
+        }
+        
+        // Función para cerrar formulario
+        function cerrarFormulario() {
+            const formContainer = document.getElementById('form-container');
+            if (formContainer) {
+                formContainer.classList.remove('show');
+                setTimeout(() => {
+                    formContainer.style.display = 'none';
+                }, 500);
+            }
+        }
+        
+        // Variables de paginación
+        let currentPage = 1;
+        const itemsPerPage = 10;
+        let allOfertas = [];
+        let filteredOfertas = [];
 
             // Función para actualizar tabla de ofertas
             function actualizarTablaOfertas() {
@@ -4905,245 +4947,246 @@
                                             </button>
                                         </td>
                                     `;
-                                        tbody.appendChild(fila);
-                                    });
-
-                                    actualizarDocentesHidden('formacion');
-                                    console.log('✅ Docentes cargados:', docentesSeleccionados.formacion.length);
+                                    tbody.appendChild(fila);
+                                });
+                                
+                                actualizarDocentesHidden('formacion');
+                                console.log('✅ Docentes cargados:', docentesSeleccionados.formacion.length);
+                            }
+                        }
+                        
+                    } else if (tipoOferta === 'CHARLA') {
+                        console.log('🎤 Cargando datos de CHARLA');
+                        
+                        // Fecha de la charla
+                        if (document.getElementById('fechaCharla')) {
+                            document.getElementById('fechaCharla').value = oferta.fechaInicio || '';
+                            console.log('✅ Fecha charla cargada:', oferta.fechaInicio);
+                        }
+                        
+                        // Hora de inicio
+                        if (document.getElementById('horaCharla') && oferta.horaInicio) {
+                            const horaStr = oferta.horaInicio.toString().substring(0, 5);
+                            document.getElementById('horaCharla').value = horaStr;
+                            console.log('✅ Hora charla cargada:', horaStr);
+                        }
+                        
+                        // Fechas de inscripción
+                        if (document.getElementById('fechaInicioInscripcion')) {
+                            document.getElementById('fechaInicioInscripcion').value = oferta.fechaInicioInscripcion || '';
+                            console.log('✅ Fecha inicio inscripción cargada:', oferta.fechaInicioInscripcion);
+                        }
+                        if (document.getElementById('fechaFinInscripcion')) {
+                            document.getElementById('fechaFinInscripcion').value = oferta.fechaFinInscripcion || '';
+                            console.log('✅ Fecha fin inscripción cargada:', oferta.fechaFinInscripcion);
+                        }
+                        
+                        if (document.getElementById('duracionEstimada')) {
+                            document.getElementById('duracionEstimada').value = oferta.duracionEstimada || '';
+                        }
+                        if (document.getElementById('publicoObjetivo')) {
+                            document.getElementById('publicoObjetivo').value = oferta.publicoObjetivo || '';
+                            console.log('✅ Público objetivo cargado:', oferta.publicoObjetivo);
+                        }
+                        
+                        // Cargar disertantes
+                        if (oferta.disertantes && Array.isArray(oferta.disertantes)) {
+                            // Limpiar disertantes de formato anidado [[...]]
+                            disertantesCharla = oferta.disertantes.map(d => {
+                                if (Array.isArray(d)) {
+                                    return d[0]; // Extraer el primer elemento si es un array
                                 }
-                            }
-
-                        } else if (tipoOferta === 'CHARLA') {
-                            console.log('🎤 Cargando datos de CHARLA');
-
-                            // Fecha de la charla
-                            if (document.getElementById('fechaCharla')) {
-                                document.getElementById('fechaCharla').value = oferta.fechaInicio || '';
-                                console.log('✅ Fecha charla cargada:', oferta.fechaInicio);
-                            }
-
-                            // Hora de inicio
-                            if (document.getElementById('horaCharla') && oferta.horaInicio) {
-                                const horaStr = oferta.horaInicio.toString().substring(0, 5);
-                                document.getElementById('horaCharla').value = horaStr;
-                                console.log('✅ Hora charla cargada:', horaStr);
-                            }
-
-                            // Fechas de inscripción
-                            if (document.getElementById('fechaInicioInscripcion')) {
-                                document.getElementById('fechaInicioInscripcion').value = oferta.fechaInicioInscripcion || '';
-                                console.log('✅ Fecha inicio inscripción cargada:', oferta.fechaInicioInscripcion);
-                            }
-                            if (document.getElementById('fechaFinInscripcion')) {
-                                document.getElementById('fechaFinInscripcion').value = oferta.fechaFinInscripcion || '';
-                                console.log('✅ Fecha fin inscripción cargada:', oferta.fechaFinInscripcion);
-                            }
-
-                            if (document.getElementById('duracionEstimada')) {
-                                document.getElementById('duracionEstimada').value = oferta.duracionEstimada || '';
-                            }
-                            if (document.getElementById('publicoObjetivo')) {
-                                document.getElementById('publicoObjetivo').value = oferta.publicoObjetivo || '';
-                                console.log('✅ Público objetivo cargado:', oferta.publicoObjetivo);
-                            }
-
-                            // Cargar disertantes
-                            if (oferta.disertantes && Array.isArray(oferta.disertantes)) {
-                                // Limpiar disertantes de formato anidado [[...]]
-                                disertantesCharla = oferta.disertantes.map(d => {
-                                    if (Array.isArray(d)) {
-                                        return d[0]; // Extraer el primer elemento si es un array
-                                    }
-                                    return d;
-                                }).filter(d => d); // Filtrar valores vacíos
-                                actualizarDisertantesChips('charla');
-                                console.log('✅ Disertantes charla cargados:', disertantesCharla);
-                            }
-
-                        } else if (tipoOferta === 'SEMINARIO') {
-                            console.log('🏛️ Cargando datos de SEMINARIO');
-
-                            // Fecha del seminario
-                            if (document.getElementById('fechaSeminario')) {
-                                document.getElementById('fechaSeminario').value = oferta.fechaInicio || '';
-                                console.log('✅ Fecha seminario cargada:', oferta.fechaInicio);
-                            }
-
-                            // Hora de inicio
-                            if (document.getElementById('horaSeminario') && oferta.horaInicio) {
-                                const horaStr = oferta.horaInicio.toString().substring(0, 5);
-                                document.getElementById('horaSeminario').value = horaStr;
-                                console.log('✅ Hora seminario cargada:', horaStr);
-                            }
-
-                            // Fechas de inscripción
-                            if (document.getElementById('fechaInicioInscripcion')) {
-                                document.getElementById('fechaInicioInscripcion').value = oferta.fechaInicioInscripcion || '';
-                                console.log('✅ Fecha inicio inscripción cargada:', oferta.fechaInicioInscripcion);
-                            }
-                            if (document.getElementById('fechaFinInscripcion')) {
-                                document.getElementById('fechaFinInscripcion').value = oferta.fechaFinInscripcion || '';
-                                console.log('✅ Fecha fin inscripción cargada:', oferta.fechaFinInscripcion);
-                            }
-
-                            if (document.getElementById('duracionMinutos')) {
-                                document.getElementById('duracionMinutos').value = oferta.duracionMinutos || '';
-                            }
-                            if (document.getElementById('publicoObjetivoSeminario')) {
-                                document.getElementById('publicoObjetivoSeminario').value = oferta.publicoObjetivo || '';
-                                console.log('✅ Público objetivo cargado:', oferta.publicoObjetivo);
-                            }
-
-                            // Cargar disertantes
-                            if (oferta.disertantes && Array.isArray(oferta.disertantes)) {
-                                // Limpiar disertantes de formato anidado [[...]]
-                                disertantesSeminario = oferta.disertantes.map(d => {
-                                    if (Array.isArray(d)) {
-                                        return d[0]; // Extraer el primer elemento si es un array
-                                    }
-                                    return d;
-                                }).filter(d => d); // Filtrar valores vacíos
-                                actualizarDisertantesChips('seminario');
-                                console.log('✅ Disertantes seminario cargados:', disertantesSeminario);
-                            }
+                                return d;
+                            }).filter(d => d); // Filtrar valores vacíos
+                            actualizarDisertantesChips('charla');
+                            console.log('✅ Disertantes charla cargados:', disertantesCharla);
                         }
-
-                        console.log('Campos específicos cargados');
-                    }, 100);
-
-                    // Cargar categorías
-                    if (oferta.categorias && Array.isArray(oferta.categorias)) {
-                        categoriasSeleccionadas = oferta.categorias.map(cat => ({
-                            id: cat.id.toString(),
-                            nombre: cat.nombre
-                        }));
-                        actualizarCategoriasChips();
-                        console.log('Categorías cargadas:', categoriasSeleccionadas.length);
-                    }
-
-                    // Cargar horarios si existen
-                    if (oferta.horarios && Array.isArray(oferta.horarios)) {
-                        console.log('Horarios recibidos:', oferta.horarios);
-                        horariosSeleccionados = oferta.horarios.map(h => {
-                            console.log('  - Horario individual:', h);
-                            return {
-                                dia: h.dia || h.diaSemana,
-                                horaInicio: h.horaInicio,
-                                horaFin: h.horaFin
-                            };
-                        });
-                        actualizarHorariosChips();
-                        console.log('Horarios cargados:', horariosSeleccionados.length, horariosSeleccionados);
-                    }
-
-                    // Actualizar visibilidad de campos según modalidad y tipo
-                    actualizarCamposModalidad();
-
-                    console.log('Formulario poblado exitosamente');
-
-                } catch (error) {
-                    console.error('Error poblando formulario:', error);
-                    mostrarNotificacion('Error al cargar los datos en el formulario: ' + error.message, 'error');
-                }
-            }
-
-            /**
-             * Función para mostrar el formulario
-             */
-            function mostrarFormulario() {
-                const formContainer = document.getElementById('form-container');
-                if (formContainer) {
-                    formContainer.style.display = 'block';
-                    formContainer.classList.add('show');
-
-                    // ✅ Establecer fecha mínima como hoy
-                    const hoy = new Date().toISOString().split('T')[0];
-                    const fechaInicio = document.getElementById('fechaInicio');
-                    const fechaFin = document.getElementById('fechaFin');
-                    if (fechaInicio) fechaInicio.setAttribute('min', hoy);
-                    if (fechaFin) fechaFin.setAttribute('min', hoy);
-
-                    // Scroll hasta el formulario
-                    formContainer.scrollIntoView({ behavior: 'smooth' });
-                }
-            }
-
-            /**
-             * Función para resetear el modo edición
-             */
-            function resetearModoEdicion() {
-                modoEdicion = false;
-                idOfertaModificar = null;
-                estadoOfertaEnEdicion = null;
-
-                // Resetear el botón submit
-                const btnSubmit = document.getElementById('btn-submit-form');
-                const btnSubmitText = document.getElementById('btn-submit-text');
-                if (btnSubmit && btnSubmitText) {
-                    btnSubmitText.textContent = 'Registrar Oferta';
-                    btnSubmit.classList.remove('btn-update');
-                }
-
-                // Limpiar ID de oferta
-                document.getElementById('idOfertaModificar').value = '';
-            }
-
-            // Modificar la función de envío del formulario para manejar actualizaciones
-            const formularioOriginal = document.getElementById('oferta-form');
-            if (formularioOriginal) {
-                // Interceptar el envío del formulario
-                formularioOriginal.addEventListener('submit', function (e) {
-                    e.preventDefault();
-
-                    // Sincronizar campos calculados antes de validar/enviar
-                    const tipoOferta = document.getElementById('tipoOferta') ? document.getElementById('tipoOferta').value : '';
-
-                    console.log('🔍 Tipo de oferta:', tipoOferta);
-
-                    // Para CHARLA y SEMINARIO: copiar fechas específicas a campos generales PRIMERO
-                    if (tipoOferta === 'CHARLA') {
-                        const fechaCharla = document.getElementById('fechaCharla')?.value;
-                        console.log('📅 Fecha Charla:', fechaCharla);
-                        if (fechaCharla) {
-                            const inputFechaInicio = document.getElementById('fechaInicio');
-                            const inputFechaFin = document.getElementById('fechaFin');
-
-                            // Habilitar campos antes de asignar valores (para que se envíen en FormData)
-                            inputFechaInicio.disabled = false;
-                            inputFechaFin.disabled = false;
-
-                            inputFechaInicio.value = fechaCharla;
-                            inputFechaFin.value = fechaCharla;
-                            console.log('✅ Copiado fechaCharla a fechaInicio y fechaFin:', fechaCharla);
-                        } else {
-                            console.error('❌ No se encontró fechaCharla');
-                        }
+                        
                     } else if (tipoOferta === 'SEMINARIO') {
-                        const fechaSeminario = document.getElementById('fechaSeminario')?.value;
-                        console.log('📅 Fecha Seminario:', fechaSeminario);
-                        if (fechaSeminario) {
-                            const inputFechaInicio = document.getElementById('fechaInicio');
-                            const inputFechaFin = document.getElementById('fechaFin');
-
-                            // Habilitar campos antes de asignar valores (para que se envíen en FormData)
-                            inputFechaInicio.disabled = false;
-                            inputFechaFin.disabled = false;
-
-                            inputFechaInicio.value = fechaSeminario;
-                            inputFechaFin.value = fechaSeminario;
-                            console.log('✅ Copiado fechaSeminario a fechaInicio y fechaFin:', fechaSeminario);
-                        } else {
-                            console.error('❌ No se encontró fechaSeminario');
+                        console.log('🏛️ Cargando datos de SEMINARIO');
+                        
+                        // Fecha del seminario
+                        if (document.getElementById('fechaSeminario')) {
+                            document.getElementById('fechaSeminario').value = oferta.fechaInicio || '';
+                            console.log('✅ Fecha seminario cargada:', oferta.fechaInicio);
+                        }
+                        
+                        // Hora de inicio
+                        if (document.getElementById('horaSeminario') && oferta.horaInicio) {
+                            const horaStr = oferta.horaInicio.toString().substring(0, 5);
+                            document.getElementById('horaSeminario').value = horaStr;
+                            console.log('✅ Hora seminario cargada:', horaStr);
+                        }
+                        
+                        // Fechas de inscripción
+                        if (document.getElementById('fechaInicioInscripcion')) {
+                            document.getElementById('fechaInicioInscripcion').value = oferta.fechaInicioInscripcion || '';
+                            console.log('✅ Fecha inicio inscripción cargada:', oferta.fechaInicioInscripcion);
+                        }
+                        if (document.getElementById('fechaFinInscripcion')) {
+                            document.getElementById('fechaFinInscripcion').value = oferta.fechaFinInscripcion || '';
+                            console.log('✅ Fecha fin inscripción cargada:', oferta.fechaFinInscripcion);
+                        }
+                        
+                        if (document.getElementById('duracionMinutos')) {
+                            document.getElementById('duracionMinutos').value = oferta.duracionMinutos || '';
+                        }
+                        if (document.getElementById('publicoObjetivoSeminario')) {
+                            document.getElementById('publicoObjetivoSeminario').value = oferta.publicoObjetivo || '';
+                            console.log('✅ Público objetivo cargado:', oferta.publicoObjetivo);
+                        }
+                        
+                        // Cargar disertantes
+                        if (oferta.disertantes && Array.isArray(oferta.disertantes)) {
+                            // Limpiar disertantes de formato anidado [[...]]
+                            disertantesSeminario = oferta.disertantes.map(d => {
+                                if (Array.isArray(d)) {
+                                    return d[0]; // Extraer el primer elemento si es un array
+                                }
+                                return d;
+                            }).filter(d => d); // Filtrar valores vacíos
+                            actualizarDisertantesChips('seminario');
+                            console.log('✅ Disertantes seminario cargados:', disertantesSeminario);
                         }
                     }
-
-                    actualizarHorariosHidden();
-                    actualizarDocentesHidden('curso');
-                    actualizarDocentesHidden('formacion');
-                    actualizarDisertantesHidden('charla');
-                    actualizarDisertantesHidden('seminario');
-                    actualizarCategoriaHidden();
-                    actualizarCertificadoHidden();
+                    
+                    console.log('Campos específicos cargados');
+                }, 100);
+                
+                // Cargar categorías
+                if (oferta.categorias && Array.isArray(oferta.categorias)) {
+                    categoriasSeleccionadas = oferta.categorias.map(cat => ({
+                        id: cat.id.toString(),
+                        nombre: cat.nombre
+                    }));
+                    actualizarCategoriasChips();
+                    console.log('Categorías cargadas:', categoriasSeleccionadas.length);
+                }
+                
+                // Cargar horarios si existen
+                if (oferta.horarios && Array.isArray(oferta.horarios)) {
+                    console.log('Horarios recibidos:', oferta.horarios);
+                    horariosSeleccionados = oferta.horarios.map(h => {
+                        console.log('  - Horario individual:', h);
+                        return {
+                            dia: h.dia || h.diaSemana,
+                            horaInicio: h.horaInicio,
+                            horaFin: h.horaFin
+                        };
+                    });
+                    actualizarHorariosChips();
+                    console.log('Horarios cargados:', horariosSeleccionados.length, horariosSeleccionados);
+                }
+                
+                // Actualizar visibilidad de campos según modalidad y tipo
+                actualizarCamposModalidad();
+                
+                console.log('Formulario poblado exitosamente');
+                
+            } catch (error) {
+                console.error('Error poblando formulario:', error);
+                mostrarNotificacion('Error al cargar los datos en el formulario: ' + error.message, 'error');
+            }
+        }
+        
+        /**
+         * Función para mostrar el formulario
+         */
+        function mostrarFormulario() {
+            const formContainer = document.getElementById('form-container');
+            if (formContainer) {
+                formContainer.style.display = 'block';
+                formContainer.classList.add('show');
+                
+                // ✅ Establecer fecha mínima como hoy
+                const hoy = new Date().toISOString().split('T')[0];
+                const fechaInicio = document.getElementById('fechaInicio');
+                const fechaFin = document.getElementById('fechaFin');
+                if (fechaInicio) fechaInicio.setAttribute('min', hoy);
+                if (fechaFin) fechaFin.setAttribute('min', hoy);
+                
+                // Scroll hasta el formulario
+                formContainer.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+        
+        /**
+         * Función para resetear el modo edición
+         */
+        function resetearModoEdicion() {
+            modoEdicion = false;
+            idOfertaModificar = null;
+            estadoOfertaEnEdicion = null;
+            
+            // Resetear el botón submit
+            const btnSubmit = document.getElementById('btn-submit-form');
+            const btnSubmitText = document.getElementById('btn-submit-text');
+            if (btnSubmit && btnSubmitText) {
+                btnSubmitText.textContent = 'Registrar Oferta';
+                btnSubmit.classList.remove('btn-update');
+            }
+            
+            // Limpiar ID de oferta
+            document.getElementById('idOfertaModificar').value = '';
+            limpiarCategoriasSeleccionadas();
+        }
+        
+        // Modificar la función de envío del formulario para manejar actualizaciones
+        const formularioOriginal = document.getElementById('oferta-form');
+        if (formularioOriginal) {
+            // Interceptar el envío del formulario
+            formularioOriginal.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Sincronizar campos calculados antes de validar/enviar
+                const tipoOferta = document.getElementById('tipoOferta') ? document.getElementById('tipoOferta').value : '';
+                
+                console.log('🔍 Tipo de oferta:', tipoOferta);
+                
+                // Para CHARLA y SEMINARIO: copiar fechas específicas a campos generales PRIMERO
+                if (tipoOferta === 'CHARLA') {
+                    const fechaCharla = document.getElementById('fechaCharla')?.value;
+                    console.log('📅 Fecha Charla:', fechaCharla);
+                    if (fechaCharla) {
+                        const inputFechaInicio = document.getElementById('fechaInicio');
+                        const inputFechaFin = document.getElementById('fechaFin');
+                        
+                        // Habilitar campos antes de asignar valores (para que se envíen en FormData)
+                        inputFechaInicio.disabled = false;
+                        inputFechaFin.disabled = false;
+                        
+                        inputFechaInicio.value = fechaCharla;
+                        inputFechaFin.value = fechaCharla;
+                        console.log('✅ Copiado fechaCharla a fechaInicio y fechaFin:', fechaCharla);
+                    } else {
+                        console.error('❌ No se encontró fechaCharla');
+                    }
+                } else if (tipoOferta === 'SEMINARIO') {
+                    const fechaSeminario = document.getElementById('fechaSeminario')?.value;
+                    console.log('📅 Fecha Seminario:', fechaSeminario);
+                    if (fechaSeminario) {
+                        const inputFechaInicio = document.getElementById('fechaInicio');
+                        const inputFechaFin = document.getElementById('fechaFin');
+                        
+                        // Habilitar campos antes de asignar valores (para que se envíen en FormData)
+                        inputFechaInicio.disabled = false;
+                        inputFechaFin.disabled = false;
+                        
+                        inputFechaInicio.value = fechaSeminario;
+                        inputFechaFin.value = fechaSeminario;
+                        console.log('✅ Copiado fechaSeminario a fechaInicio y fechaFin:', fechaSeminario);
+                    } else {
+                        console.error('❌ No se encontró fechaSeminario');
+                    }
+                }
+                
+                actualizarHorariosHidden();
+                actualizarDocentesHidden('curso');
+                actualizarDocentesHidden('formacion');
+                actualizarDisertantesHidden('charla');
+                actualizarDisertantesHidden('seminario');
+                actualizarCategoriaHidden();
+                actualizarCertificadoHidden();
 
                     if (!validarFormulario(tipoOferta)) {
                         console.warn('Validación fallida, formulario no enviado');
