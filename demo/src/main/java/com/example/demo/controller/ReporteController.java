@@ -237,8 +237,15 @@ public class ReporteController {
                 log.setAccion("EXPORTAR_REPORTE");
                 log.setAfecta("Reportes");
                 // Guardamos el nombre del archivo al inicio de los detalles para parsing fácil
-                log.setDetalles("Archivo: " + savedFile + " | Exportación de ofertas. Formato: " + (formato != null ? formato : "PDF") +
-                                ". Periodo: " + periodoTexto + ". Registros: " + ofertas.size());
+                String detalles;
+                if ("estadistico".equalsIgnoreCase(tipoReporte)) {
+                    detalles = "Se genero reporte " + tipoReporte + " en el periodo " + periodoTexto;
+                } else {
+                    detalles = "Archivo: " + savedFile + " | Exportación de ofertas. Formato: "
+                            + (formato != null ? formato : "PDF")
+                            + ". Periodo: " + periodoTexto + ". Registros: " + ofertas.size();
+                }
+                log.setDetalles(detalles);
                 log.setExito(true);
                 log.setIp(request.getRemoteAddr());
                 
