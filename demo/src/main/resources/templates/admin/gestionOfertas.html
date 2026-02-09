@@ -961,14 +961,24 @@
                                 <h4><i class="fas fa-users"></i> Información del Seminario</h4>
                                 <div class="form-grid">
                                     <div class="form-group">
-                                        <label for="fechaSeminario">Fecha del Seminario *</label>
-                                        <input type="date" id="fechaSeminario" name="fechaSeminario"
-                                            class="form-control">
+                                        <label for="numeroEncuentros">Número de encuentros *</label>
+                                        <input type="number" id="numeroEncuentros" name="numeroEncuentros"
+                                            class="form-control" min="1" step="1" placeholder="Ej: 4">
+                                        <small id="help-encuentros" class="form-text text-muted">
+                                            Debe ser menor o igual a los días entre fecha inicio y fecha fin.
+                                        </small>
                                     </div>
                                     <div class="form-group">
                                         <label for="horaSeminario">Hora de Inicio *</label>
                                         <input type="time" id="horaSeminario" name="horaSeminario" class="form-control">
                                     </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Fechas de encuentros</label>
+                                    <div id="encuentros-preview" class="form-text text-muted">
+                                        Completa fecha inicio, fecha fin y número de encuentros para generar las fechas.
+                                    </div>
+                                    <div id="encuentros-fechas-list" class="form-grid" style="margin-top: 10px;"></div>
                                 </div>
                                 <div class="form-group">
                                     <label for="publicoObjetivoSeminario">Público Objetivo</label>
@@ -1988,15 +1998,17 @@
             
             if (fechaInicio) {
                 fechaInicio.addEventListener('change', function() {
-                    // Solo aplicar lógica si es CURSO o FORMACION
+                    // Aplicar lógica si es CURSO, FORMACION o SEMINARIO
                     const tipoOferta = document.getElementById('tipoOferta')?.value;
-                    if (tipoOferta === 'CURSO' || tipoOferta === 'FORMACION') {
+                    if (tipoOferta === 'CURSO' || tipoOferta === 'FORMACION' || tipoOferta === 'SEMINARIO') {
                         // Habilitar fechaFin cuando se selecciona fechaInicio
                         if (fechaFin && this.value) {
                             fechaFin.disabled = false;
                             fechaFin.setAttribute('min', this.value);
                         }
-                        calcularNumeroCuotas();
+                        if (tipoOferta === 'CURSO' || tipoOferta === 'FORMACION') {
+                            calcularNumeroCuotas();
+                        }
                     }
                 });
             }
@@ -2088,10 +2100,10 @@
             if (grupoNroCuotas) grupoNroCuotas.style.display = mostrarCamposCuotas ? 'block' : 'none';
             if (grupoDiaVencimiento) grupoDiaVencimiento.style.display = mostrarCamposCuotas ? 'block' : 'none';
             
-            // Ocultar fechaInicio y fechaFin para CHARLA y SEMINARIO (usan sus propios campos específicos)
+            // Ocultar fechaInicio y fechaFin solo para CHARLA (usa fecha específica)
             const grupoFechaInicio = document.getElementById('grupo-fecha-inicio');
             const grupoFechaFin = document.getElementById('grupo-fecha-fin');
-            const mostrarFechasGenerales = tipoOferta === 'CURSO' || tipoOferta === 'FORMACION';
+            const mostrarFechasGenerales = tipoOferta === 'CURSO' || tipoOferta === 'FORMACION' || tipoOferta === 'SEMINARIO';
             
             if (grupoFechaInicio) {
                 grupoFechaInicio.style.display = mostrarFechasGenerales ? 'block' : 'none';
@@ -2356,11 +2368,11 @@
                     return;
                 }
             } else if (tipoOferta === 'SEMINARIO') {
-                fecha = document.getElementById('fechaSeminario').value;
+                fecha = document.getElementById('fechaInicio').value;
                 hora = document.getElementById('horaSeminario').value;
                 
                 if (!fecha || !hora) {
-                    mostrarNotificacion('Por favor, ingresa la fecha y hora del seminario', 'warning');
+                    mostrarNotificacion('Por favor, ingresa la fecha de inicio y la hora del seminario', 'warning');
                     return;
                 }
             }
@@ -2411,6 +2423,98 @@
             console.log('   - Hora: ' + hora);
             console.log('   - URL: ' + videoUrl);
         };
+
+        function actualizarEncuentrosSeminario() {
+            const tipoOferta = document.getElementById('tipoOferta')?.value;
+            const preview = document.getElementById('encuentros-preview');
+            const fechasList = document.getElementById('encuentros-fechas-list');
+            const help = document.getElementById('help-encuentros');
+            const numeroInput = document.getElementById('numeroEncuentros');
+            const fechaInicio = document.getElementById('fechaInicio')?.value;
+            const fechaFin = document.getElementById('fechaFin')?.value;
+
+            if (!preview || !numeroInput || !fechasList) return;
+
+            if (tipoOferta !== 'SEMINARIO') {
+                preview.textContent = 'Completa fecha inicio, fecha fin y número de encuentros para ver el cronograma.';
+                if (help) help.textContent = 'Debe ser menor o igual a los días entre fecha inicio y fecha fin.';
+                fechasList.innerHTML = '';
+                return;
+            }
+
+            if (!fechaInicio || !fechaFin) {
+                preview.textContent = 'Completa fecha inicio y fecha fin para calcular los encuentros.';
+                if (help) help.textContent = 'Debe ser menor o igual a los días entre fecha inicio y fecha fin.';
+                fechasList.innerHTML = '';
+                return;
+            }
+
+            const inicioObj = new Date(fechaInicio + 'T00:00:00');
+            const finObj = new Date(fechaFin + 'T00:00:00');
+            const diffDays = Math.floor((finObj - inicioObj) / (1000 * 60 * 60 * 24)) + 1;
+
+            if (diffDays <= 0) {
+                preview.textContent = 'Rango de fechas inválido.';
+                fechasList.innerHTML = '';
+                return;
+            }
+
+            numeroInput.max = diffDays;
+            if (help) help.textContent = `Máximo ${diffDays} encuentros según el rango seleccionado.`;
+
+            const numero = parseInt(numeroInput.value || '0', 10);
+            if (!numero || numero <= 0) {
+                preview.textContent = 'Ingresa el número de encuentros para ver las fechas.';
+                fechasList.innerHTML = '';
+                return;
+            }
+            if (numero > diffDays) {
+                preview.textContent = 'El número de encuentros supera el rango disponible.';
+                fechasList.innerHTML = '';
+                return;
+            }
+
+            const existentes = Array.from(fechasList.querySelectorAll('input[name="fechasEncuentros"]'))
+                .map((input) => input.value)
+                .filter(Boolean);
+            const fechas = [];
+            for (let i = 0; i < numero; i++) {
+                const d = new Date(inicioObj);
+                d.setDate(inicioObj.getDate() + i);
+                const yyyy = d.getFullYear();
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                fechas.push(`${yyyy}-${mm}-${dd}`);
+            }
+
+            preview.textContent = `Selecciona ${numero} fechas (entre ${fechaInicio} y ${fechaFin}).`;
+            fechasList.innerHTML = fechas.map((f, idx) => {
+                const valor = existentes[idx] || f;
+                return `
+                    <div class="form-group">
+                        <label for="encuentro-fecha-${idx + 1}">Encuentro ${idx + 1}</label>
+                        <input type="date"
+                               id="encuentro-fecha-${idx + 1}"
+                               name="fechasEncuentros"
+                               class="form-control"
+                               min="${fechaInicio}"
+                               max="${fechaFin}"
+                               value="${valor}"
+                               required>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            ['fechaInicio', 'fechaFin', 'numeroEncuentros', 'tipoOferta'].forEach((id) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.addEventListener('change', actualizarEncuentrosSeminario);
+                el.addEventListener('input', actualizarEncuentrosSeminario);
+            });
+            actualizarEncuentrosSeminario();
+        });
 
 
             // Variables globales para docentes seleccionados
@@ -3392,7 +3496,7 @@
                         const fechaFinInscripcion = document.getElementById('fechaFinInscripcion')?.value;
                         const fechaEvento = tipoOferta === 'CHARLA'
                             ? document.getElementById('fechaCharla')?.value
-                            : document.getElementById('fechaSeminario')?.value;
+                            : document.getElementById('fechaInicio')?.value;
 
                         if (fechaFinInscripcion && fechaEvento) {
                             const fechaFinInscripcionObj = new Date(fechaFinInscripcion + 'T00:00:00');
@@ -3405,6 +3509,46 @@
                                     'error'
                                 );
                                 return false;
+                            }
+                        }
+
+                        if (tipoOferta === 'SEMINARIO') {
+                            const numeroEncuentros = parseInt(document.getElementById('numeroEncuentros')?.value || '0', 10);
+                            const fechaInicio = document.getElementById('fechaInicio')?.value;
+                            const fechaFin = document.getElementById('fechaFin')?.value;
+
+                            if (!numeroEncuentros || numeroEncuentros <= 0) {
+                                mostrarNotificacion('Debes indicar el número de encuentros del seminario', 'error');
+                                return false;
+                            }
+
+                            if (fechaInicio && fechaFin) {
+                                const inicioObj = new Date(fechaInicio + 'T00:00:00');
+                                const finObj = new Date(fechaFin + 'T00:00:00');
+                                const diffDays = Math.floor((finObj - inicioObj) / (1000 * 60 * 60 * 24)) + 1;
+                                if (numeroEncuentros > diffDays) {
+                                    mostrarNotificacion('El número de encuentros no puede superar los días entre fecha inicio y fecha fin', 'error');
+                                    return false;
+                                }
+
+                                const fechasEncuentrosInputs = Array.from(document.querySelectorAll('input[name="fechasEncuentros"]'));
+                                if (fechasEncuentrosInputs.length !== numeroEncuentros) {
+                                    mostrarNotificacion('Debe indicar la fecha de cada encuentro del seminario', 'error');
+                                    return false;
+                                }
+
+                                for (let i = 0; i < fechasEncuentrosInputs.length; i++) {
+                                    const valor = fechasEncuentrosInputs[i].value;
+                                    if (!valor) {
+                                        mostrarNotificacion('Todos los encuentros deben tener una fecha asignada', 'error');
+                                        return false;
+                                    }
+                                    const fechaEncuentro = new Date(valor + 'T00:00:00');
+                                    if (fechaEncuentro < inicioObj || fechaEncuentro > finObj) {
+                                        mostrarNotificacion('Las fechas de los encuentros deben estar entre la fecha de inicio y fin del seminario', 'error');
+                                        return false;
+                                    }
+                                }
                             }
                         }
 
@@ -5106,10 +5250,9 @@
                     } else if (tipoOferta === 'SEMINARIO') {
                         console.log('🏛️ Cargando datos de SEMINARIO');
                         
-                        // Fecha del seminario
-                        if (document.getElementById('fechaSeminario')) {
-                            document.getElementById('fechaSeminario').value = oferta.fechaInicio || '';
-                            console.log('✅ Fecha seminario cargada:', oferta.fechaInicio);
+                        if (document.getElementById('numeroEncuentros')) {
+                            document.getElementById('numeroEncuentros').value = oferta.numeroEncuentros || '';
+                            console.log('✅ Número de encuentros cargado:', oferta.numeroEncuentros);
                         }
                         
                         // Hora de inicio
@@ -5135,6 +5278,9 @@
                         if (document.getElementById('publicoObjetivoSeminario')) {
                             document.getElementById('publicoObjetivoSeminario').value = oferta.publicoObjetivo || '';
                             console.log('✅ Público objetivo cargado:', oferta.publicoObjetivo);
+                        }
+                        if (typeof actualizarEncuentrosSeminario === 'function') {
+                            actualizarEncuentrosSeminario();
                         }
                         
                         // Cargar disertantes
@@ -5262,23 +5408,6 @@
                     } else {
                         console.error('❌ No se encontró fechaCharla');
                     }
-                } else if (tipoOferta === 'SEMINARIO') {
-                    const fechaSeminario = document.getElementById('fechaSeminario')?.value;
-                    console.log('📅 Fecha Seminario:', fechaSeminario);
-                    if (fechaSeminario) {
-                        const inputFechaInicio = document.getElementById('fechaInicio');
-                        const inputFechaFin = document.getElementById('fechaFin');
-                        
-                        // Habilitar campos antes de asignar valores (para que se envíen en FormData)
-                        inputFechaInicio.disabled = false;
-                        inputFechaFin.disabled = false;
-                        
-                        inputFechaInicio.value = fechaSeminario;
-                        inputFechaFin.value = fechaSeminario;
-                        console.log('✅ Copiado fechaSeminario a fechaInicio y fechaFin:', fechaSeminario);
-                    } else {
-                        console.error('❌ No se encontró fechaSeminario');
-                    }
                 }
                 
                 actualizarHorariosHidden();
@@ -5339,20 +5468,6 @@
                     inputFechaInicio.value = fechaCharla;
                     inputFechaFin.value = fechaCharla;
                     console.log('✅ [EDICIÓN] Copiado fechaCharla:', fechaCharla);
-                }
-            } else if (tipoOferta === 'SEMINARIO') {
-                const fechaSeminario = document.getElementById('fechaSeminario')?.value;
-                if (fechaSeminario) {
-                    const inputFechaInicio = document.getElementById('fechaInicio');
-                    const inputFechaFin = document.getElementById('fechaFin');
-                    
-                    // Habilitar campos antes de asignar valores
-                    inputFechaInicio.disabled = false;
-                    inputFechaFin.disabled = false;
-                    
-                    inputFechaInicio.value = fechaSeminario;
-                    inputFechaFin.value = fechaSeminario;
-                    console.log('✅ [EDICIÓN] Copiado fechaSeminario:', fechaSeminario);
                 }
             }
             

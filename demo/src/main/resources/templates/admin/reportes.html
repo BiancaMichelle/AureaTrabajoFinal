@@ -77,8 +77,29 @@
                     </div>
                     <form th:action="@{/admin/reportes/ofertas/descargar}" method="get" target="_blank" onsubmit="setTimeout(() => window.location.reload(), 4000)">
                         <input type="hidden" name="tipoReporte" value="ofertas">
-                        <input type="hidden" name="tipos" value="Curso,Formación,Seminario,Charla"> <!-- Todos los tipos por defecto -->
                         <div class="tw-space-y-3">
+                            <div>
+                                <label class="tw-text-sm tw-font-medium tw-text-gray-700">Tipo de oferta</label>
+                                <div class="tw-grid tw-grid-cols-2 tw-gap-2 tw-mt-2">
+                                    <label class="tw-flex tw-items-center tw-gap-2 tw-text-sm tw-text-gray-700">
+                                        <input type="checkbox" name="tipos" value="CURSO" class="tw-rounded tw-border-gray-300" checked>
+                                        Curso
+                                    </label>
+                                    <label class="tw-flex tw-items-center tw-gap-2 tw-text-sm tw-text-gray-700">
+                                        <input type="checkbox" name="tipos" value="FORMACION" class="tw-rounded tw-border-gray-300" checked>
+                                        Formación
+                                    </label>
+                                    <label class="tw-flex tw-items-center tw-gap-2 tw-text-sm tw-text-gray-700">
+                                        <input type="checkbox" name="tipos" value="SEMINARIO" class="tw-rounded tw-border-gray-300" checked>
+                                        Seminario
+                                    </label>
+                                    <label class="tw-flex tw-items-center tw-gap-2 tw-text-sm tw-text-gray-700">
+                                        <input type="checkbox" name="tipos" value="CHARLA" class="tw-rounded tw-border-gray-300" checked>
+                                        Charla
+                                    </label>
+                                </div>
+                                <p class="tw-text-xs tw-text-gray-500 tw-mt-1">Puedes seleccionar uno o varios tipos.</p>
+                            </div>
                             <div>
                                 <label class="tw-text-sm tw-font-medium tw-text-gray-700">Rango de Fechas</label>
                                 <div class="tw-flex tw-flex-col tw-gap-2">
@@ -90,9 +111,10 @@
                                 <label class="tw-text-sm tw-font-medium tw-text-gray-700">Estado</label>
                                 <select name="estado" class="tw-w-full tw-text-sm tw-border-gray-300 tw-rounded-md tw-p-2 tw-border filter-input">
                                     <option value="">Todos</option>
-                                    <option value="PUBLICADO">Publicado</option>
-                                    <option value="BORRADOR">Borrador</option>
-                                    <option value="CERRADO">Cerrado</option>
+                                    <option value="ACTIVA">Activa</option>
+                                    <option value="ENCURSO">En curso</option>
+                                    <option value="FINALIZADA">Finalizada</option>
+                                    <option value="CERRADA">Cerrada</option>
                                 </select>
                             </div>
                             <div class="tw-flex tw-items-center tw-justify-between tw-pt-3">
