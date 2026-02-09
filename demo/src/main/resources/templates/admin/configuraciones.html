@@ -89,10 +89,10 @@
                                            th:value="${instituto?.telefono}">
                                 </div>
                                 <div class="form-group">
-                                    <label for="email">Email Institucional</label>
+                                    <label for="email">Email Institucional *</label>
                                     <input type="email" id="email" name="email" 
                                            class="form-control" placeholder="contacto@instituto.com"
-                                           th:value="${instituto?.email}">
+                                           th:value="${instituto?.email}" required>
                                 </div>
                             </div>
                         </div>
@@ -127,22 +127,22 @@
                             <h4><i class="fas fa-credit-card"></i> Configuración de Pagos</h4>
                             <div class="form-grid">
                                 <div class="form-group">
-                                    <label for="razonSocial">Razón Social</label>
+                                    <label for="razonSocial">Razón Social *</label>
                                     <input type="text" id="razonSocial" name="razonSocial" 
                                            class="form-control" placeholder="Ej: Instituto Aurea S.A."
-                                           th:value="${instituto?.razonSocial}">
+                                           th:value="${instituto?.razonSocial}" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="cuil">CUIL</label>
+                                    <label for="cuil">CUIL *</label>
                                     <input type="text" id="cuil" name="cuil" 
                                            class="form-control" placeholder="Ej: 30-12345678-9"
-                                           th:value="${instituto?.cuil}">
+                                           th:value="${instituto?.cuil}" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="inicioActividad">Inicio de Actividad</label>
+                                    <label for="inicioActividad">Inicio de Actividad *</label>
                                     <input type="datetime-local" id="inicioActividad" name="inicioActividad"
                                            class="form-control"
-                                           th:value="${instituto?.inicioActividad != null ? #temporals.format(instituto.inicioActividad, 'yyyy-MM-dd''T''HH:mm') : ''}">
+                                           th:value="${instituto?.inicioActividad != null ? #temporals.format(instituto.inicioActividad, 'yyyy-MM-dd''T''HH:mm') : ''}" required>
                                 </div>
                                 <div class="form-group">
                                     <label for="moneda">Moneda *</label>
@@ -156,19 +156,19 @@
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <label for="cuentaBancaria">CBU / Cuenta Bancaria</label>
+                                    <label for="cuentaBancaria">CBU / Cuenta Bancaria *</label>
                                     <input type="text" id="cuentaBancaria" name="cuentaBancaria" 
                                            class="form-control" placeholder="1234567890123456789012"
-                                           th:value="${instituto?.cuentaBancaria}">
+                                           th:value="${instituto?.cuentaBancaria}" required>
                                     <div class="form-text">
                                         <i class="fas fa-info-circle"></i> CBU para recibir pagos de inscripciones
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label for="politicaPagos">Política de Pagos</label>
+                                    <label for="politicaPagos">Política de Pagos *</label>
                                     <textarea id="politicaPagos" name="politicaPagos" class="form-control" 
                                               rows="3" placeholder="Términos y condiciones de pago..."
-                                              th:text="${instituto?.politicaPagos}"></textarea>
+                                              th:text="${instituto?.politicaPagos}" required></textarea>
                                 </div>
                             </div>
                         </div>
@@ -215,15 +215,15 @@
                         <!-- Logo del Instituto -->
                         <div class="form-section">
                             <h4><i class="fas fa-image"></i> Logo Institucional</h4>
-                            <div class="image-upload-container">
+                            <div class="image-upload-container logo-photo-container" style="width: 100%; height: 250px; position: relative; overflow: hidden;">
                                 <input type="file" id="logo-input" name="logo" accept="image/*" class="image-input">
-                                <div class="image-upload-area" onclick="document.getElementById('logo-input').click()">
+                                <div class="image-upload-area" style="width: 100%; height: 250px; position: relative; overflow: hidden; padding: 0;" onclick="document.getElementById('logo-input').click()">
                                     <div class="upload-placeholder" id="logo-placeholder">
                                         <i class="fas fa-cloud-upload-alt"></i>
                                         <p>Haga clic para subir el logo</p>
                                         <span>PNG, JPG hasta 5MB</span>
                                     </div>
-                                    <img id="logo-preview" style="display: none; max-width: 100%; height: auto; border-radius: 8px;" alt="Logo preview">
+                                    <img id="logo-preview" style="display: none; width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; position: absolute; inset: 0; margin: auto; border-radius: 8px;" alt="Logo preview">
                                 </div>
                             </div>
                         </div>
@@ -324,13 +324,9 @@
                                                      th:alt="${imagen.altText ?: 'Imagen del carrusel'}" 
                                                      th:data-full-src="@{'/api/carrusel/imagen/' + ${imagen.id}}" />
                                                 <div class="image-overlay">
-                                                    <form th:action="@{'/admin/configuracion/carrusel/eliminar/' + ${imagen.id}}" 
-                                                          method="POST" style="display: inline;" 
-                                                          th:attr="onsubmit='event.preventDefault(); var form = this; ModalConfirmacion.show(\'Eliminar Imagen\', \'¿Estás seguro de que quieres eliminar esta imagen?\', function() { form.submit(); });'">
-                                                        <button type="submit" class="btn-delete-image" onclick="event.stopPropagation();">
-                                                            <i class="fas fa-trash"></i>
-                                                        </button>
-                                                    </form>
+                                                    <button type="button" class="btn-delete-image" th:data-id="${imagen.id}" onclick="event.stopPropagation();">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
                                                     <div class="image-order">
                                                         <span th:text="${imagen.orden}"></span>
                                                     </div>

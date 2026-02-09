@@ -165,7 +165,7 @@ function setupAutomaticConfigToggle() {
 // =================   VALIDACIÓN DEL FORMULARIO   =================
 function setupFormValidation() {
     const form = document.getElementById('config-form');
-    const inputs = form.querySelectorAll('input[required], select[required]');
+    const inputs = form.querySelectorAll('input[required], select[required], textarea[required]');
     
     inputs.forEach(input => {
         input.addEventListener('blur', validateField);
@@ -270,10 +270,22 @@ function setupFormSubmission() {
             return;
         }
 
-        console.log('✅ Validación exitosa, enviando...');
-        // Mostrar loading y enviar
-        showLoadingState(true);
-        submitConfiguration();
+        const doSubmit = () => {
+            console.log('✅ Validación exitosa, enviando...');
+            // Mostrar loading y enviar
+            showLoadingState(true);
+            submitConfiguration();
+        };
+
+        if (typeof ModalConfirmacion !== 'undefined' && ModalConfirmacion.show) {
+            ModalConfirmacion.show(
+                'Confirmar Guardado',
+                '¿Estás seguro de que deseas guardar los cambios de la configuración?',
+                doSubmit
+            );
+        } else if (confirm('¿Estás seguro de que deseas guardar los cambios de la configuración?')) {
+            doSubmit();
+        }
     };
 
     form.addEventListener('submit', function(e) {
@@ -329,7 +341,7 @@ function setupFormSubmission() {
 
 function validateForm() {
     const form = document.getElementById('config-form');
-    const requiredFields = form.querySelectorAll('input[required], select[required]');
+    const requiredFields = form.querySelectorAll('input[required], select[required], textarea[required]');
     let isValid = true;
     
     requiredFields.forEach(field => {
@@ -512,7 +524,7 @@ function loadSavedConfiguration() {
 }
 
 // =================   NOTIFICACIONES   =================
-function showNotification(message, type = 'success') {
+function showNotification(message, type = 'success', autoCloseMs = 0) {
     // Crear notificación
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
@@ -526,15 +538,20 @@ function showNotification(message, type = 'success') {
         </div>
     `;
     
-    // Agregar al DOM
+    // Agregar al DOM y mostrar
     document.body.appendChild(notification);
-    
-    // Auto remover después de 5 segundos
     setTimeout(() => {
-        if (notification.parentElement) {
-            notification.remove();
-        }
-    }, 5000);
+        notification.classList.add('show');
+    }, 10);
+    
+    // Auto remover opcional (si autoCloseMs es 0 o negativo, solo manual)
+    if (autoCloseMs > 0) {
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.remove();
+            }
+        }, autoCloseMs);
+    }
 }
 
 // =================   UTILIDADES   =================

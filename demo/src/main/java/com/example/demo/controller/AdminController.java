@@ -2842,6 +2842,23 @@ public class AdminController {
                 response.put("message", "El nombre del instituto es obligatorio");
                 return ResponseEntity.badRequest().body(response);
             }
+            Map<String, String> requiredLabels = new HashMap<>();
+            requiredLabels.put("email", "El email institucional es obligatorio");
+            requiredLabels.put("razonSocial", "La razón social es obligatoria");
+            requiredLabels.put("cuil", "El CUIL es obligatorio");
+            requiredLabels.put("inicioActividad", "La fecha de inicio de actividad es obligatoria");
+            requiredLabels.put("moneda", "La moneda es obligatoria");
+            requiredLabels.put("cuentaBancaria", "La cuenta bancaria es obligatoria");
+            requiredLabels.put("politicaPagos", "La política de pagos es obligatoria");
+
+            for (Map.Entry<String, String> entry : requiredLabels.entrySet()) {
+                String value = params.get(entry.getKey());
+                if (value == null || value.trim().isEmpty()) {
+                    response.put("success", false);
+                    response.put("message", entry.getValue());
+                    return ResponseEntity.badRequest().body(response);
+                }
+            }
             
             // Obtener instituto actual
             Instituto instituto = institutoService.obtenerInstituto();
@@ -2864,14 +2881,13 @@ public class AdminController {
             instituto.setPoliticaPagos(params.get("politicaPagos"));
             instituto.setRazonSocial(params.get("razonSocial"));
             instituto.setCuil(params.get("cuil"));
-            if (params.get("inicioActividad") != null && !params.get("inicioActividad").trim().isEmpty()) {
-                try {
-                    instituto.setInicioActividad(java.time.LocalDateTime.parse(params.get("inicioActividad").trim()));
-                } catch (Exception e) {
-                    System.out.println("Error parseando inicioActividad: " + params.get("inicioActividad"));
-                }
-            } else {
-                instituto.setInicioActividad(null);
+            try {
+                instituto.setInicioActividad(java.time.LocalDateTime.parse(params.get("inicioActividad").trim()));
+            } catch (Exception e) {
+                System.out.println("Error parseando inicioActividad: " + params.get("inicioActividad"));
+                response.put("success", false);
+                response.put("message", "La fecha de inicio de actividad no es válida");
+                return ResponseEntity.badRequest().body(response);
             }
             
             // Configuraciones automáticas - Los checkboxes solo envían valor si están marcados
