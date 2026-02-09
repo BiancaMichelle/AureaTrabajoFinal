@@ -2394,27 +2394,58 @@
             }
 
             document.body.insertAdjacentHTML('beforeend', formularioHTML);
+}
 
-            // Agregar event listeners según el tipo
-            setTimeout(() => {
-                if (tipo === 'carpeta') {
-                    const formCarpeta = document.getElementById('formCarpeta');
-                    if (formCarpeta) {
-                        formCarpeta.addEventListener('submit', async (e) => {
-                            e.preventDefault();
-                            await enviarFormularioCarpeta(e.target, moduloId);
-                        });
-                    }
+        
+        async function enviarFormularioCarpeta(form) {
+            const moduloId = form.querySelector('input[name="moduloId"]')?.value;
+            const titulo = form.querySelector('input[name="titulo"]')?.value?.trim() || '';
+            const descripcion = form.querySelector('textarea[name="descripcion"]')?.value?.trim() || '';
+            const materiales = [];
+            const erroresMaterial = [];
+
+            form.querySelectorAll('.material-item').forEach((item, index) => {
+                const tituloMat = item.querySelector('input[name="materialTitulo"]')?.value?.trim() || '';
+                const descripcionMat = item.querySelector('textarea[name="materialDescripcion"]')?.value?.trim() || '';
+                const archivosInput = item.querySelector('input[type="file"][name="materialArchivos"]');
+                const archivos = archivosInput ? Array.from(archivosInput.files || []) : [];
+
+                if (!tituloMat && !descripcionMat && archivos.length === 0) {
+                    return;
                 }
-            }, 100);
-        }
 
-        async function enviarFormularioCarpeta(form, moduloId) {
-            const formData = new FormData(form);
+                if (!tituloMat) {
+                    erroresMaterial.push(`Material ${index + 1} necesita un t??tulo.`);
+                    return;
+                }
+
+                materiales.push({ titulo: tituloMat, descripcion: descripcionMat, archivos });
+            });
+
+            if (erroresMaterial.length > 0) {
+                alert(erroresMaterial.join('
+'));
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('titulo', titulo);
+            if (descripcion) {
+                formData.append('descripcion', descripcion);
+            }
+            formData.append('moduloId', moduloId);
+
             const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
             const csrfHeader = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
+            const btnCrear = form.querySelector('#btnCrearCarpeta');
+            const btnCreando = form.querySelector('#btnCreandoCarpeta');
 
             try {
+                if (btnCrear && btnCreando) {
+                    btnCrear.style.display = 'none';
+                    btnCreando.style.display = 'inline-flex';
+                }
+
                 const response = await fetch('/carpeta/crear', {
                     method: 'POST',
                     headers: {
@@ -2426,7 +2457,42 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    alert('Carpeta creada exitosamente');
+                    const carpetaId = data.carpetaId;
+                    const materialesFallidos = [];
+
+                    for (const material of materiales) {
+                        const materialData = new FormData();
+                        materialData.append('titulo', material.titulo);
+                        if (material.descripcion) {
+                            materialData.append('descripcion', material.descripcion);
+                        }
+                        material.archivos.forEach(file => materialData.append('archivos', file));
+
+                        try {
+                            const materialResponse = await fetch(`/carpeta/${carpetaId}/material`, {
+                                method: 'POST',
+                                headers: {
+                                    [csrfHeader]: csrfToken
+                                },
+                                body: materialData
+                            });
+
+                            const materialResult = await materialResponse.json();
+                            if (!materialResponse.ok || !materialResult.success) {
+                                materialesFallidos.push(material.titulo || 'Material sin t??tulo');
+                            }
+                        } catch (materialError) {
+                            console.error('Error creando material:', materialError);
+                            materialesFallidos.push(material.titulo || 'Material sin t??tulo');
+                        }
+                    }
+
+                    if (materialesFallidos.length > 0) {
+                        alert(`Carpeta creada, pero algunos materiales fallaron: ${materialesFallidos.join(', ')}`);
+                    } else {
+                        alert('Carpeta creada exitosamente');
+                    }
+
                     cerrarFormularioCarpeta();
                     window.location.reload();
                 } else {
@@ -2435,8 +2501,14 @@
             } catch (error) {
                 console.error('Error:', error);
                 alert('Error al crear carpeta');
+            } finally {
+                if (btnCrear && btnCreando) {
+                    btnCrear.style.display = 'inline-flex';
+                    btnCreando.style.display = 'none';
+                }
             }
         }
+
 
         // ========================================
         // FORMULARIO DE RECURSO (ENLACE / TEXTO)
@@ -4219,10 +4291,64 @@
         // ========================================
         // FORMULARIO DE CARPETA
         // ========================================
+        
+        function crearItemMaterialCarpeta(index) {
+            return `
+                <div class="material-item border border-gray-200 rounded-md p-3 space-y-2" data-index="${index}">
+                    <div class="flex items-center justify-between">
+                        <span class="material-item-title text-xs font-semibold text-gray-700">Material ${index + 1}</span>
+                        <button type="button" onclick="eliminarMaterialCarpeta(this)" class="text-xs text-red-600 hover:text-red-700">
+                            <i class="fas fa-times me-1"></i>Quitar
+                        </button>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">T??tulo *</label>
+                        <input type="text" name="materialTitulo" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" placeholder="Ej: Gu??a 1">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Descripci??n</label>
+                        <textarea name="materialDescripcion" rows="2" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" placeholder="Describe el material..."></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Archivos (opcional)</label>
+                        <input type="file" name="materialArchivos" multiple
+                               accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.jpg,.jpeg,.png,.zip"
+                               class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100">
+                    </div>
+                </div>
+            `;
+        }
+
+        function agregarMaterialCarpeta() {
+            const container = document.getElementById('materialesCarpetaContainer');
+            if (!container) return;
+            const index = container.querySelectorAll('.material-item').length;
+            container.insertAdjacentHTML('beforeend', crearItemMaterialCarpeta(index));
+            renumerarMaterialesCarpeta(container);
+        }
+
+        function eliminarMaterialCarpeta(button) {
+            const item = button.closest('.material-item');
+            if (!item) return;
+            const container = item.parentElement;
+            item.remove();
+            renumerarMaterialesCarpeta(container);
+        }
+
+        function renumerarMaterialesCarpeta(container) {
+            const items = container.querySelectorAll('.material-item');
+            items.forEach((item, index) => {
+                item.dataset.index = index;
+                const title = item.querySelector('.material-item-title');
+                if (title) title.textContent = `Material ${index + 1}`;
+            });
+        }
+
         function crearFormularioCarpeta(moduloId, moduloNombre) {
+            const primerItem = crearItemMaterialCarpeta(0);
             return `
                 <div id="formularioCarpetaModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div class="bg-white rounded-lg p-6 w-full max-w-lg">
+                    <div class="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                         <h3 class="text-xl font-semibold mb-2 text-yellow-600">
                             <i class="fas fa-folder-open me-2"></i>Crear Carpeta
                         </h3>
@@ -4230,7 +4356,7 @@
                             <i class="fas fa-folder text-gray-400 me-1"></i>${moduloNombre}
                         </p>
                         
-                        <form id="formCarpeta" class="space-y-4">
+                        <form id="formCarpeta" class="space-y-4" enctype="multipart/form-data">
                             <input type="hidden" name="moduloId" value="${moduloId}">
                             
                             <div>
@@ -4244,11 +4370,27 @@
                             
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">
-                                    <i class="fas fa-align-left me-1"></i>Descripción
+                                    <i class="fas fa-align-left me-1"></i>Descripci??n
                                 </label>
                                 <textarea name="descripcion" rows="2"
                                           class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-yellow-500"
                                           placeholder="Describe el contenido de la carpeta..."></textarea>
+                            </div>
+
+                            <div class="pt-2 border-t">
+                                <div class="flex items-center justify-between mb-2">
+                                    <label class="text-sm font-medium text-gray-700">
+                                        <i class="fas fa-layer-group me-1"></i>Materiales iniciales (opcional)
+                                    </label>
+                                    <button type="button" onclick="agregarMaterialCarpeta()"
+                                            class="text-xs px-2 py-1 bg-green-50 text-green-700 border border-green-200 rounded hover:bg-green-100">
+                                        <i class="fas fa-plus me-1"></i>Agregar material
+                                    </button>
+                                </div>
+                                <p class="text-xs text-gray-500 mb-3">Pod??s cargar varios materiales ahora o dejarlos vac??os.</p>
+                                <div id="materialesCarpetaContainer" class="space-y-3">
+                                    ${primerItem}
+                                </div>
                             </div>
                             
                             <div class="flex justify-end space-x-2 pt-4 border-t">
@@ -4256,9 +4398,13 @@
                                         class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md">
                                     <i class="fas fa-times me-1"></i>Cancelar
                                 </button>
-                                <button type="submit" 
+                                <button type="submit" id="btnCrearCarpeta"
                                         class="px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600">
                                     <i class="fas fa-save me-1"></i>Crear Carpeta
+                                </button>
+                                <button type="button" id="btnCreandoCarpeta" style="display: none;"
+                                        class="px-4 py-2 bg-yellow-500 text-white rounded-md cursor-not-allowed" disabled>
+                                    <i class="fas fa-spinner fa-spin me-1"></i>Creando...
                                 </button>
                             </div>
                         </form>
@@ -4266,6 +4412,7 @@
                 </div>
             `;
         }
+
 
         function cerrarFormularioCarpeta() {
             document.getElementById('formularioCarpetaModal')?.remove();
@@ -4577,11 +4724,7 @@
 
             if (e.target.id === 'formCarpeta') {
                 e.preventDefault();
-                const formData = new FormData(e.target);
-                console.log('📁 Datos de Carpeta:', Object.fromEntries(formData));
-                alert('✅ Carpeta creada (funcionalidad de guardado pendiente)\n\nDatos capturados:\n' +
-                    'Nombre: ' + formData.get('titulo'));
-                cerrarFormularioCarpeta();
+                await enviarFormularioCarpeta(e.target);
             }
 
             if (e.target.id === 'formMaterial') {
@@ -5650,27 +5793,40 @@
     <script th:if="${success != null}" th:inline="javascript">
         /*<![CDATA[*/
         document.addEventListener('DOMContentLoaded', () => {
-            console.log("Auto-opening AI chat for analysis result...");
-            setTimeout(() => {
-                // Abrir el chat
-                if (window.aiChat && typeof window.aiChat.openChat === 'function') {
-                    window.aiChat.openChat();
-                    // Forzar chequeo inmediato de notificaciones para traer el mensaje desde el servidor
-                    if (typeof window.aiChat.checkNotifications === 'function') {
-                        window.aiChat.checkNotifications();
+            const successMsg = /*[[${success}]]*/ '';
+            if (!successMsg) return;
+
+            if (successMsg === 'ANÁLISIS_COMPLETADO') {
+                console.log("Auto-opening AI chat for analysis result...");
+                setTimeout(() => {
+                    // Abrir el chat
+                    if (window.aiChat && typeof window.aiChat.openChat === 'function') {
+                        window.aiChat.openChat();
+                        // Forzar chequeo inmediato de notificaciones para traer el mensaje desde el servidor
+                        if (typeof window.aiChat.checkNotifications === 'function') {
+                            window.aiChat.checkNotifications();
+                        }
+                    } else if (window.simpleChatInstance && typeof window.simpleChatInstance.openChat === 'function') {
+                        window.simpleChatInstance.openChat();
+                        if (typeof window.simpleChatInstance.checkNotifications === 'function') {
+                            window.simpleChatInstance.checkNotifications();
+                        }
+                    } else {
+                        const btn = document.getElementById('chat-button-simple');
+                        if (btn) btn.click();
                     }
-                } else if (window.simpleChatInstance && typeof window.simpleChatInstance.openChat === 'function') {
-                    window.simpleChatInstance.openChat();
-                    if (typeof window.simpleChatInstance.checkNotifications === 'function') {
-                        window.simpleChatInstance.checkNotifications();
-                    }
+                    // NOTA: Ya no inyectamos manualmente el mensaje aquí para evitar duplicados, 
+                    // puesto que el backend ya generó la notificación correspondiente.
+                }, 1000);
+            } else {
+                if (typeof mostrarNotificacionGlobal === 'function') {
+                    mostrarNotificacionGlobal('Éxito', successMsg, 'success');
+                } else if (typeof mostrarToast === 'function') {
+                    mostrarToast(successMsg, 'success');
                 } else {
-                    const btn = document.getElementById('chat-button-simple');
-                    if (btn) btn.click();
+                    alert(successMsg);
                 }
-                // NOTA: Ya no inyectamos manualmente el mensaje aquí para evitar duplicados, 
-                // puesto que el backend ya generó la notificación correspondiente.
-            }, 1000);
+            }
         });
         /*]]>*/
     </script>

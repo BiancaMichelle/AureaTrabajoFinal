@@ -868,6 +868,7 @@ public class DocenteController {
         List<Examen> examenes = examenRepository.findByModulo_Curso_IdOferta(oferta.getIdOferta());
 
         Map<Long, Long> pendientesPorTarea = new HashMap<>();
+        Map<Long, LocalDateTime> ultimoPendientePorTarea = new HashMap<>();
         if (!tareas.isEmpty()) {
             List<Entrega> entregas = entregaRepository.findByTareaIn(tareas);
             for (Entrega entrega : entregas) {
@@ -875,6 +876,13 @@ public class DocenteController {
                     Long tareaId = entrega.getTarea().getIdActividad();
                     if (tareaId != null) {
                         pendientesPorTarea.merge(tareaId, 1L, Long::sum);
+                        LocalDateTime fechaEntrega = entrega.getFechaEntrega();
+                        if (fechaEntrega != null) {
+                            LocalDateTime actual = ultimoPendientePorTarea.get(tareaId);
+                            if (actual == null || fechaEntrega.isAfter(actual)) {
+                                ultimoPendientePorTarea.put(tareaId, fechaEntrega);
+                            }
+                        }
                     }
                 }
             }
@@ -885,14 +893,23 @@ public class DocenteController {
             if (cierre == null) {
                 continue;
             }
-            if (!cierre.isAfter(ahora) && cierre.isAfter(haceUnaSemana)) {
-                long pendientes = pendientesPorTarea.getOrDefault(tarea.getIdActividad(), 0L);
-                if (pendientes > 0) {
+            long pendientes = pendientesPorTarea.getOrDefault(tarea.getIdActividad(), 0L);
+            if (pendientes > 0) {
+                if (cierre != null && !cierre.isAfter(ahora) && cierre.isAfter(haceUnaSemana)) {
                     avisos.add(crearAviso(
                         "Tarea \"" + tarea.getTitulo() + "\" cerró: " + pendientes + " por corregir",
                         cierre,
                         "warning"
                     ));
+                } else {
+                    LocalDateTime ultimoPendiente = ultimoPendientePorTarea.get(tarea.getIdActividad());
+                    if (ultimoPendiente != null && ultimoPendiente.isAfter(haceUnaSemana)) {
+                        avisos.add(crearAviso(
+                            "Tarea \"" + tarea.getTitulo() + "\": " + pendientes + " por corregir",
+                            ultimoPendiente,
+                            "warning"
+                        ));
+                    }
                 }
             }
         }
