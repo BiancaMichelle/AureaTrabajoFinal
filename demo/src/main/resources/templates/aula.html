@@ -1229,13 +1229,17 @@
                     <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
                         <h4 class="font-bold text-gray-700 mb-3 text-sm uppercase">Avisos Recientes</h4>
                         <div class="space-y-3">
-                            <div class="text-sm border-l-2 border-blue-500 pl-3">
-                                <p class="font-medium text-gray-800">Bienvenida al curso</p>
-                                <p class="text-xs text-gray-500">Hace 2 días</p>
+                            <div th:if="${avisosRecientes == null || #lists.isEmpty(avisosRecientes)}"
+                                class="text-sm text-gray-500">
+                                <p>No hay avisos recientes para mostrar.</p>
                             </div>
-                            <div class="text-sm border-l-2 border-gray-300 pl-3">
-                                <p class="font-medium text-gray-800">Recordatorio de examen</p>
-                                <p class="text-xs text-gray-500">Hace 1 semana</p>
+                            <div th:each="aviso, avisoStat : ${avisosRecientes}"
+                                th:if="${avisoStat.index < 5}"
+                                class="text-sm border-l-2 pl-3"
+                                th:classappend="${aviso.tipo == 'warning' ? ' border-amber-500' : (aviso.tipo == 'success' ? ' border-green-500' : ' border-blue-500')}">
+                                <p class="font-medium text-gray-800" th:text="${aviso.titulo}">Aviso</p>
+                                <p class="text-xs text-gray-500"
+                                   th:text="${aviso.fecha != null ? #temporals.format(aviso.fecha, 'dd/MM/yyyy HH:mm') : ''}">Fecha</p>
                             </div>
                         </div>
                     </div>

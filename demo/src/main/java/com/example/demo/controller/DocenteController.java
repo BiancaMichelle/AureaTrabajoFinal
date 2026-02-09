@@ -839,6 +839,7 @@ public class DocenteController {
             model.addAttribute("modulos", modulos);
             model.addAttribute("docente", docente);
             model.addAttribute("puedeModificar", true);
+            model.addAttribute("avisosRecientes", construirAvisosDocente(oferta));
             
             System.out.println("✅ Model attributes:");
             System.out.println("   - puedeModificar: " + true);
@@ -854,6 +855,87 @@ public class DocenteController {
             return "redirect:/docente/mis-ofertas";
         }
     }
+    private List<Map<String, Object>> construirAvisosDocente(OfertaAcademica oferta) {
+        List<Map<String, Object>> avisos = new ArrayList<>();
+        if (oferta == null || oferta.getIdOferta() == null) {
+            return avisos;
+        }
+
+        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime haceUnaSemana = ahora.minusDays(7);
+
+        List<Tarea> tareas = tareaRepository.findByCursoId(oferta.getIdOferta());
+        List<Examen> examenes = examenRepository.findByModulo_Curso_IdOferta(oferta.getIdOferta());
+
+        Map<Long, Long> pendientesPorTarea = new HashMap<>();
+        if (!tareas.isEmpty()) {
+            List<Entrega> entregas = entregaRepository.findByTareaIn(tareas);
+            for (Entrega entrega : entregas) {
+                if (entrega.getCalificacion() == null && entrega.getTarea() != null) {
+                    Long tareaId = entrega.getTarea().getIdActividad();
+                    if (tareaId != null) {
+                        pendientesPorTarea.merge(tareaId, 1L, Long::sum);
+                    }
+                }
+            }
+        }
+
+        for (Tarea tarea : tareas) {
+            LocalDateTime cierre = tarea.getLimiteEntrega();
+            if (cierre == null) {
+                continue;
+            }
+            if (!cierre.isAfter(ahora) && cierre.isAfter(haceUnaSemana)) {
+                long pendientes = pendientesPorTarea.getOrDefault(tarea.getIdActividad(), 0L);
+                if (pendientes > 0) {
+                    avisos.add(crearAviso(
+                        "Tarea \"" + tarea.getTitulo() + "\" cerró: " + pendientes + " por corregir",
+                        cierre,
+                        "warning"
+                    ));
+                }
+            }
+        }
+
+        for (Examen examen : examenes) {
+            LocalDateTime cierre = examen.getFechaCierre();
+            if (cierre == null) {
+                continue;
+            }
+            if (!cierre.isAfter(ahora) && cierre.isAfter(haceUnaSemana)) {
+                long pendientes = intentoRepository.countByExamen_IdActividadAndEstado(
+                    examen.getIdActividad(),
+                    com.example.demo.enums.EstadoIntento.PENDIENTE_CORRECCION
+                );
+                if (pendientes > 0) {
+                    avisos.add(crearAviso(
+                        "Examen \"" + examen.getTitulo() + "\" terminó: " + pendientes + " por corregir",
+                        cierre,
+                        "warning"
+                    ));
+                }
+            }
+        }
+
+        avisos.sort(Comparator.comparing(
+                (Map<String, Object> a) -> (LocalDateTime) a.get("fecha"),
+                Comparator.nullsLast(Comparator.naturalOrder()))
+            .reversed());
+
+        if (avisos.size() > 5) {
+            return new ArrayList<>(avisos.subList(0, 5));
+        }
+        return avisos;
+    }
+
+    private Map<String, Object> crearAviso(String titulo, LocalDateTime fecha, String tipo) {
+        Map<String, Object> aviso = new HashMap<>();
+        aviso.put("titulo", titulo);
+        aviso.put("fecha", fecha);
+        aviso.put("tipo", tipo);
+        return aviso;
+    }
+
     @PostMapping("/aula/{ofertaId}/analizar-rendimiento")
     public String analizarRendimientoCurso(@PathVariable Long ofertaId, RedirectAttributes redirectAttributes, Principal principal) {
         try {

@@ -1224,6 +1224,14 @@ public class AlumnoController {
                     System.out.println("⚠️ Error calculando progreso: " + e.getMessage());
                     model.addAttribute("progreso", 0.0);
                 }
+
+                model.addAttribute("avisosRecientes", construirAvisosAlumno(
+                    oferta,
+                    alumno,
+                    modulos,
+                    tareasEntregas,
+                    examenesResumen
+                ));
                 
                 System.out.println("✅ Redirigiendo a template: aula");
                 return "aula"; 
@@ -1244,6 +1252,114 @@ public class AlumnoController {
         }
     }
     
+    private List<Map<String, Object>> construirAvisosAlumno(OfertaAcademica oferta,
+                                                            Usuario alumno,
+                                                            List<Modulo> modulos,
+                                                            Map<Long, Entrega> tareasEntregas,
+                                                            Map<Long, Map<String, Object>> examenesResumen) {
+        List<Map<String, Object>> avisos = new ArrayList<>();
+        if (oferta == null || oferta.getIdOferta() == null) {
+            return avisos;
+        }
+
+        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime haceUnaSemana = ahora.minusDays(7);
+        LocalDateTime enTresDias = ahora.plusDays(3);
+
+        List<Tarea> tareas = new ArrayList<>();
+        List<Examen> examenes = new ArrayList<>();
+
+        if (modulos != null) {
+            for (Modulo modulo : modulos) {
+                if (modulo.getActividades() == null) {
+                    continue;
+                }
+                for (var actividad : modulo.getActividades()) {
+                    if (actividad instanceof Tarea tarea) {
+                        tareas.add(tarea);
+                    } else if (actividad instanceof Examen examen) {
+                        examenes.add(examen);
+                    }
+                }
+            }
+        }
+
+        for (Tarea tarea : tareas) {
+            LocalDateTime creada = tarea.getFechaCreacion();
+            if (creada != null && creada.isAfter(haceUnaSemana)) {
+                avisos.add(crearAviso("Nueva tarea: " + tarea.getTitulo(), creada, "info"));
+            }
+
+            LocalDateTime limite = tarea.getLimiteEntrega();
+            if (limite != null && limite.isAfter(ahora) && limite.isBefore(enTresDias)) {
+                boolean entregada = tareasEntregas != null && tareasEntregas.containsKey(tarea.getIdActividad());
+                if (!entregada) {
+                    avisos.add(crearAviso("Entrega próxima: " + tarea.getTitulo(), limite, "warning"));
+                }
+            }
+        }
+
+        for (Examen examen : examenes) {
+            LocalDateTime apertura = examen.getFechaApertura();
+            if (apertura != null && apertura.isAfter(haceUnaSemana)) {
+                avisos.add(crearAviso("Nuevo examen: " + examen.getTitulo(), apertura, "info"));
+            }
+
+            if (apertura != null && !apertura.isAfter(ahora)) {
+                LocalDateTime cierre = examen.getFechaCierre();
+                boolean abierto = cierre == null || cierre.isAfter(ahora);
+                if (abierto) {
+                    int intentosRealizados = 0;
+                    boolean puedeReintentar = true;
+                    if (examenesResumen != null) {
+                        Map<String, Object> resumen = examenesResumen.get(examen.getIdActividad());
+                        if (resumen != null) {
+                            Object intentosVal = resumen.get("intentosRealizados");
+                            if (intentosVal instanceof Integer) {
+                                intentosRealizados = (Integer) intentosVal;
+                            }
+                            Object puedeVal = resumen.get("puedeReintentar");
+                            if (puedeVal instanceof Boolean) {
+                                puedeReintentar = (Boolean) puedeVal;
+                            }
+                        }
+                    }
+                    if (intentosRealizados == 0) {
+                        avisos.add(crearAviso("Examen abierto: " + examen.getTitulo(), apertura, "success"));
+                    } else if (puedeReintentar) {
+                        avisos.add(crearAviso("Reintento disponible: " + examen.getTitulo(), apertura, "success"));
+                    }
+                }
+            }
+        }
+
+        List<Clase> clases = claseRepository.findByModuloCursoIdOferta(oferta.getIdOferta());
+        for (Clase clase : clases) {
+            LocalDateTime inicio = clase.getInicio();
+            if (inicio != null && inicio.isAfter(ahora) && inicio.isBefore(enTresDias)) {
+                avisos.add(crearAviso("Clase próxima: " + clase.getTitulo(), inicio, "info"));
+            }
+        }
+
+        avisos.sort(Comparator.comparing(
+                (Map<String, Object> a) -> (LocalDateTime) a.get("fecha"),
+                Comparator.nullsLast(Comparator.naturalOrder()))
+            .reversed());
+
+        if (avisos.size() > 5) {
+            return new ArrayList<>(avisos.subList(0, 5));
+        }
+        return avisos;
+    }
+
+    private Map<String, Object> crearAviso(String titulo, LocalDateTime fecha, String tipo) {
+        Map<String, Object> aviso = new HashMap<>();
+        aviso.put("titulo", titulo);
+        aviso.put("fecha", fecha);
+        aviso.put("tipo", tipo);
+        return aviso;
+    }
+
     @GetMapping("/perfil")
     public String perfilUsuario(Authentication authentication, Model model) {
         String username = authentication.getName();
