@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 import javax.validation.constraints.NotNull;
@@ -287,19 +288,29 @@ public class OfertaAcademica {
         String moneda = "$"; 
         if (this instanceof Curso) {
             Curso c = (Curso) this;
-            return "Inscripción: " + moneda + (costoInscripcion != null ? costoInscripcion : 0) + 
-                   " + " + (c.getNrCuotas() != null ? c.getNrCuotas() : 0) + " cuotas de " + moneda + (c.getCostoCuota() != null ? c.getCostoCuota() : 0);
+            boolean tieneCuotas = c.getNrCuotas() != null && c.getNrCuotas() > 0
+                    && c.getCostoCuota() != null && c.getCostoCuota() > 0;
+            if (!tieneCuotas) {
+                return "Inscripción: " + moneda + formatMoney(costoInscripcion);
+            }
+            return "Inscripción: " + moneda + formatMoney(costoInscripcion) +
+                   " + " + c.getNrCuotas() + " cuotas de " + moneda + formatMoney(c.getCostoCuota());
         }
         if (this instanceof Formacion) {
             Formacion f = (Formacion) this;
-             return "Inscripción: " + moneda + (costoInscripcion != null ? costoInscripcion : 0) + 
-                   " + " + (f.getNrCuotas() != null ? f.getNrCuotas() : 0) + " cuotas de " + moneda + (f.getCostoCuota() != null ? f.getCostoCuota() : 0);
+            boolean tieneCuotas = f.getNrCuotas() != null && f.getNrCuotas() > 0
+                    && f.getCostoCuota() != null && f.getCostoCuota() > 0;
+            if (!tieneCuotas) {
+                return "Inscripción: " + moneda + formatMoney(costoInscripcion);
+            }
+            return "Inscripción: " + moneda + formatMoney(costoInscripcion) +
+                   " + " + f.getNrCuotas() + " cuotas de " + moneda + formatMoney(f.getCostoCuota());
         }
         // Seminario y Charla (solo costo inscripcion)
         if (costoInscripcion == null || costoInscripcion == 0) {
             return "Gratuito";
         }
-        return "Costo único: " + moneda + costoInscripcion;
+        return "Costo único: " + moneda + formatMoney(costoInscripcion);
     }
     
     /**
@@ -358,7 +369,12 @@ public class OfertaAcademica {
         if (costoInscripcion == null || costoInscripcion == 0) {
             return "Gratuito";
         }
-        return String.format("$%.2f", costoInscripcion);
+        return "$" + formatMoney(costoInscripcion);
+    }
+
+    private String formatMoney(Double value) {
+        double safeValue = value != null ? value : 0.0;
+        return String.format(Locale.forLanguageTag("es-AR"), "%,.2f", safeValue);
     }
     /**
      * Información de cupos para la tabla

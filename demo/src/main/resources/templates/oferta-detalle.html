@@ -389,12 +389,17 @@
                         
                         <div class="sidebar-content">
                             <div class="course-price">
-                                <span th:if="${oferta.costoInscripcion != null and oferta.costoInscripcion > 0}" th:text="'$' + ${#numbers.formatDecimal(oferta.costoInscripcion, 0, 'COMMA', 2, 'POINT')}">$XX.XX</span>
+                                <th:block th:if="${oferta.costoInscripcion != null and oferta.costoInscripcion > 0}">
+                                    <span th:if="${(oferta.tipoOferta == 'Curso' or oferta.tipoOferta == 'Formación') and (oferta.costoCuota == null or oferta.costoCuota == 0)}"
+                                        th:text="${'Unico pago de: $' + #numbers.formatDecimal(oferta.costoInscripcion, 0, 'POINT', 2, 'COMMA')}">$XX.XX</span>
+                                    <span th:unless="${(oferta.tipoOferta == 'Curso' or oferta.tipoOferta == 'Formación') and (oferta.costoCuota == null or oferta.costoCuota == 0)}"
+                                        th:text="${'$' + #numbers.formatDecimal(oferta.costoInscripcion, 0, 'POINT', 2, 'COMMA')}">$XX.XX</span>
+                                </th:block>
                                 <span th:if="${oferta.costoInscripcion == null or oferta.costoInscripcion == 0}" class="text-success">Gratis</span>
                                 
                                 <th:block th:if="${oferta.tipoOferta == 'Curso' or oferta.tipoOferta == 'Formación'}">
                                     <span th:if="${oferta.costoCuota != null and oferta.costoCuota > 0}" class="course-price-monthly">
-                                        + $<span th:text="${#numbers.formatDecimal(oferta.costoCuota, 0, 'COMMA', 0, 'POINT')}"></span>/mes
+                                        + $<span th:text="${#numbers.formatDecimal(oferta.costoCuota, 0, 'POINT', 2, 'COMMA')}"></span>/mes
                                     </span>
                                 </th:block>
                             </div>
