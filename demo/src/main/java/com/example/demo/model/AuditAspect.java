@@ -1,10 +1,10 @@
 ﻿package com.example.demo.model;
 
-import jakarta.servlet.http.HttpServletRequest;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.AfterReturning;
 import org.aspectj.lang.annotation.AfterThrowing;
 import org.aspectj.lang.annotation.Aspect;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -23,79 +23,87 @@ import java.util.Set;
 public class AuditAspect {
 
     private final AuditLogService auditService;
-    private final HttpServletRequest request;
+    private final ObjectProvider<jakarta.servlet.http.HttpServletRequest> requestProvider;
 
-    public AuditAspect(AuditLogService auditService, HttpServletRequest request) {
+    public AuditAspect(AuditLogService auditService,
+                       ObjectProvider<jakarta.servlet.http.HttpServletRequest> requestProvider) {
         this.auditService = auditService;
-        this.request = request;
+        this.requestProvider = requestProvider;
     }
 
     @AfterReturning(pointcut = "@annotation(auditable)", returning = "result")
     public void registrar(JoinPoint jp, Auditable auditable, Object result) {
+        try {
+            AuditLog log = new AuditLog();
+            LocalDateTime now = LocalDateTime.now();
+            log.setFecha(Date.valueOf(now.toLocalDate()));
+            log.setHora(Time.valueOf(now.toLocalTime()));
 
-        AuditLog log = new AuditLog();
-        LocalDateTime now = LocalDateTime.now();
-        log.setFecha(Date.valueOf(now.toLocalDate()));
-        log.setHora(Time.valueOf(now.toLocalTime()));
+            log.setAccion(auditable.action());
+            log.setAfecta(auditable.entity());
 
-        log.setAccion(auditable.action());
-        log.setAfecta(auditable.entity());
-        
-        // Analyze result for success/failure
-        boolean exito = true;
-        String detalleBase = construirDetalleBase(auditable, jp.getArgs(), jp.getSignature().getName());
-        StringBuilder detalles = new StringBuilder(detalleBase);
+            // Analyze result for success/failure
+            boolean exito = true;
+            String detalleBase = construirDetalleBase(auditable, jp.getArgs(), jp.getSignature().getName());
+            StringBuilder detalles = new StringBuilder(detalleBase);
 
-        if (result instanceof ResponseEntity) {
-            ResponseEntity<?> response = (ResponseEntity<?>) result;
-            if (!response.getStatusCode().is2xxSuccessful()) {
-                exito = false;
-                detalles.append(" | Status: ").append(response.getStatusCode());
-            }
-            if (response.getBody() instanceof Map) {
-                Map<?, ?> body = (Map<?, ?>) response.getBody();
-                Object auditDetails = body.get("auditDetails");
-                if (auditDetails != null) {
-                    String auditText = auditDetails.toString().trim();
-                    if (!auditText.isEmpty()) {
-                        detalles.setLength(0);
-                        detalles.append(auditText);
-                    }
-                }
-                if (Boolean.FALSE.equals(body.get("success"))) {
+            if (result instanceof ResponseEntity) {
+                ResponseEntity<?> response = (ResponseEntity<?>) result;
+                if (!response.getStatusCode().is2xxSuccessful()) {
                     exito = false;
-                    if (body.containsKey("error")) {
-                        detalles.append(" | Error: ").append(body.get("error"));
+                    detalles.append(" | Status: ").append(response.getStatusCode());
+                }
+                if (response.getBody() instanceof Map) {
+                    Map<?, ?> body = (Map<?, ?>) response.getBody();
+                    Object auditDetails = body.get("auditDetails");
+                    if (auditDetails != null) {
+                        String auditText = auditDetails.toString().trim();
+                        if (!auditText.isEmpty()) {
+                            detalles.setLength(0);
+                            detalles.append(auditText);
+                        }
+                    }
+                    if (Boolean.FALSE.equals(body.get("success"))) {
+                        exito = false;
+                        if (body.containsKey("error")) {
+                            detalles.append(" | Error: ").append(body.get("error"));
+                        }
                     }
                 }
             }
+
+            log.setDetalles(detalles.toString());
+            log.setExito(exito);
+
+            setUsuarioFromAuth(log);
+            log.setIp(obtenerIpCliente());
+
+            auditService.registrar(log);
+        } catch (Exception e) {
+            System.err.println("Error registrando auditoria: " + e.getMessage());
         }
-        
-        log.setDetalles(detalles.toString());
-        log.setExito(exito);
-
-        setUsuarioFromAuth(log);
-        log.setIp(obtenerIpCliente(request));
-
-        auditService.registrar(log);
     }
     
     @AfterThrowing(pointcut = "@annotation(auditable)", throwing = "ex")
     public void registrarFallo(JoinPoint jp, Auditable auditable, Throwable ex) {
-        AuditLog log = new AuditLog();
-        LocalDateTime now = LocalDateTime.now();
-        log.setFecha(Date.valueOf(now.toLocalDate()));
-        log.setHora(Time.valueOf(now.toLocalTime()));
-        log.setAccion(auditable.action());
-        log.setAfecta(auditable.entity());
-        log.setExito(false);
-        log.setDetalles("Exception: " + ex.getClass().getSimpleName() + " - " + ex.getMessage() 
-            + " | Args: " + resumirArgs(jp.getArgs()));
-        log.setIp(obtenerIpCliente(request));
-        
-        setUsuarioFromAuth(log);
-        
-        auditService.registrar(log);
+        try {
+            AuditLog log = new AuditLog();
+            LocalDateTime now = LocalDateTime.now();
+            log.setFecha(Date.valueOf(now.toLocalDate()));
+            log.setHora(Time.valueOf(now.toLocalTime()));
+            log.setAccion(auditable.action());
+            log.setAfecta(auditable.entity());
+            log.setExito(false);
+            log.setDetalles("Exception: " + ex.getClass().getSimpleName() + " - " + ex.getMessage()
+                + " | Args: " + resumirArgs(jp.getArgs()));
+            log.setIp(obtenerIpCliente());
+
+            setUsuarioFromAuth(log);
+
+            auditService.registrar(log);
+        } catch (Exception e) {
+            System.err.println("Error registrando auditoria (fallo): " + e.getMessage());
+        }
     }
 
     private void setUsuarioFromAuth(AuditLog log) {
@@ -118,7 +126,11 @@ public class AuditAspect {
         }
     }
     
-    private String obtenerIpCliente(HttpServletRequest request) {
+    private String obtenerIpCliente() {
+        jakarta.servlet.http.HttpServletRequest request = requestProvider.getIfAvailable();
+        if (request == null) {
+            return "SYSTEM";
+        }
         String[] headers = {"X-Forwarded-For", "X-Real-IP", "Proxy-Client-IP", 
                            "WL-Proxy-Client-IP", "HTTP_CLIENT_IP", "HTTP_X_FORWARDED_FOR"};
         
