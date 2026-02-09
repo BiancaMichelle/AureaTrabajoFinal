@@ -12,6 +12,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.hibernate.Hibernate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
@@ -65,6 +67,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @Controller
 @RequestMapping("/examen")
 public class ExamenController {
+
+    private static final Logger log = LoggerFactory.getLogger(ExamenController.class);
 
     @Value("${app.base-url}")
     private String baseUrl;
@@ -414,6 +418,7 @@ public class ExamenController {
 
     @PostMapping("/entregar")
     public ResponseEntity<?> entregarExamen(@RequestBody Map<String, Object> payload, Principal principal) {
+        System.out.println("🚀 [ExamenController] Recibida solicitud de ENTREGAR EXAMEN");
         try {
             Long examenId = Long.valueOf(payload.get("examenId").toString());
             List<Map<String, Object>> respuestas = obtenerRespuestasComoLista(payload.get("respuestas"));
@@ -490,8 +495,52 @@ public class ExamenController {
 
             intentoRepository.save(intento);
 
-            if (Boolean.TRUE.equals(examen.getCalificacionAutomatica())) {
-                examenFeedbackService.generarYProgramarFeedback(alumno, examen, intento, respuestasIntento);
+            // NUEVA LÓGICA: Generar feedback SIEMPRE que el alumno repruebe
+
+            // Detectar escala automáticamente y determinar si reprobó
+            boolean reprobo;
+            if (puntajeTotal >= 10.0f) {
+                // Escala 0-100: reprueba con menos de 60
+                reprobo = puntajeTotal < 60.0f;
+                // log.info("🔍 Escala 0-100. Puntaje: {}, Reprobó: {}", puntajeTotal, reprobo);
+                System.out
+                        .println("🔍 FEEDBACK DEBUG: Escala 0-100. Puntaje: " + puntajeTotal + ", Reprobó: " + reprobo);
+            } else {
+                // Escala 0-10: reprueba con menos de 6
+                reprobo = puntajeTotal < 6.0f;
+                // log.info("🔍 Escala 0-10. Puntaje: {}, Reprobó: {}", puntajeTotal, reprobo);
+                System.out
+                        .println("🔍 FEEDBACK DEBUG: Escala 0-10. Puntaje: " + puntajeTotal + ", Reprobó: " + reprobo);
+            }
+
+            if (reprobo) {
+                String nombreAlumno = alumno.getNombre() + " " + alumno.getApellido();
+                System.out.println("📚 FEEDBACK DEBUG: Alumno " + nombreAlumno + " reprobó con " + puntajeTotal
+                        + ", generando feedback...");
+                System.out.println("📊 FEEDBACK DEBUG: Respuestas: " + respuestasIntento.size() + ", Intento: "
+                        + intento.getIdIntento());
+
+                // LOG SOLICITADO POR EL USUARIO:
+                System.out.println("📢 NOTIFICACIÓN A ENVIAR A: " + nombreAlumno + " (ID: " + alumno.getId() + ")");
+
+                try {
+                    examenFeedbackService.generarYProgramarFeedback(alumno, examen, intento, respuestasIntento);
+                    System.out.println("✅ FEEDBACK DEBUG: Método de servicio llamado correctamente");
+                } catch (Exception e) {
+                    System.err.println("❌ FEEDBACK DEBUG ERROR: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            } else if (Boolean.TRUE.equals(examen.getCalificacionAutomatica())) {
+                System.out.println("✅ FEEDBACK DEBUG: Aprobó con " + puntajeTotal + " y calificación automática ON");
+                try {
+                    examenFeedbackService.generarYProgramarFeedback(alumno, examen, intento, respuestasIntento);
+                    System.out.println("✅ FEEDBACK DEBUG: Método de servicio llamado correctamente");
+                } catch (Exception e) {
+                    System.err.println("❌ FEEDBACK DEBUG ERROR: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            } else {
+                System.out.println("ℹ️ FEEDBACK DEBUG: Aprobó con " + puntajeTotal + ". No se genera feedback.");
             }
 
             Map<String, Object> response = new HashMap<>();
