@@ -7,7 +7,6 @@ import java.util.Objects;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -119,8 +118,8 @@ public class OfertaAcademicaController {
             @RequestParam(required = false) String objetivos,
             @RequestParam(required = false) String temario,
             @RequestParam(required = false) String bibliografia,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
+            @RequestParam(required = false) String fechaInicio,
+            @RequestParam(required = false) String fechaFin,
             @RequestParam(required = false, defaultValue = "false") Boolean visibilidad,
             @RequestParam Long cursoId,
             Authentication auth) {
@@ -129,7 +128,10 @@ public class OfertaAcademicaController {
         // Validación de permisos antes de crear (Precondición CU-23)
         validarPermisoDocenteOferta(auth, cursoIdSeguro);
 
-        cursoService.crearModulo(nombre, descripcion, objetivos, temario, bibliografia, fechaInicio, fechaFin, visibilidad, cursoIdSeguro);
+        LocalDate fechaInicioDate = parseFechaModulo(fechaInicio);
+        LocalDate fechaFinDate = parseFechaModulo(fechaFin);
+
+        cursoService.crearModulo(nombre, descripcion, objetivos, temario, bibliografia, fechaInicioDate, fechaFinDate, visibilidad, cursoIdSeguro);
         // ✅ Redirigir de vuelta al curso específico
         return "redirect:/ofertaAcademica/" + cursoIdSeguro;
     }
@@ -143,16 +145,26 @@ public class OfertaAcademicaController {
             @RequestParam(required = false) String objetivos,
             @RequestParam(required = false) String temario,
             @RequestParam(required = false) String bibliografia,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
+            @RequestParam(required = false) String fechaInicio,
+            @RequestParam(required = false) String fechaFin,
             @RequestParam(required = false, defaultValue = "false") Boolean visibilidad,
             Authentication auth) {
         Long cursoIdSeguro = Objects.requireNonNull(cursoId, "El identificador de la oferta no puede ser nulo");
         
         validarPermisoDocenteOferta(auth, cursoIdSeguro);
 
-        cursoService.actualizarModulo(moduloId, nombre, descripcion, objetivos, temario, bibliografia, fechaInicio, fechaFin, visibilidad, cursoIdSeguro);
+        LocalDate fechaInicioDate = parseFechaModulo(fechaInicio);
+        LocalDate fechaFinDate = parseFechaModulo(fechaFin);
+
+        cursoService.actualizarModulo(moduloId, nombre, descripcion, objetivos, temario, bibliografia, fechaInicioDate, fechaFinDate, visibilidad, cursoIdSeguro);
         return "redirect:/ofertaAcademica/" + cursoIdSeguro;
+    }
+
+    private LocalDate parseFechaModulo(String fecha) {
+        if (fecha == null || fecha.isBlank()) {
+            return null;
+        }
+        return LocalDate.parse(fecha);
     }
 
     @PostMapping("/modulo/{moduloId}/visibilidad")

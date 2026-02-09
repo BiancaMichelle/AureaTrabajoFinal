@@ -66,12 +66,7 @@ public class CursoService {
         if (nombre == null || nombre.trim().isEmpty()) {
             throw new IllegalArgumentException("El nombre del módulo es obligatorio.");
         }
-        if (fechaInicio == null || fechaFin == null) {
-            throw new IllegalArgumentException("Las fechas de inicio y fin son obligatorias.");
-        }
-        if (fechaFin.isBefore(fechaInicio)) {
-             throw new IllegalArgumentException("La fecha de fin no puede ser anterior a la fecha de inicio.");
-        }
+        validarFechasModulo(curso, fechaInicio, fechaFin, null);
 
         Modulo modulo = new Modulo();
         modulo.setNombre(nombre);
@@ -115,15 +110,8 @@ public class CursoService {
         if (descripcion == null || descripcion.trim().isEmpty()) {
             throw new IllegalArgumentException("La descripción del módulo no puede estar vacía");
         }
+        validarFechasModulo(modulo.getCurso(), fechaInicio, fechaFin, modulo.getIdModulo());
 
-        if (fechaInicio == null || fechaFin == null) {
-            throw new IllegalArgumentException("Las fechas del módulo son obligatorias");
-        }
-
-        if (fechaFin.isBefore(fechaInicio)) {
-            throw new IllegalArgumentException("La fecha de fin no puede ser anterior a la fecha de inicio");
-        }
-        
         // Detectar cambios críticos para notificaciones
         boolean fechasCambiadas = !Objects.equals(modulo.getFechaInicioModulo(), fechaInicio) || !Objects.equals(modulo.getFechaFinModulo(), fechaFin);
         // Manejo de null en visibilidad actual
@@ -425,4 +413,59 @@ public class CursoService {
     public List<Curso> buscarPorNombre(String nombre) {
         return cursoRepository.findByNombreContainingIgnoreCase(nombre);
     }
+
+    private void validarFechasModulo(OfertaAcademica curso, LocalDate fechaInicio, LocalDate fechaFin, UUID moduloId) {
+        if (fechaInicio == null && fechaFin == null) {
+            return;
+        }
+
+        if (fechaInicio != null && fechaFin != null && fechaFin.isBefore(fechaInicio)) {
+            throw new IllegalArgumentException("La fecha de fin no puede ser anterior a la fecha de inicio.");
+        }
+
+        LocalDate ofertaInicio = curso.getFechaInicio();
+        LocalDate ofertaFin = curso.getFechaFin();
+
+        if (fechaInicio != null) {
+            if (ofertaInicio != null && fechaInicio.isBefore(ofertaInicio)) {
+                throw new IllegalArgumentException("La fecha de inicio del m??dulo debe estar dentro de las fechas de dictado de la oferta.");
+            }
+            if (ofertaFin != null && fechaInicio.isAfter(ofertaFin)) {
+                throw new IllegalArgumentException("La fecha de inicio del m??dulo debe estar dentro de las fechas de dictado de la oferta.");
+            }
+        }
+
+        if (fechaFin != null) {
+            if (ofertaInicio != null && fechaFin.isBefore(ofertaInicio)) {
+                throw new IllegalArgumentException("La fecha de fin del m??dulo debe estar dentro de las fechas de dictado de la oferta.");
+            }
+            if (ofertaFin != null && fechaFin.isAfter(ofertaFin)) {
+                throw new IllegalArgumentException("La fecha de fin del m??dulo debe estar dentro de las fechas de dictado de la oferta.");
+            }
+        }
+
+        if (fechaInicio == null || fechaFin == null) {
+            return;
+        }
+
+        List<Modulo> modulos = moduloRepository.findByCursoOrderByFechaInicioModuloAsc(curso);
+        for (Modulo existente : modulos) {
+            if (moduloId != null && moduloId.equals(existente.getIdModulo())) {
+                continue;
+            }
+
+            LocalDate inicioExistente = existente.getFechaInicioModulo();
+            LocalDate finExistente = existente.getFechaFinModulo();
+            if (inicioExistente == null || finExistente == null) {
+                continue;
+            }
+
+            boolean seSuperpone = fechaInicio.isBefore(finExistente) && fechaFin.isAfter(inicioExistente);
+            if (seSuperpone) {
+                throw new IllegalArgumentException("Las fechas del m??dulo se superponen con " + "\"" + existente.getNombre()
+                        + "\"" + ". Ajusta las fechas para que los m??dulos no se solapen.");
+            }
+        }
+    }
+
 }
