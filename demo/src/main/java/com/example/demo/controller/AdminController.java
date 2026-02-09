@@ -489,6 +489,7 @@ public class AdminController {
                 Map<String, Object> response = new HashMap<>();
                 response.put("success", false);
                 response.put("message", "Oferta no encontrada");
+                response.put("auditDetails", "No se pudo eliminar: oferta no encontrada (ID " + id + ").");
                 return ResponseEntity.notFound().build();
             }
 
@@ -500,7 +501,9 @@ public class AdminController {
             if (!oferta.puedeSerEliminada()) {
                 Map<String, Object> response = new HashMap<>();
                 response.put("success", false);
-                response.put("message", "No se puede eliminar esta oferta porque tiene inscripciones o ya finalizó");
+                String motivo = "No se puede eliminar esta oferta porque tiene inscripciones o ya finalizó";
+                response.put("message", motivo);
+                response.put("auditDetails", motivo + " (ID " + oferta.getIdOferta() + ").");
                 return ResponseEntity.badRequest().body(response);
             }
 
@@ -518,7 +521,9 @@ public class AdminController {
         } catch (Exception e) {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
-            response.put("message", "Error al eliminar la oferta: " + e.getMessage());
+            String motivo = "Error al eliminar la oferta: " + e.getMessage();
+            response.put("message", motivo);
+            response.put("auditDetails", motivo);
             return ResponseEntity.internalServerError().body(response);
         }
     }
@@ -540,6 +545,7 @@ public class AdminController {
                 response.put("success", false);
                 response.put("message", "Oferta no encontrada");
                 response.put("motivo", "OFERTA_NO_ENCONTRADA");
+                response.put("auditDetails", "No se pudo cambiar estado: oferta no encontrada (ID " + id + ").");
                 return ResponseEntity.ok(response);
             }
 
@@ -555,6 +561,7 @@ public class AdminController {
                 response.put("success", false);
                 response.put("message", motivo);
                 response.put("motivo", "ESTADO_FINAL");
+                response.put("auditDetails", motivo + " (ID " + oferta.getIdOferta() + ").");
                 return ResponseEntity.ok(response);
             }
 
@@ -590,6 +597,7 @@ public class AdminController {
                 response.put("success", false);
                 response.put("message", mensajeError);
                 response.put("motivo", motivoCodigo);
+                response.put("auditDetails", mensajeError + " (ID " + oferta.getIdOferta() + ").");
                 return ResponseEntity.ok(response);
             }
 
@@ -612,8 +620,10 @@ public class AdminController {
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
-            response.put("message", "Error interno del servidor: " + e.getMessage());
+            String motivo = "Error interno del servidor: " + e.getMessage();
+            response.put("message", motivo);
             response.put("motivo", "ERROR_SERVIDOR");
+            response.put("auditDetails", motivo + " (ID " + id + ").");
             return ResponseEntity.ok(response);
         }
     }
@@ -2427,6 +2437,7 @@ public class AdminController {
             if (usuarioOpt.isEmpty()) {
                 response.put("success", false);
                 response.put("message", "Usuario no encontrado");
+                response.put("auditDetails", "No se pudo dar de baja: usuario no encontrado (ident " + identificador + ").");
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
             }
 
@@ -2610,7 +2621,9 @@ public class AdminController {
             // currentUsername es el DNI según CustomUsuarioDetails
             if (usuarioOpt.get().getDni().equals(currentUsername)) {
                 response.put("success", false);
-                response.put("message", "No puedes dar de baja a tu propia cuenta de usuario.");
+                String motivo = "No puedes dar de baja a tu propia cuenta de usuario.";
+                response.put("message", motivo);
+                response.put("auditDetails", motivo + " (DNI " + usuarioOpt.get().getDni() + ").");
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
             }
 
@@ -2624,15 +2637,21 @@ public class AdminController {
             return ResponseEntity.ok(response);
         } catch (IllegalStateException ex) {
             response.put("success", false);
-            response.put("message", ex.getMessage());
+            String motivo = ex.getMessage();
+            response.put("message", motivo);
+            response.put("auditDetails", motivo);
             return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
         } catch (DataIntegrityViolationException ex) {
             response.put("success", false);
-            response.put("message", "El usuario no puede eliminarse porque tiene registros asociados");
+            String motivo = "El usuario no puede eliminarse porque tiene registros asociados";
+            response.put("message", motivo);
+            response.put("auditDetails", motivo);
             return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
         } catch (Exception e) {
             response.put("success", false);
-            response.put("message", "Error al eliminar usuario: " + e.getMessage());
+            String motivo = "Error al eliminar usuario: " + e.getMessage();
+            response.put("message", motivo);
+            response.put("auditDetails", motivo);
             return ResponseEntity.badRequest().body(response);
         }
     }

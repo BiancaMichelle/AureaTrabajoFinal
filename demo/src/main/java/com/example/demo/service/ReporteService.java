@@ -1599,6 +1599,53 @@ public class ReporteService {
         return generarReportePdfDesdePlantilla("reporte/reporteUsuarios", data);
     }
 
+    public ByteArrayInputStream generarReporteUsuariosExcel(List<Usuario> usuarios) throws IOException {
+        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet("Usuarios");
+
+            String[] columns = {"ID", "DNI", "Nombre", "Apellido", "Correo", "Teléfono", "Roles", "Estado", "Fecha Registro"};
+            Row headerRow = sheet.createRow(0);
+
+            CellStyle headerStyle = workbook.createCellStyle();
+            org.apache.poi.ss.usermodel.Font font = workbook.createFont();
+            font.setBold(true);
+            headerStyle.setFont(font);
+
+            for (int i = 0; i < columns.length; i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(columns[i]);
+                cell.setCellStyle(headerStyle);
+            }
+
+            int rowIdx = 1;
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
+            for (Usuario usuario : usuarios) {
+                Row row = sheet.createRow(rowIdx++);
+                row.createCell(0).setCellValue(usuario.getId() != null ? usuario.getId().toString() : "");
+                row.createCell(1).setCellValue(usuario.getDni() != null ? usuario.getDni() : "");
+                row.createCell(2).setCellValue(usuario.getNombre() != null ? usuario.getNombre() : "");
+                row.createCell(3).setCellValue(usuario.getApellido() != null ? usuario.getApellido() : "");
+                row.createCell(4).setCellValue(usuario.getCorreo() != null ? usuario.getCorreo() : "");
+                row.createCell(5).setCellValue(usuario.getNumTelefono() != null ? usuario.getNumTelefono() : "");
+
+                String roles = usuario.getRoles() != null && !usuario.getRoles().isEmpty()
+                    ? usuario.getRoles().stream().map(r -> r.getNombre()).collect(Collectors.joining(", "))
+                    : "";
+                row.createCell(6).setCellValue(roles);
+                row.createCell(7).setCellValue(usuario.isEstado() ? "ACTIVO" : "INACTIVO");
+                row.createCell(8).setCellValue(usuario.getFechaRegistro() != null ? usuario.getFechaRegistro().format(formatter) : "");
+            }
+
+            for (int i = 0; i < columns.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
+            workbook.write(out);
+            return new ByteArrayInputStream(out.toByteArray());
+        }
+    }
+
 
     private void addTableRow(PdfPTable table, String label, String value) {
         com.lowagie.text.Font boldFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12);

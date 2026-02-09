@@ -211,6 +211,16 @@ public class AdminPagoController {
                     .collect(Collectors.toList());
             }
 
+            String periodoTexto = "Histórico completo";
+            if (fechaInicio != null && fechaFin != null) {
+                periodoTexto = fechaInicio.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                        + " al " + fechaFin.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            } else if (fechaInicio != null) {
+                periodoTexto = "Desde " + fechaInicio.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            } else if (fechaFin != null) {
+                periodoTexto = "Hasta " + fechaFin.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            }
+
             java.io.ByteArrayInputStream pdfStream = reporteService.generarReportePagosPDF(pagos, cursoId);
             byte[] data = pdfStream.readAllBytes();
             
@@ -244,7 +254,7 @@ public class AdminPagoController {
                     }
                     log.setAccion("EXPORTAR_REPORTE");
                     log.setAfecta("Reportes Pagos");
-                    log.setDetalles("Archivo: " + savedFile + " | Exportación de pagos."); 
+                    log.setDetalles("Archivo: " + savedFile + " | Exportación de pagos. Periodo: " + periodoTexto + "."); 
                     log.setExito(true);
                     log.setIp(request.getRemoteAddr());
                     

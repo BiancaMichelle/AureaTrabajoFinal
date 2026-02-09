@@ -2052,334 +2052,359 @@
                 });
             }
 
-                console.log('🎉 GESTIÓN DE OFERTAS INICIALIZADA');
-
-                // Cargar ofertas iniciales para paginación
-                actualizarTablaOfertas();
+            console.log('🎉 GESTIÓN DE OFERTAS INICIALIZADA');
+            
+            // Cargar ofertas iniciales para paginación
+            actualizarTablaOfertas();
+        });
+        
+        // Función para mostrar campos específicos según tipo de oferta
+        function mostrarCamposEspecificos(tipoOferta) {
+            console.log('🔄 Cambiando tipo de oferta a:', tipoOferta);
+            
+            // Limpiar datos anteriores
+            limpiarDatosFormulario();
+            
+            // Ocultar todas las secciones específicas
+            const seccionesEspecificas = document.querySelectorAll('.tipo-specific');
+            seccionesEspecificas.forEach(seccion => {
+                seccion.style.display = 'none';
             });
-
-            // Función para mostrar campos específicos según tipo de oferta
-            function mostrarCamposEspecificos(tipoOferta) {
-                console.log('🔄 Cambiando tipo de oferta a:', tipoOferta);
-
-                // Limpiar datos anteriores
-                limpiarDatosFormulario();
-
-                // Ocultar todas las secciones específicas
-                const seccionesEspecificas = document.querySelectorAll('.tipo-specific');
-                seccionesEspecificas.forEach(seccion => {
-                    seccion.style.display = 'none';
-                });
-
-                // Ocultar sección de horarios por defecto
-                const seccionHorarios = document.getElementById('seccion-horarios');
-                seccionHorarios.style.display = 'none';
-
-                // Controlar campos de cuotas en la sección principal de costos
-                const grupoCostoCuota = document.getElementById('grupo-costo-cuota');
-                const grupoNroCuotas = document.getElementById('grupo-nro-cuotas');
-                const grupoDiaVencimiento = document.getElementById('grupo-dia-vencimiento');
-
-                // Mostrar campos de cuotas solo para CURSO y FORMACION
-                const mostrarCamposCuotas = tipoOferta === 'CURSO' || tipoOferta === 'FORMACION';
-
-                if (grupoCostoCuota) grupoCostoCuota.style.display = mostrarCamposCuotas ? 'block' : 'none';
-                if (grupoNroCuotas) grupoNroCuotas.style.display = mostrarCamposCuotas ? 'block' : 'none';
-                if (grupoDiaVencimiento) grupoDiaVencimiento.style.display = mostrarCamposCuotas ? 'block' : 'none';
-
-                // Ocultar fechaInicio y fechaFin para CHARLA y SEMINARIO (usan sus propios campos específicos)
-                const grupoFechaInicio = document.getElementById('grupo-fecha-inicio');
-                const grupoFechaFin = document.getElementById('grupo-fecha-fin');
-                const mostrarFechasGenerales = tipoOferta === 'CURSO' || tipoOferta === 'FORMACION';
-
-                if (grupoFechaInicio) {
-                    grupoFechaInicio.style.display = mostrarFechasGenerales ? 'block' : 'none';
-                    const inputFechaInicio = document.getElementById('fechaInicio');
-                    if (inputFechaInicio) {
-                        inputFechaInicio.required = mostrarFechasGenerales;
-                    }
+            
+            // Ocultar sección de horarios por defecto
+            const seccionHorarios = document.getElementById('seccion-horarios');
+            seccionHorarios.style.display = 'none';
+            
+            // Controlar campos de cuotas en la sección principal de costos
+            const grupoCostoCuota = document.getElementById('grupo-costo-cuota');
+            const grupoNroCuotas = document.getElementById('grupo-nro-cuotas');
+            const grupoDiaVencimiento = document.getElementById('grupo-dia-vencimiento');
+            
+            // Mostrar campos de cuotas solo para CURSO y FORMACION
+            const mostrarCamposCuotas = tipoOferta === 'CURSO' || tipoOferta === 'FORMACION';
+            
+            if (grupoCostoCuota) grupoCostoCuota.style.display = mostrarCamposCuotas ? 'block' : 'none';
+            if (grupoNroCuotas) grupoNroCuotas.style.display = mostrarCamposCuotas ? 'block' : 'none';
+            if (grupoDiaVencimiento) grupoDiaVencimiento.style.display = mostrarCamposCuotas ? 'block' : 'none';
+            
+            // Ocultar fechaInicio y fechaFin para CHARLA y SEMINARIO (usan sus propios campos específicos)
+            const grupoFechaInicio = document.getElementById('grupo-fecha-inicio');
+            const grupoFechaFin = document.getElementById('grupo-fecha-fin');
+            const mostrarFechasGenerales = tipoOferta === 'CURSO' || tipoOferta === 'FORMACION';
+            
+            if (grupoFechaInicio) {
+                grupoFechaInicio.style.display = mostrarFechasGenerales ? 'block' : 'none';
+                const inputFechaInicio = document.getElementById('fechaInicio');
+                if (inputFechaInicio) {
+                    inputFechaInicio.required = mostrarFechasGenerales;
                 }
-
-                if (grupoFechaFin) {
-                    grupoFechaFin.style.display = mostrarFechasGenerales ? 'block' : 'none';
-                    const inputFechaFin = document.getElementById('fechaFin');
-                    if (inputFechaFin) {
-                        inputFechaFin.required = mostrarFechasGenerales;
-                    }
-                }
-
-                // Mostrar la sección correspondiente al tipo seleccionado
-                let seccionMostrar = null;
-                switch (tipoOferta) {
-                    case 'CURSO':
-                        seccionMostrar = document.getElementById('fields-curso');
-                        // Mostrar horarios para curso
-                        seccionHorarios.style.display = 'block';
-                        // Inicializar búsqueda de docentes para curso
-                        console.log('🔍 Inicializando búsqueda para CURSO');
-                        inicializarBusquedaDocentes('docente-search', 'docente-results', 'docentes-table');
-                        break;
-
-                    case 'FORMACION':
-                        seccionMostrar = document.getElementById('fields-formacion');
-                        // Mostrar horarios para formación
-                        seccionHorarios.style.display = 'block';
-                        // Inicializar búsqueda de docentes para formación
-                        console.log('🔍 Inicializando búsqueda para FORMACION');
-                        inicializarBusquedaDocentes('docente-search-formacion', 'docente-results-formacion', 'docentes-table-formacion');
-                        break;
-
-                    case 'CHARLA':
-                        seccionMostrar = document.getElementById('fields-charla');
-                        break;
-
-                    case 'SEMINARIO':
-                        seccionMostrar = document.getElementById('fields-seminario');
-                        break;
-
-                    default:
-                        console.log('⚠️ Tipo de oferta no reconocido:', tipoOferta);
-                        return;
-                }
-
-                if (seccionMostrar) {
-                    seccionMostrar.style.display = 'block';
-                    console.log('✅ Mostrando campos específicos para:', tipoOferta);
-                }
-
-                // Actualizar campos según el tipo y modalidad
-                actualizarCamposModalidad();
             }
-
-            // Función para limpiar datos del formulario cuando se cambia tipo
-            function limpiarDatosFormulario() {
-                // Limpiar docentes seleccionados
-                docentesSeleccionados.curso = [];
-                docentesSeleccionados.formacion = [];
-
-                // Limpiar horarios
-                horariosSeleccionados = [];
-
-                // Limpiar disertantes
-                disertantesCharla = [];
-                disertantesSeminario = [];
-
-                // Limpiar tablas de docentes
-                const tablaCurso = document.getElementById('docentes-table');
-                const tablaFormacion = document.getElementById('docentes-table-formacion');
-
-                if (tablaCurso) {
-                    const tbody = tablaCurso.querySelector('tbody');
-                    if (tbody) tbody.innerHTML = '';
+            
+            if (grupoFechaFin) {
+                grupoFechaFin.style.display = mostrarFechasGenerales ? 'block' : 'none';
+                const inputFechaFin = document.getElementById('fechaFin');
+                if (inputFechaFin) {
+                    inputFechaFin.required = mostrarFechasGenerales;
                 }
-
-                if (tablaFormacion) {
-                    const tbody = tablaFormacion.querySelector('tbody');
-                    if (tbody) tbody.innerHTML = '';
-                }
-
-                // Limpiar visualizaciones
-                actualizarHorariosChips();
-                actualizarDisertantesChips('charla');
-                actualizarDisertantesChips('seminario');
-
-                // Actualizar campos hidden
-                actualizarDocentesHidden('curso');
-                actualizarDocentesHidden('formacion');
-
-                console.log('🧹 Datos del formulario limpiados');
             }
-
-            // Función para actualizar campos según modalidad seleccionada
-            function actualizarCamposModalidad() {
-                const modalidadSelect = document.getElementById('modalidad');
-                const tipoOfertaSelect = document.getElementById('tipoOferta');
-
-                if (!modalidadSelect || !tipoOfertaSelect) return;
-
-                const modalidad = modalidadSelect.value;
-                const tipoOferta = tipoOfertaSelect.value;
-
-                const seccionUbicacion = document.getElementById('seccion-ubicacion');
-                const grupoLugar = document.getElementById('grupo-lugar');
-                const grupoEnlace = document.getElementById('grupo-enlace');
-
-                if (!seccionUbicacion || !grupoLugar || !grupoEnlace) return;
-
-                // Si no hay tipo de oferta o modalidad seleccionada, ocultar todo
-                if (!tipoOferta || !modalidad) {
-                    seccionUbicacion.style.display = 'none';
-                    grupoLugar.style.display = 'none';
-                    grupoEnlace.style.display = 'none';
+            
+            // Mostrar la sección correspondiente al tipo seleccionado
+            let seccionMostrar = null;
+            switch(tipoOferta) {
+                case 'CURSO':
+                    seccionMostrar = document.getElementById('fields-curso');
+                    // Mostrar horarios para curso
+                    seccionHorarios.style.display = 'block';
+                    // Inicializar búsqueda de docentes para curso
+                    console.log('🔍 Inicializando búsqueda para CURSO');
+                    inicializarBusquedaDocentes('docente-search', 'docente-results', 'docentes-table');
+                    break;
+                    
+                case 'FORMACION':
+                    seccionMostrar = document.getElementById('fields-formacion');
+                    // Mostrar horarios para formación
+                    seccionHorarios.style.display = 'block';
+                    // Inicializar búsqueda de docentes para formación
+                    console.log('🔍 Inicializando búsqueda para FORMACION');
+                    inicializarBusquedaDocentes('docente-search-formacion', 'docente-results-formacion', 'docentes-table-formacion');
+                    break;
+                    
+                case 'CHARLA':
+                    seccionMostrar = document.getElementById('fields-charla');
+                    break;
+                    
+                case 'SEMINARIO':
+                    seccionMostrar = document.getElementById('fields-seminario');
+                    break;
+                    
+                default:
+                    console.log('⚠️ Tipo de oferta no reconocido:', tipoOferta);
                     return;
-                }
-
-                // Para CURSO y FORMACIÓN
-                if (tipoOferta === 'CURSO' || tipoOferta === 'FORMACION') {
-                    grupoEnlace.style.display = 'none';
-
-                    // Mostrar ubicación solo para PRESENCIAL o HÍBRIDA
-                    if (modalidad === 'PRESENCIAL' || modalidad === 'HIBRIDA') {
-                        seccionUbicacion.style.display = 'block';
-                        grupoLugar.style.display = 'block';
-                    } else {
-                        seccionUbicacion.style.display = 'none';
-                        grupoLugar.style.display = 'none';
-                    }
-                    return;
-                }
-
-                // Para CHARLA y SEMINARIO
-                if (tipoOferta === 'CHARLA' || tipoOferta === 'SEMINARIO') {
-                    if (modalidad === 'PRESENCIAL') {
-                        // Solo ubicación, sin enlace
-                        seccionUbicacion.style.display = 'block';
-                        grupoLugar.style.display = 'block';
-                        grupoEnlace.style.display = 'none';
-                    } else if (modalidad === 'VIRTUAL' || modalidad === 'HIBRIDA') {
-                        // Ubicación y enlace
-                        seccionUbicacion.style.display = 'block';
-                        grupoLugar.style.display = 'block';
-                        grupoEnlace.style.display = 'block';
-                    } else {
-                        seccionUbicacion.style.display = 'none';
-                        grupoLugar.style.display = 'none';
-                        grupoEnlace.style.display = 'none';
-                    }
-                    return;
-                }
-
-                // Caso por defecto: ocultar todo
+            }
+            
+            if (seccionMostrar) {
+                seccionMostrar.style.display = 'block';
+                console.log('✅ Mostrando campos específicos para:', tipoOferta);
+            }
+            
+            // Actualizar campos según el tipo y modalidad
+            actualizarCamposModalidad();
+        }
+        
+        // Función para limpiar datos del formulario cuando se cambia tipo
+        function limpiarDatosFormulario() {
+            // Limpiar docentes seleccionados
+            docentesSeleccionados.curso = [];
+            docentesSeleccionados.formacion = [];
+            
+            // Limpiar horarios
+            horariosSeleccionados = [];
+            
+            // Limpiar disertantes
+            disertantesCharla = [];
+            disertantesSeminario = [];
+            
+            // Limpiar tablas de docentes
+            const tablaCurso = document.getElementById('docentes-table');
+            const tablaFormacion = document.getElementById('docentes-table-formacion');
+            
+            if (tablaCurso) {
+                const tbody = tablaCurso.querySelector('tbody');
+                if (tbody) tbody.innerHTML = '';
+            }
+            
+            if (tablaFormacion) {
+                const tbody = tablaFormacion.querySelector('tbody');
+                if (tbody) tbody.innerHTML = '';
+            }
+            
+            // Limpiar visualizaciones
+            actualizarHorariosChips();
+            actualizarDisertantesChips('charla');
+            actualizarDisertantesChips('seminario');
+            
+            // Actualizar campos hidden
+            actualizarDocentesHidden('curso');
+            actualizarDocentesHidden('formacion');
+            
+            console.log('🧹 Datos del formulario limpiados');
+        }
+        
+        // Función para actualizar campos según modalidad seleccionada
+        function actualizarCamposModalidad() {
+            const modalidadSelect = document.getElementById('modalidad');
+            const tipoOfertaSelect = document.getElementById('tipoOferta');
+            
+            if (!modalidadSelect || !tipoOfertaSelect) return;
+            
+            const modalidad = modalidadSelect.value;
+            const tipoOferta = tipoOfertaSelect.value;
+            
+            const seccionUbicacion = document.getElementById('seccion-ubicacion');
+            const grupoLugar = document.getElementById('grupo-lugar');
+            const grupoEnlace = document.getElementById('grupo-enlace');
+            
+            if (!seccionUbicacion || !grupoLugar || !grupoEnlace) return;
+            
+            // Si no hay tipo de oferta o modalidad seleccionada, ocultar todo
+            if (!tipoOferta || !modalidad) {
                 seccionUbicacion.style.display = 'none';
                 grupoLugar.style.display = 'none';
                 grupoEnlace.style.display = 'none';
+                return;
             }
-
-            // Función para calcular número de cuotas automáticamente
-            function calcularNumeroCuotas() {
-                const fechaInicio = document.getElementById('fechaInicio');
-                const fechaFin = document.getElementById('fechaFin');
-                const diaVencimiento = document.getElementById('diaVencimiento');
-                const nrCuotas = document.getElementById('nrCuotas');
-
-                if (!fechaInicio || !fechaFin || !diaVencimiento || !nrCuotas) return;
-
-                const inicio = fechaInicio.value;
-                const fin = fechaFin.value;
-                const dia = parseInt(diaVencimiento.value);
-
-                if (!inicio || !fin || !dia) return;
-
-                const fechaInicioDate = new Date(inicio);
-                const fechaFinDate = new Date(fin);
-
-                // Calcular meses completos
-                let meses = (fechaFinDate.getFullYear() - fechaInicioDate.getFullYear()) * 12;
-                meses += fechaFinDate.getMonth() - fechaInicioDate.getMonth();
-
-                // Ajustar según el día de vencimiento y el día de inicio
-                const diaInicio = fechaInicioDate.getDate();
-                const diaFinalizacion = fechaFinDate.getDate();
-
-                // Si el curso inicia después del día de vencimiento, se pierde una cuota de ese mes
-                let cuotas = meses;
-
-                if (diaInicio > dia) {
-                    // Si el curso empieza después del día de vencimiento, no se paga ese mes
-                    // pero sí todos los siguientes hasta el mes de finalización
-                    cuotas = meses;
+            
+            // Para CURSO y FORMACIÓN
+            if (tipoOferta === 'CURSO' || tipoOferta === 'FORMACION') {
+                grupoEnlace.style.display = 'none';
+                
+                // Mostrar ubicación solo para PRESENCIAL o HÍBRIDA
+                if (modalidad === 'PRESENCIAL' || modalidad === 'HIBRIDA') {
+                    seccionUbicacion.style.display = 'block';
+                    grupoLugar.style.display = 'block';
                 } else {
-                    // Si el curso empieza antes o en el día de vencimiento, se paga ese mes
-                    cuotas = meses + 1;
+                    seccionUbicacion.style.display = 'none';
+                    grupoLugar.style.display = 'none';
                 }
-
-                // Si el curso termina antes del día de vencimiento del último mes, no se cuenta esa cuota
-                if (diaFinalizacion < dia && cuotas > 1) {
-                    cuotas--;
+                return;
+            }
+            
+            // Para CHARLA
+            if (tipoOferta === 'CHARLA') {
+                if (modalidad === 'PRESENCIAL') {
+                    // Solo ubicación, sin enlace
+                    seccionUbicacion.style.display = 'block';
+                    grupoLugar.style.display = 'block';
+                    grupoEnlace.style.display = 'none';
+                } else if (modalidad === 'VIRTUAL' || modalidad === 'HIBRIDA') {
+                    // Ubicación y enlace
+                    seccionUbicacion.style.display = 'block';
+                    grupoLugar.style.display = 'block';
+                    grupoEnlace.style.display = 'block';
+                } else {
+                    seccionUbicacion.style.display = 'none';
+                    grupoLugar.style.display = 'none';
+                    grupoEnlace.style.display = 'none';
                 }
-
-                // Mínimo 1 cuota
-                cuotas = Math.max(1, cuotas);
-
-                nrCuotas.value = cuotas;
+                return;
             }
 
-            // Función para generar videoconferencia
-            window.generarVideoconferencia = function () {
-                const tipoOferta = document.getElementById('tipoOferta').value;
-                const nombreOferta = document.getElementById('nombre').value;
-
-                if (!nombreOferta) {
-                    mostrarNotificacion('Por favor, ingresa el nombre de la oferta primero', 'warning');
+            // Para SEMINARIO
+            if (tipoOferta === 'SEMINARIO') {
+                if (modalidad === 'PRESENCIAL') {
+                    // Solo ubicación, sin enlace
+                    seccionUbicacion.style.display = 'block';
+                    grupoLugar.style.display = 'block';
+                    grupoEnlace.style.display = 'none';
+                } else if (modalidad === 'VIRTUAL') {
+                    // Solo enlace, sin ubicación
+                    seccionUbicacion.style.display = 'block';
+                    grupoLugar.style.display = 'none';
+                    grupoEnlace.style.display = 'block';
+                } else if (modalidad === 'HIBRIDA') {
+                    // Ubicación y enlace
+                    seccionUbicacion.style.display = 'block';
+                    grupoLugar.style.display = 'block';
+                    grupoEnlace.style.display = 'block';
+                } else {
+                    seccionUbicacion.style.display = 'none';
+                    grupoLugar.style.display = 'none';
+                    grupoEnlace.style.display = 'none';
+                }
+                return;
+            }
+            
+            // Caso por defecto: ocultar todo
+            seccionUbicacion.style.display = 'none';
+            grupoLugar.style.display = 'none';
+            grupoEnlace.style.display = 'none';
+        }
+        
+        // Función para calcular número de cuotas automáticamente
+        function calcularNumeroCuotas() {
+            const fechaInicio = document.getElementById('fechaInicio');
+            const fechaFin = document.getElementById('fechaFin');
+            const diaVencimiento = document.getElementById('diaVencimiento');
+            const nrCuotas = document.getElementById('nrCuotas');
+            
+            if (!fechaInicio || !fechaFin || !diaVencimiento || !nrCuotas) return;
+            
+            const inicio = fechaInicio.value;
+            const fin = fechaFin.value;
+            const dia = parseInt(diaVencimiento.value);
+            
+            if (!inicio || !fin || !dia) return;
+            
+            const fechaInicioDate = new Date(inicio);
+            const fechaFinDate = new Date(fin);
+            
+            // Calcular meses completos
+            let meses = (fechaFinDate.getFullYear() - fechaInicioDate.getFullYear()) * 12;
+            meses += fechaFinDate.getMonth() - fechaInicioDate.getMonth();
+            
+            // Ajustar según el día de vencimiento y el día de inicio
+            const diaInicio = fechaInicioDate.getDate();
+            const diaFinalizacion = fechaFinDate.getDate();
+            
+            // Si el curso inicia después del día de vencimiento, se pierde una cuota de ese mes
+            let cuotas = meses;
+            
+            if (diaInicio > dia) {
+                // Si el curso empieza después del día de vencimiento, no se paga ese mes
+                // pero sí todos los siguientes hasta el mes de finalización
+                cuotas = meses;
+            } else {
+                // Si el curso empieza antes o en el día de vencimiento, se paga ese mes
+                cuotas = meses + 1;
+            }
+            
+            // Si el curso termina antes del día de vencimiento del último mes, no se cuenta esa cuota
+            if (diaFinalizacion < dia && cuotas > 1) {
+                cuotas--;
+            }
+            
+            // Mínimo 1 cuota
+            cuotas = Math.max(1, cuotas);
+            
+            nrCuotas.value = cuotas;
+        }
+        
+        // Función para generar videoconferencia
+        window.generarVideoconferencia = function() {
+            const tipoOferta = document.getElementById('tipoOferta').value;
+            const nombreOferta = document.getElementById('nombre').value;
+            
+            if (!nombreOferta) {
+                mostrarNotificacion('Por favor, ingresa el nombre de la oferta primero', 'warning');
+                return;
+            }
+            
+            // Validar fecha y hora según el tipo
+            let fecha, hora;
+            if (tipoOferta === 'CHARLA') {
+                fecha = document.getElementById('fechaCharla').value;
+                hora = document.getElementById('horaCharla').value;
+                
+                if (!fecha || !hora) {
+                    mostrarNotificacion('Por favor, ingresa la fecha y hora de la charla', 'warning');
                     return;
                 }
-
-                // Validar fecha y hora según el tipo
-                let fecha, hora;
-                if (tipoOferta === 'CHARLA') {
-                    fecha = document.getElementById('fechaCharla').value;
-                    hora = document.getElementById('horaCharla').value;
-
-                    if (!fecha || !hora) {
-                        mostrarNotificacion('Por favor, ingresa la fecha y hora de la charla', 'warning');
-                        return;
-                    }
-                } else if (tipoOferta === 'SEMINARIO') {
-                    fecha = document.getElementById('fechaSeminario').value;
-                    hora = document.getElementById('horaSeminario').value;
-
-                    if (!fecha || !hora) {
-                        mostrarNotificacion('Por favor, ingresa la fecha y hora del seminario', 'warning');
-                        return;
-                    }
-                }
-
-                // Obtener el primer disertante según el tipo
-                let disertante = null;
-                if (tipoOferta === 'CHARLA') {
-                    if (disertantesCharla.length > 0) {
-                        disertante = disertantesCharla[0];
-                    }
-                } else if (tipoOferta === 'SEMINARIO') {
-                    if (disertantesSeminario.length > 0) {
-                        disertante = disertantesSeminario[0];
-                    }
-                }
-
-                if (!disertante) {
-                    mostrarNotificacion('Por favor, ingresa al menos un disertante primero', 'warning');
+            } else if (tipoOferta === 'SEMINARIO') {
+                fecha = document.getElementById('fechaSeminario').value;
+                hora = document.getElementById('horaSeminario').value;
+                
+                if (!fecha || !hora) {
+                    mostrarNotificacion('Por favor, ingresa la fecha y hora del seminario', 'warning');
                     return;
                 }
-
-                // Generar el nombre de la sala (similar a como se hace en clases)
-                const roomName = nombreOferta.toLowerCase()
-                    .replace(/[áàäâ]/g, 'a')
-                    .replace(/[éèëê]/g, 'e')
-                    .replace(/[íìïî]/g, 'i')
-                    .replace(/[óòöô]/g, 'o')
-                    .replace(/[úùüû]/g, 'u')
-                    .replace(/ñ/g, 'n')
-                    .replace(/\s+/g, '-')
-                    .replace(/[^a-z0-9-]/g, '');
-
-                const safeRoomName = 'aurea-charla-' + roomName;
-
-                // URL hacia el HTML de Aurea que mostrará el iframe (será creado en el backend)
-                // Pasar la fecha y hora como parámetros
-                const videoUrl = `/charla/videoconferencia/${safeRoomName}?fecha=${fecha}&hora=${hora}&moderador=${encodeURIComponent(disertante)}`;
-
-                // Establecer el enlace en el campo
-                document.getElementById('enlace').value = window.location.origin + videoUrl;
-
-                mostrarNotificacion(`Videoconferencia programada para ${fecha} ${hora}. Moderador: ${disertante}`, 'success');
-
-                console.log('🎥 Videoconferencia generada:');
-                console.log('   - Room: ' + safeRoomName);
-                console.log('   - Moderador: ' + disertante);
-                console.log('   - Fecha: ' + fecha);
-                console.log('   - Hora: ' + hora);
-                console.log('   - URL: ' + videoUrl);
-            };
+            }
+            
+            // Obtener el primer disertante según el tipo
+            let disertante = null;
+            if (tipoOferta === 'CHARLA') {
+                if (disertantesCharla.length > 0) {
+                    disertante = disertantesCharla[0];
+                }
+            } else if (tipoOferta === 'SEMINARIO') {
+                if (disertantesSeminario.length > 0) {
+                    disertante = disertantesSeminario[0];
+                }
+            }
+            
+            if (!disertante) {
+                mostrarNotificacion('Por favor, ingresa al menos un disertante primero', 'warning');
+                return;
+            }
+            
+            // Generar el nombre de la sala (similar a como se hace en clases)
+            const roomName = nombreOferta.toLowerCase()
+                .replace(/[áàäâ]/g, 'a')
+                .replace(/[éèëê]/g, 'e')
+                .replace(/[íìïî]/g, 'i')
+                .replace(/[óòöô]/g, 'o')
+                .replace(/[úùüû]/g, 'u')
+                .replace(/ñ/g, 'n')
+                .replace(/\s+/g, '-')
+                .replace(/[^a-z0-9-]/g, '');
+            
+            const safeRoomName = 'aurea-charla-' + roomName;
+            
+            // URL hacia el HTML de Aurea que mostrará el iframe (será creado en el backend)
+            // Pasar la fecha y hora como parámetros
+            const videoUrl = `/charla/videoconferencia/${safeRoomName}?fecha=${fecha}&hora=${hora}&moderador=${encodeURIComponent(disertante)}`;
+            
+            // Establecer el enlace en el campo
+            document.getElementById('enlace').value = window.location.origin + videoUrl;
+            
+            mostrarNotificacion(`Videoconferencia programada para ${fecha} ${hora}. Moderador: ${disertante}`, 'success');
+            
+            console.log('🎥 Videoconferencia generada:');
+            console.log('   - Room: ' + safeRoomName);
+            console.log('   - Moderador: ' + disertante);
+            console.log('   - Fecha: ' + fecha);
+            console.log('   - Hora: ' + hora);
+            console.log('   - URL: ' + videoUrl);
+        };
 
 
             // Variables globales para docentes seleccionados
