@@ -1172,35 +1172,33 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
 
-        if (btnCloseForm) {
-            btnCloseForm.addEventListener('click', function () {
-                const form = document.getElementById('user-form');
-                const isEditMode = form?.dataset?.mode === 'edit';
-                if (isEditMode) {
-                    confirmAction(
-                        'Cancelar edición',
-                        '¿Está seguro de que desea cancelar? Los cambios no guardados se perderán.',
-                        hideForm
-                    );
-                    return;
-                }
+        function solicitarConfirmacionCancelacion() {
+            const form = document.getElementById('user-form');
+            const mode = form?.dataset?.mode || 'create';
+
+            if (mode === 'view') {
                 hideForm();
+                return;
+            }
+
+            const isEditMode = mode === 'edit';
+            const title = isEditMode ? 'Cancelar edición' : 'Cancelar registro';
+            const message = isEditMode
+                ? '¿Está seguro de que desea cancelar? Los cambios no guardados se perderán.'
+                : '¿Está seguro de que desea cancelar el registro? Los datos ingresados se perderán.';
+
+            confirmAction(title, message, hideForm);
+        }
+
+        if (btnCloseForm) {
+            btnCloseForm.addEventListener('click', function() {
+                solicitarConfirmacionCancelacion();
             });
         }
 
         if (btnCancelForm) {
-            btnCancelForm.addEventListener('click', function () {
-                const form = document.getElementById('user-form');
-                const isEditMode = form?.dataset?.mode === 'edit';
-                if (isEditMode) {
-                    confirmAction(
-                        'Cancelar edición',
-                        '¿Está seguro de que desea cancelar? Los cambios no guardados se perderán.',
-                        hideForm
-                    );
-                    return;
-                }
-                hideForm();
+            btnCancelForm.addEventListener('click', function() {
+                solicitarConfirmacionCancelacion();
             });
         }
     }

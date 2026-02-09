@@ -1861,238 +1861,196 @@
                 categoriaSearchInput.addEventListener('input', filtrarCategoriasSelect);
             }
 
-                if (categoriasFilterClear) {
-                    categoriasFilterClear.addEventListener('click', function () {
+            if (categoriasFilterClear) {
+                categoriasFilterClear.addEventListener('click', function() {
+                    if (categoriasFilterInput) {
+                        categoriasFilterInput.value = '';
+                        aplicarFiltroCategorias();
+                        categoriasFilterInput.focus();
+                    }
+                });
+            }
+            
+            // Manejador del botón mostrar formulario
+            if (btnShowForm && formContainer) {
+                btnShowForm.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    console.log('👆 CLICK EN NUEVA OFERTA');
+                    
+                    // Limpiar formulario para asegurar estado inicial
+                    if (typeof limpiarFormularioCompleto === 'function') {
+                        limpiarFormularioCompleto();
+                    }
+                    
+                     // Establecer fecha mínima en los inputs de fecha (hoy)
+                    const hoy = new Date().toISOString().split('T')[0];
+                    const fechaInicioInput = document.getElementById('fechaInicio');
+                    const fechaFinInput = document.getElementById('fechaFin');
+                    
+                    if (fechaInicioInput) fechaInicioInput.setAttribute('min', hoy);
+                    if (fechaFinInput) fechaFinInput.setAttribute('min', hoy);
+                    
+                    // Mostrar formulario con animación
+                    formContainer.style.display = 'block';
+                    
+                    setTimeout(() => {
+                        formContainer.classList.add('show');
+                        console.log('📝 FORMULARIO MOSTRADO');
+                    }, 10);
+                });
+            }
+            
+            function confirmarCancelacionFormulario() {
+                const estaEnEdicion = typeof modoEdicion !== 'undefined' && modoEdicion;
+                const titulo = estaEnEdicion ? 'Cancelar Modificación' : 'Cancelar Registro';
+                const mensaje = estaEnEdicion
+                    ? '¿Estás seguro que deseas cancelar la modificación? Los cambios no guardados se perderán.'
+                    : '¿Estás seguro que deseas cancelar el registro? Los datos ingresados se perderán.';
+
+                ModalConfirmacion.show(titulo, mensaje, () => {
+                    if (estaEnEdicion && typeof resetearModoEdicion === 'function') {
+                        resetearModoEdicion();
+                    }
+                    if (typeof limpiarFormularioCompleto === 'function') {
+                        limpiarFormularioCompleto();
+                    }
+                    console.log('❌ CERRANDO FORMULARIO');
+                    formContainer.classList.remove('show');
+                    setTimeout(() => {
+                        formContainer.style.display = 'none';
+                    }, 500);
+                });
+            }
+
+            // Manejador del botón cerrar formulario
+            if (btnCloseForm && formContainer) {
+                btnCloseForm.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    confirmarCancelacionFormulario();
+                });
+            }
+
+            // Manejador del botón cancelar formulario (botón inferior)
+            if (btnCancelForm && formContainer) {
+                btnCancelForm.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    confirmarCancelacionFormulario();
+                });
+            }
+            
+            // Manejador del botón gestionar categorías
+            if (btnGestionarCategorias) {
+                btnGestionarCategorias.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    console.log('📋 ABRIENDO GESTIÓN DE CATEGORÍAS');
+                    
+                    const modal = document.getElementById('categoriaModal');
+                    if (modal) {
+                        modal.style.display = 'flex';
                         if (categoriasFilterInput) {
                             categoriasFilterInput.value = '';
-                            aplicarFiltroCategorias();
-                            categoriasFilterInput.focus();
                         }
-                    });
-                }
-
-                // Manejador del botón mostrar formulario
-                if (btnShowForm && formContainer) {
-                    btnShowForm.addEventListener('click', function (e) {
+                        cargarCategorias();
+                    }
+                });
+            }
+            
+            // Manejador del botón añadir categoría
+            const btnAddCategoria = document.getElementById('btn-add-categoria');
+            if (btnAddCategoria) {
+                btnAddCategoria.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    añadirCategoriaSeleccionada();
+                });
+            }
+            
+            // Manejador para mostrar campos específicos según tipo de oferta
+            const tipoOfertaSelect = document.getElementById('tipoOferta');
+            if (tipoOfertaSelect) {
+                tipoOfertaSelect.addEventListener('change', function() {
+                    mostrarCamposEspecificos(this.value);
+                });
+            }
+            
+            // Manejador para mostrar/ocultar campos según modalidad
+            const modalidadSelect = document.getElementById('modalidad');
+            if (modalidadSelect) {
+                modalidadSelect.addEventListener('change', function() {
+                    actualizarCamposModalidad(this.value);
+                });
+            }
+            
+            // Listeners para cálculo automático de cuotas
+            const fechaInicio = document.getElementById('fechaInicio');
+            const fechaFin = document.getElementById('fechaFin');
+            const diaVencimiento = document.getElementById('diaVencimiento');
+            
+            if (fechaInicio) {
+                fechaInicio.addEventListener('change', function() {
+                    // Solo aplicar lógica si es CURSO o FORMACION
+                    const tipoOferta = document.getElementById('tipoOferta')?.value;
+                    if (tipoOferta === 'CURSO' || tipoOferta === 'FORMACION') {
+                        // Habilitar fechaFin cuando se selecciona fechaInicio
+                        if (fechaFin && this.value) {
+                            fechaFin.disabled = false;
+                            fechaFin.setAttribute('min', this.value);
+                        }
+                        calcularNumeroCuotas();
+                    }
+                });
+            }
+            if (fechaFin) {
+                fechaFin.addEventListener('change', calcularNumeroCuotas);
+            }
+            if (diaVencimiento) {
+                diaVencimiento.addEventListener('change', calcularNumeroCuotas);
+            }
+            
+            // Event listeners para disertantes (Enter key)
+            const disertantesCharlaInput = document.getElementById('disertantesCharlaInput');
+            if (disertantesCharlaInput) {
+                disertantesCharlaInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
                         e.preventDefault();
-                        console.log('👆 CLICK EN NUEVA OFERTA');
-
-                        // Limpiar formulario para asegurar estado inicial
-                        if (typeof limpiarFormularioCompleto === 'function') {
-                            limpiarFormularioCompleto();
-                        }
-
-                        // Establecer fecha mínima en los inputs de fecha (hoy)
-                        const hoy = new Date().toISOString().split('T')[0];
-                        const fechaInicioInput = document.getElementById('fechaInicio');
-                        const fechaFinInput = document.getElementById('fechaFin');
-
-                        if (fechaInicioInput) fechaInicioInput.setAttribute('min', hoy);
-                        if (fechaFinInput) fechaFinInput.setAttribute('min', hoy);
-
-                        // Mostrar formulario con animación
-                        formContainer.style.display = 'block';
-
-                        setTimeout(() => {
-                            formContainer.classList.add('show');
-                            console.log('📝 FORMULARIO MOSTRADO');
-                        }, 10);
-                    });
-                }
-
-                // Manejador del botón cerrar formulario
-                if (btnCloseForm && formContainer) {
-                    btnCloseForm.addEventListener('click', function (e) {
+                        agregarDisertante('charla');
+                    }
+                });
+            }
+            
+            const disertantesSeminarioInput = document.getElementById('disertantesSeminarioInput');
+            if (disertantesSeminarioInput) {
+                disertantesSeminarioInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
                         e.preventDefault();
-
-                        // Verificar si estamos en modo edición
-                        if (typeof modoEdicion !== 'undefined' && modoEdicion) {
-                            ModalConfirmacion.show(
-                                'Cancelar Modificación',
-                                '¿Estás seguro que deseas cancelar la modificación? Los cambios no guardados se perderán.',
-                                () => {
-                                    // Si confirma, reseteamos el modo edición
-                                    if (typeof resetearModoEdicion === 'function') {
-                                        resetearModoEdicion();
-                                    }
-                                    // Y limpiamos el formulario
-                                    if (typeof limpiarFormularioCompleto === 'function') {
-                                        limpiarFormularioCompleto();
-                                    }
-                                    console.log('❌ CERRANDO FORMULARIO');
-                                    formContainer.classList.remove('show');
-                                    setTimeout(() => {
-                                        formContainer.style.display = 'none';
-                                    }, 500);
-                                }
-                            );
-                            return;
-                        }
-
-                        console.log('❌ CERRANDO FORMULARIO');
-
-                        formContainer.classList.remove('show');
-                        setTimeout(() => {
-                            formContainer.style.display = 'none';
-                        }, 500);
-                    });
-                }
-
-                // Manejador del botón cancelar formulario (botón inferior)
-                if (btnCancelForm && formContainer) {
-                    btnCancelForm.addEventListener('click', function (e) {
-                        e.preventDefault();
-
-                        // Verificar si estamos en modo edición
-                        if (typeof modoEdicion !== 'undefined' && modoEdicion) {
-                            ModalConfirmacion.show(
-                                'Cancelar Modificación',
-                                '¿Estás seguro que deseas cancelar la modificación? Los cambios no guardados se perderán.',
-                                () => {
-                                    // Si confirma, reseteamos el modo edición
-                                    if (typeof resetearModoEdicion === 'function') {
-                                        resetearModoEdicion();
-                                    }
-                                    // Y limpiamos el formulario
-                                    if (typeof limpiarFormularioCompleto === 'function') {
-                                        limpiarFormularioCompleto();
-                                    }
-                                    formContainer.classList.remove('show');
-                                    setTimeout(() => {
-                                        formContainer.style.display = 'none';
-                                    }, 500);
-                                }
-                            );
-                            return;
-                        }
-
-                        // Y limpiamos el formulario
-                        if (typeof limpiarFormularioCompleto === 'function') {
-                            limpiarFormularioCompleto();
-                        }
-
-                        console.log('❌ CANCELANDO FORMULARIO');
-
-                        formContainer.classList.remove('show');
-                        setTimeout(() => {
-                            formContainer.style.display = 'none';
-                        }, 500);
-                    });
-                }
-
-                // Manejador del botón gestionar categorías
-                if (btnGestionarCategorias) {
-                    btnGestionarCategorias.addEventListener('click', function (e) {
-                        e.preventDefault();
-                        console.log('📋 ABRIENDO GESTIÓN DE CATEGORÍAS');
-
-                        const modal = document.getElementById('categoriaModal');
-                        if (modal) {
-                            modal.style.display = 'flex';
-                            if (categoriasFilterInput) {
-                                categoriasFilterInput.value = '';
-                            }
-                            cargarCategorias();
-                        }
-                    });
-                }
-
-                // Manejador del botón añadir categoría
-                const btnAddCategoria = document.getElementById('btn-add-categoria');
-                if (btnAddCategoria) {
-                    btnAddCategoria.addEventListener('click', function (e) {
-                        e.preventDefault();
-                        añadirCategoriaSeleccionada();
-                    });
-                }
-
-                // Manejador para mostrar campos específicos según tipo de oferta
-                const tipoOfertaSelect = document.getElementById('tipoOferta');
-                if (tipoOfertaSelect) {
-                    tipoOfertaSelect.addEventListener('change', function () {
-                        mostrarCamposEspecificos(this.value);
-                    });
-                }
-
-                // Manejador para mostrar/ocultar campos según modalidad
-                const modalidadSelect = document.getElementById('modalidad');
-                if (modalidadSelect) {
-                    modalidadSelect.addEventListener('change', function () {
-                        actualizarCamposModalidad(this.value);
-                    });
-                }
-
-                // Listeners para cálculo automático de cuotas
-                const fechaInicio = document.getElementById('fechaInicio');
-                const fechaFin = document.getElementById('fechaFin');
-                const diaVencimiento = document.getElementById('diaVencimiento');
-
-                if (fechaInicio) {
-                    fechaInicio.addEventListener('change', function () {
-                        // Solo aplicar lógica si es CURSO o FORMACION
-                        const tipoOferta = document.getElementById('tipoOferta')?.value;
-                        if (tipoOferta === 'CURSO' || tipoOferta === 'FORMACION') {
-                            // Habilitar fechaFin cuando se selecciona fechaInicio
-                            if (fechaFin && this.value) {
-                                fechaFin.disabled = false;
-                                fechaFin.setAttribute('min', this.value);
-                            }
-                            calcularNumeroCuotas();
-                        }
-                    });
-                }
-                if (fechaFin) {
-                    fechaFin.addEventListener('change', calcularNumeroCuotas);
-                }
-                if (diaVencimiento) {
-                    diaVencimiento.addEventListener('change', calcularNumeroCuotas);
-                }
-
-                // Event listeners para disertantes (Enter key)
-                const disertantesCharlaInput = document.getElementById('disertantesCharlaInput');
-                if (disertantesCharlaInput) {
-                    disertantesCharlaInput.addEventListener('keypress', function (e) {
-                        if (e.key === 'Enter') {
-                            e.preventDefault();
-                            agregarDisertante('charla');
-                        }
-                    });
-                }
-
-                const disertantesSeminarioInput = document.getElementById('disertantesSeminarioInput');
-                if (disertantesSeminarioInput) {
-                    disertantesSeminarioInput.addEventListener('keypress', function (e) {
-                        if (e.key === 'Enter') {
-                            e.preventDefault();
-                            agregarDisertante('seminario');
-                        }
-                    });
-                }
-
-                // Cargar categorías al iniciar
-                cargarCategoriasSelect();
-
-                // Event listener para cerrar notificación
-                const notificationClose = document.getElementById('notification-close');
-                if (notificationClose) {
-                    notificationClose.addEventListener('click', ocultarNotificacion);
-                }
-
-                // Manejador de filtros
-                const btnApplyFilters = document.getElementById('btn-apply-filters');
-                const btnClearFilters = document.getElementById('btn-clear-filters');
-
-                if (btnApplyFilters) {
-                    btnApplyFilters.addEventListener('click', function () {
-                        aplicarFiltros();
-                    });
-                }
-
-                if (btnClearFilters) {
-                    btnClearFilters.addEventListener('click', function () {
-                        limpiarFiltros();
-                    });
-                }
+                        agregarDisertante('seminario');
+                    }
+                });
+            }
+            
+            // Cargar categorías al iniciar
+            cargarCategoriasSelect();
+            
+            // Event listener para cerrar notificación
+            const notificationClose = document.getElementById('notification-close');
+            if (notificationClose) {
+                notificationClose.addEventListener('click', ocultarNotificacion);
+            }
+            
+            // Manejador de filtros
+            const btnApplyFilters = document.getElementById('btn-apply-filters');
+            const btnClearFilters = document.getElementById('btn-clear-filters');
+            
+            if (btnApplyFilters) {
+                btnApplyFilters.addEventListener('click', function() {
+                    aplicarFiltros();
+                });
+            }
+            
+            if (btnClearFilters) {
+                btnClearFilters.addEventListener('click', function() {
+                    limpiarFiltros();
+                });
+            }
 
                 console.log('🎉 GESTIÓN DE OFERTAS INICIALIZADA');
 
