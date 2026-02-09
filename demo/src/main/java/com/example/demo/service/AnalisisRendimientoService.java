@@ -32,6 +32,7 @@ import com.example.demo.repository.UsuarioRepository;
 import com.example.demo.repository.EntregaRepository;
 import com.example.demo.repository.IntentoRepository;
 import com.example.demo.repository.AsistenciaRepository;
+import com.example.demo.service.AuditLogService;
 
 import com.example.demo.service.InstitutoService;
 import com.example.demo.model.Instituto;
@@ -73,6 +74,9 @@ public class AnalisisRendimientoService {
     
     @Autowired
     private AsistenciaRepository asistenciaRepository;
+
+    @Autowired
+    private AuditLogService auditLogService;
     
     @Autowired
     private com.example.demo.repository.OfertaAcademicaRepository ofertaAcademicaRepository;
@@ -175,6 +179,24 @@ public class AnalisisRendimientoService {
                 log.warn("⚠️ BAJA AUTOMÁTICA para oferta {}: {}", oferta.getNombre(), motivoBaja);
                 oferta.setEstado(EstadoOferta.DE_BAJA);
                 ofertaAcademicaRepository.save(oferta);
+
+                // Registrar auditoría de baja automática
+                try {
+                    long now = System.currentTimeMillis();
+                    com.example.demo.model.AuditLog audit = new com.example.demo.model.AuditLog();
+                    audit.setFecha(new java.sql.Date(now));
+                    audit.setHora(new java.sql.Time(now));
+                    audit.setUsuario(null);
+                    audit.setRol(null);
+                    audit.setAccion("BAJA_AUTOMATICA_OFERTA");
+                    audit.setAfecta("OfertaAcademica");
+                    audit.setDetalles("ID:" + oferta.getIdOferta() + " | Nombre:" + oferta.getNombre() + " | Motivo:" + motivoBaja);
+                    audit.setExito(true);
+                    audit.setIp("SYSTEM");
+                    auditLogService.registrar(audit);
+                } catch (Exception e) {
+                    log.error("Error registrando auditoría de baja automática: {}", e.getMessage());
+                }
                 
                 // Notificar docentes (si aplica)
                 List<? extends Usuario> docentes = new ArrayList<>();

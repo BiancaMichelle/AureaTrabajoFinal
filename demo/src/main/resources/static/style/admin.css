@@ -5904,3 +5904,33 @@ textarea.form-control:focus {
     border-top: 1px solid var(--border-color);
 }
 
+/* =================   BOTÓN CERRAR SESIÓN ADMIN   ================= */
+.btn-logout {
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    color: #ef4444;
+    background: linear-gradient(180deg, rgba(239, 68, 68, 0.08), rgba(239, 68, 68, 0.02));
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.btn-logout i {
+    font-size: 0.95rem;
+}
+
+.btn-logout:hover {
+    background: linear-gradient(180deg, rgba(239, 68, 68, 0.16), rgba(239, 68, 68, 0.06));
+    border-color: rgba(239, 68, 68, 0.6);
+    color: #dc2626;
+    transform: translateY(-1px);
+}
+
+.btn-logout:active {
+    transform: translateY(0);
+}
+

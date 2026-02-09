@@ -94,7 +94,9 @@
                     <a>
                         <form th:action="@{/logout}" id="logoutFormAdmin" method="post" style="display: inline;">
                                 <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-                                <button type="button" class="btn-link" onclick="confirmarSalidaAdmin()">Cerrar Sesión</button>
+                                <button type="button" class="btn-logout" onclick="confirmarSalidaAdmin()">
+                                    <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                                </button>
                         </form>
                     </a>
                 </li>

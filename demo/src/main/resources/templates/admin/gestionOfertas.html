@@ -4023,6 +4023,12 @@ if (typeof window.mostrarNotificacion !== 'function') {
         // Función para cambiar estado de la oferta
         window.cambiarEstadoOferta = function() {
             if (!ofertaActualId) {
+                const hiddenId = document.getElementById('idOfertaModificar')?.value;
+                if (hiddenId) {
+                    ofertaActualId = hiddenId;
+                }
+            }
+            if (!ofertaActualId) {
                 console.error('❌ No hay oferta seleccionada para cambiar estado');
                 mostrarNotificacion('Error: No hay oferta seleccionada', 'error');
                 return;
@@ -5153,6 +5159,13 @@ if (typeof window.mostrarNotificacion !== 'function') {
                 if (data.success) {
                     console.log('Oferta actualizada exitosamente. Estado original era:', estadoOfertaEnEdicion);
                     mostrarNotificacion('Oferta actualizada exitosamente', 'success');
+                    const idOfertaActual = (data.oferta && (data.oferta.id || data.oferta.idOferta))
+                        || idOfertaModificar
+                        || document.getElementById('idOfertaModificar')?.value
+                        || ofertaActualId;
+                    if (idOfertaActual) {
+                        ofertaActualId = idOfertaActual;
+                    }
                     
                     // Verificar si estaba DE_BAJA para ofrecer dar de alta
                     if (estadoOfertaEnEdicion === 'DE_BAJA') {
@@ -5172,7 +5185,15 @@ if (typeof window.mostrarNotificacion !== 'function') {
                                     };
                                     if (token && headerName) headers[headerName] = token;
         
-                                    fetch(`/admin/ofertas/cambiar-estado/${idOfertaModificar}`, {
+                                    const idParaCambiar = idOfertaActual
+                                        || idOfertaModificar
+                                        || document.getElementById('idOfertaModificar')?.value
+                                        || ofertaActualId;
+                                    if (!idParaCambiar) {
+                                        mostrarNotificacion('Error: No se pudo determinar el ID de la oferta', 'error');
+                                        return;
+                                    }
+                                    fetch(`/admin/ofertas/cambiar-estado/${idParaCambiar}`, {
                                         method: 'POST',
                                         headers: headers
                                     })

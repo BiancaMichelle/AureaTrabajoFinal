@@ -18,6 +18,12 @@ function initializeConfiguraciones() {
     console.log('✅ Configuraciones inicializadas correctamente');
 }
 
+const DEFAULT_COLORS = {
+    primary: '#E5383B',
+    secondary: '#0D1B2A',
+    text: '#374151'
+};
+
 function ensureDefaultCurrency() {
     const monedaSelect = document.getElementById('moneda');
     if (monedaSelect && !monedaSelect.value) {
@@ -380,6 +386,14 @@ function submitConfiguration() {
         if (data.success) {
             showNotification('Configuración guardada exitosamente', 'success');
             updateSaveStatus('success');
+            // Aplicar colores en vivo al root (sin recargar)
+            const colorPrimario = document.getElementById('colorPrimario')?.value;
+            const colorSecundario = document.getElementById('colorSecundario')?.value;
+            const colorTexto = document.getElementById('colorTexto')?.value;
+            const root = document.documentElement;
+            if (colorPrimario) root.style.setProperty('--main-red', colorPrimario);
+            if (colorSecundario) root.style.setProperty('--dark-blue', colorSecundario);
+            if (colorTexto) root.style.setProperty('--text-color', colorTexto);
         } else {
             showNotification(data.message || 'Error al guardar la configuración', 'error');
             updateSaveStatus('error');
@@ -394,23 +408,31 @@ function submitConfiguration() {
 }
 
 function resetConfiguration() {
-    const form = document.getElementById('config-form');
-    form.reset();
-    
-    // Restablecer vista previa de imagen
-    const logoPreview = document.getElementById('logo-preview');
-    const logoPlaceholder = document.getElementById('logo-placeholder');
-    logoPreview.style.display = 'none';
-    logoPlaceholder.style.display = 'block';
-    
-    // Restablecer colores
-    setupColorInputs();
+    // Restablecer solo colores a los valores por defecto (DataSeeder)
+    const colorPrimario = document.getElementById('colorPrimario');
+    const colorSecundario = document.getElementById('colorSecundario');
+    const colorTexto = document.getElementById('colorTexto');
+    const colorTexts = document.querySelectorAll('.color-text');
+
+    if (colorPrimario) colorPrimario.value = DEFAULT_COLORS.primary;
+    if (colorSecundario) colorSecundario.value = DEFAULT_COLORS.secondary;
+    if (colorTexto) colorTexto.value = DEFAULT_COLORS.text;
+
+    // Sincronizar inputs de texto
+    colorTexts.forEach((input, idx) => {
+        if (idx === 0) input.value = DEFAULT_COLORS.primary;
+        if (idx === 1) input.value = DEFAULT_COLORS.secondary;
+        if (idx === 2) input.value = DEFAULT_COLORS.text;
+    });
+
+    // Aplicar a la vista previa y al root
     updateColorPreview();
-    
-    // Restablecer configuraciones automáticas
-    setupAutomaticConfigToggle();
-    
-    showNotification('Configuración restablecida', 'success');
+    const root = document.documentElement;
+    root.style.setProperty('--main-red', DEFAULT_COLORS.primary);
+    root.style.setProperty('--dark-blue', DEFAULT_COLORS.secondary);
+    root.style.setProperty('--text-color', DEFAULT_COLORS.text);
+
+    showNotification('Colores restablecidos a los valores por defecto', 'success');
 }
 
 // =================   ESTADO DE GUARDADO   =================

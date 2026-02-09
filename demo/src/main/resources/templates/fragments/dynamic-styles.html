@@ -7,6 +7,9 @@
             
             /* Color Secundario (Index 1) -> Reemplaza --dark-blue */
             --dark-blue: [[${instituto.colores != null and instituto.colores.size() > 1 ? instituto.colores[1] : '#0D1B2A'}]] !important;
+
+            /* Color de Texto (Index 2) */
+            --text-color: [[${instituto.colores != null and instituto.colores.size() > 2 ? instituto.colores[2] : '#374151'}]] !important;
         }
         
         /* Actualizar gradientes que usan estos colores si es necesario */
