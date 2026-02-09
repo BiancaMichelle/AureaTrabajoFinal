@@ -2402,30 +2402,26 @@
             const titulo = form.querySelector('input[name="titulo"]')?.value?.trim() || '';
             const descripcion = form.querySelector('textarea[name="descripcion"]')?.value?.trim() || '';
             const materiales = [];
-            const erroresMaterial = [];
 
-            form.querySelectorAll('.material-item').forEach((item, index) => {
-                const tituloMat = item.querySelector('input[name="materialTitulo"]')?.value?.trim() || '';
-                const descripcionMat = item.querySelector('textarea[name="materialDescripcion"]')?.value?.trim() || '';
-                const archivosInput = item.querySelector('input[type="file"][name="materialArchivos"]');
-                const archivos = archivosInput ? Array.from(archivosInput.files || []) : [];
+            const tituloMat = form.querySelector('input[name="materialTitulo"]')?.value?.trim() || '';
+            const descripcionMat = form.querySelector('textarea[name="materialDescripcion"]')?.value?.trim() || '';
+            const archivosInput = form.querySelector('input[type="file"][name="materialArchivos"]');
+            const archivos = archivosInput ? Array.from(archivosInput.files || []) : [];
 
-                if (!tituloMat && !descripcionMat && archivos.length === 0) {
-                    return;
+            const tieneDatosMaterial = tituloMat || descripcionMat || archivos.length > 0;
+            if (tieneDatosMaterial) {
+                let tituloFinal = tituloMat;
+                if (!tituloFinal) {
+                    if (archivos.length > 0) {
+                        const nombre = archivos[0].name || 'Material';
+                        const base = nombre.replace(/\.[^/.]+$/, '');
+                        tituloFinal = base || 'Material';
+                    } else {
+                        tituloFinal = 'Material';
+                    }
                 }
 
-                if (!tituloMat) {
-                    erroresMaterial.push(`Material ${index + 1} necesita un t??tulo.`);
-                    return;
-                }
-
-                materiales.push({ titulo: tituloMat, descripcion: descripcionMat, archivos });
-            });
-
-            if (erroresMaterial.length > 0) {
-                alert(erroresMaterial.join('
-'));
-                return;
+                materiales.push({ titulo: tituloFinal, descripcion: descripcionMat, archivos });
             }
 
             const formData = new FormData();
@@ -2479,11 +2475,11 @@
 
                             const materialResult = await materialResponse.json();
                             if (!materialResponse.ok || !materialResult.success) {
-                                materialesFallidos.push(material.titulo || 'Material sin t??tulo');
+                                materialesFallidos.push(material.titulo || 'Material sin titulo');
                             }
                         } catch (materialError) {
                             console.error('Error creando material:', materialError);
-                            materialesFallidos.push(material.titulo || 'Material sin t??tulo');
+                            materialesFallidos.push(material.titulo || 'Material sin titulo');
                         }
                     }
 
@@ -2545,7 +2541,7 @@
                             
                             <div class="mb-4">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Título *</label>
-                                <input type="text" name="titulo" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" placeholder="Título del recurso" value="${escapeHtmlAtributo(tituloValor)}">
+                                <input type="text" name="titulo" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" placeholder="Título del recurso" value="${escapeHtmlAtributo(tituloValor)}">
                             </div>
                             
                             ${esEnlace ? `
@@ -2669,7 +2665,7 @@
                                     <label class="block text-sm font-medium text-gray-700 mb-1">
                                         <i class="fas fa-heading me-1"></i>Nombre de la tarea *
                                     </label>
-                                    <input type="text" name="titulo" required
+                                    <input type="text" name="titulo"
                                            class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500"
                                            placeholder="Ej: Trabajo Práctico N°1">
                                 </div>
@@ -2813,7 +2809,7 @@
                                         <label class="block text-sm font-medium text-gray-700 mb-1">
                                             <i class="fas fa-heading me-1"></i>Título del examen *
                                         </label>
-                                        <input type="text" name="titulo" required
+                                        <input type="text" name="titulo"
                                                class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-purple-500"
                                                placeholder="Ej: Examen Parcial - Unidad 1">
                                     </div>
@@ -4302,11 +4298,11 @@
                         </button>
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">T??tulo *</label>
-                        <input type="text" name="materialTitulo" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" placeholder="Ej: Gu??a 1">
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Titulo *</label>
+                        <input type="text" name="materialTitulo" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" placeholder="Ej: Guia 1">
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Descripci??n</label>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Descripcion</label>
                         <textarea name="materialDescripcion" rows="2" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" placeholder="Describe el material..."></textarea>
                     </div>
                     <div>
@@ -4345,7 +4341,6 @@
         }
 
         function crearFormularioCarpeta(moduloId, moduloNombre) {
-            const primerItem = crearItemMaterialCarpeta(0);
             return `
                 <div id="formularioCarpetaModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div class="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -4363,33 +4358,38 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-1">
                                     <i class="fas fa-heading me-1"></i>Nombre de la carpeta *
                                 </label>
-                                <input type="text" name="titulo" required
+                                <input type="text" name="titulo"
                                        class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-yellow-500"
                                        placeholder="Ej: Materiales de Apoyo">
                             </div>
                             
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">
-                                    <i class="fas fa-align-left me-1"></i>Descripci??n
+                                    <i class="fas fa-align-left me-1"></i>Descripcion
                                 </label>
                                 <textarea name="descripcion" rows="2"
                                           class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-yellow-500"
                                           placeholder="Describe el contenido de la carpeta..."></textarea>
                             </div>
 
-                            <div class="pt-2 border-t">
-                                <div class="flex items-center justify-between mb-2">
-                                    <label class="text-sm font-medium text-gray-700">
-                                        <i class="fas fa-layer-group me-1"></i>Materiales iniciales (opcional)
-                                    </label>
-                                    <button type="button" onclick="agregarMaterialCarpeta()"
-                                            class="text-xs px-2 py-1 bg-green-50 text-green-700 border border-green-200 rounded hover:bg-green-100">
-                                        <i class="fas fa-plus me-1"></i>Agregar material
-                                    </button>
+                            <div class="pt-2 border-t space-y-2">
+                                <label class="text-sm font-medium text-gray-700">
+                                    <i class="fas fa-layer-group me-1"></i>Material inicial (opcional)
+                                </label>
+                                <p class="text-xs text-gray-500">Podes cargar uno o varios archivos en un solo material.</p>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-700 mb-1">Titulo (opcional)</label>
+                                    <input type="text" name="materialTitulo" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" placeholder="Ej: Guia 1">
                                 </div>
-                                <p class="text-xs text-gray-500 mb-3">Pod??s cargar varios materiales ahora o dejarlos vac??os.</p>
-                                <div id="materialesCarpetaContainer" class="space-y-3">
-                                    ${primerItem}
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-700 mb-1">Descripcion (opcional)</label>
+                                    <textarea name="materialDescripcion" rows="2" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" placeholder="Describe el material..."></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-700 mb-1">Archivos (opcional)</label>
+                                    <input type="file" name="materialArchivos" multiple
+                                           accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.jpg,.jpeg,.png,.zip"
+                                           class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100">
                                 </div>
                             </div>
                             
@@ -4437,16 +4437,16 @@
                             
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">
-                                    <i class="fas fa-heading me-1"></i>Título del material *
+                                    <i class="fas fa-heading me-1"></i>Titulo del material (opcional)
                                 </label>
-                                <input type="text" name="titulo" required
+                                <input type="text" name="titulo"
                                        class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-green-500"
-                                       placeholder="Ej: Presentación - Introducción al tema">
+                                       placeholder="Ej: Presentacion - Introduccion al tema">
                             </div>
                             
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">
-                                    <i class="fas fa-align-left me-1"></i>Descripción (opcional)
+                                    <i class="fas fa-align-left me-1"></i>Descripcion (opcional)
                                 </label>
                                 <textarea name="descripcion" rows="2"
                                           class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-green-500"
@@ -4466,7 +4466,7 @@
                                         <div id="previewArea">
                                             <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-2"></i>
                                             <p class="text-sm text-gray-600">Click para seleccionar archivos</p>
-                                            <p class="text-xs text-gray-500 mt-1">PDF, Word, Excel, PowerPoint, imágenes, ZIP</p>
+                                            <p class="text-xs text-gray-500 mt-1">PDF, Word, Excel, PowerPoint, imagenes, ZIP</p>
                                         </div>
                                         <div id="filePreview" class="hidden flex flex-col items-center">
                                             <div id="filesList" class="w-full space-y-2 mb-2"></div>
@@ -4730,23 +4730,43 @@
             if (e.target.id === 'formMaterial') {
                 e.preventDefault();
 
-                // Mostrar botón de carga
+                const form = e.target;
                 const btnSubir = document.getElementById('btnSubirMaterial');
                 const btnCargando = document.getElementById('btnCargandoMaterial');
-                btnSubir.style.display = 'none';
-                btnCargando.style.display = 'inline-flex';
-
-                const formData = new FormData(e.target);
-                const moduloId = formData.get('moduloId');
-
-                // Determinar si es una carpeta (Long) o un módulo (UUID)
-                const esCarpeta = /^\d+$/.test(moduloId); // Si son solo dígitos, es carpeta
-                const endpoint = esCarpeta
-                    ? `/carpeta/${moduloId}/material`
-                    : `/actividad/modulo/${moduloId}/material`;
 
                 const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
                 const csrfHeader = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
+
+                const formData = new FormData(form);
+                const moduloId = formData.get('moduloId');
+
+                const archivosInput = form.querySelector('input[type="file"][name="archivos"]');
+                const archivos = archivosInput ? Array.from(archivosInput.files || []) : [];
+                let titulo = (formData.get('titulo') || '').toString().trim();
+
+                if (!titulo) {
+                    if (archivos.length > 0) {
+                        const nombre = archivos[0].name || 'Material';
+                        const base = nombre.replace(/\.[^/.]+$/, '');
+                        titulo = base || 'Material';
+                    } else {
+                        alert('Agrega al menos un archivo o un titulo.');
+                        return;
+                    }
+                }
+
+                formData.set('titulo', titulo);
+
+                if (btnSubir && btnCargando) {
+                    btnSubir.style.display = 'none';
+                    btnCargando.style.display = 'inline-flex';
+                }
+
+                // Determinar si es una carpeta (Long) o un modulo (UUID)
+                const esCarpeta = /^\d+$/.test(moduloId); // Si son solo digitos, es carpeta
+                const endpoint = esCarpeta
+                    ? `/carpeta/${moduloId}/material`
+                    : `/actividad/modulo/${moduloId}/material`;
 
                 fetch(endpoint, {
                     method: 'POST',
@@ -4763,19 +4783,23 @@
                             window.location.reload();
                         } else {
                             alert('Error: ' + data.message);
-                            // Restaurar botón
-                            btnSubir.style.display = 'inline-flex';
-                            btnCargando.style.display = 'none';
+                            if (btnSubir && btnCargando) {
+                                btnSubir.style.display = 'inline-flex';
+                                btnCargando.style.display = 'none';
+                            }
                         }
                     })
                     .catch(error => {
                         console.error('Error:', error);
                         alert('Error al crear material');
-                        // Restaurar botón
-                        btnSubir.style.display = 'inline-flex';
-                        btnCargando.style.display = 'none';
+                        if (btnSubir && btnCargando) {
+                            btnSubir.style.display = 'inline-flex';
+                            btnCargando.style.display = 'none';
+                        }
                     });
             }
+
+
         });
 
         // ========================================

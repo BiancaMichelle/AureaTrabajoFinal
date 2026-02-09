@@ -124,10 +124,15 @@
             display: grid;
             grid-template-columns: repeat(7, 1fr);
             gap: 10px;
+            grid-auto-rows: 120px;
         }
 
         .calendar-day {
-            min-height: 100px;
+            height: 120px;
+            min-height: 120px;
+            max-height: 120px;
+            box-sizing: border-box;
+            min-width: 0;
             display: flex;
             flex-direction: column;
             align-items: stretch;
@@ -141,6 +146,7 @@
             background: #f7fafc;
             padding: 6px;
             border: 1px solid #edf2f7;
+            overflow: hidden;
         }
         
         .day-number {
@@ -148,6 +154,7 @@
             font-weight: 600;
             margin-bottom: 4px;
             font-size: 0.9rem;
+            flex: 0 0 auto;
         }
 
         .calendar-day:hover {
@@ -177,6 +184,9 @@
             flex-direction: column;
             gap: 2px;
             overflow: hidden;
+            flex: 1 1 auto;
+            min-height: 0;
+            min-width: 0;
         }
 
         /* Panel lateral */
@@ -666,6 +676,13 @@
             let currentDate = new Date();
 
             const events = JSON.parse(/*[[${eventsJson}]]*/ '[]');
+            const eventsMap = {};
+            events.forEach(evt => {
+                if (!eventsMap[evt.start]) {
+                    eventsMap[evt.start] = [];
+                }
+                eventsMap[evt.start].push(evt);
+            });
 
             function getEventsForDay(date) {
                 // Generar formato YYYY-MM-DD local para comparar strings
@@ -674,7 +691,7 @@
                 const day = String(date.getDate()).padStart(2, '0');
                 const dateString = `${year}-${month}-${day}`;
                 
-                return events.filter(event => event.start === dateString);
+                return eventsMap[dateString] || [];
             }
 
 
@@ -786,7 +803,7 @@
                         const eventsContainer = document.createElement('div');
                         eventsContainer.className = 'day-events-container';
                         
-                        dayEvents.slice(0, 4).forEach(evt => {
+                        dayEvents.slice(0, 3).forEach(evt => {
                             const evtDiv = document.createElement('div');
                             
                             // Acortar título para mostrar
@@ -796,14 +813,17 @@
                             if(displayText.startsWith("Examen: ")) displayText = "Ex: " + displayText.substring(8);
                             
                             evtDiv.textContent = displayText;
-                            evtDiv.style.fontSize = '0.75rem';
+                            evtDiv.title = evt.title;
+                            evtDiv.style.fontSize = '0.7rem';
+                            evtDiv.style.lineHeight = '1.2';
                             evtDiv.style.whiteSpace = 'nowrap';
                             evtDiv.style.overflow = 'hidden';
                             evtDiv.style.textOverflow = 'ellipsis';
-                            evtDiv.style.padding = '2px 4px';
+                            evtDiv.style.padding = '1px 3px';
                             evtDiv.style.borderRadius = '3px';
-                            evtDiv.style.marginBottom = '2px';
+                            evtDiv.style.marginTop = '2px';
                             evtDiv.style.fontWeight = '500';
+                            evtDiv.style.maxWidth = '100%';
                             
                             // Colores
                             if(evt.className && evt.className.includes('event-clase')) {
@@ -829,9 +849,9 @@
                             eventsContainer.appendChild(evtDiv);
                         });
                         
-                        if(dayEvents.length > 4) {
+                        if(dayEvents.length > 3) {
                             const more = document.createElement('div');
-                            more.textContent = `+ ${dayEvents.length - 4} más`;
+                            more.textContent = `+ ${dayEvents.length - 3} más`;
                             more.style.fontSize = '0.7rem';
                             more.style.color = '#6b7280';
                             more.style.textAlign = 'center';

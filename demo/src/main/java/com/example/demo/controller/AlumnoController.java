@@ -40,6 +40,7 @@ import com.example.demo.enums.EstadoIntento;
 import com.example.demo.enums.EstadoOferta;
 import com.example.demo.enums.EstadoPago;
 import com.example.demo.enums.TipoGenero;
+import com.example.demo.model.Actividad;
 import com.example.demo.model.Alumno;
 import com.example.demo.model.Auditable;
 import com.example.demo.model.Curso;
@@ -182,11 +183,15 @@ public class AlumnoController {
             long totalCursosActivos = ofertasActivas.size();
 
             // Tareas y Exámenes de TODAS las ofertas activas (Cursos y Formaciones)
-            List<Tarea> todasLasTareas = tareaRepository.findByModuloCursoIn(ofertasActivas);
+            List<Tarea> todasLasTareas = tareaRepository.findByModuloCursoIn(ofertasActivas).stream()
+                .filter(this::actividadVisibleParaAlumno)
+                .collect(Collectors.toList());
             List<Entrega> todasLasEntregas = entregaRepository.findByEstudiante(alumno);
             
             // Exámenes
-            List<Examen> todosLosExamenes = examenRepository.findByModulo_CursoIn(ofertasActivas);
+            List<Examen> todosLosExamenes = examenRepository.findByModulo_CursoIn(ofertasActivas).stream()
+                .filter(this::actividadVisibleParaAlumno)
+                .collect(Collectors.toList());
             List<Intento> intentosAlumno = intentoRepository.findByAlumno(alumno);
 
             // IDs de tareas y examenes activos para asegurar consistencia
@@ -385,6 +390,10 @@ public class AlumnoController {
             if (!cursosIds.isEmpty()) {
                  clasesCalendario = claseRepository.findClasesCalendario(cursosIds, fechaInicioCal, fechaFinCal);
             }
+
+            clasesCalendario = clasesCalendario.stream()
+                .filter(this::claseVisibleParaAlumno)
+                .collect(Collectors.toList());
             
             clasesCalendario.forEach(c -> {
                 Map<String, String> event = new HashMap<>();
@@ -1358,6 +1367,25 @@ public class AlumnoController {
         aviso.put("fecha", fecha);
         aviso.put("tipo", tipo);
         return aviso;
+    }
+
+    private boolean actividadVisibleParaAlumno(Actividad actividad) {
+        if (actividad == null) {
+            return false;
+        }
+        if (Boolean.FALSE.equals(actividad.getVisibilidad())) {
+            return false;
+        }
+        Modulo modulo = actividad.getModulo();
+        return modulo == null || !Boolean.FALSE.equals(modulo.getVisibilidad());
+    }
+
+    private boolean claseVisibleParaAlumno(Clase clase) {
+        if (clase == null) {
+            return false;
+        }
+        Modulo modulo = clase.getModulo();
+        return modulo == null || !Boolean.FALSE.equals(modulo.getVisibilidad());
     }
 
     @GetMapping("/perfil")
