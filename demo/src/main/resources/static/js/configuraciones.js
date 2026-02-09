@@ -10,6 +10,7 @@ function initializeConfiguraciones() {
     setupColorInputs();
     setupFileUpload();
     setupAutomaticConfigToggle();
+    setupWeeklyReportsSimulation();
     setupFormValidation();
     setupFormSubmission();
     setupColorPreview();
@@ -18,6 +19,56 @@ function initializeConfiguraciones() {
     console.log('✅ Configuraciones inicializadas correctamente');
 }
 
+// =================   REPORTES SEMANALES (SIMULACION)   =================
+function setupWeeklyReportsSimulation() {
+    const btn = document.getElementById('btn-ejecutar-reportes-semanales');
+    if (!btn) return;
+
+    btn.addEventListener('click', () => {
+        const ejecutar = () => {
+            btn.disabled = true;
+            const original = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
+
+            const token = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+            const header = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+            const headers = { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
+            if (token && header) headers[header] = token;
+
+            fetch('/admin/reportes/semanal/ejecutar', {
+                method: 'POST',
+                headers,
+                credentials: 'same-origin'
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification(data.message || 'Reportes semanales generados', 'success');
+                    if (data.resumen) {
+                        showNotification(data.resumen.replace(/\n/g, '<br>'), 'info', 0);
+                    }
+                } else {
+                    showNotification(data.message || 'Error al generar reportes semanales', 'error');
+                }
+            })
+            .catch(() => showNotification('Error de conexión al generar reportes semanales', 'error'))
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = original;
+            });
+        };
+
+        if (typeof ModalConfirmacion !== 'undefined' && ModalConfirmacion.show) {
+            ModalConfirmacion.show(
+                'Simular sábado',
+                '¿Desea generar ahora los reportes semanales y notificar al admin?',
+                ejecutar
+            );
+        } else {
+            ejecutar();
+        }
+    });
+}
 const DEFAULT_COLORS = {
     primary: '#E5383B',
     secondary: '#0D1B2A',

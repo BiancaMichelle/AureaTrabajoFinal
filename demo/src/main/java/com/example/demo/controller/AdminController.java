@@ -124,6 +124,9 @@ public class AdminController {
 
     @Autowired
     private InstitutoService institutoService;
+    
+    @Autowired
+    private com.example.demo.scheduler.ReporteSemanalScheduler reporteSemanalScheduler;
 
     @Autowired
     private InstitutoLogoService institutoLogoService;
@@ -3220,6 +3223,23 @@ public class AdminController {
 
         var logoGuardado = institutoLogoService.guardarLogo(logo, instituto);
         return "/api/instituto/logo/" + logoGuardado.getId();
+    }
+
+    @PostMapping("/admin/reportes/semanal/ejecutar")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> ejecutarReportesSemanalesManual() {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            String resumen = reporteSemanalScheduler.ejecutarReportesSemanalesManual();
+            response.put("success", true);
+            response.put("message", "Reportes semanales generados correctamente.");
+            response.put("resumen", resumen);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "Error al generar reportes semanales: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
     }
 
     private Long extraerIdLogoInstituto(String logoUrl) {
