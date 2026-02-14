@@ -2,7 +2,12 @@ package com.example.demo.service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.StringJoiner;
+import java.util.Set;
 import java.util.UUID;
 
 import org.hibernate.Hibernate;
@@ -19,13 +24,16 @@ import com.example.demo.event.ActivityCreatedEvent;
 import com.example.demo.model.Curso;
 import com.example.demo.model.Examen;
 import com.example.demo.model.Inscripciones;
+import com.example.demo.model.Material;
 import com.example.demo.model.Modulo;
 import com.example.demo.model.OfertaAcademica;
 import com.example.demo.model.Pool;
 import com.example.demo.model.Pregunta;
 import com.example.demo.model.Usuario;
+import com.example.demo.enums.IaGenerationStatus;
 import com.example.demo.repository.ExamenRepository;
 import com.example.demo.repository.InscripcionRepository;
+import com.example.demo.repository.MaterialRepository;
 import com.example.demo.repository.ModuloRepository;
 import com.example.demo.repository.PoolRepository;
 import com.example.demo.repository.PreguntaRepository;
@@ -58,6 +66,9 @@ public class ExamenService {
 
     @Autowired
     private IaPoolGeneratorService iaPoolGeneratorService;
+
+    @Autowired
+    private MaterialRepository materialRepository;
 
     @Transactional
     public Examen crearExamen(Examen examen, UUID moduloId, List<PoolDTO> poolsDTO, List<UUID> modulosRelacionadosIds) {
@@ -212,6 +223,10 @@ public class ExamenService {
     public void analizarYGenerarPreExamen(Examen examenPrincipal, Modulo modulo) {
         try {
             log.info("🔍 Analizando rendimiento para posible generación de pre-examen");
+            if (Boolean.FALSE.equals(examenPrincipal.getPermitirPreExamen())) {
+                log.info("⚠️ Pre-examen deshabilitado para este examen (sin material en módulo).");
+                return;
+            }
 
             // 1. Obtener la oferta académica del módulo
             OfertaAcademica ofertaBase = modulo.getCurso();
@@ -356,45 +371,129 @@ public class ExamenService {
                 preExamen.setFechaCierre(LocalDateTime.now().plusDays(7));
             }
 
-            // 5. GENERAR 8 PREGUNTAS CON IA del material del módulo
-            log.info("🤖 Generando 8 preguntas con IA del material del módulo...");
+            // 4.1 Reunir mÃ³dulos para contexto (modulos relacionados + mÃ³dulo base)
+            List<Modulo> modulosContexto = new ArrayList<>();
+            List<Modulo> modulosRel = examenPrincipal.getModulosRelacionados();
+            if (modulosRel != null && !modulosRel.isEmpty()) {
+                modulosContexto.addAll(modulosRel);
+            }
+            if (modulo != null && modulo.getIdModulo() != null) {
+                boolean existe = modulosContexto.stream()
+                        .anyMatch(m -> m != null && modulo.getIdModulo().equals(m.getIdModulo()));
+                if (!existe) {
+                    modulosContexto.add(modulo);
+                }
+            }
 
-            // crear un nuevo pool para el pre-examen
+            // 4.2 Buscar materiales asociados a los modulos seleccionados
+            List<Long> materialesIds = new ArrayList<>();
+            if (!modulosContexto.isEmpty()) {
+                List<UUID> moduloIds = new ArrayList<>();
+                for (Modulo m : modulosContexto) {
+                    if (m != null && m.getIdModulo() != null) {
+                        moduloIds.add(m.getIdModulo());
+                    }
+                }
+                if (!moduloIds.isEmpty()) {
+                    List<Material> materiales = materialRepository.findByModulo_IdModuloIn(moduloIds);
+                    for (Material material : materiales) {
+                        if (material != null && material.getIdActividad() != null) {
+                            materialesIds.add(material.getIdActividad());
+                        }
+                    }
+                }
+            }
+            
+            if (materialesIds.isEmpty()) {
+                log.warn("No hay materiales en los modulos seleccionados. No se genera pre-examen.");
+                return;
+            }
+            
+            // 4.3 Recolectar preguntas del examen para evitar repeticiones
+            List<String> excluirEnunciados = new ArrayList<>();
+            if (examenPrincipal.getPoolPreguntas() != null) {
+                Set<String> exclSet = new LinkedHashSet<>();
+                for (Pool pool : examenPrincipal.getPoolPreguntas()) {
+                    if (pool == null || pool.getPreguntas() == null) {
+                        continue;
+                    }
+                    for (Pregunta p : pool.getPreguntas()) {
+                        if (p != null && p.getEnunciado() != null && !p.getEnunciado().isBlank()) {
+                            exclSet.add(p.getEnunciado().trim());
+                        }
+                    }
+                }
+                excluirEnunciados.addAll(exclSet);
+            }
+            int maxExcluir = 60;
+            if (excluirEnunciados.size() > maxExcluir) {
+                excluirEnunciados = new ArrayList<>(excluirEnunciados.subList(0, maxExcluir));
+            }
+            
+            // 5. GENERAR 8 PREGUNTAS CON IA del material del modulo (evitando repetidas)
+            log.info("Generando 8 preguntas con IA del material del modulo...");
+            
             Pool poolPreExamen = new Pool();
             poolPreExamen.setNombre("Pool Auto-Generado: " + modulo.getNombre());
-            poolPreExamen.setDescripcion("Generado automáticamente con IA para pre-examen de práctica");
-            poolPreExamen.setCantidadPreguntas(8); // 8 preguntas
+            poolPreExamen.setDescripcion("Generado automaticamente con IA para pre-examen de practica");
+            poolPreExamen.setCantidadPreguntas(8);
             poolPreExamen.setGeneratedByIA(true);
-            poolPreExamen.setIaStatus(com.example.demo.enums.IaGenerationStatus.PENDING);
-
-            // Preparar parámetros para la generación con IA
-            String paramsJson = String.format(
-                    "{\"tema\": \"%s\", \"cantidadPreguntas\": 8, \"contextoMaterial\": \"%s\", \"objetivos\": \"%s\", \"bibliografia\": \"%s\"}",
-                    escaparJson(modulo.getNombre()),
-                    escaparJson(modulo.getTemario() != null ? modulo.getTemario() : "Contenido del módulo"),
-                    escaparJson(modulo.getObjetivos() != null ? modulo.getObjetivos() : ""),
-                    escaparJson(modulo.getBibliografia() != null ? modulo.getBibliografia() : ""));
-
+            poolPreExamen.setIaStatus(IaGenerationStatus.PENDING);
+            poolPreExamen.setOferta(modulo.getCurso());
+            
+            String temas = (modulo != null) ? modulo.getTemario() : null;
+            if (temas == null || temas.isBlank()) {
+                temas = (modulo != null && modulo.getNombre() != null) ? modulo.getNombre() : "General";
+            }
+            
+            StringJoiner idsJoiner = new StringJoiner(",");
+            for (Long id : materialesIds) {
+                idsJoiner.add(String.valueOf(id));
+            }
+            
+            StringJoiner tiposJoiner = new StringJoiner("\",\"", "[\"", "\"]");
+            tiposJoiner.add("MULTIPLE_CHOICE");
+            tiposJoiner.add("VERDADERO_FALSO");
+            tiposJoiner.add("UNICA_RESPUESTA");
+            
+            String excluirJson = "[]";
+            if (!excluirEnunciados.isEmpty()) {
+                StringJoiner exclJoiner = new StringJoiner("\",\"", "[\"", "\"]");
+                int exclCount = 0;
+                for (String ex : excluirEnunciados) {
+                    if (ex != null && !ex.isBlank()) {
+                        exclJoiner.add(escaparJson(ex));
+                        exclCount++;
+                    }
+                }
+                if (exclCount > 0) {
+                    excluirJson = exclJoiner.toString();
+                }
+            }
+            
+            String paramsJson = String.format("{\"temas\": \"%s\", \"materialesIds\": [%s], \"cantidad\": 8, \"minNuevas\": 5, \"tipos\": %s, \"excluirEnunciados\": %s, \"contextoMaterial\": \"%s\", \"objetivos\": \"%s\", \"bibliografia\": \"%s\"}",
+                    escaparJson(temas),
+                    idsJoiner.toString(),
+                    tiposJoiner.toString(),
+                    excluirJson,
+                    escaparJson(modulo != null && modulo.getTemario() != null ? modulo.getTemario() : "Contenido del modulo"),
+                    escaparJson(modulo != null && modulo.getObjetivos() != null ? modulo.getObjetivos() : ""),
+                    escaparJson(modulo != null && modulo.getBibliografia() != null ? modulo.getBibliografia() : ""));
+            
             poolPreExamen.setIaRequest(paramsJson);
-
-            // Guardar el pool
+            
             Pool poolGuardado = poolRepository.save(poolPreExamen);
-
-            log.info("📄 Pool creado, lanzando generación IA asíncrona...");
-
-            // Lanzar generación ASÍNCRONA (no bloqueante)
+            
+            log.info("Pool creado, lanzando generacion IA asincrona...");
             iaPoolGeneratorService.generarPoolIAAsync(poolGuardado.getIdPool(), paramsJson);
-
-            // Asociar el pool al pre-examen (aunque aún no tenga preguntas)
-            // Las preguntas se generarán en background
+            
             List<Pool> poolsPreExamen = new ArrayList<>();
             poolsPreExamen.add(poolGuardado);
             preExamen.setPoolPreguntas(poolsPreExamen);
 
             // Copiar módulos relacionados si existen
-            List<Modulo> modulosRel = examenPrincipal.getModulosRelacionados();
-            if (modulosRel != null && !modulosRel.isEmpty()) {
-                preExamen.setModulosRelacionados(new ArrayList<>(modulosRel));
+            if (!modulosContexto.isEmpty()) {
+                preExamen.setModulosRelacionados(new ArrayList<>(modulosContexto));
             }
 
             // 6. Guardar pre-examen
@@ -404,7 +503,7 @@ public class ExamenService {
             log.info("   - ID: {}", preExamenGuardado.getIdActividad());
             log.info("   - Título: {}", preExamenGuardado.getTitulo());
             log.info("   - Visible: {}", preExamenGuardado.getVisibilidad());
-            log.info("   - Pool IA: Generándose en background con 8 preguntas");
+            log.info("   - Pool IA: generandose en background con 8 preguntas");
 
             // NO publicar evento ActivityCreatedEvent para evitar notificaciones prematuras
             // El docente debe revisar y publicar manualmente
@@ -412,6 +511,20 @@ public class ExamenService {
         } catch (Exception e) {
             log.error("❌ Error al generar pre-examen automático: {}", e.getMessage(), e);
         }
+    }
+    /**
+     * Escapa caracteres especiales para JSON
+     */
+    private String escaparJson(String texto) {
+        if (texto == null) {
+            return "";
+        }
+        return texto
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t");
     }
 
     // DTOs internos para transferencia de datos
@@ -511,17 +624,4 @@ public class ExamenService {
         examenRepository.delete(examen);
     }
 
-    /**
-     * Escapa caracteres especiales para JSON
-     */
-    private String escaparJson(String texto) {
-        if (texto == null)
-            return "";
-        return texto
-                .replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t");
-    }
 }

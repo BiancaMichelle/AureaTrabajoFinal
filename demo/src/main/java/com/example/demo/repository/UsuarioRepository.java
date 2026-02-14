@@ -12,6 +12,7 @@ import org.springframework.data.repository.query.Param;
 import com.example.demo.model.Usuario;
 public interface UsuarioRepository extends JpaRepository<Usuario, UUID>, JpaSpecificationExecutor<Usuario> {
     boolean existsByDni(String dni);
+    boolean existsByDniAndPais_Codigo(String dni, String paisCodigo);
     boolean existsByCorreo(String correo);
     Optional<Usuario> findByDni(String dni);
     

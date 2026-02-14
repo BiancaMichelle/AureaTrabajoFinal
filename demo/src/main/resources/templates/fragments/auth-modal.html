@@ -63,7 +63,6 @@
                 
                     <form th:action="@{/register}" th:object="${alumno}" method="post" id="registerForm" novalidate>
                         <div class="form-scroll">
-                            <!-- Paso 1: Datos Personales (nombre, apellido, dni, género, fecha de nacimiento, teléfono, correo electrónico) -->
                             <div class="form-step active" data-step="1">
                                 <div class="input-group">
                                     <label for="reg-nombre">Nombre</label>
@@ -79,16 +78,6 @@
                                     <label for="reg-dni">DNI</label>
                                     <input type="text" th:field="*{dni}" id="reg-dni" placeholder="DNI" class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white placeholder-slate-400 transition-colors duration-200" required>
                                     <span class="error-message" th:if="${#fields.hasErrors('dni')}" th:errors="*{dni}"></span>
-                                </div>
-                                <div class="input-group">
-                                    <label for="reg-genero">Género</label>
-                                    <select th:field="*{genero}" id="reg-genero" class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white transition-colors duration-200" required>
-                                        <option value="" class="text-slate-400">Seleccionar género</option>
-                                        <option value="MASCULINO">Masculino</option>
-                                        <option value="FEMENINO">Femenino</option>
-                                        <option value="OTRO">Otro</option>
-                                    </select>
-                                    <span class="error-message" id="error-genero"></span>
                                 </div>
                                 <div class="input-group">
                                     <label for="reg-fecha-nac">Fecha de nacimiento</label>

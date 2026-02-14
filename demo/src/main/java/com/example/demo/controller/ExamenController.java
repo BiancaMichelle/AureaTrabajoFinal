@@ -35,6 +35,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.example.demo.enums.EstadoCuota;
 import com.example.demo.enums.EstadoIntento;
+import com.example.demo.enums.IaGenerationStatus;
 import com.example.demo.enums.TipoPregunta;
 import com.example.demo.ia.service.ChatServiceSimple;
 import com.example.demo.model.Alumno;
@@ -124,12 +125,20 @@ public class ExamenController {
         try {
             Examen examen = examenRepository.findById(examenId)
                     .orElseThrow(() -> new RuntimeException("Examen no encontrado"));
+
             System.out.println("🎯 Examen encontrado: " + examen.getTitulo());
 
-            boolean esDocenteOAdmin = authentication.getAuthorities().stream()
+
+            boolean esDocenteOAdmin = authentication != null && authentication.getAuthorities().stream()
                     .anyMatch(a -> a.getAuthority().equals("DOCENTE") || a.getAuthority().equals("ADMIN")
                             || a.getAuthority().equals("ROLE_ADMIN"));
             System.out.println("🎯 ¿Es docente/admin?: " + esDocenteOAdmin);
+
+            if (Boolean.TRUE.equals(examen.getGenerarPreExamen()) && !poolListoParaExamen(examen)) {
+                Long ofertaId = examen.getModulo().getCurso().getIdOferta();
+                String base = esDocenteOAdmin ? "/docente/aula/" : "/alumno/aula/";
+                return "redirect:" + base + ofertaId + "?error=El+pre-examen+se+esta+generando.+Intenta+mas+tarde";
+            }
 
             if (!esDocenteOAdmin) {
                 System.out.println("🎯 Iniciando validaciones para alumno...");
@@ -291,6 +300,10 @@ public class ExamenController {
         try {
             Examen examen = examenRepository.findById(examenId)
                     .orElseThrow(() -> new RuntimeException("Examen no encontrado"));
+            if (Boolean.TRUE.equals(examen.getGenerarPreExamen()) && !poolListoParaExamen(examen)) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(Map.of("error", "El pre-examen se esta generando. Intenta mas tarde."));
+            }
 
             boolean esDocenteOAdmin = authentication != null && authentication.getAuthorities().stream()
                     .anyMatch(a -> a.getAuthority().equals("DOCENTE") || a.getAuthority().equals("ADMIN")
@@ -779,6 +792,13 @@ public class ExamenController {
         Examen examen = examenRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Examen no encontrado"));
 
+        if (Boolean.TRUE.equals(examen.getGenerarPreExamen()) && !poolListoParaExamen(examen)) {
+            Long ofertaId = examen.getModulo().getCurso().getIdOferta();
+            return "redirect:/docente/aula/" + ofertaId + "?error=El+pre-examen+se+esta+generando.+Intenta+mas+tarde";
+        }
+
+
+
         boolean haComenzado = examen.getFechaApertura() != null &&
                 examen.getFechaApertura().isBefore(LocalDateTime.now());
 
@@ -1076,6 +1096,36 @@ public class ExamenController {
                     "success", false,
                     "message", "Error al publicar pre-examen: " + e.getMessage()));
         }
+    }
+
+    private boolean poolListoParaExamen(Examen examen) {
+        if (examen == null || examen.getPoolPreguntas() == null || examen.getPoolPreguntas().isEmpty()) {
+            return false;
+        }
+
+        for (Pool pool : examen.getPoolPreguntas()) {
+            if (pool == null) {
+                return false;
+            }
+            if (Boolean.TRUE.equals(pool.getGeneratedByIA())) {
+                if (pool.getIaStatus() != IaGenerationStatus.READY) {
+                    return false;
+                }
+            }
+
+            List<Pregunta> preguntas = pool.getPreguntas();
+            if (preguntas == null || preguntas.isEmpty()) {
+                return false;
+            }
+            int disponibles = preguntas.size();
+            Integer cantidad = pool.getCantidadPreguntas();
+            int requeridas = (cantidad == null || cantidad <= 0) ? disponibles : cantidad;
+            if (disponibles < requeridas) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private int calcularTotalPreguntasExamen(Examen examen) {

@@ -44,7 +44,6 @@ import com.example.demo.enums.Dias;
 import com.example.demo.enums.EstadoOferta;
 import com.example.demo.enums.EstadoProcesoCertificacion;
 import com.example.demo.enums.Modalidad;
-import com.example.demo.enums.TipoGenero;
 import com.example.demo.model.Alumno;
 import com.example.demo.model.Auditable;
 import com.example.demo.model.CarruselImagen;
@@ -2406,7 +2405,6 @@ public class AdminController {
             @RequestParam String nombre,
             @RequestParam String apellido,
             @RequestParam LocalDate fechaNacimiento,
-            @RequestParam TipoGenero genero,
             @RequestParam String paisCodigo,
             @RequestParam String provinciaCodigo,
             @RequestParam String ciudadId,
@@ -2473,7 +2471,7 @@ public class AdminController {
 
             // Usar el servicio unificado - MODIFICAR EL SERVICIO PARA ACEPTAR HORARIOS
             Usuario nuevoUsuario = registroService.registrarUsuarioAdministrativo(
-                    dni, nombre, apellido, fechaNacimiento, genero,
+                    dni, nombre, apellido, fechaNacimiento,
                     correo, telefono, paisCodigo, provinciaCodigo,
                     ciudadIdLong, rol, matricula,
                     experiencia, colegioEgreso, añoEgreso, ultimosEstudios,
@@ -2537,7 +2535,6 @@ public class AdminController {
             @RequestParam String nombre,
             @RequestParam String apellido,
             @RequestParam LocalDate fechaNacimiento,
-            @RequestParam TipoGenero genero,
             @RequestParam String paisCodigo,
             @RequestParam String provinciaCodigo,
             @RequestParam String ciudadId,
@@ -2589,7 +2586,6 @@ public class AdminController {
                     nombre,
                     apellido,
                     fechaNacimiento,
-                    genero,
                     correo,
                     telefono,
                     paisCodigo,
@@ -2609,7 +2605,6 @@ public class AdminController {
             addCambio(cambios, "nombre", usuarioPrevio.getNombre(), nombre);
             addCambio(cambios, "apellido", usuarioPrevio.getApellido(), apellido);
             addCambio(cambios, "fechaNacimiento", usuarioPrevio.getFechaNacimiento(), fechaNacimiento);
-            addCambio(cambios, "genero", usuarioPrevio.getGenero(), genero);
             addCambio(cambios, "correo", usuarioPrevio.getCorreo(), correo);
             addCambio(cambios, "telefono", usuarioPrevio.getNumTelefono(), telefono);
             addCambio(cambios, "rol", rolAnterior, rol);
@@ -2972,7 +2967,6 @@ public class AdminController {
         data.put("foto", usuario.getFoto());
         data.put("telefono", usuario.getNumTelefono());
         data.put("fechaNacimiento", usuario.getFechaNacimiento());
-        data.put("genero", usuario.getGenero());
         data.put("estado", usuario.getEstado());
         data.put("estadoBoolean", usuario.isEstado());
         data.put("fechaRegistro", usuario.getFechaRegistro());

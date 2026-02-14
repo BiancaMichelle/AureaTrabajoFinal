@@ -164,6 +164,74 @@ document.addEventListener("DOMContentLoaded", function () {
         hideFieldError(input);
     }
 
+    // ✅ Notificaciones globales (usa estilos de auth.css)
+    function showNotification(message, type = 'info', duration = 8000) {
+        if (type === 'error') {
+            const existingErrors = document.querySelectorAll('.notification-error');
+            existingErrors.forEach(notif => {
+                if (notif.parentNode) {
+                    notif.parentNode.removeChild(notif);
+                }
+            });
+        }
+
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+
+        const icons = {
+            success: 'fas fa-check-circle',
+            error: 'fas fa-exclamation-circle',
+            warning: 'fas fa-exclamation-triangle',
+            info: 'fas fa-info-circle'
+        };
+
+        notification.innerHTML = `
+            <div class="notification-content">
+                <div class="notification-icon">
+                    <i class="${icons[type] || icons.info}"></i>
+                </div>
+                <div class="notification-message">${message}</div>
+                <button class="notification-close" title="Cerrar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="notification-progress"></div>
+        `;
+
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            notification.classList.add('show');
+            const progressBar = notification.querySelector('.notification-progress');
+            if (progressBar) {
+                progressBar.style.animation = `progress ${duration}ms linear`;
+            }
+        }, 100);
+
+        const autoRemove = setTimeout(() => {
+            if (notification.parentNode) {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }
+        }, duration);
+
+        notification.querySelector('.notification-close').addEventListener('click', () => {
+            clearTimeout(autoRemove);
+            if (notification.parentNode) {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }
+        });
+    }
+
     // ✅ Función para limpiar todos los errores de un paso
     function clearStepErrors(step) {
         const stepNode = formSteps[step];
@@ -482,7 +550,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 stepValidationResult = await validatePersonalData();
                 break;
             case 1: // Paso 2: Domicilio
-                stepValidationResult = validateLocation();
+                stepValidationResult = await validateLocation();
                 break;
             case 2: // Paso 3: Datos Académicos
                 stepValidationResult = validateAcademicData();
@@ -501,20 +569,25 @@ document.addEventListener("DOMContentLoaded", function () {
         return stepValidationResult;
     }
 
-    // ✅ Función para verificar si el DNI ya existe
-    function verificarDNIExistente(dni) {
+    // ✅ Función para verificar si el DNI ya existe (con país)
+    function verificarDNIExistente(dni, paisCodigo) {
         return new Promise((resolve, reject) => {
-            if (!dni || dni.length < 7) {
-                resolve(false);
+            if (!dni || dni.length < 7 || !paisCodigo) {
+                resolve({ existe: false, mensaje: '' });
                 return;
             }
-    
+
             // Timeout de 10 segundos
             const timeoutPromise = new Promise((_, reject) => 
                 setTimeout(() => reject(new Error('Timeout verificando DNI')), 10000)
             );
-    
-            const fetchPromise = fetch(`/api/usuarios/verificar-dni?dni=${dni}`, {
+
+            const params = new URLSearchParams({
+                dni: dni,
+                paisCodigo: paisCodigo
+            });
+
+            const fetchPromise = fetch(`/api/usuarios/verificar-dni-pais?${params.toString()}`, {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json',
@@ -522,28 +595,30 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
             })
             .then(response => {
-                console.log("📡 Respuesta DNI - Status:", response.status);
+                console.log("📡 Respuesta DNI+País - Status:", response.status);
                 if (!response.ok) {
                     throw new Error(`Error del servidor: ${response.status}`);
+                }
+                const contentType = response.headers.get('content-type') || '';
+                if (!contentType.includes('application/json')) {
+                    throw new Error('Respuesta no JSON');
                 }
                 return response.json();
             })
             .then(data => {
-                console.log("📊 Datos DNI recibidos:", data);
-                return data.existe;
+                console.log("📊 Datos DNI+País recibidos:", data);
+                return data;
             });
-    
+
             Promise.race([fetchPromise, timeoutPromise])
                 .then(resolve)
                 .catch(error => {
                     console.error('❌ Error verificando DNI:', error);
-                    // Si es timeout, asumimos que no existe para no bloquear (o manejamos diferente)
-                    // Pero mejor rechazamos para que el usuario intente de nuevo
                     reject(error);
                 });
         });
     }
-    
+
     function verificarEmailExistente(email) {
         return new Promise((resolve, reject) => {
             if (!email || !email.includes('@')) {
@@ -655,21 +730,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 showFieldError(dni, 'El DNI debe tener 7 u 8 dígitos numéricos');
                 isValid = false;
             } else {
-                // ✅ VERIFICAR SI EL DNI YA EXISTE (ASÍNCRONO)
-                try {
-                    const dniExiste = await verificarDNIExistente(dni.value);
-                    if (dniExiste) {
-                        showFieldError(dni, 'Este DNI ya está registrado en el sistema');
-                        isValid = false;
-                    } else {
-                        hideFieldError(dni);
-                    }
-                } catch (error) {
-                    console.error('Error verificando DNI:', error);
-                    // En caso de error, permitir continuar pero mostrar advertencia
-                    showFieldError(dni, 'Error verificando DNI. Intenta nuevamente.');
-                    isValid = false;
-                }
+                hideFieldError(dni);
             }
     
             // Validar teléfono (al menos 10 dígitos)
@@ -706,7 +767,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
     
-    function validateLocation() {
+    async function validateLocation() {
         let isValid = true;
         const paisSelect = document.getElementById('pais');
         const provinciaSelect = document.getElementById('provincia');
@@ -714,6 +775,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const paisCodigo = document.getElementById('paisCodigo').value;
         const provinciaCodigo = document.getElementById('provinciaCodigo').value;
         const ciudadId = document.getElementById('ciudadId').value;
+        const dni = document.getElementById('dni');
         
         if (!paisCodigo) {
             showFieldError(paisSelect, 'Por favor, selecciona un país');
@@ -730,8 +792,37 @@ document.addEventListener("DOMContentLoaded", function () {
             isValid = false;
         }
         
+        // ✅ Verificar DNI existente en el país seleccionado (paso 2)
+        if (isValid && dni && paisCodigo) {
+            if (!/^\d{7,8}$/.test(dni.value)) {
+                showFieldError(dni, 'El DNI debe tener 7 u 8 dígitos numéricos');
+                isValid = false;
+            } else {
+                try {
+                    const data = await verificarDNIExistente(dni.value, paisCodigo);
+                    if (data && data.existe) {
+                        const mensaje = data.mensaje || 'Ya existe una cuenta con este DNI en el pais seleccionado';
+                        showFieldError(dni, 'Este DNI ya está registrado en el sistema');
+                        showNotification(mensaje, 'error');
+                        currentStep = 0;
+                        showStep(currentStep);
+                        dni.focus();
+                        dni.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        isValid = false;
+                    } else {
+                        hideFieldError(dni);
+                    }
+                } catch (error) {
+                    console.error('Error verificando DNI:', error);
+                    showFieldError(dni, 'Error verificando DNI. Intenta nuevamente.');
+                    isValid = false;
+                }
+            }
+        }
+        
         return isValid;
     }
+
     
     function validateAcademicData() {
         let isValid = true;

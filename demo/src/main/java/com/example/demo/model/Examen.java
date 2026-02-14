@@ -31,6 +31,7 @@ public class Examen extends Actividad {
     private Boolean calificacionAutomatica;
     private Boolean publicarNota;
     private Boolean generarPreExamen;
+    private Boolean permitirPreExamen;
     
     @Enumerated(EnumType.STRING)
     private EstadoExamen estado;

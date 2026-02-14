@@ -11,4 +11,5 @@ import com.example.demo.model.Archivo;
 public interface ArchivoRepository extends JpaRepository<Archivo, Long> {
     List<Archivo> findByCarpetaIdActividad(Long carpetaId);
     List<Archivo> findByMaterialIdActividad(Long materialId);
+    List<Archivo> findByMaterial_IdActividadIn(List<Long> materialIds);
 }

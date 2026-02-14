@@ -2802,6 +2802,7 @@
                         <form id="formExamen" class="space-y-4">
                             <input type="hidden" name="moduloId" value="${moduloId}">
                             <input type="hidden" id="poolsData" name="poolsData" value="[]">
+                            <input type="hidden" id="permitirPreExamen" name="permitirPreExamen" value="true">
                             
                             <!-- Información Básica -->
                             <div class="border-b pb-3">
@@ -3344,21 +3345,26 @@
         // Variable global para cachear materiales y evitar recargas
         let materialesCache = null;
 
+        function cargarMaterialesCache() {
+            if (materialesCache) {
+                return Promise.resolve(materialesCache);
+            }
+            return fetch(`/pool/materiales/${OFERTA_ID}`)
+                .then(r => r.json())
+                .then(data => {
+                    materialesCache = data;
+                    return data;
+                });
+        }
+
         function cargarMaterialesIA() {
             const container = document.getElementById('listaMaterialesContainer');
             const msg = document.getElementById('msgCargandoMateriales');
 
-            if (materialesCache) {
-                renderizarMateriales(materialesCache);
-                return;
-            }
-
             if (msg) msg.textContent = 'Cargando materiales...';
 
-            fetch(`/pool/materiales/${OFERTA_ID}`)
-                .then(r => r.json())
+            cargarMaterialesCache()
                 .then(data => {
-                    materialesCache = data;
                     renderizarMateriales(data);
                 })
                 .catch(e => {
@@ -3385,6 +3391,58 @@
                     </label>
                 </div>
             `).join('');
+        }
+
+        function obtenerNombreModuloPorId(moduloId) {
+            const modulos = obtenerModulosDesdeDOM();
+            const modulo = modulos.find(m => `${m.id}` === `${moduloId}`);
+            return modulo ? modulo.nombre : 'Modulo';
+        }
+
+        function tieneMaterialEnModulo(moduloId) {
+            if (!materialesCache || !moduloId) {
+                return false;
+            }
+            return materialesCache.some(m => `${m.moduloId}` === `${moduloId}`);
+        }
+
+        function tieneMaterialEnModulos(moduloIds) {
+            if (!materialesCache || !moduloIds || moduloIds.length === 0) {
+                return false;
+            }
+            return moduloIds.some(id => materialesCache.some(m => `${m.moduloId}` === `${id}`));
+        }
+
+        function abrirFormularioMaterialParaModulo(moduloId) {
+            const nombre = obtenerNombreModuloPorId(moduloId);
+            const formularioHTML = crearFormularioMaterial(moduloId, nombre);
+            document.body.insertAdjacentHTML('beforeend', formularioHTML);
+        }
+
+        function mostrarAdvertenciaMaterialExamen(moduloId, onContinuar) {
+            const mensaje = 'No hay material en los modulos seleccionados. Si continuas, no se generara el PRE EXAMEN automaticamente.';
+            mostrarConfirmacionGlobal(
+                'Material faltante',
+                mensaje,
+                onContinuar,
+                { confirmText: 'Continuar', cancelText: 'Anadir material', type: 'warning' }
+            );
+
+            const btnCancel = document.getElementById('btnCancelConfirm');
+            if (btnCancel) {
+                const newBtn = btnCancel.cloneNode(true);
+                btnCancel.parentNode.replaceChild(newBtn, btnCancel);
+                newBtn.textContent = 'Anadir material';
+                newBtn.style.display = 'inline-flex';
+                newBtn.addEventListener('click', () => {
+                    if (window.ModalConfirmacion) {
+                        ModalConfirmacion.close();
+                    }
+                    if (moduloId) {
+                        abrirFormularioMaterialParaModulo(moduloId);
+                    }
+                });
+            }
         }
 
         function editarPoolExistente(idPool, nombre, descripcion, cantidadPreguntas) {
@@ -4669,6 +4727,7 @@
             if (e.target.id === 'formExamen') {
                 e.preventDefault();
                 const formData = new FormData(e.target);
+                const moduloId = formData.get('moduloId');
 
                 // Validar que haya al menos un pool
                 if (examenPools.length === 0) {
@@ -4718,6 +4777,26 @@
                             alert('❌ Error al crear el examen. Por favor, intenta de nuevo.');
                         });
                 };
+
+                try {
+                    await cargarMaterialesCache();
+                } catch (e) {
+                    console.error('Error cargando materiales para validación:', e);
+                }
+
+                const inputPermitir = e.target.querySelector('input[name="permitirPreExamen"]');
+                if (!tieneMaterialEnModulos(modulosSeleccionados)) {
+                    const targetModulo = (modulosSeleccionados && modulosSeleccionados.length > 0)
+                        ? modulosSeleccionados[0]
+                        : moduloId;
+                    if (inputPermitir) inputPermitir.value = 'false';
+                    formData.set('permitirPreExamen', 'false');
+                    mostrarAdvertenciaMaterialExamen(targetModulo, ejecutarCreacionExamen);
+                    return;
+                }
+
+                if (inputPermitir) inputPermitir.value = 'true';
+                formData.set('permitirPreExamen', 'true');
 
                 mostrarConfirmacionGlobal(
                     'Crear examen',

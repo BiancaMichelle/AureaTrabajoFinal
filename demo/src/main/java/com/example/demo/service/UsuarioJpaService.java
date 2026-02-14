@@ -45,6 +45,13 @@ public class UsuarioJpaService implements UserDetailsService {
         return usuarioRepository.findByDni(dni).isPresent();
     }
 
+    public boolean existePorDniYPais(String dni, String paisCodigo) {
+        if (paisCodigo == null || paisCodigo.isBlank()) {
+            return false;
+        }
+        return usuarioRepository.existsByDniAndPais_Codigo(dni, paisCodigo);
+    }
+
     public boolean existePorCorreo(String correo) {
         return usuarioRepository.findByCorreo(correo).isPresent();
     }

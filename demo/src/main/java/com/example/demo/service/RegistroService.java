@@ -15,7 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.demo.enums.Dias;
 import com.example.demo.enums.EstadoOferta;
-import com.example.demo.enums.TipoGenero;
 import com.example.demo.model.Alumno;
 import com.example.demo.model.Ciudad;
 import com.example.demo.model.Curso;
@@ -427,7 +426,6 @@ public class RegistroService {
             String nombre,
             String apellido,
             LocalDate fechaNacimiento,
-            TipoGenero genero,
             String correo,
             String telefono,
             String paisCodigo,
@@ -476,7 +474,6 @@ public class RegistroService {
         usuario.setNombre(nombre);
         usuario.setApellido(apellido);
         usuario.setFechaNacimiento(fechaNacimiento);
-        usuario.setGenero(genero);
         usuario.setCorreo(correo);
         usuario.setNumTelefono(telefono);
         
@@ -499,7 +496,6 @@ public class RegistroService {
             String nombre,
             String apellido,
             LocalDate fechaNacimiento,
-            TipoGenero genero,
             String correo,
             String telefono,
             String paisCodigo,
@@ -564,7 +560,6 @@ public class RegistroService {
             usuarioExistente.setNombre(nombre);
             usuarioExistente.setApellido(apellido);
             usuarioExistente.setFechaNacimiento(fechaNacimiento);
-            usuarioExistente.setGenero(genero);
             usuarioExistente.setCorreo(correo);
 
             String telefonoFinal = (telefono != null && !telefono.isBlank())

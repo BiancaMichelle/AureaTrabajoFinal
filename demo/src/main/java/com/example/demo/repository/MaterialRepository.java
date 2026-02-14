@@ -1,6 +1,7 @@
 package com.example.demo.repository;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -13,4 +14,5 @@ public interface MaterialRepository extends JpaRepository<Material, Long> {
     
     // Buscar materiales por ID de oferta (curso) a través de la relación Modulo -> Curso
     List<Material> findByModulo_Curso_IdOferta(Long ofertaId);
+    List<Material> findByModulo_IdModuloIn(List<UUID> moduloIds);
 }

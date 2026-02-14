@@ -15,7 +15,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import com.example.demo.enums.Dias;
 import com.example.demo.enums.EstadoOferta;
 import com.example.demo.enums.Modalidad;
-import com.example.demo.enums.TipoGenero;
 import com.example.demo.model.Alumno;
 import com.example.demo.model.Charla;
 import com.example.demo.model.Curso;
@@ -841,7 +840,6 @@ public class DataSeeder implements CommandLineRunner {
             admin.setNombre("Super");
             admin.setApellido("Admin");
             admin.setFechaNacimiento(LocalDate.of(1990, 1, 1));
-            admin.setGenero(TipoGenero.MASCULINO);
             admin.setCorreo("admin@demo.com");
             admin.setNumTelefono("1234567890");
             admin.setContraseña(passwordEncoder.encode("123"));
@@ -879,7 +877,6 @@ public class DataSeeder implements CommandLineRunner {
             alumno.setNombre(nombre);
             alumno.setApellido(apellido);
             alumno.setFechaNacimiento(LocalDate.of(2000, 1, 1));
-            alumno.setGenero(TipoGenero.MASCULINO);
             alumno.setCorreo(email);
             alumno.setNumTelefono("1234567890");
             alumno.setContraseña(passwordEncoder.encode("123"));
@@ -912,7 +909,6 @@ public class DataSeeder implements CommandLineRunner {
             docente.setNombre(nombre);
             docente.setApellido(apellido);
             docente.setFechaNacimiento(LocalDate.of(1985, 1, 1));
-            docente.setGenero(TipoGenero.MASCULINO);
             docente.setCorreo(email);
             docente.setNumTelefono("1234567890");
             docente.setContraseña(passwordEncoder.encode("123"));

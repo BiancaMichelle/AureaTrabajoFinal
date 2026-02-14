@@ -369,6 +369,29 @@ public class RegisterController {
         }
     }
 
+    @GetMapping("/api/usuarios/verificar-dni-pais")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> verificarDniPais(@RequestParam String dni,
+            @RequestParam String paisCodigo) {
+        try {
+            System.out.println("ðŸ” Verificando DNI: " + dni + " en PaÃ­s: " + paisCodigo);
+            boolean existe = usuarioJpaService.existePorDniYPais(dni, paisCodigo);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("existe", existe);
+            response.put("mensaje", existe ? "Ya existe una cuenta con este DNI en el pais seleccionado" : "DNI disponible");
+            response.put("valido", !existe);
+
+            System.out.println("âœ… Respuesta DNI+PaÃ­s: " + response);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            System.out.println("âŒ Error verificando DNI+PaÃ­s: " + e.getMessage());
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Error al verificar DNI");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
     @GetMapping("/api/usuarios/verificar-email")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> verificarEmail(@RequestParam String email) {

@@ -80,6 +80,11 @@ public class PoolController {
             
             // Configurar IA si aplica
             if (Boolean.TRUE.equals(esIA)) {
+                if (cantidadPreguntas != null && cantidadPreguntas > 8) {
+                    return ResponseEntity.badRequest()
+                        .header("Content-Type", "application/json")
+                        .body("{\"success\": false, \"message\": \"El maximo de preguntas para un pool IA es 8.\"}");
+                }
                 pool.setGeneratedByIA(true);
                 pool.setIaStatus(com.example.demo.enums.IaGenerationStatus.PENDING);
                 pool.setIaRequest(iaParams);
@@ -149,6 +154,8 @@ public class PoolController {
                 matMap.put("id", material.getIdActividad());
                 matMap.put("titulo", material.getTitulo());
                 // Obtener nombre del modulo de forma segura
+                java.util.UUID moduloId = (material.getModulo() != null) ? material.getModulo().getIdModulo() : null;
+                matMap.put("moduloId", moduloId != null ? moduloId.toString() : null);
                 String moduloNombre = (material.getModulo() != null) ? material.getModulo().getNombre() : "Sin módulo";
                 matMap.put("moduloNombre", moduloNombre);
                 materiales.add(matMap);

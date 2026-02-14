@@ -111,6 +111,7 @@ public class ActividadController {
             @RequestParam(value = "calificacionAutomatica", required = false, defaultValue = "false") Boolean calificacionAutomatica,
             @RequestParam(value = "publicarNota", required = false, defaultValue = "false") Boolean publicarNota,
             @RequestParam(value = "visibilidad", required = false, defaultValue = "false") Boolean visibilidad,
+            @RequestParam(value = "permitirPreExamen", required = false, defaultValue = "true") Boolean permitirPreExamen,
             @RequestParam(value = "poolsData", required = false) String poolsData,
             @RequestParam(value = "modulosRelacionados", required = false) List<String> modulosRelacionados) {
         
@@ -126,6 +127,7 @@ public class ActividadController {
             examen.setCalificacionAutomatica(calificacionAutomatica);
             examen.setPublicarNota(publicarNota);
             examen.setVisibilidad(visibilidad);
+            examen.setPermitirPreExamen(permitirPreExamen);
             
             // Parsear los pools desde JSON
             List<PoolDTORequest> poolsRequest = null;
