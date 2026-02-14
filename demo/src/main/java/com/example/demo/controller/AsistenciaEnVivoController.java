@@ -95,4 +95,15 @@ public class AsistenciaEnVivoController {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
         }
     }
+
+    @GetMapping("/{claseId}/asistencia/estado")
+    public ResponseEntity<?> estadoAsistenciaTiempo(@PathVariable UUID claseId, Principal principal) {
+        if (principal == null) return ResponseEntity.status(401).build();
+        try {
+            Map<String, Object> result = asistenciaEnVivoService.obtenerEstadoAsistenciaTiempo(claseId, principal.getName());
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
 }

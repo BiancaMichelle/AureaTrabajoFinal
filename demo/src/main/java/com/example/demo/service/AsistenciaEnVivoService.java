@@ -277,7 +277,7 @@ public class AsistenciaEnVivoService {
         Clase clase = claseRepository.findById(claseId).orElseThrow();
 
         if (!Boolean.TRUE.equals(clase.getAsistenciaAutomatica())) {
-            return Map.of("success", false, "message", "La asistencia automática no está habilitada para esta clase.");
+            return Map.of("success", false, "message", "La asistencia automatica no esta habilitada para esta clase.");
         }
         if (Boolean.TRUE.equals(clase.getPreguntasAleatorias())) {
             return Map.of("success", false, "message", "La asistencia de esta clase se registra mediante preguntas aleatorias.");
@@ -287,21 +287,25 @@ public class AsistenciaEnVivoService {
             return Map.of("success", false, "message", "La clase no tiene horario definido.");
         }
 
-        long duracionMinutos = Duration.between(clase.getInicio(), clase.getFin()).toMinutes();
-        if (duracionMinutos <= 0) {
-            return Map.of("success", false, "message", "La duración de la clase es inválida.");
+        long duracionSegundos = Duration.between(clase.getInicio(), clase.getFin()).getSeconds();
+        if (duracionSegundos <= 0) {
+            return Map.of("success", false, "message", "La duracion de la clase es invalida.");
         }
 
-        long minutosAsistidos = calcularSegundosAsistidos(claseId, alumnoDni, clase) / 60;
-        long umbralMinutos = (duracionMinutos / 2) + 1; // más de la mitad
+        long segundosAsistidos = calcularSegundosAsistidos(claseId, alumnoDni, clase);
+        long segundosRequeridos = (duracionSegundos / 2) + 1; // mas de la mitad
+        long minutosAsistidos = segundosAsistidos / 60;
+        long minutosRequeridos = (segundosRequeridos + 59) / 60;
 
-        if (minutosAsistidos <= umbralMinutos - 1) {
+        if (segundosAsistidos < segundosRequeridos) {
             return Map.of(
                 "success", false,
-                "message", "Aún no alcanzaste el tiempo mínimo de asistencia.",
+                "message", "Aun no alcanzaste el tiempo minimo de asistencia.",
                 "minutosAsistidos", minutosAsistidos,
-                "minutosRequeridos", umbralMinutos,
-                "duracionMinutos", duracionMinutos
+                "minutosRequeridos", minutosRequeridos,
+                "duracionMinutos", duracionSegundos / 60,
+                "segundosAsistidos", segundosAsistidos,
+                "segundosRequeridos", segundosRequeridos
             );
         }
 
@@ -318,8 +322,45 @@ public class AsistenciaEnVivoService {
             "success", true,
             "message", "Asistencia registrada correctamente.",
             "minutosAsistidos", minutosAsistidos,
-            "minutosRequeridos", umbralMinutos,
-            "duracionMinutos", duracionMinutos
+            "minutosRequeridos", minutosRequeridos,
+            "duracionMinutos", duracionSegundos / 60,
+            "segundosAsistidos", segundosAsistidos,
+            "segundosRequeridos", segundosRequeridos
+        );
+    }
+
+    public Map<String, Object> obtenerEstadoAsistenciaTiempo(UUID claseId, String alumnoDni) {
+        Clase clase = claseRepository.findById(claseId).orElseThrow();
+
+        if (!Boolean.TRUE.equals(clase.getAsistenciaAutomatica())) {
+            return Map.of("success", false, "message", "La asistencia automatica no esta habilitada.");
+        }
+        if (Boolean.TRUE.equals(clase.getPreguntasAleatorias())) {
+            return Map.of("success", false, "message", "La asistencia se controla con preguntas.");
+        }
+        if (clase.getInicio() == null || clase.getFin() == null) {
+            return Map.of("success", false, "message", "La clase no tiene horario definido.");
+        }
+
+        long duracionSegundos = Duration.between(clase.getInicio(), clase.getFin()).getSeconds();
+        if (duracionSegundos <= 0) {
+            return Map.of("success", false, "message", "La duracion de la clase es invalida.");
+        }
+
+        long segundosAsistidos = calcularSegundosAsistidos(claseId, alumnoDni, clase);
+        long segundosRequeridos = (duracionSegundos / 2) + 1;
+        long minutosAsistidos = segundosAsistidos / 60;
+        long minutosRequeridos = (segundosRequeridos + 59) / 60;
+        boolean presente = segundosAsistidos >= segundosRequeridos;
+
+        return Map.of(
+            "success", true,
+            "segundosAsistidos", segundosAsistidos,
+            "segundosRequeridos", segundosRequeridos,
+            "minutosAsistidos", minutosAsistidos,
+            "minutosRequeridos", minutosRequeridos,
+            "duracionMinutos", duracionSegundos / 60,
+            "presente", presente
         );
     }
 }

@@ -665,7 +665,20 @@
                 if (!claseDuracionMinutos || claseDuracionMinutos <= 0) {
                     return null;
                 }
-                return Math.floor(claseDuracionMinutos / 2) + 1; // más de la mitad
+                return Math.floor(claseDuracionMinutos / 2) + 1; // m??s de la mitad
+            }
+
+            async function obtenerEstadoAsistenciaTiempo() {
+                try {
+                    const response = await fetch(`/api/clase/${claseId}/asistencia/estado`);
+                    if (!response.ok) {
+                        return null;
+                    }
+                    return await response.json();
+                } catch (e) {
+                    console.error("Error obteniendo estado de asistencia:", e);
+                    return null;
+                }
             }
 
             async function marcarIngresoAsistenciaTiempo() {
@@ -754,14 +767,46 @@
                 if (asistenciaTimer) {
                     clearTimeout(asistenciaTimer);
                 }
-                marcarIngresoAsistenciaTiempo();
-                asistenciaTimer = setTimeout(() => {
-                    confirmarAsistenciaTiempo().then(ok => {
-                        if (!ok) {
+                marcarIngresoAsistenciaTiempo().then(async () => {
+                    const estado = await obtenerEstadoAsistenciaTiempo();
+                    if (estado && estado.success) {
+                        if (estado.presente) {
+                            const ok = await confirmarAsistenciaTiempo();
+                            if (ok) {
+                                asistenciaTiempoConfirmada = true;
+                                return;
+                            }
                             iniciarReintentosAsistencia();
+                            return;
                         }
-                    });
-                }, minutosRequeridos * 60 * 1000);
+                        const segundosAsistidos = typeof estado.segundosAsistidos === "number"
+                            ? estado.segundosAsistidos
+                            : 0;
+                        const segundosRequeridos = typeof estado.segundosRequeridos === "number"
+                            ? estado.segundosRequeridos
+                            : (minutosRequeridos * 60);
+                        const restantes = Math.max(0, segundosRequeridos - segundosAsistidos);
+
+                        if (asistenciaTimer) {
+                            clearTimeout(asistenciaTimer);
+                        }
+                        asistenciaTimer = setTimeout(() => {
+                            confirmarAsistenciaTiempo().then(ok => {
+                                if (!ok) {
+                                    iniciarReintentosAsistencia();
+                                }
+                            });
+                        }, restantes * 1000);
+                    } else {
+                        asistenciaTimer = setTimeout(() => {
+                            confirmarAsistenciaTiempo().then(ok => {
+                                if (!ok) {
+                                    iniciarReintentosAsistencia();
+                                }
+                            });
+                        }, minutosRequeridos * 60 * 1000);
+                    }
+                });
             }
 
             async function detenerAsistenciaTiempo() {
