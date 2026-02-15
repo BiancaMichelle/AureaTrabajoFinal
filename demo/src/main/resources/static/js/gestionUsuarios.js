@@ -1907,6 +1907,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function initializeTable() {
         const table = document.getElementById('usuarios-table');
         if (table) {
+            setupSortableUserHeaders();
             table.addEventListener('click', function (event) {
                 const button = event.target.closest('button[data-action]');
                 if (!button) {

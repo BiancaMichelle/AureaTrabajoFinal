@@ -5296,6 +5296,123 @@ textarea.form-control:focus {
     transform: translateY(-2px);
 }
 
+/* Detalle de usuario en auditoría */
+.audit-user-detail {
+    display: block;
+    margin-top: 8px;
+    color: #111827;
+}
+
+.audit-user-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.audit-user-field label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6b7280;
+}
+
+.audit-user-value {
+    font-weight: 600;
+    color: #111827;
+}
+
+.audit-user-value.audit-muted {
+    color: #111827;
+}
+
+.audit-user-value.audit-change {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.audit-user-value.audit-change span {
+    background: transparent;
+    border: 0;
+    padding: 0;
+}
+
+.audit-change-table {
+    display: grid;
+    gap: 14px;
+}
+
+.audit-change-head {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6b7280;
+    font-weight: 700;
+}
+
+.audit-change-head-cell {
+    text-align: center;
+}
+
+.audit-change-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.audit-change-label {
+    grid-column: 1 / -1;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6b7280;
+    font-weight: 600;
+}
+
+.audit-change-cell {
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+    background: #f9fafb;
+    font-weight: 700;
+    text-align: center;
+}
+
+.audit-change-cell.audit-old {
+    color: #b91c1c !important;
+    background: #fee2e2;
+    border-color: #fecaca;
+}
+
+.audit-change-cell.audit-new {
+    color: #047857 !important;
+    background: #d1fae5;
+    border-color: #a7f3d0;
+}
+
+.audit-old {
+    color: #b91c1c !important;
+    font-weight: 700;
+}
+
+.audit-new {
+    color: #047857 !important;
+    font-weight: 700;
+}
+
+.audit-arrow {
+    color: #6b7280;
+}
+
+.audit-user-loading {
+    color: #6b7280;
+    font-style: italic;
+}
+
 /* Badges de estado para auditoría */
 .status-badge {
     display: inline-flex;

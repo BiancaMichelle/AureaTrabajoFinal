@@ -32,6 +32,7 @@
                     <option value="MODIFICAR_OFERTA">Modificar Oferta</option>
                     <option value="ELIMINAR_OFERTA">Eliminar Oferta</option>
                     <option value="CAMBIAR_ESTADO_OFERTA">Cambiar Estado Oferta</option>
+                    <option value="MODIFICAR_CONFIGURACION">Modificar Configuración</option>
                     <option value="EXPORTAR_REPORTE">Exportar Reporte</option>
                 </select>
             </div>
@@ -170,16 +171,13 @@
                         <span id="audit-modal-hora">-</span>
                     </div>
                     <div class="info-item">
-                        <label>IP:</label>
-                        <span id="audit-modal-ip">-</span>
-                    </div>
-                    <div class="info-item">
                         <label>Estado:</label>
                         <span id="audit-modal-estado">-</span>
                     </div>
                     <div class="info-item full-width">
                         <label>Detalle:</label>
-                        <div id="audit-modal-detalle" style="white-space: pre-wrap;">-</div>
+                        <div id="audit-modal-detalle" class="audit-detail-text" style="white-space: pre-wrap;">-</div>
+                        <div id="audit-user-detail" class="audit-user-detail audit-change-grid" style="display: none;"></div>
                     </div>
                 </div>
             </div>
@@ -450,7 +448,6 @@
         setText('audit-modal-accion', formatearAccion(item.accion || ''));
         setText('audit-modal-fecha', formatearFecha(item.fecha));
         setText('audit-modal-hora', formatearHora(item.hora));
-        setText('audit-modal-ip', item.ip || 'N/A');
 
         const estadoEl = document.getElementById('audit-modal-estado');
         if (estadoEl) {
@@ -461,7 +458,23 @@
         }
 
         const detalleEl = document.getElementById('audit-modal-detalle');
-        if (detalleEl) detalleEl.textContent = formatearDetalleAuditoria(item.detalles, item.afecta);
+        const userDetailEl = document.getElementById('audit-user-detail');
+        if (userDetailEl) {
+            userDetailEl.style.display = 'none';
+            userDetailEl.innerHTML = '';
+        }
+        if (detalleEl) {
+            detalleEl.style.display = 'block';
+            detalleEl.textContent = formatearDetalleAuditoria(item.detalles, item.afecta);
+        }
+
+        if (item.accion === 'MODIFICACION_USUARIO' || item.accion === 'ACTUALIZAR_USUARIO') {
+            renderAuditUserDetail(item);
+        } else if (item.accion === 'MODIFICAR_OFERTA' || item.accion === 'MODIFICACION_OFERTA') {
+            renderAuditOfertaDetail(item);
+        } else if (item.accion === 'MODIFICAR_CONFIGURACION') {
+            renderAuditConfigDetail(item);
+        }
 
         modal.style.display = 'flex';
     };
@@ -491,6 +504,413 @@
 
         return texto;
     }
+
+    function normalizeChangeKey(value) {
+        if (!value) return '';
+        return String(value)
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .replace(/[\s_-]+/g, '');
+    }
+
+    function parseAuditChanges(detalles) {
+        const cambios = {};
+        if (!detalles) return cambios;
+
+        const raw = String(detalles);
+        let changeText = raw;
+        const pipeIdx = raw.indexOf('|');
+        if (pipeIdx !== -1) {
+            changeText = raw.slice(pipeIdx + 1);
+        }
+
+        if (/sin\s+cambios/i.test(changeText)) {
+            return cambios;
+        }
+
+        const stripQuotes = (value) => String(value || '').trim().replace(/^[\"'`]+|[\"'`]+$/g, '');
+        const segments = changeText.split(';');
+        segments.forEach((segment) => {
+            const seg = segment.trim();
+            if (!seg) return;
+            const colonIdx = seg.indexOf(':');
+            const arrowIdx = seg.indexOf('->');
+            if (colonIdx === -1 || arrowIdx === -1 || arrowIdx < colonIdx) return;
+            const keyRaw = seg.slice(0, colonIdx).trim();
+            let before = seg.slice(colonIdx + 1, arrowIdx).trim();
+            let after = seg.slice(arrowIdx + 2).trim();
+            before = stripQuotes(before);
+            after = stripQuotes(after);
+            const normalized = normalizeChangeKey(keyRaw);
+            if (!normalized) return;
+            cambios[normalized] = { antes: before, despues: after, keyRaw };
+        });
+
+        if (Object.keys(cambios).length === 0) {
+            const regex = /([A-Za-z0-9ÁÉÍÓÚÜÑáéíóúüñ _-]+)\s*:\s*'([^']*)'\s*->\s*'([^']*)'/g;
+            let match;
+            while ((match = regex.exec(raw)) !== null) {
+                const keyRaw = match[1]?.trim() || '';
+                const normalized = normalizeChangeKey(keyRaw);
+                if (!normalized) continue;
+                cambios[normalized] = {
+                    antes: match[2],
+                    despues: match[3],
+                    keyRaw
+                };
+            }
+        }
+
+        return cambios;
+    }
+
+    function formatDateValue(valor) {
+        if (!valor) return '-';
+        const local = parseLocalDate(valor);
+        if (local) {
+            return local.toLocaleDateString('es-ES');
+        }
+        const parsed = new Date(valor);
+        if (!Number.isNaN(parsed.getTime())) {
+            return parsed.toLocaleDateString('es-ES');
+        }
+        return String(valor);
+    }
+
+    function formatFieldValue(key, valor) {
+        if (valor === null || valor === undefined || valor === '') return '-';
+        const dateKeys = new Set([
+            'fechaNacimiento',
+            'fechaRegistro',
+            'fechaInicio',
+            'fechaFin',
+            'fechaInicioInscripcion',
+            'fechaFinInscripcion',
+            'inicioActividad'
+        ]);
+        const boolKeys = new Set([
+            'documentacionEntregada',
+            'certificado',
+            'visibilidad',
+            'cuposDisponibles',
+            'permisoBajaAutomatica',
+            'habilitarIA',
+            'reportesAutomaticos'
+        ]);
+        if (dateKeys.has(key)) {
+            return formatDateValue(valor);
+        }
+        if (key === 'horaInicio' && typeof valor === 'string') {
+            return valor.length >= 5 ? valor.substring(0, 5) : valor;
+        }
+        if (boolKeys.has(key)) {
+            if (valor === true || valor === 'true') return 'Si';
+            if (valor === false || valor === 'false') return 'No';
+        }
+        return String(valor);
+    }
+
+    function buildAuditUserDetailHtml(data, cambios, item) {
+        const rolActual = data?.rolPrincipal
+            || (Array.isArray(data?.rolesRaw) ? data.rolesRaw[0] : null)
+            || (Array.isArray(data?.roles) ? data.roles[0] : data?.roles)
+            || '-';
+        const campos = [
+            { key: 'dni', label: 'DNI', value: data?.dni || item?.usuarioDni || '-' },
+            { key: 'nombre', label: 'Nombre', value: data?.nombre || '-' },
+            { key: 'apellido', label: 'Apellido', value: data?.apellido || '-' },
+            { key: 'correo', label: 'Correo', value: data?.correo || '-' },
+            { key: 'telefono', label: 'Teléfono', value: data?.telefono || '-' },
+            { key: 'fechaNacimiento', label: 'Fecha Nacimiento', value: data?.fechaNacimiento || '-' },
+            { key: 'estado', label: 'Estado', value: data?.estado || '-' },
+            { key: 'fechaRegistro', label: 'Fecha Registro', value: data?.fechaRegistro || '-' },
+            { key: 'rol', label: 'Rol', value: rolActual },
+            { key: 'pais', label: 'País', value: data?.pais?.nombre || '-' },
+            { key: 'provincia', label: 'Provincia', value: data?.provincia?.nombre || '-' },
+            { key: 'ciudad', label: 'Ciudad', value: data?.ciudad?.nombre || '-' },
+            { key: 'colegioEgreso', label: 'Colegio Egreso', value: data?.colegioEgreso || '-' },
+            { key: 'añoEgreso', label: 'Año Egreso', value: data?.añoEgreso || '-' },
+            { key: 'ultimosEstudios', label: 'Últimos Estudios', value: data?.ultimosEstudios || '-' },
+            { key: 'documentacionEntregada', label: 'Documentación Entregada', value: data?.documentacionEntregada },
+            { key: 'matricula', label: 'Matrícula', value: data?.matricula || '-' },
+            { key: 'experiencia', label: 'Experiencia', value: data?.experiencia || '-' }
+        ];
+
+        const labelMap = {};
+        const orderedKeys = [];
+        campos.forEach((campo) => {
+            const normalized = normalizeChangeKey(campo.key);
+            if (!normalized) return;
+            labelMap[normalized] = { label: campo.label, key: campo.key };
+            orderedKeys.push(normalized);
+        });
+
+        const seen = new Set();
+        const orderedEntries = [];
+        orderedKeys.forEach((key) => {
+            if (cambios[key]) {
+                orderedEntries.push([key, cambios[key]]);
+                seen.add(key);
+            }
+        });
+        Object.keys(cambios || {}).forEach((key) => {
+            if (!seen.has(key)) {
+                orderedEntries.push([key, cambios[key]]);
+            }
+        });
+
+        if (orderedEntries.length === 0) {
+            return '<div class="audit-user-loading">Sin cambios detectados.</div>';
+        }
+
+        const rows = orderedEntries.map(([key, cambio]) => {
+            const meta = labelMap[key] || {};
+            const label = meta.label || cambio.keyRaw || key;
+            const fieldKey = meta.key || key;
+            const antes = formatFieldValue(fieldKey, cambio.antes);
+            const despues = formatFieldValue(fieldKey, cambio.despues);
+            return `
+                <div class="audit-change-row">
+                    <div class="audit-change-label">${label}</div>
+                    <div class="audit-change-cell audit-old">${antes}</div>
+                    <div class="audit-change-cell audit-new">${despues}</div>
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <div class="audit-change-table">
+                <div class="audit-change-head">
+                    <div class="audit-change-head-cell audit-old">Antes</div>
+                    <div class="audit-change-head-cell audit-new">Despues</div>
+                </div>
+                ${rows}
+            </div>
+        `;
+    }
+
+    function renderAuditUserDetail(item) {
+        const container = document.getElementById('audit-user-detail');
+        const detalleEl = document.getElementById('audit-modal-detalle');
+        if (!container) return;
+
+        const cambios = parseAuditChanges(item?.detalles || '');
+
+        container.innerHTML = '<div class="audit-user-loading">Cargando detalle de usuario...</div>';
+        container.style.display = 'block';
+        const dni = item?.usuarioDni || cambios?.dni?.despues || cambios?.dni?.antes || null;
+        if (!dni) {
+            container.innerHTML = buildAuditUserDetailHtml({}, cambios, item);
+            return;
+        }
+
+        fetch(`/admin/usuarios/${encodeURIComponent(dni)}`)
+            .then(resp => resp.json())
+            .then(payload => {
+                const data = payload?.data || {};
+                container.innerHTML = buildAuditUserDetailHtml(data, cambios, item);
+            })
+            .catch(() => {
+                container.innerHTML = buildAuditUserDetailHtml({}, cambios, item);
+            });
+    }
+
+    function buildAuditOfertaDetailHtml(cambios) {
+        const campos = [
+            { key: 'nombre', label: 'Nombre' },
+            { key: 'descripcion', label: 'Descripcion' },
+            { key: 'tipo', label: 'Tipo' },
+            { key: 'modalidad', label: 'Modalidad' },
+            { key: 'estado', label: 'Estado' },
+            { key: 'fechaInicio', label: 'Fecha Inicio' },
+            { key: 'fechaFin', label: 'Fecha Fin' },
+            { key: 'fechaInicioInscripcion', label: 'Inicio Inscripcion' },
+            { key: 'fechaFinInscripcion', label: 'Fin Inscripcion' },
+            { key: 'cupos', label: 'Cupos' },
+            { key: 'costo', label: 'Costo Inscripcion' },
+            { key: 'costoInscripcion', label: 'Costo Inscripcion' },
+            { key: 'certificado', label: 'Certificado' },
+            { key: 'visibilidad', label: 'Visibilidad' },
+            { key: 'lugar', label: 'Lugar' },
+            { key: 'enlace', label: 'Enlace' },
+            { key: 'imagen', label: 'Imagen' },
+            { key: 'categorias', label: 'Categorias' },
+            { key: 'temario', label: 'Temario' },
+            { key: 'plan', label: 'Plan' },
+            { key: 'docentes', label: 'Docentes' },
+            { key: 'costoCuota', label: 'Costo Cuota' },
+            { key: 'costoMora', label: 'Costo Mora' },
+            { key: 'nrCuotas', label: 'Nro Cuotas' },
+            { key: 'diaVencimiento', label: 'Dia Vencimiento' },
+            { key: 'duracionEstimada', label: 'Duracion Estimada' },
+            { key: 'duracionMinutos', label: 'Duracion Minutos' },
+            { key: 'numeroEncuentros', label: 'Numero Encuentros' },
+            { key: 'publicoObjetivo', label: 'Publico Objetivo' },
+            { key: 'disertantes', label: 'Disertantes' },
+            { key: 'horaInicio', label: 'Hora Inicio' }
+        ];
+
+        const labelMap = {};
+        const orderedKeys = [];
+        campos.forEach((campo) => {
+            const normalized = normalizeChangeKey(campo.key);
+            if (!normalized) return;
+            labelMap[normalized] = { label: campo.label, key: campo.key };
+            orderedKeys.push(normalized);
+        });
+
+        const seen = new Set();
+        const orderedEntries = [];
+        orderedKeys.forEach((key) => {
+            if (cambios[key]) {
+                orderedEntries.push([key, cambios[key]]);
+                seen.add(key);
+            }
+        });
+        Object.keys(cambios || {}).forEach((key) => {
+            if (!seen.has(key)) {
+                orderedEntries.push([key, cambios[key]]);
+            }
+        });
+
+        if (orderedEntries.length === 0) {
+            return '<div class="audit-user-loading">Sin cambios detectados.</div>';
+        }
+
+        const rows = orderedEntries.map(([key, cambio]) => {
+            const meta = labelMap[key] || {};
+            const label = meta.label || cambio.keyRaw || key;
+            const fieldKey = meta.key || key;
+            const antes = formatFieldValue(fieldKey, cambio.antes);
+            const despues = formatFieldValue(fieldKey, cambio.despues);
+            return `
+                <div class="audit-change-row">
+                    <div class="audit-change-label">${label}</div>
+                    <div class="audit-change-cell audit-old">${antes}</div>
+                    <div class="audit-change-cell audit-new">${despues}</div>
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <div class="audit-change-table">
+                <div class="audit-change-head">
+                    <div class="audit-change-head-cell audit-old">Antes</div>
+                    <div class="audit-change-head-cell audit-new">Despues</div>
+                </div>
+                ${rows}
+            </div>
+        `;
+    }
+
+    function renderAuditOfertaDetail(item) {
+        const container = document.getElementById('audit-user-detail');
+        if (!container) return;
+
+        const cambios = parseAuditChanges(item?.detalles || '');
+        container.innerHTML = '<div class="audit-user-loading">Cargando detalle de oferta...</div>';
+        container.style.display = 'block';
+        container.innerHTML = buildAuditOfertaDetailHtml(cambios);
+    }
+
+    function buildAuditConfigDetailHtml(cambios) {
+        const campos = [
+            { key: 'nombreInstituto', label: 'Nombre Instituto' },
+            { key: 'descripcion', label: 'Descripcion' },
+            { key: 'mision', label: 'Mision' },
+            { key: 'vision', label: 'Vision' },
+            { key: 'sobreNosotros', label: 'Sobre Nosotros' },
+            { key: 'direccion', label: 'Direccion' },
+            { key: 'telefono', label: 'Telefono' },
+            { key: 'email', label: 'Email' },
+            { key: 'facebook', label: 'Facebook' },
+            { key: 'instagram', label: 'Instagram' },
+            { key: 'x', label: 'X (Twitter)' },
+            { key: 'moneda', label: 'Moneda' },
+            { key: 'cuentaBancaria', label: 'Cuenta Bancaria' },
+            { key: 'politicaPagos', label: 'Politica de Pagos' },
+            { key: 'razonSocial', label: 'Razon Social' },
+            { key: 'cuil', label: 'CUIL' },
+            { key: 'inicioActividad', label: 'Inicio Actividad' },
+            { key: 'permisoBajaAutomatica', label: 'Permiso Baja Automatica' },
+            { key: 'minimoAlumnoBaja', label: 'Minimo Alumno Baja' },
+            { key: 'inactividadBaja', label: 'Inactividad Baja' },
+            { key: 'diasMoraBloqueoExamen', label: 'Dias Mora Bloqueo Examen' },
+            { key: 'diasMoraBloqueoMaterial', label: 'Dias Mora Bloqueo Material' },
+            { key: 'diasMoraBloqueoActividad', label: 'Dias Mora Bloqueo Actividad' },
+            { key: 'diasMoraBloqueoAula', label: 'Dias Mora Bloqueo Aula' },
+            { key: 'habilitarIA', label: 'Habilitar IA' },
+            { key: 'reportesAutomaticos', label: 'Reportes Automaticos' },
+            { key: 'colorPrimario', label: 'Color Primario' },
+            { key: 'colorSecundario', label: 'Color Secundario' },
+            { key: 'colorTexto', label: 'Color Texto' },
+            { key: 'logo', label: 'Logo' }
+        ];
+
+        const labelMap = {};
+        const orderedKeys = [];
+        campos.forEach((campo) => {
+            const normalized = normalizeChangeKey(campo.key);
+            if (!normalized) return;
+            labelMap[normalized] = { label: campo.label, key: campo.key };
+            orderedKeys.push(normalized);
+        });
+
+        const seen = new Set();
+        const orderedEntries = [];
+        orderedKeys.forEach((key) => {
+            if (cambios[key]) {
+                orderedEntries.push([key, cambios[key]]);
+                seen.add(key);
+            }
+        });
+        Object.keys(cambios || {}).forEach((key) => {
+            if (!seen.has(key)) {
+                orderedEntries.push([key, cambios[key]]);
+            }
+        });
+
+        if (orderedEntries.length === 0) {
+            return '<div class="audit-user-loading">Sin cambios detectados.</div>';
+        }
+
+        const rows = orderedEntries.map(([key, cambio]) => {
+            const meta = labelMap[key] || {};
+            const label = meta.label || cambio.keyRaw || key;
+            const fieldKey = meta.key || key;
+            const antes = formatFieldValue(fieldKey, cambio.antes);
+            const despues = formatFieldValue(fieldKey, cambio.despues);
+            return `
+                <div class="audit-change-row">
+                    <div class="audit-change-label">${label}</div>
+                    <div class="audit-change-cell audit-old">${antes}</div>
+                    <div class="audit-change-cell audit-new">${despues}</div>
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <div class="audit-change-table">
+                <div class="audit-change-head">
+                    <div class="audit-change-head-cell audit-old">Antes</div>
+                    <div class="audit-change-head-cell audit-new">Despues</div>
+                </div>
+                ${rows}
+            </div>
+        `;
+    }
+
+    function renderAuditConfigDetail(item) {
+        const container = document.getElementById('audit-user-detail');
+        if (!container) return;
+
+        const cambios = parseAuditChanges(item?.detalles || '');
+        container.innerHTML = '<div class="audit-user-loading">Cargando detalle de configuracion...</div>';
+        container.style.display = 'block';
+        container.innerHTML = buildAuditConfigDetailHtml(cambios);
+    }
+
 
     // === CAMBIAR PÁGINA ===
     window.cambiarPagina = function(nuevaPagina) {
@@ -643,3 +1063,7 @@
 </main>
 </body>
 </html>
+
+
+
+

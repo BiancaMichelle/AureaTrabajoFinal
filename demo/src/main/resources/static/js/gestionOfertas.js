@@ -1074,6 +1074,13 @@ if (!window.__skipGestionOfertasInit) {
             document.getElementById('fechaInicio').value = oferta.fechaInicio;
             document.getElementById('fechaFin').value = oferta.fechaFin;
 
+            if (document.getElementById('fechaInicioInscripcion')) {
+                document.getElementById('fechaInicioInscripcion').value = oferta.fechaInicioInscripcion || '';
+            }
+            if (document.getElementById('fechaFinInscripcion')) {
+                document.getElementById('fechaFinInscripcion').value = oferta.fechaFinInscripcion || '';
+            }
+
             const modalidadSelect = document.getElementById('modalidad');
             modalidadSelect.value = oferta.modalidad;
             // Actualizar visibilidad de lugar/enlace
@@ -1960,5 +1967,7 @@ function aplicarPropuestaSeleccionada(propIndex) {
 
     mostrarAlerta('Horarios aplicados al formulario', 'success');
 }
+
+
 
 

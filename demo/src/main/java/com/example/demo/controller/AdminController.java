@@ -833,6 +833,42 @@ public class AdminController {
         }
     }
 
+    private String nombresCategorias(List<Categoria> categorias) {
+        if (categorias == null || categorias.isEmpty()) return null;
+        return categorias.stream()
+                .map(Categoria::getNombre)
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .collect(Collectors.joining(", "));
+    }
+
+    private String nombresDocentes(List<Docente> docentes) {
+        if (docentes == null || docentes.isEmpty()) return null;
+        return docentes.stream()
+                .filter(Objects::nonNull)
+                .map(d -> (d.getNombre() + " " + d.getApellido()).trim())
+                .filter(s -> !s.isEmpty())
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .collect(Collectors.joining(", "));
+    }
+
+    private String listaTexto(List<String> valores) {
+        if (valores == null || valores.isEmpty()) return null;
+        return valores.stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.joining(", "));
+    }
+
+    private String horaTexto(java.sql.Time hora) {
+        if (hora == null) return null;
+        String texto = hora.toString();
+        return texto.length() >= 5 ? texto.substring(0, 5) : texto;
+    }
+
     // =================== ENDPOINTS PARA DOCENTES ===================
 
     @GetMapping("/admin/docentes/buscar")
@@ -1710,6 +1746,67 @@ public class AdminController {
             LocalDate fechaInicioInscripcionAnterior = ofertaExistente.getFechaInicioInscripcion();
             LocalDate fechaFinInscripcionAnterior = ofertaExistente.getFechaFinInscripcion();
             Modalidad modalidadAnterior = ofertaExistente.getModalidad();
+            String lugarAnterior = ofertaExistente.getLugar();
+            String enlaceAnterior = ofertaExistente.getEnlace();
+            Boolean certificadoAnterior = ofertaExistente.getCertificado();
+            String imagenAnterior = ofertaExistente.getImagenUrl();
+            String categoriasAnterior = nombresCategorias(ofertaExistente.getCategorias());
+
+            String temarioAnterior = null;
+            Double costoCuotaAnterior = null;
+            Double costoMoraAnterior = null;
+            Integer nrCuotasAnterior = null;
+            Integer diaVencimientoAnterior = null;
+            String docentesAnterior = null;
+
+            String planAnterior = null;
+            Double costoCuotaFormAnterior = null;
+            Double costoMoraFormAnterior = null;
+            Integer nrCuotasFormAnterior = null;
+            Integer diaVencimientoFormAnterior = null;
+            String docentesFormAnterior = null;
+
+            Integer duracionEstimadaAnterior = null;
+            String publicoObjetivoCharlaAnterior = null;
+            String disertantesCharlaAnterior = null;
+            String horaCharlaAnterior = null;
+
+            Integer duracionMinutosAnterior = null;
+            Integer numeroEncuentrosAnterior = null;
+            String publicoObjetivoSeminarioAnterior = null;
+            String disertantesSeminarioAnterior = null;
+            String horaSeminarioAnterior = null;
+
+            if (ofertaExistente instanceof Curso) {
+                Curso cursoAnterior = (Curso) ofertaExistente;
+                temarioAnterior = cursoAnterior.getTemario();
+                costoCuotaAnterior = cursoAnterior.getCostoCuota();
+                costoMoraAnterior = cursoAnterior.getCostoMora();
+                nrCuotasAnterior = cursoAnterior.getNrCuotas();
+                diaVencimientoAnterior = cursoAnterior.getDiaVencimiento();
+                docentesAnterior = nombresDocentes(cursoAnterior.getDocentes());
+            } else if (ofertaExistente instanceof Formacion) {
+                Formacion formacionAnterior = (Formacion) ofertaExistente;
+                planAnterior = formacionAnterior.getPlan();
+                costoCuotaFormAnterior = formacionAnterior.getCostoCuota();
+                costoMoraFormAnterior = formacionAnterior.getCostoMora();
+                nrCuotasFormAnterior = formacionAnterior.getNrCuotas();
+                diaVencimientoFormAnterior = formacionAnterior.getDiaVencimiento();
+                docentesFormAnterior = nombresDocentes(formacionAnterior.getDocentes());
+            } else if (ofertaExistente instanceof Charla) {
+                Charla charlaAnterior = (Charla) ofertaExistente;
+                duracionEstimadaAnterior = charlaAnterior.getDuracionEstimada();
+                publicoObjetivoCharlaAnterior = charlaAnterior.getPublicoObjetivo();
+                disertantesCharlaAnterior = listaTexto(charlaAnterior.getDisertantes());
+                horaCharlaAnterior = horaTexto(charlaAnterior.getHoraInicio());
+            } else if (ofertaExistente instanceof Seminario) {
+                Seminario seminarioAnterior = (Seminario) ofertaExistente;
+                duracionMinutosAnterior = seminarioAnterior.getDuracionMinutos();
+                numeroEncuentrosAnterior = seminarioAnterior.getNumeroEncuentros();
+                publicoObjetivoSeminarioAnterior = seminarioAnterior.getPublicoObjetivo();
+                disertantesSeminarioAnterior = listaTexto(seminarioAnterior.getDisertantes());
+                horaSeminarioAnterior = horaTexto(seminarioAnterior.getHoraInicio());
+            }
 
             // Verificar si se puede modificar
             if (!ofertaExistente.puedeSerEditada()) {
@@ -1938,9 +2035,13 @@ public class AdminController {
                 datosActualizar.put("fechaFinInscripcion", fechaFinInscripcion);
             }
 
-            // Lugar y Enlace pueden ser seteados a vacío, así que los pasamos directo
-            datosActualizar.put("lugar", lugar);
-            datosActualizar.put("enlace", enlace);
+            // Evitar pisar valores existentes con vacíos
+            if (lugar != null && !lugar.trim().isEmpty()) {
+                datosActualizar.put("lugar", lugar);
+            }
+            if (enlace != null && !enlace.trim().isEmpty()) {
+                datosActualizar.put("enlace", enlace);
+            }
 
             if (cupos != null)
                 datosActualizar.put("cupos", cupos);
@@ -1986,7 +2087,7 @@ public class AdminController {
 
                 // Si hubiera lógica de docentes para formación
                 if (docentesFormacion != null && !docentesFormacion.trim().isEmpty()) {
-                    // datosActualizar.put("docentes", obtenerDocentesPorIds(docentesFormacion));
+                    datosActualizar.put("docentes", obtenerDocentesPorIds(docentesFormacion));
                 }
 
             } else if ("CHARLA".equals(tipoOfertaUpper)) {
@@ -2048,6 +2149,42 @@ public class AdminController {
                 addCambio(cambios, "fechaFinInscripcion", fechaFinInscripcionAnterior,
                         ofertaModificada.getFechaFinInscripcion());
                 addCambio(cambios, "modalidad", modalidadAnterior, ofertaModificada.getModalidad());
+                addCambio(cambios, "lugar", lugarAnterior, ofertaModificada.getLugar());
+                addCambio(cambios, "enlace", enlaceAnterior, ofertaModificada.getEnlace());
+                addCambio(cambios, "certificado", certificadoAnterior, ofertaModificada.getCertificado());
+                addCambio(cambios, "imagen", imagenAnterior, ofertaModificada.getImagenUrl());
+                addCambio(cambios, "categorias", categoriasAnterior, nombresCategorias(ofertaModificada.getCategorias()));
+
+                if (ofertaModificada instanceof Curso) {
+                    Curso cursoModificado = (Curso) ofertaModificada;
+                    addCambio(cambios, "temario", temarioAnterior, cursoModificado.getTemario());
+                    addCambio(cambios, "docentes", docentesAnterior, nombresDocentes(cursoModificado.getDocentes()));
+                    addCambio(cambios, "costoCuota", costoCuotaAnterior, cursoModificado.getCostoCuota());
+                    addCambio(cambios, "costoMora", costoMoraAnterior, cursoModificado.getCostoMora());
+                    addCambio(cambios, "nrCuotas", nrCuotasAnterior, cursoModificado.getNrCuotas());
+                    addCambio(cambios, "diaVencimiento", diaVencimientoAnterior, cursoModificado.getDiaVencimiento());
+                } else if (ofertaModificada instanceof Formacion) {
+                    Formacion formacionModificada = (Formacion) ofertaModificada;
+                    addCambio(cambios, "plan", planAnterior, formacionModificada.getPlan());
+                    addCambio(cambios, "docentes", docentesFormAnterior, nombresDocentes(formacionModificada.getDocentes()));
+                    addCambio(cambios, "costoCuota", costoCuotaFormAnterior, formacionModificada.getCostoCuota());
+                    addCambio(cambios, "costoMora", costoMoraFormAnterior, formacionModificada.getCostoMora());
+                    addCambio(cambios, "nrCuotas", nrCuotasFormAnterior, formacionModificada.getNrCuotas());
+                    addCambio(cambios, "diaVencimiento", diaVencimientoFormAnterior, formacionModificada.getDiaVencimiento());
+                } else if (ofertaModificada instanceof Charla) {
+                    Charla charlaModificada = (Charla) ofertaModificada;
+                    addCambio(cambios, "duracionEstimada", duracionEstimadaAnterior, charlaModificada.getDuracionEstimada());
+                    addCambio(cambios, "publicoObjetivo", publicoObjetivoCharlaAnterior, charlaModificada.getPublicoObjetivo());
+                    addCambio(cambios, "disertantes", disertantesCharlaAnterior, listaTexto(charlaModificada.getDisertantes()));
+                    addCambio(cambios, "horaInicio", horaCharlaAnterior, horaTexto(charlaModificada.getHoraInicio()));
+                } else if (ofertaModificada instanceof Seminario) {
+                    Seminario seminarioModificado = (Seminario) ofertaModificada;
+                    addCambio(cambios, "duracionMinutos", duracionMinutosAnterior, seminarioModificado.getDuracionMinutos());
+                    addCambio(cambios, "numeroEncuentros", numeroEncuentrosAnterior, seminarioModificado.getNumeroEncuentros());
+                    addCambio(cambios, "publicoObjetivo", publicoObjetivoSeminarioAnterior, seminarioModificado.getPublicoObjetivo());
+                    addCambio(cambios, "disertantes", disertantesSeminarioAnterior, listaTexto(seminarioModificado.getDisertantes()));
+                    addCambio(cambios, "horaInicio", horaSeminarioAnterior, horaTexto(seminarioModificado.getHoraInicio()));
+                }
 
                 String detalleCambios = "Modificacion de oferta " + ofertaModificada.getTipoOferta() + ": " +
                         trunc(ofertaModificada.getNombre(), 80) + " (ID " + ofertaModificada.getIdOferta() + ")" +
@@ -2577,6 +2714,30 @@ public class AdminController {
                     ? usuarioPrevio.getRoles().iterator().next().getNombre()
                     : "";
             String estadoAnterior = usuarioPrevio.getEstado();
+            String dniAnterior = usuarioPrevio.getDni();
+            String nombreAnterior = usuarioPrevio.getNombre();
+            String apellidoAnterior = usuarioPrevio.getApellido();
+            LocalDate fechaNacimientoAnterior = usuarioPrevio.getFechaNacimiento();
+            String correoAnterior = usuarioPrevio.getCorreo();
+            String telefonoAnterior = usuarioPrevio.getNumTelefono();
+            String paisAnterior = usuarioPrevio.getPais() != null ? usuarioPrevio.getPais().getNombre() : null;
+            String provinciaAnterior = usuarioPrevio.getProvincia() != null ? usuarioPrevio.getProvincia().getNombre() : null;
+            String ciudadAnterior = usuarioPrevio.getCiudad() != null ? usuarioPrevio.getCiudad().getNombre() : null;
+            String colegioAnterior = null;
+            Integer anioEgresoAnterior = null;
+            String ultimosEstudiosAnterior = null;
+            String matriculaAnterior = null;
+            Integer experienciaAnterior = null;
+            if (usuarioPrevio instanceof Alumno) {
+                Alumno alumnoPrevio = (Alumno) usuarioPrevio;
+                colegioAnterior = alumnoPrevio.getColegioEgreso();
+                anioEgresoAnterior = alumnoPrevio.getAñoEgreso();
+                ultimosEstudiosAnterior = alumnoPrevio.getUltimosEstudios();
+            } else if (usuarioPrevio instanceof Docente) {
+                Docente docentePrevio = (Docente) usuarioPrevio;
+                matriculaAnterior = docentePrevio.getMatricula();
+                experienciaAnterior = docentePrevio.getAñosExperiencia();
+            }
 
             Long ciudadIdLong = (ciudadId != null && !ciudadId.isBlank()) ? Long.valueOf(ciudadId) : null;
 
@@ -2601,15 +2762,31 @@ public class AdminController {
                     estado);
 
             List<String> cambios = new ArrayList<>();
-            addCambio(cambios, "dni", usuarioPrevio.getDni(), dni);
-            addCambio(cambios, "nombre", usuarioPrevio.getNombre(), nombre);
-            addCambio(cambios, "apellido", usuarioPrevio.getApellido(), apellido);
-            addCambio(cambios, "fechaNacimiento", usuarioPrevio.getFechaNacimiento(), fechaNacimiento);
-            addCambio(cambios, "correo", usuarioPrevio.getCorreo(), correo);
-            addCambio(cambios, "telefono", usuarioPrevio.getNumTelefono(), telefono);
+            addCambio(cambios, "dni", dniAnterior, actualizado.getDni());
+            addCambio(cambios, "nombre", nombreAnterior, actualizado.getNombre());
+            addCambio(cambios, "apellido", apellidoAnterior, actualizado.getApellido());
+            addCambio(cambios, "fechaNacimiento", fechaNacimientoAnterior, actualizado.getFechaNacimiento());
+            addCambio(cambios, "correo", correoAnterior, actualizado.getCorreo());
+            addCambio(cambios, "telefono", telefonoAnterior, actualizado.getNumTelefono());
+            addCambio(cambios, "pais", paisAnterior,
+                    actualizado.getPais() != null ? actualizado.getPais().getNombre() : null);
+            addCambio(cambios, "provincia", provinciaAnterior,
+                    actualizado.getProvincia() != null ? actualizado.getProvincia().getNombre() : null);
+            addCambio(cambios, "ciudad", ciudadAnterior,
+                    actualizado.getCiudad() != null ? actualizado.getCiudad().getNombre() : null);
             addCambio(cambios, "rol", rolAnterior, rol);
             if (estado != null) {
-                addCambio(cambios, "estado", estadoAnterior, estado);
+                addCambio(cambios, "estado", estadoAnterior, actualizado.getEstado());
+            }
+            if (actualizado instanceof Alumno) {
+                Alumno alumnoAct = (Alumno) actualizado;
+                addCambio(cambios, "colegioEgreso", colegioAnterior, alumnoAct.getColegioEgreso());
+                addCambio(cambios, "añoEgreso", anioEgresoAnterior, alumnoAct.getAñoEgreso());
+                addCambio(cambios, "ultimosEstudios", ultimosEstudiosAnterior, alumnoAct.getUltimosEstudios());
+            } else if (actualizado instanceof Docente) {
+                Docente docenteAct = (Docente) actualizado;
+                addCambio(cambios, "matricula", matriculaAnterior, docenteAct.getMatricula());
+                addCambio(cambios, "experiencia", experienciaAnterior, docenteAct.getAñosExperiencia());
             }
 
             String detalleCambios = "Modificacion de usuario: " + nombre + " " + apellido +
@@ -3122,6 +3299,7 @@ public class AdminController {
         return "admin/configuraciones";
     }
 
+    @Auditable(action = "MODIFICAR_CONFIGURACION", entity = "Configuracion")
     @PostMapping("/admin/configuracion/guardar")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> guardarConfiguracion(
@@ -3144,6 +3322,44 @@ public class AdminController {
             // Obtener instituto actual
             Instituto instituto = institutoService.obtenerInstituto();
             System.out.println("Instituto actual ID: " + instituto.getIdInstituto());
+
+            // Snapshot de valores anteriores para auditoria
+            String nombreInstitutoAnterior = instituto.getNombreInstituto();
+            String descripcionAnterior = instituto.getDescripcion();
+            String misionAnterior = instituto.getMision();
+            String visionAnterior = instituto.getVision();
+            String sobreNosotrosAnterior = instituto.getSobreNosotros();
+            String direccionAnterior = instituto.getDireccion();
+            String telefonoAnterior = instituto.getTelefono();
+            String emailAnterior = instituto.getEmail();
+            String facebookAnterior = instituto.getFacebook();
+            String instagramAnterior = instituto.getInstagram();
+            String xAnterior = instituto.getX();
+            String monedaAnterior = instituto.getMoneda();
+            String cuentaBancariaAnterior = instituto.getCuentaBancaria();
+            String politicaPagosAnterior = instituto.getPoliticaPagos();
+            String razonSocialAnterior = instituto.getRazonSocial();
+            String cuilAnterior = instituto.getCuil();
+            LocalDateTime inicioActividadAnterior = instituto.getInicioActividad();
+            Boolean permisoBajaAutomaticaAnterior = instituto.getPermisoBajaAutomatica();
+            Integer minimoAlumnoBajaAnterior = instituto.getMinimoAlumnoBaja();
+            Integer inactividadBajaAnterior = instituto.getInactividadBaja();
+            Integer diasMoraBloqueoExamenAnterior = instituto.getDiasMoraBloqueoExamen();
+            Integer diasMoraBloqueoMaterialAnterior = instituto.getDiasMoraBloqueoMaterial();
+            Integer diasMoraBloqueoActividadAnterior = instituto.getDiasMoraBloqueoActividad();
+            Integer diasMoraBloqueoAulaAnterior = instituto.getDiasMoraBloqueoAula();
+            Boolean habilitarIAAnterior = instituto.getHabilitarIA();
+            Boolean reportesAutomaticosAnterior = instituto.getReportesAutomaticos();
+            List<String> coloresAnterior = instituto.getColores() != null ? new ArrayList<>(instituto.getColores())
+                    : null;
+            String colorPrimarioAnterior = coloresAnterior != null && coloresAnterior.size() > 0 ? coloresAnterior.get(0)
+                    : null;
+            String colorSecundarioAnterior = coloresAnterior != null && coloresAnterior.size() > 1
+                    ? coloresAnterior.get(1)
+                    : null;
+            String colorTextoAnterior = coloresAnterior != null && coloresAnterior.size() > 2 ? coloresAnterior.get(2)
+                    : null;
+            String logoAnterior = instituto.getLogoPath();
 
             // Actualizar campos básicos
             instituto.setNombreInstituto(params.get("nombreInstituto"));
@@ -3279,8 +3495,59 @@ public class AdminController {
             System.out.println("Días mora material guardado: " + institutoGuardado.getDiasMoraBloqueoMaterial());
             System.out.println("Días mora actividad guardado: " + institutoGuardado.getDiasMoraBloqueoActividad());
 
+            List<String> coloresNuevos = institutoGuardado.getColores() != null
+                    ? new ArrayList<>(institutoGuardado.getColores())
+                    : null;
+            String colorPrimarioNuevo = coloresNuevos != null && coloresNuevos.size() > 0 ? coloresNuevos.get(0) : null;
+            String colorSecundarioNuevo = coloresNuevos != null && coloresNuevos.size() > 1 ? coloresNuevos.get(1)
+                    : null;
+            String colorTextoNuevo = coloresNuevos != null && coloresNuevos.size() > 2 ? coloresNuevos.get(2) : null;
+
+            List<String> cambios = new ArrayList<>();
+            addCambio(cambios, "nombreInstituto", nombreInstitutoAnterior, institutoGuardado.getNombreInstituto());
+            addCambio(cambios, "descripcion", descripcionAnterior, institutoGuardado.getDescripcion());
+            addCambio(cambios, "mision", misionAnterior, institutoGuardado.getMision());
+            addCambio(cambios, "vision", visionAnterior, institutoGuardado.getVision());
+            addCambio(cambios, "sobreNosotros", sobreNosotrosAnterior, institutoGuardado.getSobreNosotros());
+            addCambio(cambios, "direccion", direccionAnterior, institutoGuardado.getDireccion());
+            addCambio(cambios, "telefono", telefonoAnterior, institutoGuardado.getTelefono());
+            addCambio(cambios, "email", emailAnterior, institutoGuardado.getEmail());
+            addCambio(cambios, "facebook", facebookAnterior, institutoGuardado.getFacebook());
+            addCambio(cambios, "instagram", instagramAnterior, institutoGuardado.getInstagram());
+            addCambio(cambios, "x", xAnterior, institutoGuardado.getX());
+            addCambio(cambios, "moneda", monedaAnterior, institutoGuardado.getMoneda());
+            addCambio(cambios, "cuentaBancaria", cuentaBancariaAnterior, institutoGuardado.getCuentaBancaria());
+            addCambio(cambios, "politicaPagos", politicaPagosAnterior, institutoGuardado.getPoliticaPagos());
+            addCambio(cambios, "razonSocial", razonSocialAnterior, institutoGuardado.getRazonSocial());
+            addCambio(cambios, "cuil", cuilAnterior, institutoGuardado.getCuil());
+            addCambio(cambios, "inicioActividad", inicioActividadAnterior, institutoGuardado.getInicioActividad());
+            addCambio(cambios, "permisoBajaAutomatica", permisoBajaAutomaticaAnterior,
+                    institutoGuardado.getPermisoBajaAutomatica());
+            addCambio(cambios, "minimoAlumnoBaja", minimoAlumnoBajaAnterior, institutoGuardado.getMinimoAlumnoBaja());
+            addCambio(cambios, "inactividadBaja", inactividadBajaAnterior, institutoGuardado.getInactividadBaja());
+            addCambio(cambios, "diasMoraBloqueoExamen", diasMoraBloqueoExamenAnterior,
+                    institutoGuardado.getDiasMoraBloqueoExamen());
+            addCambio(cambios, "diasMoraBloqueoMaterial", diasMoraBloqueoMaterialAnterior,
+                    institutoGuardado.getDiasMoraBloqueoMaterial());
+            addCambio(cambios, "diasMoraBloqueoActividad", diasMoraBloqueoActividadAnterior,
+                    institutoGuardado.getDiasMoraBloqueoActividad());
+            addCambio(cambios, "diasMoraBloqueoAula", diasMoraBloqueoAulaAnterior,
+                    institutoGuardado.getDiasMoraBloqueoAula());
+            addCambio(cambios, "habilitarIA", habilitarIAAnterior, institutoGuardado.getHabilitarIA());
+            addCambio(cambios, "reportesAutomaticos", reportesAutomaticosAnterior,
+                    institutoGuardado.getReportesAutomaticos());
+            addCambio(cambios, "colorPrimario", colorPrimarioAnterior, colorPrimarioNuevo);
+            addCambio(cambios, "colorSecundario", colorSecundarioAnterior, colorSecundarioNuevo);
+            addCambio(cambios, "colorTexto", colorTextoAnterior, colorTextoNuevo);
+            addCambio(cambios, "logo", logoAnterior, institutoGuardado.getLogoPath());
+
+            String detalleCambios = "Modificacion de configuracion: " +
+                    trunc(institutoGuardado.getNombreInstituto(), 80) + " (ID " + institutoGuardado.getIdInstituto()
+                    + ")" + (cambios.isEmpty() ? " | sin cambios detectados" : " | " + String.join("; ", cambios));
+
             response.put("success", true);
             response.put("message", "Configuración guardada exitosamente");
+            response.put("auditDetails", detalleCambios);
 
             return ResponseEntity.ok(response);
 
