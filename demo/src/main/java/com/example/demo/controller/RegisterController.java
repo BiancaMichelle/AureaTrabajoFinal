@@ -7,6 +7,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +24,9 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import com.example.demo.model.Alumno;
 import com.example.demo.model.Ciudad;
@@ -50,6 +59,7 @@ public class RegisterController {
     private final LocacionAPIService locacionApiService;
     private final AlumnoRepository alumnoRepository;
     private final UsuarioJpaService usuarioJpaService; // ✅ Nuevo servicio
+    private final AuthenticationManager authenticationManager;
 
     public RegisterController(PaisRepository paisRepository,
             AlumnoRepository alumnoRepository,
@@ -59,7 +69,8 @@ public class RegisterController {
             RegistroService registroService,
             InstitucionService institucionService,
             LocacionAPIService locacionApiService,
-            UsuarioJpaService usuarioJpaService) { // ✅ Inyectar
+            UsuarioJpaService usuarioJpaService,
+            AuthenticationManager authenticationManager) { // ✅ Inyectar
         this.paisRepository = paisRepository;
         this.alumnoRepository = alumnoRepository;
         this.provinciaRepository = provinciaRepository;
@@ -69,6 +80,7 @@ public class RegisterController {
         this.institucionService = institucionService;
         this.locacionApiService = locacionApiService;
         this.usuarioJpaService = usuarioJpaService; // ✅ Inicializar
+        this.authenticationManager = authenticationManager;
     }
 
     @GetMapping("/register")
@@ -105,7 +117,9 @@ public class RegisterController {
             @RequestParam(value = "ciudadId", required = false) Long ciudadId,
             @RequestParam("confirmPassword") String confirmPassword,
             @RequestParam(value = "terms", required = false) String terms,
-            Model model) {
+            Model model,
+            HttpServletRequest request,
+            HttpServletResponse response) {
 
         // Mapear opt-in de promociones si vino en el formulario (th:field ya lo bindea automáticamente)
 
@@ -173,6 +187,8 @@ public class RegisterController {
         }
 
         try {
+            String rawPassword = alumno.getContraseña();
+
             // DEBUG: Verificar el estado del alumno antes del registro
             System.out.println("🔍 Estado del alumno antes del registro:");
             System.out.println("   - País: " + (alumno.getPais() != null ? alumno.getPais().getCodigo() : "null"));
@@ -192,8 +208,20 @@ public class RegisterController {
             // Pasar los códigos/IDs al servicio para que busque las entidades completas
             registroService.registrarUsuario(alumno, paisCodigo, provinciaCodigo, ciudadId);
 
-            System.out.println("🎉 Registro exitoso, redirigiendo a login...");
-            return "redirect:/login?success";
+            System.out.println("🎉 Registro exitoso, iniciando sesión automática...");
+
+            try {
+                Authentication auth = authenticationManager.authenticate(
+                        new UsernamePasswordAuthenticationToken(alumno.getDni(), rawPassword));
+                SecurityContext context = SecurityContextHolder.createEmptyContext();
+                context.setAuthentication(auth);
+                SecurityContextHolder.setContext(context);
+                new HttpSessionSecurityContextRepository().saveContext(context, request, response);
+                return redirigirSegunRol(auth);
+            } catch (Exception authError) {
+                System.out.println("❌ Error en login automático: " + authError.getMessage());
+                return "redirect:/login?success";
+            }
 
         } catch (Exception e) {
             System.out.println("❌ Error al registrar: " + e.getMessage());
@@ -202,6 +230,16 @@ public class RegisterController {
             recargarDatosFormulario(model);
             return "screens/register";
         }
+    }
+
+    private String redirigirSegunRol(Authentication auth) {
+        boolean esAdmin = auth.getAuthorities().stream().anyMatch(a -> "ADMIN".equals(a.getAuthority()));
+        if (esAdmin) return "redirect:/admin/dashboard";
+        boolean esDocente = auth.getAuthorities().stream().anyMatch(a -> "DOCENTE".equals(a.getAuthority()));
+        if (esDocente) return "redirect:/docente/mi-espacio";
+        boolean esAlumno = auth.getAuthorities().stream().anyMatch(a -> "ALUMNO".equals(a.getAuthority()));
+        if (esAlumno) return "redirect:/alumno/mi-espacio";
+        return "redirect:/";
     }
 
     @PostMapping("/guardar-ubicaciones")

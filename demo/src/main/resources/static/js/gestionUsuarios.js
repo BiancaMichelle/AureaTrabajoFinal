@@ -91,6 +91,8 @@ document.addEventListener('DOMContentLoaded', function () {
     let pageSize = 10;
     const defaultPageSize = 10;
     let ciudadesDisponibles = false;
+    let currentSort = { key: 'fechaRegistro', direction: 'desc' };
+    let currentUsuarios = [];
 
     // Inicialización
     initializeFormHandlers();
@@ -1835,6 +1837,7 @@ document.addEventListener('DOMContentLoaded', function () {
         applyFilters();
         pageSize = defaultPageSize;
         setPaginationControlsVisible(true);
+        setupSortableUserHeaders();
         loadUsuarios(1);
     }
 
@@ -2802,6 +2805,99 @@ document.addEventListener('DOMContentLoaded', function () {
         return filters;
     }
 
+    function normalizeText(value) {
+        if (value == null) return '';
+        return String(value)
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toUpperCase();
+    }
+
+    function parseDateValue(value) {
+        if (!value) return null;
+        if (value instanceof Date) {
+            return Number.isNaN(value.getTime()) ? null : value.getTime();
+        }
+        if (typeof value === 'string') {
+            const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (match) {
+                const year = Number(match[1]);
+                const month = Number(match[2]) - 1;
+                const day = Number(match[3]);
+                return new Date(year, month, day).getTime();
+            }
+        }
+        const parsed = new Date(value);
+        return Number.isNaN(parsed.getTime()) ? null : parsed.getTime();
+    }
+
+    function getUsuarioSortValue(usuario, key) {
+        switch (key) {
+            case 'dni': {
+                const raw = usuario?.dni ?? '';
+                const digits = String(raw).replace(/[^\d]/g, '');
+                const num = digits ? Number(digits) : NaN;
+                return Number.isNaN(num) ? normalizeText(raw) : num;
+            }
+            case 'nombreCompleto':
+                return normalizeText(usuario?.nombreCompleto || '');
+            case 'correo':
+                return normalizeText(usuario?.correo || '');
+            case 'roles': {
+                const roles = Array.isArray(usuario?.roles) ? usuario.roles.join(' ') : '';
+                return normalizeText(roles);
+            }
+            case 'estado':
+                return normalizeText(usuario?.estado || '');
+            case 'fechaRegistro':
+                return parseDateValue(usuario?.fechaRegistro);
+            default:
+                return null;
+        }
+    }
+
+    function sortUsuariosData(data) {
+        const sortKey = currentSort?.key;
+        const dir = currentSort?.direction === 'desc' ? -1 : 1;
+        if (!sortKey) return Array.isArray(data) ? [...data] : [];
+        const list = Array.isArray(data) ? [...data] : [];
+        list.sort((a, b) => {
+            const va = getUsuarioSortValue(a, sortKey);
+            const vb = getUsuarioSortValue(b, sortKey);
+            if (va == null && vb == null) return 0;
+            if (va == null) return 1;
+            if (vb == null) return -1;
+            if (typeof va === 'number' && typeof vb === 'number') {
+                return (va - vb) * dir;
+            }
+            return String(va).localeCompare(String(vb), 'es', { sensitivity: 'base' }) * dir;
+        });
+        return list;
+    }
+
+    function setupSortableUserHeaders() {
+        const table = document.getElementById('usuarios-table');
+        if (!table || table.dataset.sortInit === '1') return;
+        table.dataset.sortInit = '1';
+        const headers = table.querySelectorAll('thead th');
+        const keyMap = ['dni', 'nombreCompleto', 'correo', 'roles', 'estado', 'fechaRegistro', null];
+        headers.forEach((th, index) => {
+            const key = keyMap[index];
+            if (!key) return;
+            th.style.cursor = 'pointer';
+            th.addEventListener('click', () => {
+                if (currentSort.key === key) {
+                    currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+                } else {
+                    currentSort.key = key;
+                    currentSort.direction = 'asc';
+                }
+                populateUsuariosTable(currentUsuarios);
+                filterTable(getCurrentFilters());
+            });
+        });
+    }
+
     // Función para poblar la tabla con datos
     function populateUsuariosTable(responseData) {
         const tableBody = document.querySelector('#usuarios-table tbody');
@@ -2831,9 +2927,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
         console.log('👥 Usuarios a mostrar:', usuarios.length);
 
+        currentUsuarios = Array.isArray(usuarios) ? usuarios : [];
+        const sortedUsuarios = sortUsuariosData(currentUsuarios);
+
         tableBody.innerHTML = '';
 
-        if (usuarios.length === 0) {
+        if (sortedUsuarios.length === 0) {
             tableBody.innerHTML = `
                     <tr>
                         <td colspan="7" class="text-center">No hay usuarios registrados</td>
@@ -2842,7 +2941,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return { totalElements, displayed: 0 };
         }
 
-        usuarios.forEach(usuario => {
+        sortedUsuarios.forEach(usuario => {
             const userKey = resolveUsuarioKey(usuario);
             const keyString = userKey != null ? String(userKey) : '';
             const dniMostrar = usuario.dni || keyString || 'N/A';
@@ -2904,7 +3003,7 @@ document.addEventListener('DOMContentLoaded', function () {
             tableBody.appendChild(row);
         });
 
-        return { totalElements, displayed: usuarios.length };
+        return { totalElements, displayed: sortedUsuarios.length };
     }
 
     function formatRoles(roles) {

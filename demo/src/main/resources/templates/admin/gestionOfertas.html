@@ -2069,6 +2069,7 @@
             
             // Cargar ofertas iniciales para paginación
             actualizarTablaOfertas();
+            setupSortableOfferHeaders();
         });
         
         // Función para mostrar campos específicos según tipo de oferta
@@ -3731,6 +3732,98 @@
         const itemsPerPage = 10;
         let allOfertas = [];
         let filteredOfertas = [];
+        let currentSort = { key: 'fechaInicio', direction: 'desc' };
+
+        function normalizeText(value) {
+            if (value == null) return '';
+            return String(value)
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toUpperCase();
+        }
+
+        function parseDateValue(value) {
+            if (!value) return null;
+            if (value instanceof Date) {
+                return Number.isNaN(value.getTime()) ? null : value.getTime();
+            }
+            if (typeof value === 'string') {
+                const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                if (match) {
+                    const year = Number(match[1]);
+                    const month = Number(match[2]) - 1;
+                    const day = Number(match[3]);
+                    return new Date(year, month, day).getTime();
+                }
+            }
+            const parsed = new Date(value);
+            return Number.isNaN(parsed.getTime()) ? null : parsed.getTime();
+        }
+
+        function getOfertaSortValue(oferta, key) {
+            switch (key) {
+                case 'nombre':
+                    return normalizeText(oferta.nombre || '');
+                case 'tipo':
+                    return normalizeText(oferta.tipo || oferta.tipoOferta || '');
+                case 'modalidad':
+                    return normalizeText(oferta.modalidad || '');
+                case 'cupos': {
+                    const cupos = oferta.cupos;
+                    if (cupos == null) return null;
+                    return Number(cupos === 2147483647 ? Number.MAX_SAFE_INTEGER : cupos);
+                }
+                case 'fechaInicio':
+                    return parseDateValue(oferta.fechaInicio);
+                case 'fechaFin':
+                    return parseDateValue(oferta.fechaFin);
+                case 'estado':
+                    return normalizeText(oferta.estado || '');
+                default:
+                    return null;
+            }
+        }
+
+        function sortOfertasData(data) {
+            const sortKey = currentSort?.key;
+            const dir = currentSort?.direction === 'desc' ? -1 : 1;
+            if (!sortKey) return Array.isArray(data) ? [...data] : [];
+            const list = Array.isArray(data) ? [...data] : [];
+            list.sort((a, b) => {
+                const va = getOfertaSortValue(a, sortKey);
+                const vb = getOfertaSortValue(b, sortKey);
+                if (va == null && vb == null) return 0;
+                if (va == null) return 1;
+                if (vb == null) return -1;
+                if (typeof va === 'number' && typeof vb === 'number') {
+                    return (va - vb) * dir;
+                }
+                return String(va).localeCompare(String(vb), 'es', { sensitivity: 'base' }) * dir;
+            });
+            return list;
+        }
+
+        function setupSortableOfferHeaders() {
+            const table = document.getElementById('ofertas-table');
+            if (!table || table.dataset.sortInit === '1') return;
+            table.dataset.sortInit = '1';
+            const headers = table.querySelectorAll('thead th');
+            const keyMap = ['nombre', 'tipo', 'modalidad', 'cupos', 'fechaInicio', 'fechaFin', 'estado', null];
+            headers.forEach((th, index) => {
+                const key = keyMap[index];
+                if (!key) return;
+                th.style.cursor = 'pointer';
+                th.addEventListener('click', () => {
+                    if (currentSort.key === key) {
+                        currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        currentSort.key = key;
+                        currentSort.direction = 'asc';
+                    }
+                    renderizarPaginaActual();
+                });
+            });
+        }
 
             // Función para actualizar tabla de ofertas
             function actualizarTablaOfertas() {
@@ -3741,7 +3834,7 @@
                         console.log('📥 Respuesta del servidor:', data);
                         if (data.success && data.data) {
                             // Guardar datos globales
-                            allOfertas = data.data;
+                            allOfertas = Array.isArray(data.data) ? data.data : [];
                             filteredOfertas = [...allOfertas]; // Inicialmente sin filtros adicionales
 
                             // Resetear a página 1
@@ -3777,7 +3870,8 @@
             function renderizarPaginaActual() {
                 const start = (currentPage - 1) * itemsPerPage;
                 const end = start + itemsPerPage;
-                const pageData = filteredOfertas.slice(start, end);
+                const sorted = sortOfertasData(filteredOfertas);
+                const pageData = sorted.slice(start, end);
 
                 actualizarTablaConDatos(pageData);
                 actualizarControlesPaginacion();
@@ -3837,16 +3931,23 @@
 
                 filteredOfertas = allOfertas.filter(oferta => {
                     // Filtro por nombre
-                    if (searchInput && !oferta.nombre.toLowerCase().includes(searchInput)) return false;
+                    const nombreOferta = (oferta.nombre || '').toLowerCase();
+                    if (searchInput && !nombreOferta.includes(searchInput)) return false;
 
                     // Filtro por tipo
-                    if (tipo && (oferta.tipo || oferta.tipoOferta) !== tipo) return false;
+                    const tipoOferta = normalizeText(oferta.tipo || oferta.tipoOferta || '');
+                    const tipoFiltro = normalizeText(tipo);
+                    if (tipoFiltro && tipoOferta !== tipoFiltro) return false;
 
                     // Filtro por modalidad
-                    if (modalidad && oferta.modalidad !== modalidad) return false;
+                    const modalidadOferta = normalizeText(oferta.modalidad || '');
+                    const modalidadFiltro = normalizeText(modalidad);
+                    if (modalidadFiltro && modalidadOferta !== modalidadFiltro) return false;
 
                     // Filtro por estado
-                    if (estado && oferta.estado !== estado) return false;
+                    const estadoOferta = normalizeText(oferta.estado || '');
+                    const estadoFiltro = normalizeText(estado);
+                    if (estadoFiltro && estadoOferta !== estadoFiltro) return false;
 
                     // Filtro por certificado
                     if (certificado) {

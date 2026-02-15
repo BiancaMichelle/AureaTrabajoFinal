@@ -2825,6 +2825,14 @@ public class AdminController {
 
             // OBTENER USUARIOS REALES DE LA BASE DE DATOS
             List<Usuario> todosUsuarios = usuarioRepository.findAll();
+            todosUsuarios.sort((a, b) -> {
+                LocalDateTime fa = a != null ? a.getFechaRegistro() : null;
+                LocalDateTime fb = b != null ? b.getFechaRegistro() : null;
+                if (fa == null && fb == null) return 0;
+                if (fa == null) return 1;
+                if (fb == null) return -1;
+                return fb.compareTo(fa); // más nuevo primero
+            });
             System.out.println("👥 Usuarios encontrados en BD: " + todosUsuarios.size());
 
             // ✅ CORREGIR PAGINACIÓN - VERIFICAR LÍMITES
