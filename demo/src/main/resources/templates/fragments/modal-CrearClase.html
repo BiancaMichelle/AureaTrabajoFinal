@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
@@ -160,7 +160,7 @@
             const form = document.getElementById('createClassForm');
             const modal = document.getElementById('classModal');
             
-            // RESETEAR MODO A CREACIÓN
+            // RESETEAR MODO A CREACI�"N
             // Eliminar dataset mode si existe
             delete form.dataset.mode; 
             
@@ -180,6 +180,11 @@
             // Ocultar contenedores condicionales
             document.getElementById('cantidadPreguntasContainer').classList.add('hidden');
             document.getElementById('publicarResumenContainer').classList.add('hidden');
+
+            const asistenciaCheck = form.querySelector('input[name="asistenciaAutomatica"]');
+            if (asistenciaCheck) asistenciaCheck.disabled = false;
+            const preguntasCheck = form.querySelector('input[name="preguntasAleatorias"]');
+            if (preguntasCheck) preguntasCheck.disabled = false;
 
             // Resetear inputs específicos
             const tiempoInput = form.querySelector('input[name="tiempoPreguntas"]');
@@ -215,7 +220,7 @@
             const tituloModal = modal.querySelector('h3');
             const btnSubmit = form.querySelector('button[type="submit"]');
 
-            // Configurar modo EDICIÓN
+            // Configurar modo EDICI�"N
             form.dataset.mode = 'edit';
             form.action = '/clase/' + claseId + '/modificar';
 
@@ -236,6 +241,24 @@
             
             setCheckbox(form, 'preguntasAleatorias', data.preguntasAleatorias);
             const preguntasContainer = document.getElementById('cantidadPreguntasContainer');
+            const asistenciaCheck = form.querySelector('input[name="asistenciaAutomatica"]');
+            const preguntasCheck = form.querySelector('input[name="preguntasAleatorias"]');
+            if (data.preguntasAleatorias) {
+                if (asistenciaCheck) {
+                    asistenciaCheck.checked = false;
+                    asistenciaCheck.disabled = true;
+                }
+                if (preguntasCheck) preguntasCheck.disabled = false;
+            } else if (data.asistenciaAutomatica) {
+                if (preguntasCheck) {
+                    preguntasCheck.checked = false;
+                    preguntasCheck.disabled = true;
+                }
+                if (asistenciaCheck) asistenciaCheck.disabled = false;
+            } else {
+                if (asistenciaCheck) asistenciaCheck.disabled = false;
+                if (preguntasCheck) preguntasCheck.disabled = false;
+            }
             if(data.preguntasAleatorias) {
                 preguntasContainer.classList.remove('hidden');
                 form.querySelector('input[name="cantidadPreguntas"]').value = data.cantidadPreguntas;
@@ -289,6 +312,36 @@
             const tiempoInput = document.querySelector('input[name="tiempoPreguntas"]');
             if (cantidadInput) cantidadInput.required = this.checked;
             if (tiempoInput) tiempoInput.required = this.checked;
+
+            const asistenciaCheck = document.getElementById('asistenciaAutomatica');
+            if (asistenciaCheck) {
+                if (this.checked) {
+                    asistenciaCheck.checked = false;
+                    asistenciaCheck.disabled = true;
+                } else {
+                    asistenciaCheck.disabled = false;
+                }
+            }
+        });
+
+        // Exclusivo con asistencia automática (por tiempo)
+        document.getElementById('asistenciaAutomatica')?.addEventListener('change', function() {
+            const preguntasCheck = document.getElementById('preguntasAleatorias');
+            const container = document.getElementById('cantidadPreguntasContainer');
+            const cantidadInput = document.querySelector('input[name="cantidadPreguntas"]');
+            const tiempoInput = document.querySelector('input[name="tiempoPreguntas"]');
+
+            if (this.checked) {
+                if (preguntasCheck) {
+                    preguntasCheck.checked = false;
+                    preguntasCheck.disabled = true;
+                }
+                if (container) container.classList.add('hidden');
+                if (cantidadInput) cantidadInput.required = false;
+                if (tiempoInput) tiempoInput.required = false;
+            } else {
+                if (preguntasCheck) preguntasCheck.disabled = false;
+            }
         });
         
         // Mostrar/ocultar opción de publicación automática de resumen (CU-27)
@@ -301,7 +354,7 @@
         document.getElementById('generarResumenAutomatico')?.addEventListener('change', function() {
             const transcripcionCheck = document.getElementById('transcripcionHabilitada');
             if (this.checked && !transcripcionCheck.checked) {
-                alert('⚠️ Recomendación: Active la transcripción para generar un resumen más completo.');
+                alert('�s�️ Recomendación: Active la transcripción para generar un resumen más completo.');
             }
         });
 
@@ -338,7 +391,7 @@
                 }
             }
             
-            // INTERCEPCIÓN AJAX PARA CREAR Y EDITAR
+            // INTERCEPCI�"N AJAX PARA CREAR Y EDITAR
             e.preventDefault(); 
             
             const formData = new FormData(this);
@@ -374,3 +427,10 @@
     </script>
 </body>
 </html>
+
+
+
+
+
+
+

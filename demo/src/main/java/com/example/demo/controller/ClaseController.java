@@ -1,4 +1,4 @@
-package com.example.demo.controller;
+﻿package com.example.demo.controller;
 
 import java.security.Principal;
 import java.time.LocalDate;
@@ -147,9 +147,19 @@ public class ClaseController {
                 if (cantidadPreguntas == null || cantidadPreguntas < 1) {
                     throw new IllegalArgumentException("Debe especificar la cantidad de preguntas (mínimo 1)");
                 }
+                if (tiempoPreguntas == null || tiempoPreguntas < 1) {
+                    throw new IllegalArgumentException("Debe especificar el intervalo de tiempo (mínimo 1 minuto)");
+                }
+                // Tipo de asistencia por preguntas (exclusivo)
+                asistenciaAutomatica = false;
+            } else if (Boolean.TRUE.equals(asistenciaAutomatica)) {
+                // Tipo de asistencia por tiempo (exclusivo)
+                preguntasAleatorias = false;
+                cantidadPreguntas = null;
+                tiempoPreguntas = null;
             }
 /* 
-            System.out.println("🎯 Creando clase con configuración completa:");
+            System.out.println("Creando clase con configuración completa:");
             System.out.println("   - Título: " + titulo);
             System.out.println("   - Módulo ID: " + moduloId);
             System.out.println("   - Permisos: Mic=" + permisoMicrofono + ", Cam=" + permisoCamara + 
@@ -176,7 +186,7 @@ public class ClaseController {
 
             Clase claseCreada = claseService.crearClase(clase, moduloId, principal.getName());
 
-            System.out.println("✅ Clase creada exitosamente con ID: " + claseCreada.getIdClase());
+            System.out.println("Clase creada exitosamente con ID: " + claseCreada.getIdClase());
             
             // Notificar a los alumnos del curso (Postcondición CU-26)
             notificarNuevaClase(claseCreada);
@@ -184,10 +194,10 @@ public class ClaseController {
             return ResponseEntity.ok(Map.of("success", true, "message", "Clase creada exitosamente", "id", claseCreada.getIdClase()));
 
         } catch (IllegalArgumentException | IllegalStateException e) {
-            System.out.println("❌ Error de validación: " + e.getMessage());
+            System.out.println("Error de validación: " + e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
         } catch (Exception e) {
-            System.out.println("❌ Error al crear clase: " + e.getMessage());
+            System.out.println("Error al crear clase: " + e.getMessage());
             e.printStackTrace();
             String errorMsg = e.getMessage() != null ? e.getMessage() : "Error interno desconocido";
             return ResponseEntity.internalServerError().body(Map.of("success", false, "message", errorMsg));
@@ -204,6 +214,7 @@ public class ClaseController {
             @RequestParam(required = false, defaultValue = "false") Boolean asistenciaAutomatica,
             @RequestParam(required = false, defaultValue = "false") Boolean preguntasAleatorias,
             @RequestParam(required = false) Integer cantidadPreguntas,
+            @RequestParam(required = false) Integer tiempoPreguntas,
             @RequestParam(required = false, defaultValue = "false") Boolean permisoMicrofono,
             @RequestParam(required = false, defaultValue = "false") Boolean permisoCamara,
             @RequestParam(required = false, defaultValue = "false") Boolean permisoCompartirPantalla,
@@ -220,9 +231,26 @@ public class ClaseController {
             claseDetalles.setInicio(inicio);
             claseDetalles.setFin(calcularFinClase(inicio, duracion));
             
+            if (Boolean.TRUE.equals(preguntasAleatorias)) {
+                if (cantidadPreguntas == null || cantidadPreguntas < 1) {
+                    throw new IllegalArgumentException("Debe especificar la cantidad de preguntas (mínimo 1)");
+                }
+                if (tiempoPreguntas == null || tiempoPreguntas < 1) {
+                    throw new IllegalArgumentException("Debe especificar el intervalo de tiempo (mínimo 1 minuto)");
+                }
+                // Tipo de asistencia por preguntas (exclusivo)
+                asistenciaAutomatica = false;
+            } else if (Boolean.TRUE.equals(asistenciaAutomatica)) {
+                // Tipo de asistencia por tiempo (exclusivo)
+                preguntasAleatorias = false;
+                cantidadPreguntas = null;
+                tiempoPreguntas = null;
+            }
+
             claseDetalles.setAsistenciaAutomatica(asistenciaAutomatica);
             claseDetalles.setPreguntasAleatorias(preguntasAleatorias);
             claseDetalles.setCantidadPreguntas(Boolean.TRUE.equals(preguntasAleatorias) ? cantidadPreguntas : null);
+            claseDetalles.setTiempoPreguntas(Boolean.TRUE.equals(preguntasAleatorias) ? tiempoPreguntas : null);
             
             claseDetalles.setPermisoMicrofono(permisoMicrofono);
             claseDetalles.setPermisoCamara(permisoCamara);
@@ -262,6 +290,7 @@ public class ClaseController {
                         Map.entry("asistenciaAutomatica", clase.getAsistenciaAutomatica() != null && clase.getAsistenciaAutomatica()),
                         Map.entry("preguntasAleatorias", clase.getPreguntasAleatorias() != null && clase.getPreguntasAleatorias()),
                         Map.entry("cantidadPreguntas", clase.getCantidadPreguntas() != null ? clase.getCantidadPreguntas() : 3),
+                        Map.entry("tiempoPreguntas", clase.getTiempoPreguntas() != null ? clase.getTiempoPreguntas() : 5),
                         Map.entry("permisoMicrofono", clase.getPermisoMicrofono() != null ? clase.getPermisoMicrofono() : true),
                         Map.entry("permisoCamara", clase.getPermisoCamara() != null ? clase.getPermisoCamara() : true),
                         Map.entry("permisoCompartirPantalla", clase.getPermisoCompartirPantalla() != null ? clase.getPermisoCompartirPantalla() : true),
@@ -275,8 +304,8 @@ public class ClaseController {
     }
 
     private void notificarNuevaClase(Clase clase) {
-        // TODO: Integrar con sistema de notificaciones
-        System.out.println("📧 Stub Notificación: Nueva clase '" + clase.getTitulo() + 
+        // Notificación pendiente de implementación
+        System.out.println("Stub Notificación: Nueva clase '" + clase.getTitulo() + 
                           "' creada para el " + clase.getInicio());
     }
 
@@ -352,7 +381,7 @@ public class ClaseController {
                 return "clase-espera";
             }
 
-            System.out.println("🎯 Uniéndose a clase Jitsi ID: " + claseId);
+            System.out.println("Uniéndose a clase Jitsi ID: " + claseId);
 
             String meetingUrl = claseService.unirseAClase(claseId, principal.getName());
             
@@ -371,7 +400,7 @@ public class ClaseController {
             return "clase-VideoConferencia";
 
         } catch (Exception e) {
-            System.out.println("❌ Error en unirseAClase Jitsi: " + e.getMessage());
+            System.out.println("Error en unirseAClase Jitsi: " + e.getMessage());
             
             // INTENTAR RECUPERAR CLASE PARA EL MODELO SI FALLÓ ANTES
             try {
@@ -389,13 +418,13 @@ public class ClaseController {
     @ResponseBody
     public ResponseEntity<Map<String, Object>> validarMoraAula(@PathVariable UUID claseId, Principal principal) {
         try {
-            System.out.println("🎯 Validando mora para videoconferencia - Clase ID: " + claseId);
+            System.out.println("Validando mora para videoconferencia - Clase ID: " + claseId);
             System.out.println("   - Usuario: " + principal.getName());
             
             // Obtener clase y validar
             Clase clase = claseService.findById(claseId).orElse(null);
             if (clase == null) {
-                System.out.println("❌ Clase no encontrada");
+                System.out.println("Clase no encontrada");
                 return ResponseEntity.badRequest().body(Map.of("error", "Clase no encontrada"));
             }
             
@@ -405,7 +434,7 @@ public class ClaseController {
                 boolean esDocente = usuario.getRoles().stream()
                         .anyMatch(r -> r.getNombre().equals("DOCENTE") || r.getNombre().equals("ADMIN"));
                 if (esDocente) {
-                    System.out.println("✅ Usuario es docente/admin - Acceso permitido");
+                    System.out.println("Usuario es docente/admin - Acceso permitido");
                     return ResponseEntity.ok(Map.of("bloqueado", false));
                 }
             }
@@ -419,7 +448,7 @@ public class ClaseController {
                     .orElse(null);
             
             if (inscripcionActiva == null) {
-                System.out.println("❌ No hay inscripción activa");
+                System.out.println("No hay inscripción activa");
                 return ResponseEntity.status(403).body(Map.of(
                     "bloqueado", true,
                     "error", "No estás inscrito"
@@ -453,7 +482,7 @@ public class ClaseController {
                 System.out.println("   - ¿Bloquear? " + (maxDiasMora > diasMoraPermitidos));
                 
                 if (maxDiasMora > diasMoraPermitidos) {
-                    System.out.println("🚫 BLOQUEADO - Mora excede el límite");
+                    System.out.println("BLOQUEADO - Mora excede el límite");
                     return ResponseEntity.status(403).body(Map.of(
                         "bloqueado", true,
                         "diasMora", maxDiasMora,
@@ -464,11 +493,11 @@ public class ClaseController {
                 }
             }
             
-            System.out.println("✅ Validación de mora pasada - Acceso permitido");
+            System.out.println("Validación de mora pasada - Acceso permitido");
             return ResponseEntity.ok(Map.of("bloqueado", false));
             
         } catch (Exception e) {
-            System.out.println("❌ Error en validación de mora: " + e.getMessage());
+            System.out.println("Error en validación de mora: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(500).body(Map.of(
                 "error", "Error al validar mora: " + e.getMessage()
@@ -659,7 +688,7 @@ public class ClaseController {
                 ));
             }
 
-            System.out.println("🎯 Generando resumen de clase: " + clase.getTitulo());
+            System.out.println("Generando resumen de clase: " + clase.getTitulo());
 
             // Paso 4: Generar resumen con IA (ahora devuelve texto plano estructurado)
             String resumenTexto = chatServiceSimple.generarResumenClase(transcripcion);
@@ -731,16 +760,16 @@ public class ClaseController {
             
             archivoRepository.save(archivo);
 
-            System.out.println("✅ Resumen generado y guardado");
+            System.out.println("Resumen generado y guardado");
             System.out.println("   - Material ID: " + material.getIdActividad());
             System.out.println("   - Visible para alumnos: " + publicarAutomaticamente);
 
             // Consolidar asistencia de la clase (calcular presentes/ausentes)
             try {
                 asistenciaEnVivoService.consolidarAsistenciaClase(claseId);
-                System.out.println("✅ Asistencia consolidada para clase: " + claseId);
+                System.out.println("Asistencia consolidada para clase: " + claseId);
             } catch (Exception e) {
-                System.err.println("❌ Error al consolidar asistencia: " + e.getMessage());
+                System.err.println("Error al consolidar asistencia: " + e.getMessage());
                 // No detenemos el flujo, ya que el resumen es lo principal aquí
             }
 
@@ -757,14 +786,14 @@ public class ClaseController {
             ));
 
         } catch (Exception e) {
-            System.err.println("❌ Error al generar resumen: " + e.getMessage());
+            System.err.println("Error al generar resumen: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(500).body(Map.of("error", "Error al generar resumen: " + e.getMessage()));
         }
     }
     
     private void notificarResumenGenerado(Clase clase, com.example.demo.model.Material material, boolean publicado) {
-        System.out.println("📧 Stub Notificación: Resumen generado para clase '" + clase.getTitulo() + "'");
+        System.out.println("Stub Notificación: Resumen generado para clase '" + clase.getTitulo() + "'");
         System.out.println("   - Docente: " + clase.getDocente().getNombre() + " " + clase.getDocente().getApellido());
         if (publicado) {
             System.out.println("   - Alumnos del curso: Resumen disponible en el módulo");
@@ -792,14 +821,23 @@ public class ClaseController {
              
              asistenciaService.consolidarAsistenciaClase(claseId);
              
-             System.out.println("✅ Clase finalizada y asistencia calculada para: " + claseId);
+             System.out.println("Clase finalizada y asistencia calculada para: " + claseId);
              
              return ResponseEntity.ok().body(Map.of("success", true, "message", "Clase finalizada y asistencia calculada"));
          } catch (Exception e) {
-             System.err.println("❌ Error finalizando clase: " + e.getMessage());
+             System.err.println("Error finalizando clase: " + e.getMessage());
              e.printStackTrace();
              return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
          }
     }
 
 }
+
+
+
+
+
+
+
+
+

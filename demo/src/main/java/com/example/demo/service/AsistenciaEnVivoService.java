@@ -1,4 +1,4 @@
-package com.example.demo.service;
+﻿package com.example.demo.service;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -90,7 +90,7 @@ public class AsistenciaEnVivoService {
         acumulados.merge(alumnoDni, segundos, Long::sum);
         long totalAcumulado = acumulados.getOrDefault(alumnoDni, 0L);
 
-        // Intento extra: si ya cumplió el umbral, registrar asistencia al salir.
+        // Intento extra: si ya cumpliÃ³ el umbral, registrar asistencia al salir.
         if (clase != null
                 && Boolean.TRUE.equals(clase.getAsistenciaAutomatica())
                 && !Boolean.TRUE.equals(clase.getPreguntasAleatorias())) {
@@ -130,30 +130,35 @@ public class AsistenciaEnVivoService {
         Clase clase = claseOpt.get();
         LocalDateTime ahora = LocalDateTime.now();
 
-        // Validaciones básicas: clase iniciada y no terminada (con holgura)
+        // Validaciones bÃ¡sicas: clase iniciada y no terminada (con holgura)
+        if (clase.getInicio() == null || clase.getFin() == null) {
+            return null;
+        }
         if (ahora.isBefore(clase.getInicio()) || ahora.isAfter(clase.getFin().plusMinutes(10))) {
             return null;
         }
 
-        // Verificar si la asistencia automática está habilitada
-        if (!Boolean.TRUE.equals(clase.getAsistenciaAutomatica()) || 
-            !Boolean.TRUE.equals(clase.getPreguntasAleatorias())) {
+        // Verificar si la asistencia por preguntas estÃ¡ habilitada
+        if (!Boolean.TRUE.equals(clase.getPreguntasAleatorias())) {
             return null;
         }
 
         Integer intervalo = clase.getTiempoPreguntas();
         if (intervalo == null || intervalo <= 0) return null;
 
-        // Calcular ronda actual
+        // Calcular ronda actual (primera pregunta luego de "intervalo" minutos desde el inicio)
         long minutosTranscurridos = Duration.between(clase.getInicio(), ahora).toMinutes();
-        int rondaActual = (int) (minutosTranscurridos / intervalo) + 1;
+        if (minutosTranscurridos < intervalo) {
+            return null;
+        }
+        int rondaActual = (int) (minutosTranscurridos / intervalo);
 
         // Verificar si excedimos la cantidad de preguntas configuradas
         if (clase.getCantidadPreguntas() != null && rondaActual > clase.getCantidadPreguntas()) {
             return null;
         }
 
-        // Verificar si ya respondió esta ronda
+        // Verificar si ya respondiÃ³ esta ronda
         if (respuestaAsistenciaRepository.existsByClaseIdClaseAndAlumnoDniAndRonda(claseId, alumnoDni, rondaActual)) {
             return null;
         }
@@ -163,8 +168,8 @@ public class AsistenciaEnVivoService {
     }
 
     private Map<String, Object> generarPregunta(Clase clase, int ronda) {
-        // En una implementación completa, aquí buscaríamos del Pool de preguntas de la clase
-        // Por ahora, generamos preguntas matemáticas simples como prueba de vida (anti-bot)
+        // En una implementaciÃ³n completa, aquÃ­ buscarÃ­amos del Pool de preguntas de la clase
+        // Por ahora, generamos preguntas matemÃ¡ticas simples como prueba de vida (anti-bot)
         
         Random rand = new Random();
         int a = rand.nextInt(10) + 1;
@@ -173,7 +178,7 @@ public class AsistenciaEnVivoService {
         Map<String, Object> pregunta = new HashMap<>();
         pregunta.put("id", UUID.randomUUID().toString()); // ID temporal
         pregunta.put("tipo", "MATEMATICA");
-        pregunta.put("enunciado", "¿Cuánto es " + a + " + " + b + "?");
+        pregunta.put("enunciado", "Â¿CuÃ¡nto es " + a + " + " + b + "?");
         pregunta.put("opciones", List.of(
             String.valueOf(a + b),
             String.valueOf(a + b + 1),
@@ -181,7 +186,7 @@ public class AsistenciaEnVivoService {
             String.valueOf(a + b + 2)
         ));
         pregunta.put("ronda", ronda);
-        pregunta.put("tiempoLimite", 180); // 3 minutos en segundos
+        pregunta.put("tiempoLimite", 5); // 5 segundos
         
         // Barajar opciones en un escenario real
         return pregunta;
@@ -215,7 +220,6 @@ public class AsistenciaEnVivoService {
     public void consolidarAsistenciaClase(UUID claseId) {
         Clase clase = claseRepository.findById(claseId).orElseThrow();
         
-        if (!Boolean.TRUE.equals(clase.getAsistenciaAutomatica())) return;
         if (!Boolean.TRUE.equals(clase.getPreguntasAleatorias())) return;
         
         Long ofertaId = clase.getModulo().getCurso().getIdOferta();
@@ -228,7 +232,7 @@ public class AsistenciaEnVivoService {
                                       (int) (Duration.between(clase.getInicio(), clase.getFin()).toMinutes() / intervalo);
 
         // Umbral: Al menos 50% de respuestas
-        int umbralAprobacion = totalPreguntasEsperadas / 2;
+        int umbralAprobacion = (totalPreguntasEsperadas + 1) / 2; // ceil(total/2)
         if (umbralAprobacion < 1) umbralAprobacion = 1;
 
         for (Inscripciones inscripcion : inscritos) {
@@ -236,34 +240,32 @@ public class AsistenciaEnVivoService {
             if (!(inscripcion.getAlumno() instanceof Alumno)) {
                 continue;
             }
-            // Validar si la inscripción está activa
+            // Validar si la inscripciÃ³n estÃ¡ activa
             if (!Boolean.TRUE.equals(inscripcion.getEstadoInscripcion())) {
                 continue;
             }
             Alumno alumno = (Alumno) inscripcion.getAlumno();
             
-            int respuestas = respuestaAsistenciaRepository.contarRespuestasPorClaseYAlumno(claseId, alumno.getDni());
+            Integer respuestasRaw = respuestaAsistenciaRepository.contarRespuestasPorClaseYAlumno(claseId, alumno.getDni());
+            int respuestas = respuestasRaw != null ? respuestasRaw : 0;
             
             EstadoAsistencia estadoFinal;
             if (respuestas >= umbralAprobacion) {
                 estadoFinal = EstadoAsistencia.PRESENTE;
             } else if (respuestas > 0) {
-                 // Si respondió algo pero no llegó al 50%, podemos poner Inasistencia o Tardanza según regla de negocio
-                 // El CU dice: "Si la recopilación... es menor a la mitad... se marca con inasistencia"
+                 // Si respondiÃ³ algo pero no llegÃ³ al 50%, podemos poner Inasistencia o Tardanza segÃºn regla de negocio
+                 // El CU dice: "Si la recopilaciÃ³n... es menor a la mitad... se marca con inasistencia"
                 estadoFinal = EstadoAsistencia.AUSENTE;
             } else {
                 estadoFinal = EstadoAsistencia.AUSENTE;
             }
             
-            // Verificar si ya existe registro para no duplicar (o actualizar)
-            List<Asistencia> existentes = asistenciaRepository.findByOfertaIdOfertaAndAlumnoDni(ofertaId, alumno.getDni());
-            // Filtrar por fecha de clase
-            Optional<Asistencia> asistenciaHoy = existentes.stream()
-                .filter(a -> a.getFecha().isEqual(clase.getInicio().toLocalDate()))
-                .findFirst();
+            // Verificar si ya existe registro para esta clase y alumno (evitar duplicados)
+            Optional<Asistencia> asistenciaClase = asistenciaRepository
+                .findByOfertaIdOfertaAndAlumnoDniAndClaseIdClase(ofertaId, alumno.getDni(), claseId);
 
-            if (asistenciaHoy.isPresent()) {
-                Asistencia a = asistenciaHoy.get();
+            if (asistenciaClase.isPresent()) {
+                Asistencia a = asistenciaClase.get();
                 a.setEstado(estadoFinal);
                 asistenciaRepository.save(a);
             } else {
@@ -364,3 +366,5 @@ public class AsistenciaEnVivoService {
         );
     }
 }
+
+

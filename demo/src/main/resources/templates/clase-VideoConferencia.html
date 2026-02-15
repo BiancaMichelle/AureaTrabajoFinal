@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org" layout:decorate="~{layout/base}">
 
 <head>
@@ -105,7 +105,7 @@
                 <div class="flex items-center gap-3">
                     <i class="fas fa-user-check text-blue-600 text-lg"></i>
                     <span class="text-gray-700"><strong>Asistencia:</strong> <span
-                            th:text="${clase.asistenciaAutomatica ? 'Automática' : 'Manual'}"></span></span>
+                            th:text="${(clase.preguntasAleatorias != null && clase.preguntasAleatorias) ? 'Preguntas' : (clase.asistenciaAutomatica ? 'Automática' : 'Manual')}"></span></span>
                 </div>
             </div>
         </div>
@@ -143,7 +143,7 @@
                 <div class="w-full bg-gray-200 rounded-full h-2.5 mb-6">
                 <div id="progressBar" class="bg-blue-600 h-2.5 rounded-full" style="width: 100%"></div>
                 </div>
-                <p class="text-xs text-center text-gray-500 mb-4">Tiempo restante: <span id="timeRemaining">180</span>s</p>
+                <p class="text-xs text-center text-gray-500 mb-4">Tiempo restante: <span id="timeRemaining">5</span>s</p>
             </div>
         </div>
 
@@ -278,7 +278,7 @@
             let jwtToken = null;
 
             if (meetingUrl && meetingUrl.includes("8x8.vc")) {
-                console.log("🔧 Configurando modo JaaS (8x8.vc)");
+                console.log("Configurando modo JaaS (8x8.vc)");
                 domain = "8x8.vc";
                 try {
                     const urlObj = new URL(meetingUrl);
@@ -345,11 +345,12 @@
             const loadingTimeout = setTimeout(() => {
                 const loadingMessage = document.getElementById('loadingMessage');
                 if (loadingMessage) loadingMessage.style.display = 'none';
-                console.warn("⚠️ Tiempo de espera de carga agotado (Fallback ejecutado)");
+                console.warn("Tiempo de espera de carga agotado (Fallback ejecutado)");
             }, 5000);
 
             let api = null;
             let programarCierreClase = null;
+            let consolidacionEnviada = false;
 
             function obtenerFechaFinClase() {
                 if (!claseFinIso) return null;
@@ -362,7 +363,7 @@
                     throw new Error("La librería de Jitsi no se ha cargado correctamente. Verifique su conexión a internet.");
                 }
 
-                console.log("🚀 Iniciando Jitsi en:", domain, "Sala:", roomName);
+                console.log("Iniciando Jitsi en:", domain, "Sala:", roomName);
                 api = new JitsiMeetExternalAPI(domain, options);
 
                 let hasJoined = false;
@@ -371,7 +372,7 @@
 
                 // Ocultar mensaje de carga cuando se carga la API
                 api.addEventListener('videoConferenceJoined', () => {
-                    console.log("✅ Evento: videoConferenceJoined");
+                    console.log("Evento: videoConferenceJoined");
                     hasJoined = true;
                     clearTimeout(loadingTimeout); // Cancelar el fallback si cargó bien
                     const loadingMessage = document.getElementById('loadingMessage');
@@ -392,14 +393,14 @@
                 // Detectar expulsión o fin remoto
                 api.addEventListener('participantKickedOut', (event) => {
                      if (event.kicked && event.kicked.local) {
-                         console.log("⚠️ Usuario fue expulsado o la clase terminó para todos");
+                         console.log("Usuario fue expulsado o la clase terminó para todos");
                          forcedExit = true;
                      }
                 });
 
                 // Detectar cuando se termina la llamada
                 api.addEventListener('videoConferenceLeft', () => {
-                    console.log("🚪 Evento: videoConferenceLeft");
+                    console.log("Evento: videoConferenceLeft");
                     if (hasJoined) {
                         mostrarMensajeFinClase();
                         if (isTeacher && transcripcionHabilitada) {
@@ -412,7 +413,7 @@
                 });
 
                 api.addEventListener('readyToClose', () => {
-                    console.log("🔴 Evento: readyToClose");
+                    console.log("Evento: readyToClose");
                     forcedExit = true; // Asumimos fin global si el evento es readyToClose
                     if (hasJoined) {
                         mostrarMensajeFinClase();
@@ -425,7 +426,7 @@
                     }
                 });
 
-                function mostrarMensajeFinClase() {
+                async function mostrarMensajeFinClase() {
                     const container = document.getElementById('jitsi-container');
                     const message = document.getElementById('classEndedMessage');
                     const btnDescargar = document.getElementById('btnDescargarTranscripcion');
@@ -453,6 +454,21 @@
                         
                         // Enviar transcripción al servidor para generar resumen
                         enviarTranscripcionAlServidor();
+                    }
+
+                    // Consolidar asistencia por preguntas al finalizar la clase
+                    if (preguntasAleatorias && !consolidacionEnviada) {
+                        consolidacionEnviada = true;
+                        try {
+                            await fetch(`/clase/${claseId}/finalizar`, {
+                                method: 'POST',
+                                headers: {
+                                    [csrfHeader]: csrfToken
+                                }
+                            });
+                        } catch (e) {
+                            console.warn("No se pudo consolidar asistencia por preguntas:", e);
+                        }
                     }
 
                     // Eliminar la instancia de la API para limpiar recursos
@@ -488,7 +504,8 @@
                 function programarCierreClaseInternal() {
                     const fin = obtenerFechaFinClase();
                     if (!fin) return;
-                    const msRestantes = fin.getTime() - Date.now();
+                    const graceMs = (!isTeacher && preguntasAleatorias) ? 15000 : 0;
+                    const msRestantes = (fin.getTime() - Date.now()) + graceMs;
                     if (classEndTimer) {
                         clearTimeout(classEndTimer);
                     }
@@ -502,7 +519,7 @@
                 programarCierreClase = programarCierreClaseInternal;
 
             } catch (error) {
-                console.error("❌ Error crítico al iniciar Jitsi:", error);
+                console.error("Error crítico al iniciar Jitsi:", error);
                 const loadingMessage = document.getElementById('loadingMessage');
                 if (loadingMessage) {
                     loadingMessage.innerHTML = `
@@ -534,7 +551,7 @@
 
                 recognition.onstart = function () {
                     isTranscribing = true;
-                    console.log("🎙️ Transcripción iniciada...");
+                    console.log("Transcripción iniciada...");
                     mostrarNotificacionTranscripcion(true);
                 };
 
@@ -562,7 +579,7 @@
                             const timeString = now.toLocaleTimeString();
                             fullTranscript += `[${timeString}] ${text}\n`;
 
-                            console.log("📝 Texto final:", finalTranscript);
+                            console.log("Texto final:", finalTranscript);
                         } else {
                             interimTranscript += event.results[i][0].transcript;
                         }
@@ -689,7 +706,7 @@
                             [csrfHeader]: csrfToken
                         }
                     });
-                    console.log("🟢 Ingreso de asistencia registrado");
+                    console.log("Ingreso de asistencia registrado");
                 } catch (e) {
                     console.error("Error registrando ingreso de asistencia:", e);
                 }
@@ -703,7 +720,7 @@
                             [csrfHeader]: csrfToken
                         }
                     });
-                    console.log("🔴 Salida de asistencia registrada");
+                    console.log("Salida de asistencia registrada");
                 } catch (e) {
                     console.error("Error registrando salida de asistencia:", e);
                 }
@@ -722,7 +739,7 @@
                     const data = await response.json().catch(() => null);
                     if (response.ok && data && data.success) {
                         asistenciaTiempoConfirmada = true;
-                        console.log("✅ Asistencia automática por tiempo registrada");
+                        console.log("Asistencia automática por tiempo registrada");
                         return true;
                     } else {
                         console.log("⏳ Asistencia aún no cumple el tiempo mínimo");
@@ -828,8 +845,9 @@
                 programarCierreClase();
             }
 
-            if (asistenciaAutomatica && preguntasAleatorias && !isTeacher) {
+            if (preguntasAleatorias && !isTeacher) {
                 console.log("⏰ Iniciando monitoreo de asistencia automática por preguntas");
+                verificarPreguntaAsistencia();
                 setInterval(verificarPreguntaAsistencia, 60000); // Check every minute
             }
 
@@ -867,9 +885,11 @@
                 modal.classList.remove('hidden');
                 
                 // Timer
-                let timeLeft = pregunta.tiempoLimite || 180;
+                let timeLeft = pregunta.tiempoLimite || 5;
                 const totalTime = timeLeft;
                 clearInterval(questionTimer);
+                document.getElementById('timeRemaining').innerText = timeLeft;
+                document.getElementById('progressBar').style.width = "100%";
                 
                 questionTimer = setInterval(() => {
                     timeLeft--;
@@ -877,9 +897,15 @@
                     document.getElementById('progressBar').style.width = ((timeLeft / totalTime) * 100) + "%";
                     
                     if (timeLeft <= 0) {
-                        enviarRespuesta("TIMEOUT"); // Ocultar y marcar fallida
+                        cerrarPreguntaSinRespuesta();
                     }
                 }, 1000);
+            }
+
+            function cerrarPreguntaSinRespuesta() {
+                clearInterval(questionTimer);
+                document.getElementById('modalPreguntaAsistencia').classList.add('hidden');
+                currentRonda = 0;
             }
 
             async function enviarRespuesta(respuesta) {
@@ -898,7 +924,7 @@
                             respuesta: respuesta
                         })
                     });
-                    console.log("✅ Respuesta de asistencia enviada");
+                    console.log("Respuesta de asistencia enviada");
                 } catch (e) {
                     console.error("Error enviando respuesta:", e);
                 }
@@ -914,3 +940,10 @@
 </body>
 
 </html>
+
+
+
+
+
+
+
