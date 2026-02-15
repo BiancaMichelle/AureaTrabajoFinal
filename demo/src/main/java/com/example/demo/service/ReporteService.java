@@ -7,14 +7,13 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.LocalDateTime;
 import java.text.NumberFormat;
+import java.text.Normalizer;
 import java.util.Locale;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.Comparator;
 
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -42,7 +41,6 @@ import com.example.demo.repository.CuotaRepository;
 import com.example.demo.repository.InscripcionRepository;
 import com.example.demo.repository.CategoriaRepository;
 import com.example.demo.enums.EstadoCuota;
-import com.example.demo.service.InstitutoLogoService;
 import com.lowagie.text.Chunk;
 import com.lowagie.text.Document;
 import com.lowagie.text.DocumentException;
@@ -70,7 +68,6 @@ import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import com.example.demo.model.AuditLog;
-import com.example.demo.service.AuditLogService;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -414,15 +411,35 @@ public class ReporteService {
 
     public List<OfertaAcademica> filtrarOfertas(String nombre, String estado, Long categoriaId, LocalDate fechaInicio, LocalDate fechaFin, List<String> tipos) {
         List<OfertaAcademica> todas = ofertaRepository.findAll();
-        
+
+        final List<String> tiposNormalizados;
+        if (tipos == null || tipos.isEmpty()) {
+            tiposNormalizados = null;
+        } else {
+            List<String> normalized = tipos.stream()
+                    .map(this::normalizarTipo)
+                    .filter(s -> !s.isEmpty())
+                    .collect(Collectors.toList());
+            tiposNormalizados = normalized.isEmpty() ? null : normalized;
+        }
+
         return todas.stream()
             .filter(o -> nombre == null || nombre.isEmpty() || o.getNombre().toLowerCase().contains(nombre.toLowerCase()))
             .filter(o -> estado == null || estado.isEmpty() || (o.getEstado() != null && o.getEstado().name().equalsIgnoreCase(estado)))
             .filter(o -> categoriaId == null || o.getCategorias().stream().anyMatch(c -> c.getIdCategoria().equals(categoriaId)))
             .filter(o -> fechaInicio == null || (o.getFechaInicio() != null && !o.getFechaInicio().isBefore(fechaInicio)))
             .filter(o -> fechaFin == null || (o.getFechaFin() != null && !o.getFechaFin().isAfter(fechaFin)))
-            .filter(o -> tipos == null || tipos.isEmpty() || tipos.contains(o.getTipoOferta()))
+            .filter(o -> tiposNormalizados == null || tiposNormalizados.contains(normalizarTipo(o.getTipoOferta())))
             .collect(Collectors.toList());
+    }
+
+    private String normalizarTipo(String value) {
+        if (value == null) return "";
+        String trimmed = value.trim();
+        if (trimmed.isEmpty()) return "";
+        String normalized = Normalizer.normalize(trimmed, Normalizer.Form.NFD)
+                .replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+        return normalized.toUpperCase(Locale.ROOT);
     }
 
     public List<Usuario> filtrarUsuarios(String rol, Boolean estado, String nombre, LocalDate fechaInicio, LocalDate fechaFin) {
