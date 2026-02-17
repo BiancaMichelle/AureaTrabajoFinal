@@ -98,7 +98,7 @@ public class MPClient {
                 log.error("❌ Failure URL está vacía!");
             }
 
-            PreferenceRequest preferenceRequest = PreferenceRequest.builder()
+            PreferenceRequest.PreferenceRequestBuilder preferenceBuilder = PreferenceRequest.builder()
                     .items(items)
                     .payer(payer)
                     .backUrls(backUrls)
@@ -106,9 +106,19 @@ public class MPClient {
                     .externalReference(orderNumber)
                     // Configuración adicional para modo TEST
                     .statementDescriptor("AUREA-INSCRIPCION") // Nombre que aparece en el resumen
-                    .binaryMode(false) // Permite pagos pendientes
-                    .autoReturn("approved")
-                    .build();
+                    .binaryMode(false); // Permite pagos pendientes
+
+            String successUrl = backUrls.getSuccess();
+            boolean permitirAutoReturn = successUrl != null
+                    && !successUrl.isBlank()
+                    && successUrl.toLowerCase().startsWith("https://");
+            if (permitirAutoReturn) {
+                preferenceBuilder.autoReturn("approved");
+            } else {
+                log.warn("⚠️ auto_return deshabilitado: success URL inválida/no HTTPS ({})", successUrl);
+            }
+
+            PreferenceRequest preferenceRequest = preferenceBuilder.build();
 
             log.info("🔔 Notification URL: {}", notificationUrl);
             log.info("🔖 External Reference: {}", orderNumber);

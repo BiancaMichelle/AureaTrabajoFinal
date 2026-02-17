@@ -696,6 +696,7 @@ public class AdminController {
         map.put("certificado", oferta.getCertificado() != null ? oferta.getCertificado() : "");
         map.put("costoFormateado", oferta.getCostoFormateado() != null ? oferta.getCostoFormateado() : "$0");
         map.put("costoInscripcion", oferta.getCostoInscripcion() != null ? oferta.getCostoInscripcion() : 0.0);
+        map.put("recargoMora", oferta.getRecargoMora() != null ? oferta.getRecargoMora() : 0.0);
         map.put("categoriasTexto", oferta.getCategoriasTexto() != null ? oferta.getCategoriasTexto() : "");
         map.put("duracionTexto", oferta.getDuracionTexto() != null ? oferta.getDuracionTexto() : "");
         map.put("lugar", oferta.getLugar() != null ? oferta.getLugar() : "");
@@ -779,6 +780,8 @@ public class AdminController {
             detalle.put("horarios", horariosList);
             System.out.println("✅ Horarios agregados al detalle: " + horariosList.size());
         }
+
+        detalle.put("recargoMora", oferta.getRecargoMora());
 
         return detalle;
     }
@@ -867,6 +870,29 @@ public class AdminController {
         if (hora == null) return null;
         String texto = hora.toString();
         return texto.length() >= 5 ? texto.substring(0, 5) : texto;
+    }
+
+    private String horariosTexto(List<Horario> horarios) {
+        if (horarios == null || horarios.isEmpty()) return null;
+        return horarios.stream()
+                .filter(Objects::nonNull)
+                .map(h -> {
+                    String dia = h.getDia() != null ? h.getDia().name() : "";
+                    String inicio = horaTexto(h.getHoraInicio());
+                    String fin = horaTexto(h.getHoraFin());
+                    String rango = (inicio != null && fin != null) ? (inicio + "-" + fin) : "";
+                    String base = (dia + " " + rango).trim();
+                    String docente = h.getDocente() != null
+                            ? (h.getDocente().getNombre() + " " + h.getDocente().getApellido()).trim()
+                            : "";
+                    if (!docente.isEmpty()) {
+                        base = (base + " (" + docente + ")").trim();
+                    }
+                    return base;
+                })
+                .filter(s -> !s.isEmpty())
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .collect(Collectors.joining(", "));
     }
 
     // =================== ENDPOINTS PARA DOCENTES ===================
@@ -988,6 +1014,7 @@ public class AdminController {
             @RequestParam(required = false) String descripcion,
             @RequestParam(required = false) Integer cupos,
             @RequestParam(required = false) Double costoInscripcion,
+            @RequestParam(required = false) Double recargoMora,
             @RequestParam(required = false) String fechaInicio,
             @RequestParam(required = false) String fechaFin,
             @RequestParam(required = false) String fechaInicioInscripcion,
@@ -1099,13 +1126,36 @@ public class AdminController {
                 fechaInicioInscripcionDate = LocalDate.parse(fechaInicioInscripcion);
                 fechaFinInscripcionDate = LocalDate.parse(fechaFinInscripcion);
 
-                // Validar que fecha de inicio de inscripción no sea posterior a fecha de fin de
-                // inscripción
+                // Validar que fecha de inicio de inscripción no sea posterior a fecha de fin de inscripción
                 if (fechaInicioInscripcionDate.isAfter(fechaFinInscripcionDate)) {
                     Map<String, Object> errorResponse = new HashMap<>();
                     errorResponse.put("success", false);
                     errorResponse.put("message",
                             "La fecha de inicio de inscripción no puede ser posterior a la fecha de fin de inscripción");
+                    return ResponseEntity.badRequest().body(errorResponse);
+                }
+
+                LocalDate hoy = LocalDate.now();
+                if (fechaInicioInscripcionDate.isBefore(hoy)) {
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("success", false);
+                    errorResponse.put("message", "La fecha de inicio de inscripción no puede ser anterior a hoy");
+                    return ResponseEntity.badRequest().body(errorResponse);
+                }
+
+                if (fechaInicioInscripcionDate.isAfter(fechaFinDate)) {
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("success", false);
+                    errorResponse.put("message",
+                            "La fecha de inicio de inscripción no puede ser posterior a la fecha de fin de la oferta");
+                    return ResponseEntity.badRequest().body(errorResponse);
+                }
+
+                if (fechaFinInscripcionDate.isAfter(fechaFinDate)) {
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("success", false);
+                    errorResponse.put("message",
+                            "La fecha de fin de inscripción no puede ser posterior a la fecha de fin de la oferta");
                     return ResponseEntity.badRequest().body(errorResponse);
                 }
 
@@ -1241,17 +1291,35 @@ public class AdminController {
                 }
             }
 
+            // Fallback: si el frontend envía campos genéricos para FORMACION
+            if ("FORMACION".equalsIgnoreCase(tipoOferta)) {
+                if (costoCuotaFormacion == null && costoCuota != null) {
+                    costoCuotaFormacion = costoCuota;
+                }
+                if (costoMoraFormacion == null && costoMora != null) {
+                    costoMoraFormacion = costoMora;
+                }
+                if (nrCuotasFormacion == null && nrCuotas != null) {
+                    nrCuotasFormacion = nrCuotas;
+                }
+                if (diaVencimientoFormacion == null && diaVencimiento != null) {
+                    diaVencimientoFormacion = diaVencimiento;
+                }
+            }
+
             // Normalizar costos: convertir null a 0
             if (costoInscripcion == null)
                 costoInscripcion = 0.0;
             if (costoCuota == null)
                 costoCuota = 0.0;
-            if (costoMora == null)
-                costoMora = 0.0;
             if (costoCuotaFormacion == null)
                 costoCuotaFormacion = 0.0;
+            if (recargoMora == null)
+                recargoMora = 0.0;
+            if (costoMora == null)
+                costoMora = recargoMora;
             if (costoMoraFormacion == null)
-                costoMoraFormacion = 0.0;
+                costoMoraFormacion = recargoMora;
 
             OfertaAcademica oferta;
 
@@ -1282,6 +1350,10 @@ public class AdminController {
                     break;
                 default:
                     throw new IllegalArgumentException("Tipo de oferta no válido: " + tipoOferta);
+            }
+
+            if (recargoMora != null) {
+                oferta.setRecargoMora(recargoMora);
             }
 
             // Calcular duración en meses antes de guardar
@@ -1664,6 +1736,7 @@ public class AdminController {
             @RequestParam(required = false) String descripcion,
             @RequestParam(required = false) Integer cupos,
             @RequestParam(required = false) Double costoInscripcion,
+            @RequestParam(required = false) Double recargoMora,
             @RequestParam(required = false) String fechaInicio,
             @RequestParam(required = false) String fechaFin,
             @RequestParam(required = false) String fechaInicioInscripcion,
@@ -1751,6 +1824,7 @@ public class AdminController {
             Boolean certificadoAnterior = ofertaExistente.getCertificado();
             String imagenAnterior = ofertaExistente.getImagenUrl();
             String categoriasAnterior = nombresCategorias(ofertaExistente.getCategorias());
+            String horariosAnterior = horariosTexto(ofertaExistente.getHorarios());
 
             String temarioAnterior = null;
             Double costoCuotaAnterior = null;
@@ -1925,6 +1999,30 @@ public class AdminController {
                                 "La fecha de inicio de inscripción no puede ser posterior a la fecha de fin de inscripción");
                         return ResponseEntity.badRequest().body(errorResponse);
                     }
+
+                    LocalDate hoy = LocalDate.now();
+                    if (fechaInicioInscripcionDate.isBefore(hoy)) {
+                        Map<String, Object> errorResponse = new HashMap<>();
+                        errorResponse.put("success", false);
+                        errorResponse.put("message", "La fecha de inicio de inscripción no puede ser anterior a hoy");
+                        return ResponseEntity.badRequest().body(errorResponse);
+                    }
+
+                    if (fechaInicioInscripcionDate.isAfter(fechaFinDate)) {
+                        Map<String, Object> errorResponse = new HashMap<>();
+                        errorResponse.put("success", false);
+                        errorResponse.put("message",
+                                "La fecha de inicio de inscripción no puede ser posterior a la fecha de fin de la oferta");
+                        return ResponseEntity.badRequest().body(errorResponse);
+                    }
+
+                    if (fechaFinInscripcionDate.isAfter(fechaFinDate)) {
+                        Map<String, Object> errorResponse = new HashMap<>();
+                        errorResponse.put("success", false);
+                        errorResponse.put("message",
+                                "La fecha de fin de inscripción no puede ser posterior a la fecha de fin de la oferta");
+                        return ResponseEntity.badRequest().body(errorResponse);
+                    }
                 } catch (Exception e) {
                     Map<String, Object> errorResponse = new HashMap<>();
                     errorResponse.put("success", false);
@@ -2003,6 +2101,31 @@ public class AdminController {
                 return ResponseEntity.badRequest().body(errorResponse);
             }
 
+            // Fallback: si el frontend envía campos genéricos para FORMACION
+            if ("FORMACION".equalsIgnoreCase(tipoOferta)) {
+                if (costoCuotaFormacion == null && costoCuota != null) {
+                    costoCuotaFormacion = costoCuota;
+                }
+                if (costoMoraFormacion == null && costoMora != null) {
+                    costoMoraFormacion = costoMora;
+                }
+                if (nrCuotasFormacion == null && nrCuotas != null) {
+                    nrCuotasFormacion = nrCuotas;
+                }
+                if (diaVencimientoFormacion == null && diaVencimiento != null) {
+                    diaVencimientoFormacion = diaVencimiento;
+                }
+            }
+
+            if (recargoMora != null) {
+                if (costoMora == null) {
+                    costoMora = recargoMora;
+                }
+                if (costoMoraFormacion == null) {
+                    costoMoraFormacion = recargoMora;
+                }
+            }
+
             // Llamar al servicio apropiado según el tipo de oferta
             OfertaAcademica ofertaModificada = null;
 
@@ -2051,6 +2174,8 @@ public class AdminController {
                 datosActualizar.put("certificado", otorgaCertificado);
             if (costoInscripcion != null)
                 datosActualizar.put("costoInscripcion", costoInscripcion);
+            if (recargoMora != null)
+                datosActualizar.put("recargoMora", recargoMora);
 
             if (nuevaImagenUrl != null) {
                 datosActualizar.put("imagenUrl", nuevaImagenUrl);
@@ -2126,6 +2251,20 @@ public class AdminController {
             // Ejecutar actualización en el modelo
             ofertaExistente.actualizarDatos(datosActualizar);
 
+            // Actualizar horarios si se proporcionaron
+            boolean actualizarHorarios = horarios != null
+                    && !horarios.trim().isEmpty()
+                    && !"[]".equals(horarios.trim());
+            if (actualizarHorarios) {
+                if (ofertaExistente.getHorarios() != null) {
+                    List<Horario> horariosActuales = new ArrayList<>(ofertaExistente.getHorarios());
+                    for (Horario h : horariosActuales) {
+                        ofertaExistente.removeHorario(h);
+                    }
+                }
+                asociarHorarios(ofertaExistente, horarios);
+            }
+
             // Guardar la oferta modificada
             ofertaModificada = ofertaAcademicaRepository.save(ofertaExistente);
 
@@ -2154,6 +2293,7 @@ public class AdminController {
                 addCambio(cambios, "certificado", certificadoAnterior, ofertaModificada.getCertificado());
                 addCambio(cambios, "imagen", imagenAnterior, ofertaModificada.getImagenUrl());
                 addCambio(cambios, "categorias", categoriasAnterior, nombresCategorias(ofertaModificada.getCategorias()));
+                addCambio(cambios, "horarios", horariosAnterior, horariosTexto(ofertaModificada.getHorarios()));
 
                 if (ofertaModificada instanceof Curso) {
                     Curso cursoModificado = (Curso) ofertaModificada;
@@ -2640,7 +2780,14 @@ public class AdminController {
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
-            response.put("message", "Error al registrar usuario: " + e.getMessage());
+            String mensaje = e.getMessage();
+            if (mensaje == null || mensaje.isBlank()) {
+                mensaje = "Error al registrar usuario";
+            }
+            if (mensaje.startsWith("Error al registrar usuario: ")) {
+                mensaje = mensaje.substring("Error al registrar usuario: ".length()).trim();
+            }
+            response.put("message", mensaje);
             return ResponseEntity.badRequest().body(response);
         }
     }

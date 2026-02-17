@@ -255,11 +255,47 @@ document.addEventListener('DOMContentLoaded', function () {
             method: 'DELETE',
             headers: headers
         })
-            .then(response => {
-                if (response.status === 403) {
-                    throw new Error('No tiene permisos para realizar esta acción (Error 403)');
+            .then(async (response) => {
+                const contentType = response.headers.get('content-type') || '';
+                const text = await response.text();
+                const trimmed = text ? text.trim() : '';
+                let data = null;
+
+                if (trimmed) {
+                    const looksLikeJson = contentType.includes('application/json') || trimmed.startsWith('{') || trimmed.startsWith('[');
+                    if (looksLikeJson) {
+                        try {
+                            data = JSON.parse(trimmed);
+                        } catch (e) {
+                            // Se maneja mas abajo con un mensaje controlado
+                        }
+                    }
                 }
-                return response.json();
+
+                if (!response.ok) {
+                    // Capturar errores HTTP (400, 500, etc.)
+                    let message = data && data.message ? data.message : null;
+                    if (!message && response.status === 504) {
+                        message = 'El servidor esta tardando en responder. Intenta nuevamente.';
+                    }
+                    if (!message && trimmed && !data) {
+                        message = trimmed;
+                    }
+                    if (!message) {
+                        message = `Error HTTP: ${response.status}`;
+                    }
+                    const err = new Error(message);
+                    err.status = response.status;
+                    throw err;
+                }
+
+                if (!data) {
+                    const err = new Error('Respuesta vacia del servidor. Intenta nuevamente.');
+                    err.status = response.status;
+                    throw err;
+                }
+
+                return data;
             })
             .then(data => {
                 if (data.success) {
@@ -2449,14 +2485,47 @@ document.addEventListener('DOMContentLoaded', function () {
             headers,
             body: formData
         })
-            .then(response => {
-                if (!response.ok) {
-                    // ✅ CAPTURAR ERRORES HTTP (400, 500, etc.)
-                    return response.json().then(errorData => {
-                        throw new Error(errorData.message || `Error HTTP: ${response.status}`);
-                    });
+            .then(async (response) => {
+                const contentType = response.headers.get('content-type') || '';
+                const text = await response.text();
+                const trimmed = text ? text.trim() : '';
+                let data = null;
+
+                if (trimmed) {
+                    const looksLikeJson = contentType.includes('application/json') || trimmed.startsWith('{') || trimmed.startsWith('[');
+                    if (looksLikeJson) {
+                        try {
+                            data = JSON.parse(trimmed);
+                        } catch (e) {
+                            // Se maneja mas abajo con un mensaje controlado
+                        }
+                    }
                 }
-                return response.json();
+
+                if (!response.ok) {
+                    // Capturar errores HTTP (400, 500, etc.)
+                    let message = data && data.message ? data.message : null;
+                    if (!message && response.status === 504) {
+                        message = 'El servidor esta tardando en responder. Intenta nuevamente.';
+                    }
+                    if (!message && trimmed && !data) {
+                        message = trimmed;
+                    }
+                    if (!message) {
+                        message = `Error HTTP: ${response.status}`;
+                    }
+                    const err = new Error(message);
+                    err.status = response.status;
+                    throw err;
+                }
+
+                if (!data) {
+                    const err = new Error('Respuesta vacia del servidor. Intenta nuevamente.');
+                    err.status = response.status;
+                    throw err;
+                }
+
+                return data;
             })
             .then(data => {
                 if (data.success) {
@@ -2492,14 +2561,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 const accion = isEditMode ? 'actualizar' : 'registrar';
                 let errorMessage = `Error de conexión al ${accion} el usuario`;
 
-                if (error.message.includes('correo electrónico')) {
+                if (error.status === 504 || /Respuesta vacia del servidor|Unexpected end of JSON input|Timeout/i.test(error.message || '')) {
+                    errorMessage = 'El servidor esta tardando en responder. Intenta nuevamente.';
+                } else if (error.message.includes('correo electrónico')) {
                     errorMessage = 'El correo electrónico ya está registrado';
                     const correoInput = document.getElementById('correo');
                     if (correoInput) {
                         showFieldError(correoInput, errorMessage);
                     }
                 } else if (error.message.includes('DNI')) {
-                    errorMessage = 'El DNI ya está registrado';
+                    errorMessage = error.message || 'El DNI ya esta registrado';
                     const dniInput = document.getElementById('dni');
                     if (dniInput) {
                         showFieldError(dniInput, errorMessage);

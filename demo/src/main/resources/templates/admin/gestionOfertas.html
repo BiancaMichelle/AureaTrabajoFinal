@@ -573,25 +573,44 @@
     <!-- Script para validaciones de fecha -->
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            // Obtener la fecha actual en formato YYYY-MM-DD
             const today = new Date();
             const todayStr = today.toISOString().split('T')[0];
 
-            // Calcular la fecha de mañana
-            const tomorrow = new Date(today);
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            const tomorrowStr = tomorrow.toISOString().split('T')[0];
-
-            // Configurar fecha mínima para inicio de inscripción (desde hoy)
             const fechaInicioInscripcion = document.getElementById('fechaInicioInscripcion');
-            if (fechaInicioInscripcion) {
-                fechaInicioInscripcion.setAttribute('min', todayStr);
+            const fechaFinInscripcion = document.getElementById('fechaFinInscripcion');
+            const fechaFinOferta = document.getElementById('fechaFin');
+
+            function actualizarLimitesInscripcion() {
+                const finOfertaVal = fechaFinOferta ? fechaFinOferta.value : '';
+                const inicioInsVal = fechaInicioInscripcion ? fechaInicioInscripcion.value : '';
+
+                if (fechaInicioInscripcion) {
+                    fechaInicioInscripcion.setAttribute('min', todayStr);
+                    if (finOfertaVal) {
+                        fechaInicioInscripcion.setAttribute('max', finOfertaVal);
+                    } else {
+                        fechaInicioInscripcion.removeAttribute('max');
+                    }
+                }
+
+                if (fechaFinInscripcion) {
+                    const minFin = inicioInsVal || todayStr;
+                    fechaFinInscripcion.setAttribute('min', minFin);
+                    if (finOfertaVal) {
+                        fechaFinInscripcion.setAttribute('max', finOfertaVal);
+                    } else {
+                        fechaFinInscripcion.removeAttribute('max');
+                    }
+                }
             }
 
-            // Configurar fecha mínima para fin de inscripción (desde mañana)
-            const fechaFinInscripcion = document.getElementById('fechaFinInscripcion');
-            if (fechaFinInscripcion) {
-                fechaFinInscripcion.setAttribute('min', tomorrowStr);
+            actualizarLimitesInscripcion();
+
+            if (fechaInicioInscripcion) {
+                fechaInicioInscripcion.addEventListener('change', actualizarLimitesInscripcion);
+            }
+            if (fechaFinOferta) {
+                fechaFinOferta.addEventListener('change', actualizarLimitesInscripcion);
             }
         });
     </script>
@@ -684,7 +703,7 @@
                                         <input type="date" id="fechaInicioInscripcion" name="fechaInicioInscripcion"
                                             class="form-control" required>
                                         <small class="form-text text-muted">
-                                            <i class="fas fa-info-circle"></i> No puede ser anterior a la fecha actual
+                                            <i class="fas fa-info-circle"></i> Debe ser desde hoy y no mayor a la fecha de fin
                                         </small>
                                     </div>
                                     <div class="form-group">
@@ -692,8 +711,7 @@
                                         <input type="date" id="fechaFinInscripcion" name="fechaFinInscripcion"
                                             class="form-control" required>
                                         <small class="form-text text-muted">
-                                            <i class="fas fa-info-circle"></i> Debe ser posterior a la fecha actual
-                                            (mínimo mañana)
+                                            <i class="fas fa-info-circle"></i> Debe ser desde el inicio de inscripciones hasta la fecha de fin de la oferta
                                         </small>
                                     </div>
                                 </div>
@@ -749,6 +767,15 @@
                                         <label for="costoCuota">Costo por Cuota</label>
                                         <input type="number" step="0.01" id="costoCuota" name="costoCuota"
                                             class="form-control" placeholder="0.00">
+                                    </div>
+                                    <div class="form-group" id="grupo-recargo-mora" style="display: none;">
+                                        <label for="recargoMora">Recarga por mora</label>
+                                        <input type="number" step="0.01" id="recargoMora" name="recargoMora"
+                                            class="form-control" placeholder="0.00">
+                                        <small class="form-text text-muted">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            Se aplica a la cuota despues del dia de vencimiento
+                                        </small>
                                     </div>
                                     <div class="form-group" id="grupo-dia-vencimiento" style="display: none;">
                                         <label for="diaVencimiento">Día de Vencimiento *</label>
@@ -2098,6 +2125,7 @@
             const grupoCostoCuota = document.getElementById('grupo-costo-cuota');
             const grupoNroCuotas = document.getElementById('grupo-nro-cuotas');
             const grupoDiaVencimiento = document.getElementById('grupo-dia-vencimiento');
+            const grupoRecargoMora = document.getElementById('grupo-recargo-mora');
             
             // Mostrar campos de cuotas solo para CURSO y FORMACION
             const mostrarCamposCuotas = tipoOferta === 'CURSO' || tipoOferta === 'FORMACION';
@@ -2105,6 +2133,7 @@
             if (grupoCostoCuota) grupoCostoCuota.style.display = mostrarCamposCuotas ? 'block' : 'none';
             if (grupoNroCuotas) grupoNroCuotas.style.display = mostrarCamposCuotas ? 'block' : 'none';
             if (grupoDiaVencimiento) grupoDiaVencimiento.style.display = mostrarCamposCuotas ? 'block' : 'none';
+            if (grupoRecargoMora) grupoRecargoMora.style.display = mostrarCamposCuotas ? 'block' : 'none';
             
             // Ocultar fechaInicio y fechaFin solo para CHARLA (usa fecha específica)
             const grupoFechaInicio = document.getElementById('grupo-fecha-inicio');
@@ -3421,7 +3450,7 @@
             if (typeof window.mostrarNotificacion !== 'function') {
                 window.mostrarNotificacion = function (mensaje, tipo) {
                     // Fallback simple por si no existe la librería de alertas
-                    alert((tipo === 'error' ? '? ' : '? ') + mensaje);
+                    alert(mensaje);
                 };
             }
 
@@ -3472,6 +3501,38 @@
                     mostrarNotificacion('La fecha de inicio no puede ser posterior a la fecha de fin', 'error');
                     return false;
                 }
+                // Validar fechas de inscripcion
+                const fechaInicioInscripcion = getValueById('fechaInicioInscripcion');
+                const fechaFinInscripcion = getValueById('fechaFinInscripcion');
+
+                if (fechaInicioInscripcion) {
+                    const fechaInicioInscripcionObj = new Date(fechaInicioInscripcion + 'T00:00:00');
+                    if (fechaInicioInscripcionObj < hoy) {
+                        mostrarNotificacion('La fecha de inicio de inscripcion no puede ser anterior a hoy', 'error');
+                        return false;
+                    }
+                    if (fechaFin && fechaInicioInscripcionObj > fechaFinObj) {
+                        mostrarNotificacion('La fecha de inicio de inscripcion no puede ser posterior a la fecha de fin', 'error');
+                        return false;
+                    }
+                }
+
+                if (fechaFinInscripcion) {
+                    const fechaFinInscripcionObj = new Date(fechaFinInscripcion + 'T00:00:00');
+                    if (fechaInicioInscripcion) {
+                        const fechaInicioInscripcionObj = new Date(fechaInicioInscripcion + 'T00:00:00');
+                        if (fechaFinInscripcionObj < fechaInicioInscripcionObj) {
+                            mostrarNotificacion('La fecha de fin de inscripcion no puede ser anterior al inicio de inscripcion', 'error');
+                            return false;
+                        }
+                    }
+                    if (fechaFin && fechaFinInscripcionObj > fechaFinObj) {
+                        mostrarNotificacion('La fecha de fin de inscripcion no puede ser posterior a la fecha de fin', 'error');
+                        return false;
+                    }
+                }
+
+
                 // Validar costo
                 const costoVal = document.getElementById('costoInscripcion') ? parseFloat(document.getElementById('costoInscripcion').value) : NaN;
                 if (!isNaN(costoVal) && costoVal < 0) {
@@ -3498,25 +3559,6 @@
 
                     case 'CHARLA':
                     case 'SEMINARIO': {
-                        // Validar que la fecha de inscripción termine ANTES de la fecha del evento
-                        const fechaFinInscripcion = getValueById('fechaFinInscripcion');
-                        const fechaEvento = tipoOferta === 'CHARLA'
-                            ? getValueById('fechaCharla')
-                            : getValueById('fechaInicio');
-
-                        if (fechaFinInscripcion && fechaEvento) {
-                            const fechaFinInscripcionObj = new Date(fechaFinInscripcion + 'T00:00:00');
-                            const fechaEventoObj = new Date(fechaEvento + 'T00:00:00');
-
-                            if (fechaFinInscripcionObj >= fechaEventoObj) {
-                                mostrarNotificacion(
-                                    'La fecha de fin de inscripción debe ser ANTES de la fecha de la ' +
-                                    (tipoOferta === 'CHARLA' ? 'charla' : 'seminario'),
-                                    'error'
-                                );
-                                return false;
-                            }
-                        }
 
                         if (tipoOferta === 'SEMINARIO') {
                             const numeroEncuentros = parseInt(getValueById('numeroEncuentros') || '0', 10);
@@ -3649,7 +3691,7 @@
                         if (data.success) {
                             console.log('? Registro exitoso');
                             // Mostrar notificación de éxito
-                            mostrarNotificacion('? ' + data.message, 'success');
+                            mostrarNotificacion(data.message, 'success');
 
                             // Limpiar formulario
                             limpiarFormularioCompleto();
@@ -3664,12 +3706,12 @@
 
                         } else {
                             console.log('? Error en registro:', data.message);
-                            mostrarNotificacion('? ' + data.message, 'error');
+                            mostrarNotificacion(data.message, 'error');
                         }
                     })
                     .catch(error => {
                         console.error('? Error en fetch:', error);
-                        mostrarNotificacion('? Error al registrar la oferta. Inténtelo nuevamente.', 'error');
+                        mostrarNotificacion('Error al registrar la oferta. Inténtelo nuevamente.', 'error');
                     })
                     .finally(() => {
                         // Restaurar botón
@@ -4963,7 +5005,7 @@
 
                         if (!ok) {
                             const mensaje = data.message || `Error al eliminar la oferta (código ${status})`;
-                            mostrarNotificacion(`? ${mensaje}`, 'error');
+                            mostrarNotificacion(mensaje, 'error');
                             throw new Error(mensaje);
                         }
 
@@ -4990,7 +5032,7 @@
                     })
                     .catch(error => {
                         console.error('? Error durante la eliminación:', error);
-                        mostrarNotificacion('? Error al eliminar la oferta. Inténtalo nuevamente.', 'error');
+                        mostrarNotificacion('Error al eliminar la oferta. Inténtalo nuevamente.', 'error');
                     })
                     .finally(() => {
                         if (btnConfirmar) {
@@ -5130,6 +5172,7 @@
                             fechaFinInput.disabled = false;
                             fechaFinInput.setAttribute('min', fechaInicioVal);
                         }
+                        fechaFinInput.dispatchEvent(new Event('change'));
                     }
                     if (document.getElementById('cupos')) {
                         const cuposVal = oferta.cupos;
@@ -5154,6 +5197,10 @@
                     // Costo de inscripción general
                     if (document.getElementById('costoInscripcion')) {
                         document.getElementById('costoInscripcion').value = oferta.costoInscripcion || '';
+                    }
+                    if (document.getElementById('recargoMora')) {
+                        const valorRecargo = oferta.recargoMora != null ? oferta.recargoMora : (oferta.costoMora != null ? oferta.costoMora : '');
+                        document.getElementById('recargoMora').value = valorRecargo;
                     }
 
                     // Imagen de presentación

@@ -32,6 +32,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 import com.example.demo.DTOMP.ReferenceRequest;
 import com.example.demo.DTOMP.ResponseDTO;
@@ -431,7 +434,8 @@ public class AlumnoController {
     @PostMapping("/mis-pagos/cuotas/{cuotaId}/pagar")
     public String pagarCuota(@PathVariable Long cuotaId,
             Principal principal,
-            RedirectAttributes redirectAttributes) {
+            RedirectAttributes redirectAttributes,
+            HttpServletRequest request) {
         try {
             String dni = principal.getName();
             System.out.println("💳 Iniciando pago de cuota ID: " + cuotaId + " para usuario: " + dni);
@@ -478,11 +482,11 @@ public class AlumnoController {
             }
 
             System.out.println("🔨 Construyendo request para MercadoPago...");
-            ReferenceRequest request = construirReferenciaCuota(cuota, alumno, saldoPendiente);
+            ReferenceRequest mpRequest = construirReferenciaCuota(cuota, alumno, saldoPendiente, request);
 
             System.out.println("📤 Llamando a createPreferenceForCuota...");
             ResponseDTO response = mercadoPagoService.createPreferenceForCuota(
-                    request,
+                    mpRequest,
                     alumno,
                     cuota.getInscripcion().getOferta(),
                     cuota);
@@ -714,6 +718,38 @@ public class AlumnoController {
         return FORMATO_FECHA_RESUMEN.format(fecha);
     }
 
+    private String normalizarBaseUrl(String base) {
+        String valor = (base != null && !base.isBlank()) ? base.trim() : "http://localhost:8080";
+        while (valor.endsWith("/")) {
+            valor = valor.substring(0, valor.length() - 1);
+        }
+        return valor;
+    }
+
+    private String resolverBaseUrl(HttpServletRequest request) {
+        try {
+            if (request != null) {
+                String actual = ServletUriComponentsBuilder.fromRequestUri(request)
+                        .replacePath(null)
+                        .replaceQuery(null)
+                        .build()
+                        .toUriString();
+                return normalizarBaseUrl(actual);
+            }
+        } catch (Exception e) {
+            // Fallback al baseUrl configurado
+        }
+        return normalizarBaseUrl(baseUrl);
+    }
+
+    private boolean esBaseLocal(String base) {
+        if (base == null || base.isBlank()) {
+            return true;
+        }
+        String lower = base.toLowerCase(Locale.ROOT);
+        return lower.contains("localhost") || lower.contains("127.0.0.1");
+    }
+
     private int obtenerMaxDiasMora(Inscripciones inscripcion) {
         try {
             List<Cuota> cuotas = cuotaRepository.findByInscripcionIdInscripcion(inscripcion.getIdInscripcion());
@@ -734,15 +770,17 @@ public class AlumnoController {
         }
     }
 
-    private ReferenceRequest construirReferenciaCuota(Cuota cuota, Usuario alumno, BigDecimal montoPendiente) {
+    private ReferenceRequest construirReferenciaCuota(Cuota cuota, Usuario alumno, BigDecimal montoPendiente,
+            HttpServletRequest request) {
         ReferenceRequest.PayerDTO payer = new ReferenceRequest.PayerDTO(
                 alumno.getNombre() + " " + alumno.getApellido(),
                 alumno.getCorreo());
 
+        String base = resolverBaseUrl(request);
         ReferenceRequest.BackUrlsDTO backUrls = new ReferenceRequest.BackUrlsDTO(
-                baseUrl + "/pago/success",
-                baseUrl + "/pago/failure",
-                baseUrl + "/pago/pending");
+                base + "/pago/success",
+                base + "/pago/failure",
+                base + "/pago/pending");
 
         String titulo = String.format("Cuota %s - %s",
                 cuota.getNumeroCuota() != null ? cuota.getNumeroCuota() : "",
@@ -766,7 +804,8 @@ public class AlumnoController {
     @PostMapping("/inscribirse/{ofertaId}")
     public String inscribirseAOferta(@PathVariable Long ofertaId,
                                 Authentication authentication,
-                                RedirectAttributes redirectAttributes) {
+                                RedirectAttributes redirectAttributes,
+                                HttpServletRequest request) {
         try {
             String dni = authentication.getName();
             Long ofertaIdSeguro = Objects.requireNonNull(ofertaId, "ofertaId no puede ser nulo");
@@ -863,6 +902,18 @@ public class AlumnoController {
             if (oferta.getCostoInscripcion() != null && oferta.getCostoInscripcion() > 0) {
                 System.out.println("💵 Oferta con costo: $" + oferta.getCostoInscripcion() + ", redirigiendo a MercadoPago");
                 
+                String baseActual = resolverBaseUrl(request);
+                if (esBaseLocal(baseActual)) {
+                    String puente = normalizarBaseUrl(baseUrl);
+                    String mensaje = "Para inscribirte en ofertas con pago debes ingresar desde el puente HTTPS";
+                    if (puente.toLowerCase(Locale.ROOT).startsWith("https://")) {
+                        mensaje += ": " + puente;
+                    }
+                    mensaje += ". Luego vuelve a intentar la inscripción.";
+                    redirectAttributes.addFlashAttribute("error", mensaje);
+                    return "redirect:/publico";
+                }
+
                 try {
                     // Crear el request para MercadoPago
                     ReferenceRequest.ItemDTO item = new ReferenceRequest.ItemDTO(
@@ -880,13 +931,14 @@ public class AlumnoController {
                             usuario.getCorreo());
     
                     // Crear el objeto BackUrlsDTO
+                    String base = resolverBaseUrl(request);
                     ReferenceRequest.BackUrlsDTO backUrls = new ReferenceRequest.BackUrlsDTO(
-                            baseUrl + "/pago/success",
-                            baseUrl + "/pago/failure",
-                            baseUrl + "/pago/pending");
+                            base + "/pago/success",
+                            base + "/pago/failure",
+                            base + "/pago/pending");
     
                     // Crear el objeto ReferenceRequest
-                    ReferenceRequest request = new ReferenceRequest(
+                    ReferenceRequest mpRequest = new ReferenceRequest(
                             usuario.getId(),
                             BigDecimal.valueOf(oferta.getCostoInscripcion()),
                             payer,
@@ -894,7 +946,7 @@ public class AlumnoController {
                             items);
     
                     // Crear preferencia con el usuario y oferta
-                    ResponseDTO response = mercadoPagoService.createPreference(request, usuario, oferta);
+                    ResponseDTO response = mercadoPagoService.createPreference(mpRequest, usuario, oferta);
     
                     System.out.println("✅ Preferencia creada: " + response.preferenceId());
                     return "redirect:" + response.redirectUrl();

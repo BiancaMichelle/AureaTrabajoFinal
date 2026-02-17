@@ -1060,6 +1060,20 @@
                 }, 5000);
             }
 
+            // Mostrar mensajes desde backend (flash attributes)
+            document.addEventListener('DOMContentLoaded', function() {
+                const errorCupo = /*[[${errorCupo != null && errorCupo}]]*/ false;
+                const errorMsg = /*[[${error}]]*/ '';
+                const successMsg = /*[[${success}]]*/ '';
+
+                if (!errorCupo && errorMsg) {
+                    mostrarToast(errorMsg, 'error');
+                }
+                if (successMsg) {
+                    mostrarToast(successMsg, 'success');
+                }
+            });
+
             // Función para mostrar el modal de notificación
             function mostrarModalNotificacion(ofertaId, ofertaNombre, fechaInicio) {
                 // Remover modal anterior si existe

@@ -837,6 +837,9 @@ public class OfertaAcademica {
         if (datos.containsKey("costoInscripcion")) {
             this.setCostoInscripcion(convertirDouble(datos.get("costoInscripcion")));
         }
+        if (datos.containsKey("recargoMora")) {
+            this.setRecargoMora(convertirDouble(datos.get("recargoMora")));
+        }
         if (datos.containsKey("fechaInicio")) {
             this.setFechaInicio(convertirFecha(datos.get("fechaInicio")));
         }

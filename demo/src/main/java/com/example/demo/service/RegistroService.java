@@ -328,9 +328,19 @@ public class RegistroService {
         System.out.println("👨‍💼 Registro administrativo: " + esRegistroAdministrativo);
         
         try {
-            // 1. Verificar si el DNI ya existe
-            if (usuarioRepository.existsByDni(usuario.getDni())) {
-                throw new RuntimeException("El DNI ya está registrado");
+            // 1. Verificar si el DNI ya existe (considerando pais cuando aplica)
+            if (paisCodigo == null || paisCodigo.isBlank()) {
+                if (usuarioRepository.existsByDni(usuario.getDni())) {
+                    throw new RuntimeException("El DNI ya esta registrado");
+                }
+            } else {
+                if (usuarioRepository.existsByDniAndPais_Codigo(usuario.getDni(), paisCodigo)) {
+                    throw new RuntimeException("El DNI ya esta registrado en el pais seleccionado");
+                }
+                // Evitar duplicados globales mientras el login sigue usando DNI como username
+                if (usuarioRepository.existsByDni(usuario.getDni())) {
+                    throw new RuntimeException("El DNI ya esta registrado en otro pais");
+                }
             }
 
             // 2. Verificar si el email ya existe
@@ -411,7 +421,11 @@ public class RegistroService {
             
         } catch (Exception e) {
             System.out.println("❌ Error en registro: " + e.getMessage());
-            throw new RuntimeException("Error al registrar usuario: " + e.getMessage(), e);
+            String mensaje = e.getMessage();
+            if (mensaje == null || mensaje.isBlank()) {
+                mensaje = "Error al registrar usuario";
+            }
+            throw new RuntimeException(mensaje, e);
         }
     }
 

@@ -129,9 +129,20 @@ public class RegisterController {
         System.out.println("   - Nombre: " + alumno.getNombre());
         System.out.println("   - Email: " + alumno.getCorreo());
 
-        // ✅ Validar si el DNI ya existe
-        if (usuarioJpaService.existePorDni(alumno.getDni())) {
-            result.rejectValue("dni", "error.alumno", "Ya existe una cuenta con este DNI");
+        // ✅ Validar si el DNI ya existe (considerando pais cuando aplica)
+        boolean dniExisteEnPais = false;
+        if (paisCodigo != null && !paisCodigo.isBlank()) {
+            dniExisteEnPais = usuarioJpaService.existePorDniYPais(alumno.getDni(), paisCodigo);
+        }
+
+        if (dniExisteEnPais) {
+            result.rejectValue("dni", "error.alumno", "Ya existe una cuenta con este DNI en el pais seleccionado");
+            System.out.println("❌ DNI ya existe en el pais seleccionado: " + alumno.getDni());
+        } else if (usuarioJpaService.existePorDni(alumno.getDni())) {
+            String mensaje = (paisCodigo != null && !paisCodigo.isBlank())
+                    ? "Ya existe una cuenta con este DNI en otro pais"
+                    : "Ya existe una cuenta con este DNI";
+            result.rejectValue("dni", "error.alumno", mensaje);
             System.out.println("❌ DNI ya existe: " + alumno.getDni());
         }
 
