@@ -321,7 +321,7 @@
                                 </h3>
                                 <div class="tw-mt-2">
                                     <p class="tw-text-sm tw-text-gray-500 tw-mb-4">
-                                        Las siguientes ofertas académicas han sido identificadas con bajo rendimiento o inscripciones insuficientes. Desmarca las que deseas conservar activas.
+                                        Las siguientes ofertas academicas no tienen inscriptos. Desmarca las que deseas conservar activas.
                                     </p>
                                     
                                     <div class="tw-overflow-hidden tw-border tw-border-gray-200 tw-rounded-md">
@@ -344,7 +344,7 @@
                                             <i class="fas fa-spinner fa-spin tw-mr-2"></i> Analizando datos...
                                         </div>
                                         <div id="noDataMessage" class="tw-text-center tw-py-8 tw-text-gray-500 tw-hidden">
-                                            ¡Excelente! No se encontraron ofertas con baja demanda crítica.
+                                            Excelente! No se encontraron ofertas sin inscriptos.
                                         </div>
                                     </div>
                                 </div>
@@ -380,13 +380,30 @@
                     .then(response => response.json())
                     .then(data => {
                         loading.classList.add('tw-hidden');
-                        if (data && data.length > 0) {
-                            data.forEach(item => {
+                        const items = Array.isArray(data) ? data : [];
+                        const sinInscriptos = items.filter(item => {
+                            let inscritosVal = null;
+                            if (item.inscripcionesCount !== undefined && item.inscripcionesCount !== null) {
+                                inscritosVal = Number(item.inscripcionesCount);
+                            } else if (item.inscritos !== undefined && item.inscritos !== null) {
+                                inscritosVal = Number(item.inscritos);
+                            } else if (item.totalInscritos !== undefined && item.totalInscritos !== null) {
+                                inscritosVal = Number(item.totalInscritos);
+                            } else if (item.cantidadInscripciones !== undefined && item.cantidadInscripciones !== null) {
+                                inscritosVal = Number(item.cantidadInscripciones);
+                            }
+                            if (!Number.isFinite(inscritosVal)) {
+                                return false;
+                            }
+                            return inscritosVal === 0;
+                        });
+
+                        if (sinInscriptos.length > 0) {
+                            sinInscriptos.forEach(item => {
                                 // Adapt field names based on the backend DTO likely used
                                 const id = item.id || item.ofertaId; 
                                 const nombre = item.nombre || item.nombreOferta;
-                                const inscritos = item.inscripcionesCount !== undefined ? item.inscripcionesCount : (item.inscritos || 0);
-                                const motivo = item.motivo || item.motivoRiesgo || "Baja participación";
+                                const motivo = item.motivo || item.motivoRiesgo || "Sin inscriptos";
                                 
                                 const row = `
                                     <tr>
@@ -394,7 +411,7 @@
                                             <input type="checkbox" name="ofertaBaja" value="${id}" checked class="tw-h-4 tw-w-4 tw-text-red-600 focus:tw-ring-red-500 tw-border-gray-300 tw-rounded">
                                         </td>
                                         <td class="tw-px-4 tw-py-4 tw-whitespace-nowrap tw-text-sm tw-font-medium tw-text-gray-900">${nombre}</td>
-                                        <td class="tw-px-4 tw-py-4 tw-whitespace-nowrap tw-text-sm tw-text-gray-500">${inscritos}</td>
+                                        <td class="tw-px-4 tw-py-4 tw-whitespace-nowrap tw-text-sm tw-text-gray-500">0</td>
                                         <td class="tw-px-4 tw-py-4 tw-text-sm tw-text-gray-500">${motivo}</td>
                                     </tr>
                                 `;

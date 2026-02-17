@@ -506,6 +506,7 @@
         body.edit-mode .edit-controls {
             opacity: 1;
         }
+
     </style>
 </head>
 
@@ -1387,7 +1388,6 @@
         const csrfParameterName = '_csrf'; // Default default parameter name for Spring Security
         let isEditModeEnabled = false;
         const modifyCourseDefaultMarkup = modifyCourseButton ? modifyCourseButton.innerHTML : '';
-
         function updateModifyCourseButtonLabel(enabled) {
             if (!modifyCourseButton) {
                 return;
@@ -2152,6 +2152,7 @@
                 document.body.classList.add('no-scroll');
             });
         }
+
 
         // Cerrar panel de herramientas (CON LA MISMA ANIMACIÓN)
         if (closeToolsButton) {
