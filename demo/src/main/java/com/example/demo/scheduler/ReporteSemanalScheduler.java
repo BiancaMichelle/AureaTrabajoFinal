@@ -74,8 +74,8 @@ public class ReporteSemanalScheduler {
 
         try {
             // Ofertas
-            List<OfertaAcademica> ofertas = reporteService.filtrarOfertas(null, null, null, fechaInicio, fechaFin, null);
-            ByteArrayInputStream ofertasPdf = reporteService.generarReporteOfertasPDF(ofertas, fechaInicio, fechaFin);
+            List<OfertaAcademica> ofertas = reporteService.filtrarOfertas(null, null, null, null, null, null);
+            ByteArrayInputStream ofertasPdf = reporteService.generarReporteOfertasPDF(ofertas, null, null);
             String ofertasFile = guardarReporteEnDisco(ofertasPdf.readAllBytes(), "reporte_ofertas_semanal", "pdf");
 
             // Usuarios
@@ -101,9 +101,10 @@ public class ReporteSemanalScheduler {
 
             String periodo = fechaInicio.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) +
                     " al " + fechaFin.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            String periodoOfertas = "Histórico completo";
 
             String resumen = "Reportes semanales generados (" + periodo + ").\n" +
-                    "• Ofertas: " + totalOfertas + " | Inscripciones: " + totalInscritos + "\n" +
+                    "• Ofertas (" + periodoOfertas + "): " + totalOfertas + " | Inscripciones: " + totalInscritos + "\n" +
                     "• Usuarios nuevos: " + totalUsuarios + "\n" +
                     "• Pagos: " + totalPagos + " | Recaudado: $ " + String.format("%.2f", totalRecaudado) + "\n" +
                     "Archivos:\n" +
@@ -127,7 +128,7 @@ public class ReporteSemanalScheduler {
             // Auditoría por archivo
             if (!admins.isEmpty()) {
                 Usuario admin = admins.get(0);
-                registrarAuditLog(admin, "Reportes Ofertas", "Archivo: " + ofertasFile + " | Exportación semanal de ofertas. Registros: " + totalOfertas + " | Periodo: " + periodo);
+                registrarAuditLog(admin, "Reportes Ofertas", "Archivo: " + ofertasFile + " | Exportación semanal de ofertas. Registros: " + totalOfertas + " | Periodo: " + periodoOfertas);
                 registrarAuditLog(admin, "Reportes Usuarios", "Archivo: " + usuariosFile + " | Exportación semanal de usuarios. Registros: " + totalUsuarios + " | Periodo: " + periodo);
                 registrarAuditLog(admin, "Reportes Pagos", "Archivo: " + pagosFile + " | Exportación semanal de pagos. Registros: " + totalPagos + " | Periodo: " + periodo);
             }
