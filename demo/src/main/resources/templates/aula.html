@@ -5979,6 +5979,108 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            const abrirChat = params.get('chatAbrir');
+            if (abrirChat !== '1') return;
+
+            const resultado = params.get('chatResultado');
+            const feedback = params.get('chatFeedback') === '1';
+
+            const limpiarParams = () => {
+                params.delete('chatAbrir');
+                params.delete('chatResultado');
+                params.delete('chatFeedback');
+                const qs = params.toString();
+                const nuevaUrl = window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash;
+                window.history.replaceState({}, '', nuevaUrl);
+            };
+
+            const getChatApp = () => window.aiChat || window.simpleChatInstance || (window.parent ? window.parent.aiChat : null);
+
+            if (feedback) {
+                let attempts = 0;
+                const maxAttempts = 12;
+                const intervalMs = 2000;
+
+                const pollForFeedback = async () => {
+                    attempts += 1;
+                    const chatApp = getChatApp();
+                    if (!chatApp || typeof chatApp.openChat !== 'function') {
+                        if (attempts < maxAttempts) {
+                            setTimeout(pollForFeedback, 300);
+                        } else {
+                            limpiarParams();
+                        }
+                        return;
+                    }
+
+                    try {
+                        const resp = await fetch('/ia/chat/notifications');
+                        if (resp.ok) {
+                            const data = await resp.json();
+                            if (Array.isArray(data) && data.length > 0) {
+                                chatApp.openChat();
+                                if (typeof chatApp.checkNotifications === 'function') {
+                                    chatApp.checkNotifications();
+                                    setTimeout(() => chatApp.checkNotifications(), 3000);
+                                }
+                                limpiarParams();
+                                return;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('No se pudo consultar notificaciones del chat:', e);
+                    }
+
+                    if (attempts < maxAttempts) {
+                        setTimeout(pollForFeedback, intervalMs);
+                    } else {
+                        limpiarParams();
+                    }
+                };
+
+                setTimeout(pollForFeedback, 1500);
+                return;
+            }
+
+            // Caso aprobado: abrir chat y mostrar mensaje breve
+            let attempts = 0;
+            const tryOpenChat = () => {
+                const chatApp = getChatApp();
+                if (!chatApp || typeof chatApp.openChat !== 'function') {
+                    return false;
+                }
+
+                chatApp.openChat();
+
+                if (resultado === 'aprobado') {
+                    const mensaje = '¡Buen trabajo! Aprobaste el examen. Si querés, puedo ayudarte a repasar o profundizar en los temas.';
+                    if (typeof chatApp.addMessageWithTypingEffect === 'function') {
+                        chatApp.addMessageWithTypingEffect(mensaje, 'ai');
+                    } else if (typeof chatApp.addMessage === 'function') {
+                        chatApp.addMessage(mensaje, 'ai');
+                    }
+                }
+
+                limpiarParams();
+                return true;
+            };
+
+            if (tryOpenChat()) return;
+            const interval = setInterval(() => {
+                attempts += 1;
+                if (tryOpenChat() || attempts >= 10) {
+                    clearInterval(interval);
+                    if (attempts >= 10) {
+                        limpiarParams();
+                    }
+                }
+            }, 300);
+        });
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
             const createForm = document.getElementById('createModuleForm');
             const editForm = document.getElementById('editModuleForm');
 
