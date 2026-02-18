@@ -122,6 +122,9 @@ public class ChatServiceSimple {
     private static final String RESP_TECNICO =
         "Parece que tienes un problema técnico. Te sugiero contactar a soporte a través del formulario de contacto oficial.";
 
+    private static final String RESP_FUERA_DOMINIO =
+        "Lo siento, estoy limitado a responder consultas dentro del instituto Aurea (ofertas, clases, horarios, calificaciones y soporte interno).";
+
 
     public ChatMessage procesarMensaje(String userMessage, String userDni, String sessionId) {
         // Saneamiento de PII antes de procesar
@@ -196,6 +199,21 @@ public class ChatServiceSimple {
             chatMessage.setResponseTimeMs(10L); // Tiempo simulado muy rápido
             chatMessage.setMessageType(determinarTipoMensaje(userMessage));
             
+            if (!"ANONIMO".equals(userDni) && validarPermisoGuardado(usuario)) {
+                return chatMessageRepository.save(chatMessage);
+            } else {
+                return chatMessage;
+            }
+        }
+
+        // ------------------------------------------------------------
+        // NUEVA REGLA: DOMINIO LIMITADO (NO RESPONDER FUERA DEL INSTITUTO)
+        // ------------------------------------------------------------
+        if (esConsultaFueraDominio(mensajeSaneado)) {
+            chatMessage.setAiResponse(RESP_FUERA_DOMINIO);
+            chatMessage.setResponseTimeMs(5L);
+            chatMessage.setMessageType(ChatMessage.MessageType.SOPORTE_TECNICO);
+
             if (!"ANONIMO".equals(userDni) && validarPermisoGuardado(usuario)) {
                 return chatMessageRepository.save(chatMessage);
             } else {
@@ -315,6 +333,7 @@ public class ChatServiceSimple {
     private String obtenerRespuestaPredefinida(String mensaje, String userDni) {
         if (mensaje == null) return null;
         String m = mensaje.toLowerCase().trim();
+        String mNormalizado = normalizarTexto(mensaje);
 
         // 1. Saludos comunes
         List<String> saludos = Arrays.asList("hola", "buen dia", "buenos dias", "buenas tardes", "buenas noches", "que tal", "hello", "hi");
@@ -338,6 +357,11 @@ public class ChatServiceSimple {
                    "• Estado de tus cuentas (si iniciaste sesión)";
         }
 
+        // 1.1. Agradecimientos simples
+        if (mNormalizado.contains("gracias")) {
+            return "De nada! Si necesitas algo mas sobre el instituto, aqui estoy.";
+        }
+
         // 2. Solicitud explícita de recomendaciones generales
         // "que me recomiendas", "que puedo estudiar", "cuales son las ofertas", "ofertas disponibles"
         if (m.contains("recomienda") || m.contains("estudiar") || m.contains("ofertas disponibles") || m.contains("que hay para mi")) {
@@ -347,9 +371,14 @@ public class ChatServiceSimple {
         }
 
         // 3. NUEVO: Filtrado por precio (MANEJO DIRECTO - NO DELEGAR A IA)
-        Double precioMaximo = extraerLimitePrecio(m);
+        Double precioMaximo = extraerLimitePrecio(mNormalizado);
         if (precioMaximo != null) {
             return filtrarOfertasPorPrecio(userDni, precioMaximo);
+        }
+
+        // 4. NUEVO: Consultas tipo "m?s baratas"
+        if (esConsultaOfertasBaratas(mNormalizado)) {
+            return listarOfertasMasBaratas(userDni, 5);
         }
 
         return null; // Si no hay match, devolver null para que procese la IA
@@ -361,17 +390,19 @@ public class ChatServiceSimple {
      */
     private Double extraerLimitePrecio(String mensaje) {
         if (mensaje == null) return null;
+        String msg = normalizarTexto(mensaje);
         
         // Patrones comunes de consulta de precio
-        if (!mensaje.contains("menos") && !mensaje.contains("menor") && 
-            !mensaje.contains("hasta") && !mensaje.contains("máximo") &&
-            !mensaje.contains("max") && !mensaje.contains("barato")) {
+        if (!msg.contains("menos") && !msg.contains("menor") && 
+            !msg.contains("hasta") && !msg.contains("maximo") &&
+            !msg.contains("max") && !msg.contains("barato") && !msg.contains("barata") &&
+            !msg.contains("economico") && !msg.contains("economica")) {
             return null;
         }
         
         // Extraer número del mensaje
         java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("(\\d+[.,]?\\d*)");
-        java.util.regex.Matcher matcher = pattern.matcher(mensaje);
+        java.util.regex.Matcher matcher = pattern.matcher(msg);
         
         if (matcher.find()) {
             try {
@@ -455,11 +486,90 @@ public class ChatServiceSimple {
         }
     }
     
+    private boolean esConsultaOfertasBaratas(String mensajeNormalizado) {
+        if (mensajeNormalizado == null) return false;
+        return mensajeNormalizado.contains("barat") ||
+               mensajeNormalizado.contains("economico") ||
+               mensajeNormalizado.contains("economica") ||
+               mensajeNormalizado.contains("mas barato") ||
+               mensajeNormalizado.contains("mas barata") ||
+               mensajeNormalizado.contains("mas baratas") ||
+               mensajeNormalizado.contains("mas baratos");
+    }
+
+    private String listarOfertasMasBaratas(String userDni, int limite) {
+        try {
+            List<OfertaAcademica> todas = obtenerOfertasSinDocente(userDni);
+            if (todas == null || todas.isEmpty()) {
+                return "No hay ofertas academicas disponibles en este momento.";
+            }
+
+            List<OfertaAcademica> ordenadas = todas.stream()
+                .sorted(Comparator.comparingDouble(o -> o.getCostoInscripcion() == null ? 0.0 : o.getCostoInscripcion()))
+                .toList();
+
+            int tope = Math.max(1, Math.min(limite, ordenadas.size()));
+            List<OfertaAcademica> top = ordenadas.subList(0, tope);
+
+            StringBuilder sb = new StringBuilder();
+            sb.append("Estas son las ofertas academicas mas baratas disponibles:\n\n");
+
+            for (OfertaAcademica o : top) {
+                String tipo = (o instanceof Formacion) ? "FORMACION" : "CURSO";
+                if (o.getCategorias() != null) {
+                    for (Categoria cat : o.getCategorias()) {
+                        String catName = cat.getNombre().trim().toUpperCase();
+                        if (catName.contains("CHARLA") || catName.contains("WEBINAR")) tipo = "CHARLA";
+                        else if (catName.contains("SEMINARIO") || catName.contains("TALLER")) tipo = "SEMINARIO";
+                    }
+                }
+
+                sb.append(String.format("- [%s] %s\n", tipo, o.getNombre()));
+                if (o.getCostoInscripcion() == null || o.getCostoInscripcion() == 0.0) {
+                    sb.append("   INSCRIPCION: GRATIS ($0)");
+                } else {
+                    sb.append(String.format("   INSCRIPCION: $%.0f", o.getCostoInscripcion()));
+                }
+
+                if (o instanceof Curso) {
+                    Curso c = (Curso) o;
+                    if (c.getCostoCuota() != null && c.getCostoCuota() > 0) {
+                        sb.append(String.format(" | CUOTA: $%.0f (x%d cuotas)", c.getCostoCuota(), c.getNrCuotas()));
+                    }
+                } else if (o instanceof Formacion) {
+                    Formacion f = (Formacion) o;
+                    if (f.getCostoCuota() != null && f.getCostoCuota() > 0) {
+                        sb.append(String.format(" | CUOTA: $%.0f (x%d cuotas)", f.getCostoCuota(), f.getNrCuotas()));
+                    }
+                }
+
+                sb.append("\n");
+                if (o.getDescripcion() != null && !o.getDescripcion().isBlank()) {
+                    sb.append("   ").append(o.getDescripcion()).append("\n");
+                }
+                sb.append("\n");
+            }
+
+            sb.append("Te gustaria ver mas opciones o filtrar por un presupuesto?");
+            return sb.toString();
+        } catch (Exception e) {
+            System.err.println("Error listando ofertas mas baratas: " + e.getMessage());
+            return "Hubo un error al buscar ofertas mas baratas. Por favor, intenta de nuevo.";
+        }
+    }
+
     private String sanearMensaje(String mensaje) {
         if (mensaje == null) return "";
         return mensaje.replaceAll(DNI_REGEX, "[DNI_OCULTO]")
                       .replaceAll(EMAIL_REGEX, "[EMAIL_OCULTO]")
                       .replaceAll(CARD_REGEX, "[TARJETA_OCULTA]");
+    }
+
+    private String normalizarTexto(String texto) {
+        if (texto == null) return "";
+        String normalizado = java.text.Normalizer.normalize(texto, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+        return normalizado.toLowerCase().trim();
     }
     
     // Método auxiliar para detectar malas palabras
@@ -478,6 +588,30 @@ public class ChatServiceSimple {
         }
         return false;
     }
+
+    private boolean esConsultaFueraDominio(String mensaje) {
+        if (mensaje == null || mensaje.trim().isEmpty()) return false;
+
+        String msg = normalizarTexto(mensaje);
+
+        List<String> keywords = Arrays.asList(
+            "aurea", "instituto", "oferta", "ofertas", "curso", "cursos", "formacion", "formaciones",
+            "charla", "charlas", "seminario", "seminarios", "taller", "talleres", "aula",
+            "examen", "examenes", "tarea", "tareas", "clase", "clases", "modulo", "modulos",
+            "calificacion", "calificaciones", "nota", "notas", "asistencia", "horario", "horarios",
+            "certificacion", "certificaciones", "inscripcion", "inscripciones", "cuota", "cuotas",
+            "pago", "pagos", "plataforma"
+        );
+
+        for (String kw : keywords) {
+            if (msg.contains(kw)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
 
     private void manejarLenguajeInapropiado(com.example.demo.model.Usuario usuario) {
         if (usuario != null) {
@@ -545,25 +679,29 @@ public class ChatServiceSimple {
             "=== LISTA DE OFERTAS ACADÉMICAS VERIFICADAS (LA ÚNICA VERDAD) ===\n" +
             contextoOfertas + "\n" +
             "===============================================================\n\n" +
-            "⚠️ REGLAS ABSOLUTAS - LECTURA OBLIGATORIA ⚠️\n\n" +
-            "REGLA #0: PROHIBICIÓN TOTAL DE MEZCLAR DATOS\n" +
+            "REGLAS ABSOLUTAS - LECTURA OBLIGATORIA\n\n" +
+            "REGLA #0: PROHIBICION TOTAL DE MEZCLAR DATOS\n" +
             "- NUNCA combines el nombre de un curso con el precio de otro\n" +
-            "- NUNCA combines la descripción de un curso con datos de otro\n" +
-            "- NUNCA inventes precios que no estén explícitamente en el listado\n" +
-            "- Si un curso tiene INSCRIPCIÓN: $12, NO lo menciones con otro precio\n" +
-            "- Si un curso tiene INSCRIPCIÓN: $12000, NO lo menciones como $12\n" +
-            "- CADA OFERTA ES UNA UNIDAD COMPLETA: nombre + tipo + precio de inscripción + precio de cuota\n" +
-            "- Si no estás 100% seguro de qué datos corresponden a qué curso, di 'Necesito verificar esa información'\n\n" +
+            "- NUNCA combines la descripcion de un curso con datos de otro\n" +
+            "- NUNCA inventes precios que no esten explicitamente en el listado\n" +
+            "- Si un curso tiene INSCRIPCION: $12, NO lo menciones con otro precio\n" +
+            "- Si un curso tiene INSCRIPCION: $12000, NO lo menciones como $12\n" +
+            "- CADA OFERTA ES UNA UNIDAD COMPLETA: nombre + tipo + precio de inscripcion + precio de cuota\n" +
+            "- Si no estas 100% seguro de que datos corresponden a que curso, di 'Necesito verificar esa informacion'\n\n" +
             "REGLA #1: FILTRADO POR PRECIO\n" +
-            "- Cuando el usuario pida 'ofertas menores a $X', compara el valor de INSCRIPCIÓN\n" +
-            "- Ejemplo: Si pide 'menores a $15', solo incluye ofertas donde INSCRIPCIÓN sea menor a 15\n" +
-            "- NO incluyas ofertas con INSCRIPCIÓN: $12000 si piden menores a $15\n" +
-            "- El símbolo '$' significa pesos, no miles. $12 es DOCE PESOS, $12000 es DOCE MIL PESOS\n\n" +
-            "REGLAS CRÍTICAS DE CLASIFICACIÓN:\n" +
-            "1. ¡MIRA EL TIPO DE LEGAJO ANTES DE RESPONDER!\n" +
-            "2. [FORMACIÓN] = Larga duración, Carrera.\n" +
+            "- Cuando el usuario pida 'ofertas menores a $X', compara el valor de INSCRIPCION\n" +
+            "- Ejemplo: Si pide 'menores a $15', solo incluye ofertas donde INSCRIPCION sea menor a 15\n" +
+            "- NO incluyas ofertas con INSCRIPCION: $12000 si piden menores a $15\n" +
+            "- El simbolo '$' significa pesos, no miles. $12 es DOCE PESOS, $12000 es DOCE MIL PESOS\n\n" +
+            "REGLA #1B: CONSULTAS FUERA DEL INSTITUTO\n" +
+            "- Si la consulta no esta relacionada con Aurea o sus ofertas, responde exactamente:\n" +
+            "  \"" + RESP_FUERA_DOMINIO + "\"\n\n" +
+
+            "REGLAS CRITICAS DE CLASIFICACION:\n" +
+            "1. MIRA EL TIPO DE LEGAJO ANTES DE RESPONDER.\n" +
+            "2. [FORMACION] = Larga duracion, Carrera.\n" +
             "3. [CURSO] = Curso de meses, pago cuotas.\n" +
-            "4. [TALLER] / [SEMINARIO] / [CHARLA] / [WEBINAR] = Eventos cortos, usualmente de 1 día.\n\n" +
+            "4. [TALLER] / [SEMINARIO] / [CHARLA] / [WEBINAR] = Eventos cortos, usualmente de 1 dia.\n\n" +
             "CASOS DE USO ESPECÍFICOS:\n" +
             "--> Usuario dice 'Busco charlas' o 'Quiero escuchar una conferencia':\n" +
             "    RESPONDE: 'Aquí tienes las charlas y webinars disponibles:' y lista SOLO los del LISTADO 4.\n" +

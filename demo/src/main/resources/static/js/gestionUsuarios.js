@@ -142,7 +142,7 @@ document.addEventListener('DOMContentLoaded', function () {
             btnBorrarFotoUsuario.addEventListener('click', () => {
                 const identifier = modalDetalleUsuario.dataset.identifier;
                 if (!identifier) {
-                    showNotification('❌ No se pudo determinar el usuario', 'error');
+                    showNotification('? No se pudo determinar el usuario', 'error');
                     return;
                 }
                 confirmAction(
@@ -565,7 +565,15 @@ document.addEventListener('DOMContentLoaded', function () {
             const form = document.getElementById('user-form');
             const identifier = form?.dataset?.identifier || form?.dataset?.originalDni;
             if (!identifier) {
-                showNotification('❌ No se pudo determinar el usuario', 'error');
+                if (fotoInput) {
+                    fotoInput.value = '';
+                }
+                if (fotoPreview && uploadPlaceholder) {
+                    fotoPreview.src = '';
+                    fotoPreview.style.display = 'none';
+                    uploadPlaceholder.style.display = 'flex';
+                }
+                btnBorrarFotoForm.style.display = 'none';
                 return;
             }
             confirmAction(
@@ -1411,6 +1419,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (file) {
                     if (file.size > 2 * 1024 * 1024) { // 2MB
                         alert('El archivo es demasiado grande. Máximo 2MB.');
+                        fotoInput.value = '';
                         return;
                     }
 
@@ -1420,6 +1429,9 @@ document.addEventListener('DOMContentLoaded', function () {
                         fotoPreview.style.display = 'block';
                         if (uploadPlaceholder) {
                             uploadPlaceholder.style.display = 'none';
+                        }
+                        if (btnBorrarFotoForm) {
+                            btnBorrarFotoForm.style.display = 'inline-flex';
                         }
                     };
                     reader.readAsDataURL(file);

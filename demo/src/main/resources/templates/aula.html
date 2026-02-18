@@ -1151,11 +1151,12 @@
 
                                                         <th:block
                                                             th:if="${actividad instanceof T(com.example.demo.model.Examen)}">
-                                                            <button th:unless="${puedeModificar}" type="button"
+                                                            <a th:unless="${puedeModificar}"
+                                                                th:href="@{/examen/realizar/{id}(id=${actividad.idActividad})}"
                                                                 th:attr="data-examen-url=@{/examen/realizar/{id}(id=${actividad.idActividad})}"
                                                                 class="btn btn-sm btn-outline-primary rounded-pill px-3 js-ver-examen">
                                                                 Ver Examen
-                                                            </button>
+                                                            </a>
                                                             <a th:if="${puedeModificar}"
                                                                 th:href="@{/examen/detalle/{id}(id=${actividad.idActividad})}"
                                                                 class="btn btn-sm btn-outline-primary rounded-pill px-3">

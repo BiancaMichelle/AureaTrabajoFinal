@@ -344,10 +344,10 @@ public class AulaController {
         for(Examen e : examenes) {
              List<Intento> intentos = intentoRepository.findByExamen_IdActividad(e.getIdActividad());
              for(Intento i : intentos) {
-                 if((i.getEstado().name().equals("FINALIZADO") || i.getEstado().name().equals("CALIFICADO")) && i.getCalificacion() != null) {
-                      notasExamenes.computeIfAbsent(i.getAlumno().getId(), k -> new HashMap<>())
-                                   .merge(e.getIdActividad(), i.getCalificacion(), Math::max);
-                 }
+                  if((i.getEstado().name().equals("FINALIZADO") || i.getEstado().name().equals("CALIFICADO")) && i.getCalificacion() != null) {
+                       notasExamenes.computeIfAbsent(i.getAlumno().getId(), k -> new HashMap<>())
+                                    .merge(e.getIdActividad(), i.getCalificacion(), Math::max);
+                  }
              }
         }
         

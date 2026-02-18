@@ -2696,7 +2696,8 @@ public class AdminController {
             @RequestParam(required = false, defaultValue = "false") Boolean cambiarPasswordPrimerAcceso,
             @RequestParam(required = false) String colegioEgreso,
             @RequestParam(required = false) Integer añoEgreso,
-            @RequestParam(required = false) String ultimosEstudios) {
+            @RequestParam(required = false) String ultimosEstudios,
+            @RequestParam(required = false) MultipartFile foto) {
 
         try {
             System.out.println("Registrando usuario desde admin:");
@@ -2755,6 +2756,20 @@ public class AdminController {
                     horariosList // ✅ Pasar los horarios al servicio
             );
 
+            if (foto != null && !foto.isEmpty()) {
+                try {
+                    eliminarFotoAnteriorSiExiste(nuevoUsuario.getFoto());
+                    String urlFoto = guardarFotoPerfil(foto);
+                    nuevoUsuario.setFoto(urlFoto);
+                    usuarioRepository.save(nuevoUsuario);
+                } catch (IOException e) {
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("success", false);
+                    response.put("message", "Error al guardar la foto de perfil: " + e.getMessage());
+                    return ResponseEntity.badRequest().body(response);
+                }
+            }
+
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message",
@@ -2764,11 +2779,13 @@ public class AdminController {
                             (correo != null ? " | correo: " + correo : "") +
                             (telefono != null ? " | telefono: " + telefono : "") +
                             (rol != null ? " | rol: " + rol : "") +
-                            (estado != null ? " | estado: " + estado : ""));
+                            (estado != null ? " | estado: " + estado : "") +
+                            (foto != null && !foto.isEmpty() ? " | foto: cargada" : ""));
             response.put("id", nuevoUsuario.getId());
             response.put("dni", nuevoUsuario.getDni());
             response.put("nombre", nuevoUsuario.getNombre() + " " + nuevoUsuario.getApellido());
             response.put("rol", rol);
+            response.put("foto", nuevoUsuario.getFoto());
 
             System.out.println("✅ Usuario registrado exitosamente desde admin: " + nuevoUsuario.getId());
 
@@ -2832,7 +2849,8 @@ public class AdminController {
             @RequestParam(required = false, defaultValue = "false") Boolean notificacionesEmail,
             @RequestParam(required = false) String colegioEgreso,
             @RequestParam(required = false) Integer añoEgreso,
-            @RequestParam(required = false) String ultimosEstudios) {
+            @RequestParam(required = false) String ultimosEstudios,
+            @RequestParam(required = false) MultipartFile foto) {
 
         Map<String, Object> response = new HashMap<>();
 
@@ -2870,6 +2888,7 @@ public class AdminController {
             String paisAnterior = usuarioPrevio.getPais() != null ? usuarioPrevio.getPais().getNombre() : null;
             String provinciaAnterior = usuarioPrevio.getProvincia() != null ? usuarioPrevio.getProvincia().getNombre() : null;
             String ciudadAnterior = usuarioPrevio.getCiudad() != null ? usuarioPrevio.getCiudad().getNombre() : null;
+            String fotoAnterior = usuarioPrevio.getFoto();
             String colegioAnterior = null;
             Integer anioEgresoAnterior = null;
             String ultimosEstudiosAnterior = null;
@@ -2908,6 +2927,19 @@ public class AdminController {
                     horariosDisponibilidad,
                     estado);
 
+            if (foto != null && !foto.isEmpty()) {
+                try {
+                    eliminarFotoAnteriorSiExiste(actualizado.getFoto());
+                    String urlFoto = guardarFotoPerfil(foto);
+                    actualizado.setFoto(urlFoto);
+                    usuarioRepository.save(actualizado);
+                } catch (IOException e) {
+                    response.put("success", false);
+                    response.put("message", "Error al guardar la foto de perfil: " + e.getMessage());
+                    return ResponseEntity.badRequest().body(response);
+                }
+            }
+
             List<String> cambios = new ArrayList<>();
             addCambio(cambios, "dni", dniAnterior, actualizado.getDni());
             addCambio(cambios, "nombre", nombreAnterior, actualizado.getNombre());
@@ -2922,6 +2954,7 @@ public class AdminController {
             addCambio(cambios, "ciudad", ciudadAnterior,
                     actualizado.getCiudad() != null ? actualizado.getCiudad().getNombre() : null);
             addCambio(cambios, "rol", rolAnterior, rol);
+            addCambio(cambios, "foto", fotoAnterior, actualizado.getFoto());
             if (estado != null) {
                 addCambio(cambios, "estado", estadoAnterior, actualizado.getEstado());
             }
@@ -3879,6 +3912,23 @@ public class AdminController {
             return Long.parseLong(idPart.trim());
         } catch (Exception e) {
             return null;
+        }
+    }
+
+    private String guardarFotoPerfil(MultipartFile foto) throws IOException {
+        return "/api/usuarios/imagen/" + usuarioImagenService.guardarImagenUsuario(foto).getId();
+    }
+
+    private void eliminarFotoAnteriorSiExiste(String fotoUrl) {
+        if (fotoUrl == null || fotoUrl.isBlank())
+            return;
+        Long id = extraerIdImagenUsuario(fotoUrl);
+        if (id != null) {
+            try {
+                usuarioImagenService.eliminarImagenUsuario(id);
+            } catch (Exception e) {
+                System.err.println("Advertencia: no se pudo eliminar foto previa: " + e.getMessage());
+            }
         }
     }
 

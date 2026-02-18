@@ -85,10 +85,19 @@
             <!-- Header Section -->
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                 <div>
-                    <h1 class="text-3xl font-bold text-gray-800">
-                        <i class="fas fa-clipboard-check text-blue-600 mr-3"></i>Gestión de Examen
-                    </h1>
-                    <p class="text-gray-500 mt-1 ml-1">Administra los detalles y revisa las preguntas del examen.</p>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <h1 class="text-3xl font-bold text-gray-800" th:text="${examen.titulo}">
+                            Propuesta PreExamen
+                        </h1>
+                        <span th:if="${preExamenStatus != null}"
+                              id="preexamen-status"
+                              class="inline-flex items-center px-2 py-1 text-xs font-semibold border rounded-full"
+                              th:classappend="${preExamenGenerando} ? ' bg-amber-100 text-amber-700 border-amber-200' : ' bg-green-100 text-green-700 border-green-200'">
+                            <i id="preexamen-status-spinner" class="fas fa-spinner fa-spin mr-1" th:if="${preExamenGenerando}"></i>
+                            <span id="preexamen-status-text" th:text="${preExamenStatus}">Generando IA...</span>
+                        </span>
+                    </div>
+                    <p class="text-gray-500 mt-1 ml-1">Gestion de Examen</p>
                 </div>
                 <div class="flex gap-3">
                     <a th:if="${tieneIntentos}" 
@@ -183,6 +192,16 @@
                             </div>
                         </div>
 
+                        <div class="md:col-span-12">
+                            <label class="inline-flex items-center text-sm font-medium text-gray-700">
+                                <input type="checkbox" name="publicarNota" value="true"
+                                       th:checked="${examen.publicarNota}"
+                                       class="h-4 w-4 text-blue-600 border-gray-300 rounded mr-2">
+                                Publicar nota a alumnos
+                            </label>
+                            <p class="text-xs text-gray-500 mt-1">Si esta desactivado, los alumnos no veran su nota hasta que la publiques.</p>
+                        </div>
+
                         <!-- Descripción -->
                         <div class="md:col-span-12">
                             <label class="block text-sm font-medium text-gray-700 mb-2">Descripción e Instrucciones</label>
@@ -265,7 +284,16 @@
                     </span>
                 </div>
                 
-                <div th:if="${examen.poolPreguntas.empty}" class="bg-white p-8 rounded-xl shadow-sm border border-gray-200 text-center">
+                <div th:if="${preExamenGenerando}" id="preexamen-generando-msg"
+                     class="bg-white p-8 rounded-xl shadow-sm border border-amber-200 text-center">
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-50 mb-4">
+                        <i class="fas fa-spinner fa-spin text-2xl text-amber-500"></i>
+                    </div>
+                    <h3 class="text-lg font-medium text-amber-800">Generando IA...</h3>
+                    <p class="text-gray-500 mt-1">El pool de preguntas se esta creando. Esto puede tardar unos segundos.</p>
+                </div>
+
+                <div th:if="${!preExamenGenerando and examen.poolPreguntas.empty}" class="bg-white p-8 rounded-xl shadow-sm border border-gray-200 text-center">
                     <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
                         <i class="fas fa-folder-open text-2xl text-gray-400"></i>
                     </div>
@@ -387,6 +415,56 @@
     <script th:inline="javascript">
         // Cargar datos de preguntas desde el backend
         var preguntasData = JSON.parse(/*[[${preguntasDataJson}]]*/ '{}');
+        var preExamenGenerando = /*[[${preExamenGenerando}]]*/ false;
+        var preExamenPoolId = /*[[${preExamenPoolId}]]*/ null;
+
+        function actualizarEstadoPreExamen(estado) {
+            var statusEl = document.getElementById('preexamen-status');
+            var textEl = document.getElementById('preexamen-status-text');
+            var spinnerEl = document.getElementById('preexamen-status-spinner');
+            var generandoMsg = document.getElementById('preexamen-generando-msg');
+
+            if (!statusEl || !textEl) return;
+
+            if (estado === 'READY') {
+                textEl.textContent = 'Preguntas generadas';
+                statusEl.classList.remove('bg-amber-100', 'text-amber-700', 'border-amber-200');
+                statusEl.classList.add('bg-green-100', 'text-green-700', 'border-green-200');
+                if (spinnerEl) spinnerEl.classList.add('hidden');
+                if (generandoMsg) {
+                    generandoMsg.classList.add('hidden');
+                }
+                return;
+            }
+
+            textEl.textContent = 'Generando IA...';
+            statusEl.classList.remove('bg-green-100', 'text-green-700', 'border-green-200');
+            statusEl.classList.add('bg-amber-100', 'text-amber-700', 'border-amber-200');
+            if (spinnerEl) spinnerEl.classList.remove('hidden');
+        }
+
+        if (preExamenGenerando && preExamenPoolId) {
+            actualizarEstadoPreExamen('PENDING');
+            var preExamenInterval = setInterval(function () {
+                fetch('/pool/estado/' + preExamenPoolId)
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        if (!data || !data.status) return;
+                        if (data.status === 'READY') {
+                            clearInterval(preExamenInterval);
+                            actualizarEstadoPreExamen('READY');
+                        } else if (data.status === 'FAILED') {
+                            clearInterval(preExamenInterval);
+                            var textEl = document.getElementById('preexamen-status-text');
+                            if (textEl) textEl.textContent = 'Error al generar';
+                        }
+                    })
+                    .catch(function () {
+                        clearInterval(preExamenInterval);
+                    });
+            }, 3000);
+        }
+
         
         function editarPregunta(id) {
             const data = preguntasData[id];

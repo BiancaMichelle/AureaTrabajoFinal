@@ -436,15 +436,15 @@
                         <div class="form-section">
                             <h4><i class="fas fa-camera"></i> Foto de Perfil</h4>
                             <div class="image-upload-container user-photo-container" style="width: 100%; height: 250px; position: relative; overflow: hidden;">
-                                <input type="file" id="foto" name="foto" accept="image/*" class="image-input" disabled>
-                                <div class="image-upload-area" style="width: 100%; height: 250px; position: relative; overflow: hidden;">
+                                <input type="file" id="foto" name="foto" accept="image/*" class="image-input">
+                                <label for="foto" class="image-upload-area" style="width: 100%; height: 250px; position: relative; overflow: hidden;">
                                     <div class="upload-placeholder">
                                         <i class="fas fa-cloud-upload-alt"></i>
-                                        <p>La foto se gestiona desde el perfil del usuario</p>
-                                        <span>Solo se permite borrar desde aquí</span>
+                                        <p>Subi una foto de perfil</p>
+                                        <span>JPG o PNG. Maximo 2MB</span>
                                     </div>
                                     <img id="foto-preview" style="display: none; width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; position: absolute; inset: 0; margin: auto;">
-                                </div>
+                                </label>
                             </div>
                             <button type="button" id="btn-borrar-foto-form" class="btn-delete-photo mt-3" style="display: none; background:#dc2626;color:#fff;border:1px solid rgba(220,38,38,0.2);border-radius:8px;padding:8px 12px;font-weight:600;font-size:0.875rem;box-shadow:0 1px 2px rgba(0,0,0,0.08);">
                                 Borrar foto

@@ -161,6 +161,11 @@ public class ExamenController {
                                 .findFirst().orElse(null);
 
                         if (intentoFinalizado != null) {
+                            if (!Boolean.TRUE.equals(examen.getPublicarNota())) {
+                                Long ofertaId = examen.getModulo().getCurso().getIdOferta();
+                                return "redirect:/alumno/aula/" + ofertaId
+                                        + "?error=Las+notas+aun+no+estan+publicadas";
+                            }
                             return "redirect:/examen/revision/" + examenId;
                         }
                     }
@@ -272,6 +277,14 @@ public class ExamenController {
             }
 
             Examen examen = intento.getExamen();
+            if (!Boolean.TRUE.equals(examen.getPublicarNota())) {
+                Long ofertaId = null;
+                if (examen.getModulo() != null && examen.getModulo().getCurso() != null) {
+                    ofertaId = examen.getModulo().getCurso().getIdOferta();
+                }
+                String redirectPath = ofertaId != null ? "/alumno/aula/" + ofertaId : "/alumno/mis-ofertas";
+                return "redirect:" + redirectPath + "?error=Las+notas+aun+no+estan+publicadas";
+            }
             // Asegurar carga de Respuestas (Lazy)
             intento.getRespuestas().size();
 
@@ -568,8 +581,12 @@ public class ExamenController {
                 ofertaId = examen.getModulo().getCurso().getIdOferta();
             }
             String redirectPath = ofertaId != null ? "/alumno/aula/" + ofertaId : "/alumno/aula";
+            boolean publicarNota = Boolean.TRUE.equals(examen.getPublicarNota());
             response.put("redirectUrl", redirectPath);
-            response.put("calificacion", puntajeTotal);
+            response.put("publicarNota", publicarNota);
+            if (publicarNota && intento.getEstado() == EstadoIntento.FINALIZADO) {
+                response.put("calificacion", puntajeTotal);
+            }
             response.put("estado", intento.getEstado());
 
             return ResponseEntity.ok(response);
@@ -792,9 +809,27 @@ public class ExamenController {
         Examen examen = examenRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Examen no encontrado"));
 
-        if (Boolean.TRUE.equals(examen.getGenerarPreExamen()) && !poolListoParaExamen(examen)) {
-            Long ofertaId = examen.getModulo().getCurso().getIdOferta();
-            return "redirect:/docente/aula/" + ofertaId + "?error=El+pre-examen+se+esta+generando.+Intenta+mas+tarde";
+        boolean esPreExamen = Boolean.TRUE.equals(examen.getGenerarPreExamen());
+        boolean poolListo = poolListoParaExamen(examen);
+        boolean preExamenGenerando = esPreExamen && !poolListo;
+        String preExamenStatus = null;
+        String preExamenPoolId = null;
+        if (esPreExamen) {
+            preExamenStatus = poolListo ? "Preguntas generadas" : "Generando IA...";
+            if (examen.getPoolPreguntas() != null) {
+                for (Pool pool : examen.getPoolPreguntas()) {
+                    if (pool == null || pool.getIdPool() == null) {
+                        continue;
+                    }
+                    if (Boolean.TRUE.equals(pool.getGeneratedByIA())) {
+                        preExamenPoolId = pool.getIdPool().toString();
+                        break;
+                    }
+                    if (preExamenPoolId == null) {
+                        preExamenPoolId = pool.getIdPool().toString();
+                    }
+                }
+            }
         }
 
 
@@ -850,6 +885,9 @@ public class ExamenController {
         model.addAttribute("soloFechas", soloFechas);
         model.addAttribute("haComenzado", haComenzado);
         model.addAttribute("tieneIntentos", tieneIntentos);
+        model.addAttribute("preExamenStatus", preExamenStatus);
+        model.addAttribute("preExamenGenerando", preExamenGenerando);
+        model.addAttribute("preExamenPoolId", preExamenPoolId);
 
         return "docente/examen-detalle";
     }
@@ -859,6 +897,7 @@ public class ExamenController {
     public String guardarDetalleExamen(@ModelAttribute Examen examenForm,
             @RequestParam Long id,
             @RequestParam(required = false) List<UUID> pools,
+            @RequestParam(value = "publicarNota", required = false, defaultValue = "false") Boolean publicarNota,
             RedirectAttributes redirectAttributes) {
         Examen examen = examenRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Examen no encontrado"));
@@ -898,6 +937,8 @@ public class ExamenController {
                 examen.setPoolPreguntas(new ArrayList<>());
             }
         }
+
+        examen.setPublicarNota(Boolean.TRUE.equals(publicarNota));
 
         examenRepository.save(examen);
         redirectAttributes.addFlashAttribute("mensaje", "Examen actualizado correctamente");
