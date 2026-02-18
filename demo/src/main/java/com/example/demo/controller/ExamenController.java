@@ -161,11 +161,6 @@ public class ExamenController {
                                 .findFirst().orElse(null);
 
                         if (intentoFinalizado != null) {
-                            if (!Boolean.TRUE.equals(examen.getPublicarNota())) {
-                                Long ofertaId = examen.getModulo().getCurso().getIdOferta();
-                                return "redirect:/alumno/aula/" + ofertaId
-                                        + "?error=Las+notas+aun+no+estan+publicadas";
-                            }
                             return "redirect:/examen/revision/" + examenId;
                         }
                     }
@@ -277,14 +272,7 @@ public class ExamenController {
             }
 
             Examen examen = intento.getExamen();
-            if (!Boolean.TRUE.equals(examen.getPublicarNota())) {
-                Long ofertaId = null;
-                if (examen.getModulo() != null && examen.getModulo().getCurso() != null) {
-                    ofertaId = examen.getModulo().getCurso().getIdOferta();
-                }
-                String redirectPath = ofertaId != null ? "/alumno/aula/" + ofertaId : "/alumno/mis-ofertas";
-                return "redirect:" + redirectPath + "?error=Las+notas+aun+no+estan+publicadas";
-            }
+            boolean publicarNota = Boolean.TRUE.equals(examen.getPublicarNota());
             // Asegurar carga de Respuestas (Lazy)
             intento.getRespuestas().size();
 
@@ -296,6 +284,7 @@ public class ExamenController {
             model.addAttribute("respuestas", intento.getRespuestas());
 
             model.addAttribute("puntajeMax", puntajePorPregunta);
+            model.addAttribute("publicarNota", publicarNota);
 
             return "examen-revision";
         } catch (Exception e) {

@@ -29,7 +29,8 @@
         </div>
 
         <!-- Score Section -->
-        <div class="p-8 border-b border-gray-200 bg-gray-50 flex flex-col items-center justify-center text-center">
+        <div class="p-8 border-b border-gray-200 bg-gray-50 flex flex-col items-center justify-center text-center"
+             th:if="${publicarNota}">
             <div class="text-gray-500 uppercase tracking-wide text-sm font-semibold mb-2">Calificación Final</div>
             <div class="text-6xl font-extrabold text-blue-600 mb-2">
                 <span th:text="${#numbers.formatDecimal(intento.calificacion, 1, 1)}">0.0</span>
@@ -40,6 +41,11 @@
                 <span th:text="${intento.calificacion >= 6 ? 'APROBADO' : 'REPROBADO'}"></span>
             </div>
         </div>
+        <div class="p-8 border-b border-gray-200 bg-gray-50 flex flex-col items-center justify-center text-center"
+             th:if="${!publicarNota}">
+            <div class="text-gray-500 uppercase tracking-wide text-sm font-semibold mb-2">Calificación pendiente</div>
+            <p class="text-gray-600 text-sm">Tu docente publicará la nota cuando esté disponible.</p>
+        </div>
 
         <!-- Questions List -->
         <div class="p-8 space-y-8">
@@ -49,7 +55,7 @@
                     <h3 class="text-lg font-semibold text-gray-800">
                         <span class="text-blue-600 mr-2" th:text="'Pregunta ' + ${iterStat.count}"></span>
                     </h3>
-                    <div class="flex items-center space-x-2">
+                    <div class="flex items-center space-x-2" th:if="${publicarNota}">
                         <span class="text-sm font-medium px-2 py-1 rounded bg-gray-100 text-gray-600">
                             <span th:text="${#numbers.formatDecimal(resp.puntajeObtenido, 1, 1)}"></span> / 
                             <span th:text="${puntajeMax}"></span> pts

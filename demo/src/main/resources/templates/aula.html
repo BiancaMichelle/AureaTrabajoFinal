@@ -1862,7 +1862,7 @@
                     event.stopPropagation();
 
                     if (PUEDE_MODIFICAR) {
-                        const url = button.getAttribute('data-examen-url');
+                        const url = button.getAttribute('data-examen-url') || button.getAttribute('href');
                         if (url) window.location.href = url;
                         return;
                     }
@@ -1871,7 +1871,7 @@
                     const aperturaIso = card ? card.getAttribute('data-actividad-apertura') : null;
 
                     if (!aperturaIso) {
-                        const url = button.getAttribute('data-examen-url');
+                        const url = button.getAttribute('data-examen-url') || button.getAttribute('href');
                         if (url) window.location.href = url;
                         return;
                     }
@@ -1886,7 +1886,7 @@
                     }
 
                     // Si pasó todas las validaciones, navegar
-                    const url = button.getAttribute('data-examen-url');
+                    const url = button.getAttribute('data-examen-url') || button.getAttribute('href');
                     if (url) window.location.href = url;
                 });
             });
@@ -5958,6 +5958,23 @@
             }
         });
         /*]]>*/
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            const errorMsg = params.get('error');
+            if (!errorMsg) return;
+
+            const mensaje = errorMsg.replace(/\+/g, ' ');
+            if (typeof mostrarNotificacionGlobal === 'function') {
+                mostrarNotificacionGlobal('Error', mensaje, 'error');
+            } else if (typeof mostrarToast === 'function') {
+                mostrarToast(mensaje, 'error');
+            } else {
+                alert(mensaje);
+            }
+        });
     </script>
 
     <script>
