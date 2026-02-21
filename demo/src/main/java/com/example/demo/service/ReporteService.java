@@ -1558,6 +1558,13 @@ public class ReporteService {
         
         String chartBase64 = generarGraficoTortaBase64(datosGrafico, "Distribución por Rol");
 
+        // Conteo de inscripciones activas por usuario para mostrar en la tabla.
+        Map<java.util.UUID, Integer> inscripcionesActivasPorUsuario = new java.util.HashMap<>();
+        for (Usuario usuario : usuarios) {
+            int activas = inscripcionRepository.countByAlumnoAndEstadoInscripcionTrue(usuario);
+            inscripcionesActivasPorUsuario.put(usuario.getId(), activas);
+        }
+
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
         
         // Periodo Text
@@ -1588,6 +1595,7 @@ public class ReporteService {
         data.put("usuariosActivos", usuariosActivos);
         data.put("usuariosInactivos", usuariosInactivos);
         data.put("nuevosIngresos", nuevosIngresos);
+        data.put("inscripcionesActivasPorUsuario", inscripcionesActivasPorUsuario);
         data.put("chartImage", chartBase64);
         data.put("estilos", cargarEstilos());
         agregarDatosBaseReporte(data);
