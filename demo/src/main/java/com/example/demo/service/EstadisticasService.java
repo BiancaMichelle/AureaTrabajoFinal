@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -37,8 +38,54 @@ public class EstadisticasService {
     @Autowired
     private PagoRepository pagoRepository;
     
-    @Autowired
-    private CategoriaRepository categoriaRepository;
+    private boolean isDateInRange(LocalDate fecha, LocalDate inicio, LocalDate fin) {
+        if (inicio == null && fin == null) {
+            return true;
+        }
+        if (fecha == null) {
+            return false;
+        }
+        if (inicio != null && fecha.isBefore(inicio)) {
+            return false;
+        }
+        if (fin != null && fecha.isAfter(fin)) {
+            return false;
+        }
+        return true;
+    }
+
+    private boolean ofertaEnRango(OfertaAcademica oferta, LocalDate inicio, LocalDate fin) {
+        if (inicio == null && fin == null) {
+            return true;
+        }
+        LocalDate start = inicio != null ? inicio : LocalDate.MIN;
+        LocalDate end = fin != null ? fin : LocalDate.MAX;
+        LocalDate ofertaInicio = oferta != null ? oferta.getFechaInicio() : null;
+        LocalDate ofertaFin = oferta != null ? oferta.getFechaFin() : null;
+        if (ofertaInicio == null && ofertaFin == null) {
+            return true;
+        }
+        if (ofertaInicio == null) {
+            return !ofertaFin.isBefore(start);
+        }
+        if (ofertaFin == null) {
+            return !ofertaInicio.isAfter(end);
+        }
+        return !ofertaInicio.isAfter(end) && !ofertaFin.isBefore(start);
+    }
+
+    private long contarInscripcionesOfertaEnRango(OfertaAcademica oferta, LocalDate inicio, LocalDate fin) {
+        if (oferta == null) {
+            return 0L;
+        }
+        List<Inscripciones> inscripciones = inscripcionRepository.findByOfertaIdOferta(oferta.getIdOferta());
+        if (inicio == null && fin == null) {
+            return inscripciones.size();
+        }
+        return inscripciones.stream()
+            .filter(i -> isDateInRange(i.getFechaInscripcion(), inicio, fin))
+            .count();
+    }
 
     /**
      * Obtiene las métricas generales del sistema
@@ -157,9 +204,18 @@ public class EstadisticasService {
      * Analiza la demanda de ofertas académicas
      */
     public List<Map<String, Object>> analizarDemandaOfertas() {
+        return analizarDemandaOfertas(null, null);
+    }
+
+    public List<Map<String, Object>> analizarDemandaOfertas(LocalDate fechaInicio, LocalDate fechaFin) {
         try {
             List<EstadoOferta> estados = Arrays.asList(EstadoOferta.ACTIVA, EstadoOferta.ENCURSO);
             List<OfertaAcademica> ofertasActivas = ofertaRepository.findByEstadoIn(estados);
+            if (fechaInicio != null || fechaFin != null) {
+                ofertasActivas = ofertasActivas.stream()
+                    .filter(oferta -> ofertaEnRango(oferta, fechaInicio, fechaFin))
+                    .collect(Collectors.toList());
+            }
 
             // Logging para depuración
             System.out.println("🔍 Ofertas consideradas para demanda: " + ofertasActivas.size());
@@ -173,7 +229,15 @@ public class EstadisticasService {
                 Map<String, Object> ofertaData = new HashMap<>();
                 
                 // Contar inscripciones para esta oferta
-                long cantidadInscritos = inscripcionRepository.countByOfertaAndEstadoInscripcionTrue(oferta);
+                long cantidadInscritos;
+                if (fechaInicio != null || fechaFin != null) {
+                    cantidadInscritos = inscripcionRepository.findByOfertaIdOferta(oferta.getIdOferta()).stream()
+                        .filter(i -> Boolean.TRUE.equals(i.getEstadoInscripcion()))
+                        .filter(i -> isDateInRange(i.getFechaInscripcion(), fechaInicio, fechaFin))
+                        .count();
+                } else {
+                    cantidadInscritos = inscripcionRepository.countByOfertaAndEstadoInscripcionTrue(oferta);
+                }
                 
                 // Calcular nivel de demanda
                 String nivelDemanda = calcularNivelDemanda(cantidadInscritos, oferta.getCupos());
@@ -191,7 +255,13 @@ public class EstadisticasService {
                 ofertaData.put("tasaOcupacion", tasaOcupacion);
                 ofertaData.put("fechaInicio", oferta.getFechaInicio());
                 
-                demandaOfertas.add(ofertaData);
+                if (fechaInicio != null || fechaFin != null) {
+                    if (cantidadInscritos > 0 || ofertaEnRango(oferta, fechaInicio, fechaFin)) {
+                        demandaOfertas.add(ofertaData);
+                    }
+                } else {
+                    demandaOfertas.add(ofertaData);
+                }
             }
             
             // Ordenar por cantidad de inscritos (mayor a menor)
@@ -332,13 +402,41 @@ public class EstadisticasService {
         }
     }
 
+    public Map<String, Long> obtenerOfertasPorTipo(LocalDate fechaInicio, LocalDate fechaFin) {
+        if (fechaInicio == null && fechaFin == null) {
+            return obtenerOfertasPorTipo();
+        }
+        try {
+            List<EstadoOferta> estados = Arrays.asList(EstadoOferta.ACTIVA, EstadoOferta.ENCURSO);
+            List<OfertaAcademica> ofertasActivas = ofertaRepository.findByEstadoIn(estados);
+            ofertasActivas = ofertasActivas.stream()
+                .filter(oferta -> ofertaEnRango(oferta, fechaInicio, fechaFin))
+                .collect(Collectors.toList());
+
+            return ofertasActivas.stream()
+                .collect(Collectors.groupingBy(OfertaAcademica::getTipoOferta, Collectors.counting()));
+        } catch (Exception e) {
+            System.err.println("Error en obtenerOfertasPorTipo (rango): " + e.getMessage());
+            return new HashMap<>();
+        }
+    }
+
     /**
      * 1.1 Oferta Académica (Estado y Rendimiento)
      */
     public Map<String, Object> obtenerEstadisticasOfertasDetalladas() {
+        return obtenerEstadisticasOfertasDetalladas(null, null);
+    }
+
+    public Map<String, Object> obtenerEstadisticasOfertasDetalladas(LocalDate fechaInicio, LocalDate fechaFin) {
         Map<String, Object> stats = new HashMap<>();
         try {
             List<OfertaAcademica> todas = ofertaRepository.findAll();
+            if (fechaInicio != null || fechaFin != null) {
+                todas = todas.stream()
+                    .filter(oferta -> ofertaEnRango(oferta, fechaInicio, fechaFin))
+                    .collect(Collectors.toList());
+            }
             
             // Cantidad por estado
             Map<EstadoOferta, Long> porEstado = todas.stream()
@@ -350,7 +448,7 @@ public class EstadisticasService {
             double ocupacionPromedio = todas.stream()
                 .filter(o -> o.getCupos() != null && o.getCupos() > 0)
                 .mapToDouble(o -> {
-                    long inscritos = inscripcionRepository.findByOfertaIdOferta(o.getIdOferta()).size();
+                    long inscritos = contarInscripcionesOfertaEnRango(o, fechaInicio, fechaFin);
                     return (double) inscritos / o.getCupos();
                 })
                 .average().orElse(0.0);
@@ -359,7 +457,7 @@ public class EstadisticasService {
             // Ofertas con alta demanda (> 80% ocupación)
             List<Map<String, Object>> altaDemanda = todas.stream()
                 .map(o -> {
-                    long inscritos = inscripcionRepository.findByOfertaIdOferta(o.getIdOferta()).size();
+                    long inscritos = contarInscripcionesOfertaEnRango(o, fechaInicio, fechaFin);
                     double ocupacion = (o.getCupos() != null && o.getCupos() > 0) ? (double) inscritos / o.getCupos() : 0;
                     if (ocupacion > 0.8) {
                         Map<String, Object> map = new HashMap<>();
@@ -377,7 +475,7 @@ public class EstadisticasService {
              // Ofertas con baja demanda (< 10% ocupación)
             List<Map<String, Object>> bajaDemanda = todas.stream()
                 .map(o -> {
-                    long inscritos = inscripcionRepository.findByOfertaIdOferta(o.getIdOferta()).size();
+                    long inscritos = contarInscripcionesOfertaEnRango(o, fechaInicio, fechaFin);
                     double ocupacion = (o.getCupos() != null && o.getCupos() > 0) ? (double) inscritos / o.getCupos() : 0;
                     if (ocupacion < 0.1) {
                          Map<String, Object> map = new HashMap<>();
@@ -402,20 +500,34 @@ public class EstadisticasService {
      * 1.2 Inscripciones y Alumnos (Evolución)
      */
     public Map<String, Object> obtenerEstadisticasInscripciones() {
+        return obtenerEstadisticasInscripciones(null, null);
+    }
+
+    public Map<String, Object> obtenerEstadisticasInscripciones(LocalDate fechaInicio, LocalDate fechaFin) {
         Map<String, Object> stats = new HashMap<>();
         try {
             List<Inscripciones> todas = inscripcionRepository.findAll();
+            List<Inscripciones> filtradas = todas.stream()
+                .filter(i -> isDateInRange(i.getFechaInscripcion(), fechaInicio, fechaFin))
+                .collect(Collectors.toList());
             logger.info("obtenerEstadisticasInscripciones: total inscripciones = {}", todas.size());
-            // Evolución mensual (últimos 12 meses)
+            if (fechaInicio != null || fechaFin != null) {
+                logger.info("obtenerEstadisticasInscripciones: inscripciones filtradas = {}", filtradas.size());
+            }
+            // Evoluci?n mensual (rango seleccionado)
             Map<String, Long> evolucionMensual = new TreeMap<>();
-            LocalDate hoy = LocalDate.now();
-            for (int i = 11; i >= 0; i--) {
-                LocalDate fecha = hoy.minusMonths(i);
-                String key = fecha.format(DateTimeFormatter.ofPattern("yyyy-MM"));
-                long count = todas.stream()
-                    .filter(ins -> ins.getFechaInscripcion() != null && 
-                                   ins.getFechaInscripcion().getMonth() == fecha.getMonth() && 
-                                   ins.getFechaInscripcion().getYear() == fecha.getYear())
+            LocalDate finRango = fechaFin != null ? fechaFin : LocalDate.now();
+            LocalDate inicioRango = fechaInicio != null ? fechaInicio : finRango.minusMonths(11).withDayOfMonth(1);
+            YearMonth ymInicio = YearMonth.from(inicioRango);
+            YearMonth ymFin = YearMonth.from(finRango);
+            for (YearMonth ym = ymInicio; !ym.isAfter(ymFin); ym = ym.plusMonths(1)) {
+                final int year = ym.getYear();
+                final int month = ym.getMonthValue();
+                String key = ym.format(DateTimeFormatter.ofPattern("yyyy-MM"));
+                long count = filtradas.stream()
+                    .filter(ins -> ins.getFechaInscripcion() != null &&
+                                   ins.getFechaInscripcion().getYear() == year &&
+                                   ins.getFechaInscripcion().getMonthValue() == month)
                     .count();
                 evolucionMensual.put(key, count);
             }
@@ -424,7 +536,7 @@ public class EstadisticasService {
 
             // Nuevos vs Recurrentes (Simplificado: si el alumno tiene > 1 inscripción es recurrente)
             // Se usa Object para la clave para evitar problemas con UUID vs Long si cambia el modelo
-            Map<Object, Long> conteoPorAlumno = todas.stream()
+            Map<Object, Long> conteoPorAlumno = filtradas.stream()
                 .filter(i -> i.getAlumno() != null)
                 .collect(Collectors.groupingBy(i -> i.getAlumno().getId(), Collectors.counting()));
             
@@ -436,8 +548,8 @@ public class EstadisticasService {
             logger.info("alumnosNuevos = {}, alumnosRecurrentes = {}", nuevos, recurrentes);
             
             // Tasa de abandono (Inscripciones inactivas / Total)
-            long total = todas.size();
-            long inactivas = todas.stream().filter(i -> i.getEstadoInscripcion() != null && !i.getEstadoInscripcion()).count();
+            long total = filtradas.size();
+            long inactivas = filtradas.stream().filter(i -> i.getEstadoInscripcion() != null && !i.getEstadoInscripcion()).count();
             double tasaAbandono = total > 0 ? (double) inactivas / total : 0;
             stats.put("tasaAbandonoGlobal", tasaAbandono);
             logger.info("tasaAbandonoGlobal = {}", tasaAbandono);
@@ -452,9 +564,19 @@ public class EstadisticasService {
      * 1.6 Estadísticas Económicas
      */
     public Map<String, Object> obtenerEstadisticasEconomicas() {
+        return obtenerEstadisticasEconomicas(null, null);
+    }
+
+    public Map<String, Object> obtenerEstadisticasEconomicas(LocalDate fechaInicio, LocalDate fechaFin) {
         Map<String, Object> stats = new HashMap<>();
         try {
             List<Pago> pagos = pagoRepository.findAll();
+            if (fechaInicio != null || fechaFin != null) {
+                pagos = pagos.stream()
+                    .filter(p -> p.getFechaPago() != null &&
+                        isDateInRange(p.getFechaPago().toLocalDate(), fechaInicio, fechaFin))
+                    .collect(Collectors.toList());
+            }
             
             // Ingresos totales
             double ingresosTotales = pagos.stream()
