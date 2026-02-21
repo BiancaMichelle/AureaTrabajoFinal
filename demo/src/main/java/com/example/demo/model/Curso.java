@@ -10,9 +10,7 @@ import java.util.stream.Collectors;
 import com.example.demo.enums.EstadoOferta;
 import com.example.demo.enums.Modalidad;
 
-import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;

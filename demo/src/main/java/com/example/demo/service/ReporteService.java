@@ -12,9 +12,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.Comparator;
 
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -42,7 +40,6 @@ import com.example.demo.repository.CuotaRepository;
 import com.example.demo.repository.InscripcionRepository;
 import com.example.demo.repository.CategoriaRepository;
 import com.example.demo.enums.EstadoCuota;
-import com.example.demo.service.InstitutoLogoService;
 import com.lowagie.text.Chunk;
 import com.lowagie.text.Document;
 import com.lowagie.text.DocumentException;
@@ -70,7 +67,6 @@ import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import com.example.demo.model.AuditLog;
-import com.example.demo.service.AuditLogService;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 

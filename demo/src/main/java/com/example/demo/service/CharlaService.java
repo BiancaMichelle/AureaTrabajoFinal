@@ -129,8 +129,6 @@ public class CharlaService {
                 charlaExistente.setModalidad(com.example.demo.enums.Modalidad.valueOf(modalidad.toUpperCase()));
             }
             
-            // TODO: Manejar imagen, categorías y disertantes según sea necesario
-            
             // Guardar cambios
             return charlaRepository.save(charlaExistente);
             

@@ -335,9 +335,6 @@ public class CursoService {
             cursoExistente.setNrCuotas(nrCuotas);
             cursoExistente.setDiaVencimiento(diaVencimiento);
 
-            // TODO: Manejar imagen, categorías, horarios y docentes según sea necesario
-            // Estas funcionalidades pueden agregarse después si es necesario
-
             // Guardar cambios
             return cursoRepository.save(cursoExistente);
 

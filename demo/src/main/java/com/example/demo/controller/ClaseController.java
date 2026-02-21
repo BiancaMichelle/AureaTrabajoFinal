@@ -55,9 +55,9 @@ public class ClaseController {
     private String baseUrl;
 
     private final ClaseService claseService;
-    private final JitsiClaseService jitsiClaseService;
+    //private final JitsiClaseService jitsiClaseService;
     private final ModuloRepository moduloRepository;
-    private final CursoRepository cursoRepository;
+    //private final CursoRepository cursoRepository;
     private final UsuarioRepository usuarioRepository;
     private final com.example.demo.ia.service.ChatServiceSimple chatServiceSimple;
     private final com.example.demo.repository.MaterialRepository materialRepository;
@@ -86,9 +86,9 @@ public class ClaseController {
             PasswordEncoder passwordEncoder,
             com.example.demo.service.AsistenciaEnVivoService asistenciaEnVivoService) {
         this.claseService = claseService;
-        this.jitsiClaseService = jitsiClaseService;
+        //this.jitsiClaseService = jitsiClaseService;
         this.moduloRepository = moduloRepository;
-        this.cursoRepository = cursoRepository;
+        //this.cursoRepository = cursoRepository;
         this.usuarioRepository = usuarioRepository;
         this.chatServiceSimple = chatServiceSimple;
         this.materialRepository = materialRepository;

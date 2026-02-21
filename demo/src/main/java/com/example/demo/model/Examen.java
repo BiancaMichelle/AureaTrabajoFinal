@@ -4,7 +4,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import com.example.demo.enums.EstadoExamen;
-import com.example.demo.model.Modulo;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

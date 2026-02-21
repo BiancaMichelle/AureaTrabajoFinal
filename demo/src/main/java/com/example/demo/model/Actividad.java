@@ -2,12 +2,6 @@ package com.example.demo.model;
 
 import java.time.LocalDateTime;
 
-import com.example.demo.model.Examen;
-import com.example.demo.model.Tarea;
-import com.example.demo.model.Carpeta;
-import com.example.demo.model.Material;
-import com.example.demo.model.Recurso;
-import com.example.demo.model.TipoRecurso;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;

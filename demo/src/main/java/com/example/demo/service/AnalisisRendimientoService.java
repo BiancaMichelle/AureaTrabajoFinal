@@ -2,7 +2,6 @@ package com.example.demo.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Random;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -32,15 +31,12 @@ import com.example.demo.repository.UsuarioRepository;
 import com.example.demo.repository.EntregaRepository;
 import com.example.demo.repository.IntentoRepository;
 import com.example.demo.repository.AsistenciaRepository;
-import com.example.demo.service.AuditLogService;
 
-import com.example.demo.service.InstitutoService;
 import com.example.demo.model.Instituto;
 import com.example.demo.enums.EstadoOferta;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
-import java.util.Collections;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -23,7 +23,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.example.demo.enums.EstadoAsistencia;
 import com.example.demo.enums.EstadoOferta;
-import com.example.demo.enums.EstadoCertificacion;
 import com.example.demo.model.*;
 import com.example.demo.repository.*;
 import com.example.demo.service.AsistenciaService;
