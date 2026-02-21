@@ -11,13 +11,10 @@ import java.util.UUID;
 import javax.validation.constraints.AssertTrue;
 import javax.validation.constraints.Pattern;
 
-import com.example.demo.enums.TipoGenero;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.DiscriminatorColumn;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
@@ -75,10 +72,6 @@ public class Usuario {
   @NotNull(message = "La fecha de nacimiento es obligatoria")
   @Past(message = "La fecha de nacimiento debe ser en el pasado")
   private LocalDate fechaNacimiento;
-
-  @NotNull(message = "El género es obligatorio")
-  @Enumerated(EnumType.STRING)
-  private TipoGenero genero;
 
   @NotBlank(message = "El correo es obligatorio")
   @Email(message = "El formato del correo electrónico no es válido")

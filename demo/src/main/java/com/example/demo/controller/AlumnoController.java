@@ -39,7 +39,6 @@ import com.example.demo.enums.EstadoCuota;
 import com.example.demo.enums.EstadoIntento;
 import com.example.demo.enums.EstadoOferta;
 import com.example.demo.enums.EstadoPago;
-import com.example.demo.enums.TipoGenero;
 import com.example.demo.model.Alumno;
 import com.example.demo.model.Auditable;
 import com.example.demo.model.Curso;
@@ -1270,7 +1269,6 @@ public class AlumnoController {
             @RequestParam String nombre,
             @RequestParam String apellido,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaNacimiento,
-            @RequestParam(required = false) String genero,
             @RequestParam String correo,
             @RequestParam("numTelefono") String numTelefono,
             @RequestParam(required = false) String ultimosEstudios,
@@ -1295,15 +1293,6 @@ public class AlumnoController {
             usuario.setNombre(nombre);
             usuario.setApellido(apellido);
             usuario.setFechaNacimiento(fechaNacimiento);
-            if (genero != null && !genero.isBlank()) {
-                try {
-                    usuario.setGenero(TipoGenero.valueOf(genero.toUpperCase()));
-                } catch (IllegalArgumentException ex) {
-                    redirectAttributes.addFlashAttribute("mensaje", "Género inválido");
-                    redirectAttributes.addFlashAttribute("tipo", "error");
-                    return "redirect:/alumno/perfil";
-                }
-            }
             usuario.setCorreo(correo);
             usuario.setNumTelefono(numTelefono);
 

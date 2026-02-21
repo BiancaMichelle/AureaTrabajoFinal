@@ -251,16 +251,7 @@
                                         <input type="date" name="fechaNacimiento" th:value="${#temporals.format(usuario.fechaNacimiento, 'yyyy-MM-dd')}" 
                                                class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm sm:text-sm" readonly required>
                                     </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700">Género</label>
-                                        <select name="genero" id="genero" class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm sm:text-sm" disabled required>
-                                            <option value="MASCULINO" th:selected="${usuario.genero?.name() == 'MASCULINO'}">Masculino</option>
-                                            <option value="FEMENINO" th:selected="${usuario.genero?.name() == 'FEMENINO'}">Femenino</option>
-                                            <option value="OTRO" th:selected="${usuario.genero?.name() == 'OTRO'}">Otro</option>
-                                            <option value="PREFIERO_NO_DECIR" th:selected="${usuario.genero?.name() == 'PREFIERO_NO_DECIR'}">Prefiero no decir</option>
-                                        </select>
                                     </div>
-                                </div>
 
                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     <div>
@@ -593,7 +584,6 @@
                     form ? form.querySelector('input[name="correo"]') : null,
                     form ? form.querySelector('input[name="numTelefono"]') : null,
                     form ? form.querySelector('input[name="fechaNacimiento"]') : null,
-                    document.getElementById('genero'),
                     // Nuevos campos académicos
                     // document.getElementById('ultimosEstudios'), // Reemplazado por lógica especial
                     document.getElementById('colegioEgreso'),

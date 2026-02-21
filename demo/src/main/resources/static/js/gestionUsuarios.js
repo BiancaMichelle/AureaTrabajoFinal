@@ -25,7 +25,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const searchInput = document.getElementById('search-input');
     const filtroRol = document.getElementById('filtro-rol');
     const filtroEstado = document.getElementById('filtro-estado');
-    const filtroGenero = document.getElementById('filtro-genero');
     const btnApplyFilters = document.getElementById('btn-apply-filters');
     const btnClearFilters = document.getElementById('btn-clear-filters');
 
@@ -43,7 +42,6 @@ document.addEventListener('DOMContentLoaded', function () {
         dni: document.getElementById('detalle-usuario-dni'),
         correo: document.getElementById('detalle-usuario-correo'),
         telefono: document.getElementById('detalle-usuario-telefono'),
-        genero: document.getElementById('detalle-usuario-genero'),
         fechaNacimiento: document.getElementById('detalle-usuario-fecha-nacimiento'),
         estado: document.getElementById('detalle-usuario-estado'),
         fechaRegistro: document.getElementById('detalle-usuario-fecha-registro'),
@@ -391,7 +389,6 @@ document.addEventListener('DOMContentLoaded', function () {
         setModalTexto(modalDetalleRefs.dni, detalle.dni);
         setModalTexto(modalDetalleRefs.correo, detalle.correo);
         setModalTexto(modalDetalleRefs.telefono, detalle.telefono || 'No registrado');
-        setModalTexto(modalDetalleRefs.genero, formatGenero(detalle.genero));
         setModalTexto(modalDetalleRefs.fechaNacimiento, formatFechaLarga(detalle.fechaNacimiento));
         setModalTexto(modalDetalleRefs.fechaRegistro, formatFechaLarga(detalle.fechaRegistro));
 
@@ -417,11 +414,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         return [nombre, apellido].filter(Boolean).join(' ');
     }
-
-    function formatGenero(generoValor) {
-        if (!generoValor) {
-            return 'No especificado';
-        }
 
         const generoStr = `${generoValor}`.toUpperCase();
         const map = {
@@ -1870,7 +1862,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (searchInput) searchInput.value = '';
         if (filtroRol) filtroRol.value = '';
         if (filtroEstado) filtroEstado.value = '';
-        if (filtroGenero) filtroGenero.value = '';
 
         applyFilters();
         pageSize = defaultPageSize;
@@ -1892,8 +1883,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const normalizedFilters = {
                 search: filters.search ? `${filters.search}`.toLowerCase() : '',
                 rol: filters.rol ? `${filters.rol}`.toUpperCase() : '',
-                estado: filters.estado ? `${filters.estado}`.toUpperCase() : '',
-                genero: filters.genero ? `${filters.genero}`.toUpperCase() : ''
+                estado: filters.estado ? `${filters.estado}`.toUpperCase() : ''
             };
 
             rows.forEach(row => {
@@ -2098,7 +2088,6 @@ document.addEventListener('DOMContentLoaded', function () {
             setValue('correo', detalle?.correo);
             setValue('telefono', detalle?.telefono);
             setValue('fechaNacimiento', formatearFechaIso(detalle?.fechaNacimiento));
-            setSelectValue('genero', detalle?.genero);
 
             // Foto en formulario (solo visualización)
             const fotoUrl = detalle?.foto || detalle?.fotoUrl || detalle?.fotoPerfil || detalle?.imagenPerfil;
@@ -2271,7 +2260,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 #nombre[required], 
                 #apellido[required], 
                 #fechaNacimiento[required],
-                #genero[required],
                 #pais[required],
                 #provincia[required],
                 #correo[required],
@@ -2821,9 +2809,6 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             if (filtroEstado && filtroEstado.value) {
                 filters.estado = filtroEstado.value;
-            }
-            if (filtroGenero && filtroGenero.value) {
-                filters.genero = filtroGenero.value;
             }
             
             return filters;
