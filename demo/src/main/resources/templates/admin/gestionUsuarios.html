@@ -167,6 +167,17 @@
         #usuarios-table th:nth-child(5), #usuarios-table td:nth-child(5) { width: 10% !important; } /* Estado */
         #usuarios-table th:nth-child(6), #usuarios-table td:nth-child(6) { width: 10% !important; } /* Fecha */
         #usuarios-table th:nth-child(7), #usuarios-table td:nth-child(7) { width: 10% !important; } /* Acciones */
+
+        #usuarios-table th.sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        #usuarios-table th.sortable .sort-indicator {
+            margin-left: 6px;
+            color: #94a3b8;
+            font-size: 0.8rem;
+        }
     </style>
 </head>
 <body>
@@ -556,12 +567,12 @@
                 <table id="usuarios-table" class="ofertas-table">
                     <thead>
                         <tr>
-                            <th>DNI</th>
-                            <th>Nombre Completo</th>
-                            <th>Correo</th>
-                            <th>Roles</th>
-                            <th>Estado</th>
-                            <th>Fecha Registro</th>
+                            <th class="sortable" data-sort-key="dni">DNI <span class="sort-indicator">↕</span></th>
+                            <th class="sortable" data-sort-key="nombre">Nombre Completo <span class="sort-indicator">↕</span></th>
+                            <th class="sortable" data-sort-key="correo">Correo <span class="sort-indicator">↕</span></th>
+                            <th class="sortable" data-sort-key="roles">Roles <span class="sort-indicator">↕</span></th>
+                            <th class="sortable" data-sort-key="estado">Estado <span class="sort-indicator">↕</span></th>
+                            <th class="sortable" data-sort-key="fechaRegistro">Fecha Registro <span class="sort-indicator">↕</span></th>
                             <th>Acciones</th>
                         </tr>
                     </thead>

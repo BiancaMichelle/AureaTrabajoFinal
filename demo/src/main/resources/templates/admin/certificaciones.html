@@ -1,113 +1,472 @@
 <!DOCTYPE html>
-<html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/adminBase :: layout(~{::title}, ~{::main})}">
+<html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/adminBase :: layout(~{::title}, ~{::content})}">
 <head>
-    <title>Certificaciones - Administración</title>
+    <title>Certificaciones - Administracion</title>
 </head>
 <body>
-<main class="main-content">
-        <div class="mb-6">
-            <h1 class="text-3xl font-bold text-gray-800">
-                <i class="fas fa-certificate mr-2 text-yellow-500"></i>
-                Gestión de Actas de Certificación
-            </h1>
-            <p class="text-gray-600 mt-2">Administración de actas cerradas y seguimiento de certificados</p>
+<div th:fragment="content" class="main-content">
+    <style>
+        .dashboard-header {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
+            padding: 1.5rem 2rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .dashboard-header h1 {
+            margin: 0;
+            font-size: 1.7rem;
+            color: #1f2937;
+        }
+
+        .dashboard-header p {
+            margin: 0.35rem 0 0;
+            color: #6b7280;
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .kpi-card {
+            border-radius: 12px;
+            color: #fff;
+            padding: 1.15rem 1.2rem;
+            box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+
+        .kpi-card h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            margin: 0 0 .4rem;
+            opacity: .9;
+        }
+
+        .kpi-card .value {
+            font-size: 1.9rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .kpi-1 { background: linear-gradient(135deg, #667eea, #764ba2); }
+        .kpi-2 { background: linear-gradient(135deg, #f59e0b, #ef4444); }
+        .kpi-3 { background: linear-gradient(135deg, #10b981, #0ea5e9); }
+
+        .panel {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 1rem 1.2rem;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-title {
+            font-weight: 700;
+            color: #1f2937;
+            margin: 0;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        .cert-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .cert-table th {
+            background: #f8fafc;
+            color: #374151;
+            text-align: left;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: .03em;
+            padding: 0.75rem;
+            border-bottom: 1px solid #e5e7eb;
+            white-space: nowrap;
+        }
+
+        .cert-table th.sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .sort-indicator {
+            margin-left: .35rem;
+            font-size: .75rem;
+            color: #9ca3af;
+        }
+
+        .filters {
+            display: flex;
+            gap: .6rem;
+            flex-wrap: wrap;
+            padding: .9rem 1.2rem;
+            border-bottom: 1px solid #e5e7eb;
+            background: #fbfdff;
+        }
+
+        .filters input {
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: .45rem .6rem;
+            font-size: .9rem;
+            min-width: 180px;
+        }
+
+        .cert-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #f1f5f9;
+            color: #111827;
+            font-size: 0.92rem;
+            vertical-align: middle;
+        }
+
+        .badge {
+            display: inline-block;
+            border-radius: 999px;
+            padding: 0.22rem 0.58rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .badge-propuesta { background: #fef3c7; color: #92400e; }
+        .badge-aprobado { background: #dcfce7; color: #166534; }
+        .badge-emitido { background: #dbeafe; color: #1d4ed8; }
+        .badge-default { background: #e5e7eb; color: #374151; }
+
+        .alert-success, .alert-error {
+            border-radius: 10px;
+            padding: 0.8rem 1rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .alert-success { background: #dcfce7; color: #166534; }
+        .alert-error { background: #fee2e2; color: #991b1b; }
+
+        @media (max-width: 900px) {
+            .kpi-grid { grid-template-columns: 1fr; }
+            .dashboard-header { flex-direction: column; align-items: flex-start; }
+        }
+    </style>
+
+    <div class="dashboard-header">
+        <div>
+            <h1><i class="fas fa-certificate" style="color:#f59e0b;"></i> Gestion de Certificaciones</h1>
+            <p>Seguimiento de alumnos que recibiran o recibieron certificados y estado administrativo por oferta.</p>
         </div>
+    </div>
 
-        <!-- Alerts -->
-        <div th:if="${success}" class="mb-4 p-4 bg-green-100 text-green-800 rounded-lg">
-            <i class="fas fa-check-circle mr-2"></i>
-            <span th:text="${success}"></span>
+    <div th:if="${success}" class="alert-success">
+        <i class="fas fa-check-circle"></i>
+        <span th:text="${success}"></span>
+    </div>
+    <div th:if="${error}" class="alert-error">
+        <i class="fas fa-exclamation-circle"></i>
+        <span th:text="${error}"></span>
+    </div>
+
+    <div class="kpi-grid">
+        <div class="kpi-card kpi-1">
+            <h3>Ofertas Cerradas</h3>
+            <div class="value" th:text="${totalOfertasCerradas}">0</div>
         </div>
-        <div th:if="${error}" class="mb-4 p-4 bg-red-100 text-red-800 rounded-lg">
-            <i class="fas fa-exclamation-circle mr-2"></i>
-            <span th:text="${error}"></span>
+        <div class="kpi-card kpi-2">
+            <h3>Alumnos a Certificar</h3>
+            <div class="value" th:text="${totalPendientes}">0</div>
         </div>
-
-        <!-- Lista de Actas en Grid -->
-        <div th:if="${ofertas.empty}" class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center text-gray-500">
-            <i class="fas fa-inbox text-5xl mb-4"></i>
-            <p>No hay actas cerradas</p>
+        <div class="kpi-card kpi-3">
+            <h3>Certificados Emitidos</h3>
+            <div class="value" th:text="${totalEmitidos}">0</div>
         </div>
+    </div>
 
-        <div th:unless="${ofertas.empty}" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div th:each="oferta : ${ofertas}" class="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 flex flex-col overflow-hidden">
-                <!-- Card Header -->
-                <div class="p-6 flex-grow">
-                    <div class="flex justify-between items-start mb-3">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
-                            <i class="fas fa-graduation-cap mr-1"></i>
-                            <span th:text="${oferta.tipoOferta}"></span>
-                        </span>
-                        
-                         <!-- Estado Badge Small (Visual only) -->
-                        <span th:if="${oferta.estadoProcesoCertificacion.name() == 'EN_GESTION_CERTIFICACION'}" class="text-yellow-500" title="En Gestión">
-                            <i class="fas fa-cog fa-spin"></i>
-                        </span>
-                        <span th:if="${oferta.estadoProcesoCertificacion.name() == 'CERTIFICADO'}" class="text-green-500" title="Certificado">
-                            <i class="fas fa-award"></i>
-                        </span>
-                         <span th:if="${oferta.estadoProcesoCertificacion.name() == 'ENTREGADO_AL_ALUMNO'}" class="text-blue-500" title="Entregado">
-                            <i class="fas fa-check-double"></i>
-                        </span>
-                    </div>
-
-                    <h3 class="text-xl font-bold text-gray-800 mb-3 line-clamp-2 leading-tight" th:text="${oferta.nombre}"></h3>
-                    
-                    <div class="space-y-2 text-sm text-gray-600">
-                        <div class="flex items-center">
-                            <i class="fas fa-calendar-alt w-5 text-center text-gray-400 mr-2"></i> 
-                            <span th:if="${oferta.fechaInicio != null && oferta.fechaFin != null}" 
-                                  th:text="${#temporals.format(oferta.fechaInicio, 'dd/MM/yyyy')} + ' - ' + ${#temporals.format(oferta.fechaFin, 'dd/MM/yyyy')}">
-                            </span>
-                        </div>
-                        <div class="flex items-center">
-                             <i class="fas fa-users w-5 text-center text-gray-400 mr-2"></i>
-                             <span th:if="${oferta.tipoOferta == 'Curso'}" th:text="${oferta.docentes.size()} + ' docentes'"></span>
-                             <span th:if="${oferta.tipoOferta == 'Formación'}" th:text="${oferta.docentes.size()} + ' docentes'"></span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Card Footer / Actions -->
-                <div class="bg-gray-50 px-6 py-4 border-t border-gray-100">
-                    <div class="mb-4">
-                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Estado del Proceso</label>
-                        <form th:action="@{/admin/certificaciones/{id}/estado(id=${oferta.idOferta})}"
-                              method="post">
-                            <div class="relative">
-                                <select name="estado" 
-                                        class="block w-full pl-3 pr-10 py-2 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-lg shadow-sm"
-                                        onchange="this.form.submit()">
-                                    <option value="EN_GESTION_CERTIFICACION" 
-                                            th:selected="${oferta.estadoProcesoCertificacion.name() == 'EN_GESTION_CERTIFICACION'}"
-                                            data-icon="⚙️">
-                                        ⚙️ En Gestión
-                                    </option>
-                                    <option value="CERTIFICADO" 
-                                            th:selected="${oferta.estadoProcesoCertificacion.name() == 'CERTIFICADO'}"
-                                            data-icon="📜">
-                                        📜 Certificado
-                                    </option>
-                                    <option value="ENTREGADO_AL_ALUMNO" 
-                                            th:selected="${oferta.estadoProcesoCertificacion.name() == 'ENTREGADO_AL_ALUMNO'}"
-                                            data-icon="✅">
-                                        ✅ Entregado
-                                    </option>
-                                </select>
-                            </div>
+    <section class="panel">
+        <div class="panel-header">
+            <h2 class="panel-title">Control de Proceso por Oferta</h2>
+        </div>
+        <div class="filters" data-filter-scope="tabla-ofertas">
+            <input type="text" placeholder="Filtrar por nombre de oferta" data-filter-key="oferta" data-filter-mode="contains">
+            <input type="date" data-filter-key="fecha" data-filter-mode="gte" title="Fecha desde">
+            <input type="date" data-filter-key="fecha" data-filter-mode="lte" title="Fecha hasta">
+        </div>
+        <div class="table-wrap">
+            <table class="cert-table" id="tabla-ofertas">
+                <thead>
+                <tr>
+                    <th class="sortable" data-sort-key="oferta" data-sort-type="text">Oferta <span class="sort-indicator">↕</span></th>
+                    <th class="sortable" data-sort-key="tipo" data-sort-type="text">Tipo <span class="sort-indicator">↕</span></th>
+                    <th class="sortable" data-sort-key="fecha" data-sort-type="date">Fechas <span class="sort-indicator">↕</span></th>
+                    <th class="sortable" data-sort-key="estado" data-sort-type="text">Estado Proceso <span class="sort-indicator">↕</span></th>
+                    <th style="width: 220px;">Actualizar Estado</th>
+                    <th>Acta</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${ofertas.empty}">
+                    <td colspan="6" style="text-align:center; color:#6b7280;">No hay ofertas cerradas para gestionar certificaciones.</td>
+                </tr>
+                <tr th:each="oferta : ${ofertas}"
+                    th:attr="data-oferta=${oferta.nombre},
+                             data-tipo=${oferta.tipoOferta},
+                             data-fecha=${oferta.fechaInicio != null ? #temporals.format(oferta.fechaInicio, 'yyyy-MM-dd') : ''},
+                             data-estado=${oferta.estadoProcesoCertificacion != null ? oferta.estadoProcesoCertificacion.name() : ''}">
+                    <td th:text="${oferta.nombre}">Oferta</td>
+                    <td th:text="${oferta.tipoOferta}">Curso</td>
+                    <td th:text="${oferta.fechaInicio != null && oferta.fechaFin != null ? #temporals.format(oferta.fechaInicio, 'dd/MM/yyyy') + ' - ' + #temporals.format(oferta.fechaFin, 'dd/MM/yyyy') : '-'}">-</td>
+                    <td>
+                        <span th:if="${oferta.estadoProcesoCertificacion.name() == 'EN_GESTION_CERTIFICACION'}" class="badge badge-propuesta">EN GESTION</span>
+                        <span th:if="${oferta.estadoProcesoCertificacion.name() == 'CERTIFICADO'}" class="badge badge-aprobado">CERTIFICADO</span>
+                        <span th:if="${oferta.estadoProcesoCertificacion.name() == 'ENTREGADO_AL_ALUMNO'}" class="badge badge-emitido">ENTREGADO</span>
+                    </td>
+                    <td>
+                        <form th:action="@{/admin/certificaciones/{id}/estado(id=${oferta.idOferta})}" method="post">
+                            <select name="estado" onchange="this.form.submit()" style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:.45rem;">
+                                <option value="EN_GESTION_CERTIFICACION" th:selected="${oferta.estadoProcesoCertificacion.name() == 'EN_GESTION_CERTIFICACION'}">En gestion</option>
+                                <option value="CERTIFICADO" th:selected="${oferta.estadoProcesoCertificacion.name() == 'CERTIFICADO'}">Certificado</option>
+                                <option value="ENTREGADO_AL_ALUMNO" th:selected="${oferta.estadoProcesoCertificacion.name() == 'ENTREGADO_AL_ALUMNO'}">Entregado al alumno</option>
+                            </select>
                         </form>
-                    </div>
-
-                    <a th:href="@{/aula/oferta/{id}/certificaciones/acta-pdf(id=${oferta.idOferta})}"
-                       target="_blank"
-                       class="flex items-center justify-center w-full px-4 py-2.5 text-sm font-semibold text-blue-700 bg-blue-100 hover:bg-blue-200 rounded-lg transition-colors border border-blue-200">
-                        <i class="fas fa-file-pdf mr-2"></i>
-                        Descargar Acta
-                    </a>
-                </div>
-            </div>
+                    </td>
+                    <td>
+                        <a th:href="@{/aula/oferta/{id}/certificaciones/acta-pdf(id=${oferta.idOferta})}" target="_blank" style="color:#1d4ed8; font-weight:700;">
+                            <i class="fas fa-file-pdf"></i> Descargar
+                        </a>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
         </div>
-    </main>
+    </section>
+
+    <section class="panel">
+        <div class="panel-header">
+            <h2 class="panel-title">Alumnos que Recibiran Certificacion</h2>
+        </div>
+        <div class="filters" data-filter-scope="tabla-pendientes">
+            <input type="text" placeholder="Filtrar por alumno" data-filter-key="alumno" data-filter-mode="contains">
+            <input type="text" placeholder="Filtrar por DNI" data-filter-key="dni" data-filter-mode="contains">
+            <input type="text" placeholder="Filtrar por oferta" data-filter-key="oferta" data-filter-mode="contains">
+        </div>
+        <div class="table-wrap">
+            <table class="cert-table" id="tabla-pendientes">
+                <thead>
+                <tr>
+                    <th class="sortable" data-sort-key="alumno" data-sort-type="text">Alumno <span class="sort-indicator">↕</span></th>
+                    <th class="sortable" data-sort-key="dni" data-sort-type="text">DNI <span class="sort-indicator">↕</span></th>
+                    <th class="sortable" data-sort-key="oferta" data-sort-type="text">Oferta <span class="sort-indicator">↕</span></th>
+                    <th class="sortable" data-sort-key="estado" data-sort-type="text">Estado <span class="sort-indicator">↕</span></th>
+                    <th>Promedio</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${alumnosACertificar.empty}">
+                    <td colspan="5" style="text-align:center; color:#6b7280;">No hay alumnos pendientes de certificacion.</td>
+                </tr>
+                <tr th:each="item : ${alumnosACertificar}"
+                    th:attr="data-alumno=${item.alumno},
+                             data-dni=${item.dni},
+                             data-oferta=${item.oferta},
+                             data-estado=${item.estado}">
+                    <td th:text="${item.alumno}">Alumno</td>
+                    <td th:text="${item.dni}">00000000</td>
+                    <td th:text="${item.oferta}">Oferta</td>
+                    <td>
+                        <span th:if="${item.estado == 'PROPUESTA'}" class="badge badge-propuesta">PROPUESTA</span>
+                        <span th:if="${item.estado == 'APROBADO_DOCENTE'}" class="badge badge-aprobado">APROBADO DOCENTE</span>
+                        <span th:unless="${item.estado == 'PROPUESTA' or item.estado == 'APROBADO_DOCENTE'}" class="badge badge-default" th:text="${item.estado}">ESTADO</span>
+                    </td>
+                    <td th:text="${item.promedio != null ? #numbers.formatDecimal(item.promedio, 1, 2) : '-'}">-</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-header">
+            <h2 class="panel-title">Alumnos que Ya Recibieron Certificacion</h2>
+        </div>
+        <div class="filters" data-filter-scope="tabla-emitidos">
+            <input type="text" placeholder="Filtrar por alumno" data-filter-key="alumno" data-filter-mode="contains">
+            <input type="text" placeholder="Filtrar por DNI" data-filter-key="dni" data-filter-mode="contains">
+            <input type="date" data-filter-key="fecha" data-filter-mode="gte" title="Fecha emision desde">
+            <input type="date" data-filter-key="fecha" data-filter-mode="lte" title="Fecha emision hasta">
+        </div>
+        <div class="table-wrap">
+            <table class="cert-table" id="tabla-emitidos">
+                <thead>
+                <tr>
+                    <th class="sortable" data-sort-key="alumno" data-sort-type="text">Alumno <span class="sort-indicator">↕</span></th>
+                    <th class="sortable" data-sort-key="dni" data-sort-type="text">DNI <span class="sort-indicator">↕</span></th>
+                    <th class="sortable" data-sort-key="oferta" data-sort-type="text">Oferta <span class="sort-indicator">↕</span></th>
+                    <th>Nro Certificado</th>
+                    <th class="sortable" data-sort-key="fecha" data-sort-type="date">Fecha Emision <span class="sort-indicator">↕</span></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${alumnosCertificados.empty}">
+                    <td colspan="5" style="text-align:center; color:#6b7280;">No hay certificados emitidos registrados.</td>
+                </tr>
+                <tr th:each="item : ${alumnosCertificados}"
+                    th:attr="data-alumno=${item.alumno},
+                             data-dni=${item.dni},
+                             data-oferta=${item.oferta},
+                             data-fecha=${item.fechaEmision != null ? #temporals.format(item.fechaEmision, 'yyyy-MM-dd') : ''}">
+                    <td th:text="${item.alumno}">Alumno</td>
+                    <td th:text="${item.dni}">00000000</td>
+                    <td th:text="${item.oferta}">Oferta</td>
+                    <td th:text="${item.numeroCertificado != null ? item.numeroCertificado : '-'}">-</td>
+                    <td th:text="${item.fechaEmision != null ? #temporals.format(item.fechaEmision, 'dd/MM/yyyy HH:mm') : '-'}">-</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <script>
+        (function () {
+            function norm(value) {
+                return (value || "")
+                    .toString()
+                    .toLowerCase()
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "")
+                    .trim();
+            }
+
+            function setupTable(tableId) {
+                var table = document.getElementById(tableId);
+                if (!table) return;
+                var tbody = table.querySelector("tbody");
+                if (!tbody) return;
+
+                var sortState = { key: null, dir: "asc", type: "text" };
+                var headers = Array.from(table.querySelectorAll("th.sortable"));
+                var filters = Array.from(document.querySelectorAll('[data-filter-scope="' + tableId + '"] input'));
+
+                function getRowValue(row, key) {
+                    return row.dataset[key] || "";
+                }
+
+                function applyFilters() {
+                    var rows = Array.from(tbody.querySelectorAll("tr[data-oferta], tr[data-alumno]"));
+                    rows.forEach(function (row) {
+                        var visible = true;
+                        for (var i = 0; i < filters.length; i++) {
+                            var input = filters[i];
+                            var key = input.getAttribute("data-filter-key");
+                            var mode = input.getAttribute("data-filter-mode");
+                            var inputVal = input.value;
+                            if (!inputVal) continue;
+
+                            var rowVal = getRowValue(row, key);
+                            if (mode === "contains") {
+                                if (!norm(rowVal).includes(norm(inputVal))) {
+                                    visible = false;
+                                    break;
+                                }
+                            } else if (mode === "gte") {
+                                if (!rowVal || rowVal < inputVal) {
+                                    visible = false;
+                                    break;
+                                }
+                            } else if (mode === "lte") {
+                                if (!rowVal || rowVal > inputVal) {
+                                    visible = false;
+                                    break;
+                                }
+                            }
+                        }
+                        row.style.display = visible ? "" : "none";
+                    });
+                }
+
+                function applySort(key, type, dir) {
+                    var rows = Array.from(tbody.querySelectorAll("tr[data-oferta], tr[data-alumno]"));
+                    rows.sort(function (a, b) {
+                        var av = getRowValue(a, key);
+                        var bv = getRowValue(b, key);
+
+                        if (type === "date") {
+                            av = av || "";
+                            bv = bv || "";
+                        } else {
+                            av = norm(av);
+                            bv = norm(bv);
+                        }
+
+                        if (av < bv) return dir === "asc" ? -1 : 1;
+                        if (av > bv) return dir === "asc" ? 1 : -1;
+                        return 0;
+                    });
+
+                    rows.forEach(function (r) { tbody.appendChild(r); });
+                }
+
+                headers.forEach(function (th) {
+                    th.addEventListener("click", function () {
+                        var key = th.getAttribute("data-sort-key");
+                        var type = th.getAttribute("data-sort-type") || "text";
+                        if (!key) return;
+
+                        if (sortState.key === key) {
+                            sortState.dir = sortState.dir === "asc" ? "desc" : "asc";
+                        } else {
+                            sortState.key = key;
+                            sortState.type = type;
+                            sortState.dir = "asc";
+                        }
+
+                        headers.forEach(function (h) {
+                            var indicator = h.querySelector(".sort-indicator");
+                            if (!indicator) return;
+                            indicator.textContent = "↕";
+                            indicator.style.color = "#9ca3af";
+                        });
+
+                        var currentIndicator = th.querySelector(".sort-indicator");
+                        if (currentIndicator) {
+                            currentIndicator.textContent = sortState.dir === "asc" ? "↑" : "↓";
+                            currentIndicator.style.color = "#2563eb";
+                        }
+
+                        applySort(sortState.key, sortState.type, sortState.dir);
+                        applyFilters();
+                    });
+                });
+
+                filters.forEach(function (input) {
+                    input.addEventListener("input", applyFilters);
+                    input.addEventListener("change", applyFilters);
+                });
+            }
+
+            setupTable("tabla-ofertas");
+            setupTable("tabla-pendientes");
+            setupTable("tabla-emitidos");
+        })();
+    </script>
+</div>
 </body>
-</html>
 </html>

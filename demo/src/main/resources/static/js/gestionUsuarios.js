@@ -93,6 +93,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let pageSize = 10;
     const defaultPageSize = 10;
     let ciudadesDisponibles = false;
+    let sortState = { key: null, direction: 'asc' };
 
     // Inicialización
     initializeFormHandlers();
@@ -100,6 +101,7 @@ document.addEventListener('DOMContentLoaded', function () {
     initializeRoles();
     initializeHorariosDocente();
     initializeFilters();
+    initializeSorting();
     initializeTable();
     initializeDateInput(); // ✅ Nueva función para configurar el input de fecha
     initializeDetalleUsuarioModal();
@@ -1783,22 +1785,85 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     
     function applyFilters() {
-        const filters = {
-            search: searchInput ? searchInput.value.toLowerCase() : '',
-            rol: filtroRol ? filtroRol.value : '',
-            estado: filtroEstado ? filtroEstado.value : '',
-            genero: filtroGenero ? filtroGenero.value : ''
-        };
+        loadUsuarios(1);
+    }
 
-        const filtersActive = hasActiveFilters(filters);
-        if (filtersActive) {
-            loadUsuarios(1, { forceAll: true, filtersOverride: filters });
-            return;
+    function initializeSorting() {
+        const table = document.getElementById('usuarios-table');
+        if (!table) return;
+
+        const sortableHeaders = table.querySelectorAll('thead th.sortable[data-sort-key]');
+        sortableHeaders.forEach((header) => {
+            header.addEventListener('click', function () {
+                const key = this.dataset.sortKey;
+                if (!key) return;
+
+                if (sortState.key === key) {
+                    sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
+                } else {
+                    sortState.key = key;
+                    sortState.direction = 'asc';
+                }
+
+                sortableHeaders.forEach((th) => {
+                    const indicator = th.querySelector('.sort-indicator');
+                    if (indicator) {
+                        indicator.textContent = '↕';
+                        indicator.style.color = '#94a3b8';
+                    }
+                });
+
+                const currentIndicator = this.querySelector('.sort-indicator');
+                if (currentIndicator) {
+                    currentIndicator.textContent = sortState.direction === 'asc' ? '↑' : '↓';
+                    currentIndicator.style.color = '#2563eb';
+                }
+
+                loadUsuarios(currentPage);
+            });
+        });
+    }
+
+    function normalizeSortText(value) {
+        return `${value ?? ''}`
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim();
+    }
+
+    function getSortableValue(usuario = {}, key = '') {
+        switch (key) {
+            case 'dni':
+                return normalizeSortText(usuario.dni || '');
+            case 'nombre':
+                return normalizeSortText(usuario.nombreCompleto || `${usuario.nombre || ''} ${usuario.apellido || ''}`);
+            case 'correo':
+                return normalizeSortText(usuario.correo || '');
+            case 'roles':
+                return normalizeSortText((usuario.roles || []).join(', '));
+            case 'estado':
+                return normalizeSortText(usuario.estado || '');
+            case 'fechaRegistro': {
+                const fecha = new Date(usuario.fechaRegistro || 0).getTime();
+                return Number.isNaN(fecha) ? 0 : fecha;
+            }
+            default:
+                return normalizeSortText(usuario[key] || '');
         }
+    }
 
-        // Aplicar filtros a la tabla
-        filterTable(filters);
-        setPaginationControlsVisible(true);
+    function sortUsuarios(usuarios = []) {
+        if (!sortState.key) return usuarios;
+
+        return usuarios.sort((a, b) => {
+            const av = getSortableValue(a, sortState.key);
+            const bv = getSortableValue(b, sortState.key);
+
+            if (av < bv) return sortState.direction === 'asc' ? -1 : 1;
+            if (av > bv) return sortState.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
     }
     
     function clearFilters() {
@@ -2608,20 +2673,17 @@ document.addEventListener('DOMContentLoaded', function () {
             console.log(`🔄 Cargando usuarios página ${page}...`);
 
             const serverPage = Math.max(0, page - 1);
-            const { forceAll = false, filtersOverride = null } = options;
+            const { filtersOverride = null } = options;
             const queryParams = new URLSearchParams();
 
             const activeFilters = filtersOverride || getCurrentFilters();
-            const filtersActive = forceAll || hasActiveFilters(activeFilters);
-
-        if (filtersActive) {
-            queryParams.set('page', 0);
-            queryParams.set('size', 10000);
-        } else {
             pageSize = defaultPageSize;
             queryParams.set('page', serverPage);
             queryParams.set('size', pageSize);
-        }
+            if (sortState.key) {
+                queryParams.set('sortBy', sortState.key);
+                queryParams.set('sortDir', sortState.direction);
+            }
             Object.entries(activeFilters).forEach(([key, value]) => {
                 if (value !== undefined && value !== null && `${value}`.trim() !== '') {
                     queryParams.append(key, value);
@@ -2656,35 +2718,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 
                 if (data.success) {
                     const renderStats = populateUsuariosTable(data.data);
-
-                    if (!filtersActive) {
-                        if (data.pagination) {
-                            updatePagination(data.pagination);
-                        } else {
-                            const defaultPagination = {
-                                totalElements: renderStats.totalElements,
-                                totalPages: Math.max(1, Math.ceil(renderStats.totalElements / pageSize)),
-                                currentPage: serverPage,
-                                pageSize: pageSize
-                            };
-                            updatePagination(defaultPagination);
-                            console.log("⚠️ Usando paginación por defecto:", defaultPagination);
-                        }
-                    }
-
-                    const visibleCount = filterTable(activeFilters);
-                    if (filtersActive) {
-                        const singlePage = {
-                            totalElements: visibleCount || 0,
-                            totalPages: 1,
-                            currentPage: 0,
-                            pageSize: visibleCount || 1
-                        };
-                        updatePagination(singlePage);
-                        setPaginationControlsVisible(false);
+                    if (data.pagination) {
+                        updatePagination(data.pagination);
                     } else {
-                        setPaginationControlsVisible(true);
+                        const defaultPagination = {
+                            totalElements: renderStats.totalElements,
+                            totalPages: Math.max(1, Math.ceil(renderStats.totalElements / pageSize)),
+                            currentPage: serverPage,
+                            pageSize: pageSize
+                        };
+                        updatePagination(defaultPagination);
+                        console.log("⚠️ Usando paginación por defecto:", defaultPagination);
                     }
+                    setPaginationControlsVisible(true);
                 } else {
                     console.error('Error del servidor:', data.message);
                     showNotification('❌ Error al cargar usuarios: ' + data.message, 'error', 10000);

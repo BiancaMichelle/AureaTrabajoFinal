@@ -82,6 +82,17 @@
         .text-danger {
             color: #dc3545 !important;
         }
+
+        #ofertas-table th.sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        #ofertas-table th.sortable .sort-indicator {
+            margin-left: 6px;
+            color: #94a3b8;
+            font-size: 0.8rem;
+        }
     /* =========================================
    1. ESTILOS DEL SWITCH (MODO MANUAL/AUTO)
    ========================================= */
@@ -1135,13 +1146,13 @@ input:checked + .slider:after {
                 <table id="ofertas-table" class="ofertas-table">
                     <thead>
                         <tr>
-                            <th>Nombre</th>
-                            <th>Tipo</th>
-                            <th>Modalidad</th>
-                            <th>Cupos</th>
-                            <th>Fecha Inicio</th>
-                            <th>Fecha Fin</th>
-                            <th>Estado</th>
+                            <th class="sortable" data-sort-key="nombre">Nombre <span class="sort-indicator">↕</span></th>
+                            <th class="sortable" data-sort-key="tipoOferta">Tipo <span class="sort-indicator">↕</span></th>
+                            <th class="sortable" data-sort-key="modalidad">Modalidad <span class="sort-indicator">↕</span></th>
+                            <th class="sortable" data-sort-key="cupos">Cupos <span class="sort-indicator">↕</span></th>
+                            <th class="sortable" data-sort-key="fechaInicio">Fecha Inicio <span class="sort-indicator">↕</span></th>
+                            <th class="sortable" data-sort-key="fechaFin">Fecha Fin <span class="sort-indicator">↕</span></th>
+                            <th class="sortable" data-sort-key="estado">Estado <span class="sort-indicator">↕</span></th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
@@ -1987,6 +1998,7 @@ input:checked + .slider:after {
                     limpiarFiltros();
                 });
             }
+            inicializarOrdenamientoTabla();
 
             console.log('🎉 GESTIÓN DE OFERTAS INICIALIZADA');
             
@@ -3494,6 +3506,84 @@ if (typeof window.mostrarNotificacion !== 'function') {
         const itemsPerPage = 10;
         let allOfertas = [];
         let filteredOfertas = [];
+        let sortState = { key: null, direction: 'asc' };
+
+        function normalizarTexto(valor) {
+            return `${valor ?? ''}`
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .trim();
+        }
+
+        function valorOrdenOferta(oferta, key) {
+            switch (key) {
+                case 'nombre':
+                    return normalizarTexto(oferta.nombre);
+                case 'tipoOferta':
+                    return normalizarTexto(oferta.tipoOferta || oferta.tipo);
+                case 'modalidad':
+                    return normalizarTexto(oferta.modalidad);
+                case 'cupos':
+                    return Number(oferta.cupos ?? Number.MAX_SAFE_INTEGER);
+                case 'fechaInicio':
+                    return oferta.fechaInicio || '';
+                case 'fechaFin':
+                    return oferta.fechaFin || '';
+                case 'estado':
+                    return normalizarTexto(oferta.estado);
+                default:
+                    return normalizarTexto(oferta[key]);
+            }
+        }
+
+        function aplicarOrdenActual() {
+            if (!sortState.key) return;
+
+            filteredOfertas.sort((a, b) => {
+                const av = valorOrdenOferta(a, sortState.key);
+                const bv = valorOrdenOferta(b, sortState.key);
+
+                if (av < bv) return sortState.direction === 'asc' ? -1 : 1;
+                if (av > bv) return sortState.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        function inicializarOrdenamientoTabla() {
+            const headers = document.querySelectorAll('#ofertas-table thead th.sortable[data-sort-key]');
+            headers.forEach((header) => {
+                header.addEventListener('click', function() {
+                    const key = this.dataset.sortKey;
+                    if (!key) return;
+
+                    if (sortState.key === key) {
+                        sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        sortState.key = key;
+                        sortState.direction = 'asc';
+                    }
+
+                    headers.forEach((th) => {
+                        const indicator = th.querySelector('.sort-indicator');
+                        if (indicator) {
+                            indicator.textContent = '↕';
+                            indicator.style.color = '#94a3b8';
+                        }
+                    });
+
+                    const currentIndicator = this.querySelector('.sort-indicator');
+                    if (currentIndicator) {
+                        currentIndicator.textContent = sortState.direction === 'asc' ? '↑' : '↓';
+                        currentIndicator.style.color = '#2563eb';
+                    }
+
+                    aplicarOrdenActual();
+                    currentPage = 1;
+                    renderizarPaginaActual();
+                });
+            });
+        }
 
         // Función para actualizar tabla de ofertas
         function actualizarTablaOfertas() {
@@ -3506,6 +3596,7 @@ if (typeof window.mostrarNotificacion !== 'function') {
                         // Guardar datos globales
                         allOfertas = data.data;
                         filteredOfertas = [...allOfertas]; // Inicialmente sin filtros adicionales
+                        aplicarOrdenActual();
                         
                         // Resetear a página 1
                         currentPage = 1;
@@ -3620,6 +3711,8 @@ if (typeof window.mostrarNotificacion !== 'function') {
                 
                 return true;
             });
+
+            aplicarOrdenActual();
             
             currentPage = 1;
             renderizarPaginaActual();
@@ -3633,6 +3726,7 @@ if (typeof window.mostrarNotificacion !== 'function') {
             document.getElementById('filtro-certificado').value = '';
             
             filteredOfertas = [...allOfertas];
+            aplicarOrdenActual();
             currentPage = 1;
             renderizarPaginaActual();
         }
