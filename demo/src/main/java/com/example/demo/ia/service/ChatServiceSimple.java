@@ -1181,36 +1181,26 @@ public class ChatServiceSimple {
             String contexto = construirContextoModulos(modulosRelacionados);
             String detallePreguntas = construirDetallePreguntasIncorrectas(incorrectas);
 
-            String systemPrompt = "Eres un tutor académico comprensivo, carismático y motivador. " +
-                    "Este feedback es POST-EXAMEN: el alumno ya terminó y DESAPROBÓ. " +
+            String systemPrompt = "Eres un tutor académico empático y motivador. " +
                     "Tu objetivo es explicar por qué algunas respuestas están incorrectas usando SOLO el contenido proporcionado. " +
-                    "No inventes contenido ni uses fuentes externas; si faltan datos, indícalo y recomienda revisar los módulos listados. " +
-                    "No digas frases como 'buena suerte', no uses 'bienvenido' y no hables como si el examen aún no hubiera ocurrido. " +
-                    "Nunca muestres la respuesta correcta; solo explica por qué la respuesta del alumno no coincide con el material. " +
-                    "Anima al estudiante a no rendirse y a seguir practicando.";
+                    "No desmotivés al estudiante. No inventes contenido; si faltan datos, recomienda revisar los módulos listados.";
 
             String userPrompt = "Alumno: " + (alumno != null ? alumno.getNombre() + " " + alumno.getApellido() : "Estudiante") + "\n" +
-                    "Examen: " + (examen != null ? examen.getTitulo() : "Examen") + "\n" +
-                    "Contexto: El alumno ya terminó el examen y lo DESAPROBÓ.\n\n" +
+                    "Examen: " + (examen != null ? examen.getTitulo() : "Examen") + "\n\n" +
                     "Módulos relacionados y contenido:\n" + contexto + "\n\n" +
                     "Preguntas incorrectas (máximo 3):\n" + detallePreguntas + "\n\n" +
                     "Instrucciones:\n" +
-                    "1) Empieza con un mensaje breve de comprensión y apoyo emocional (máx. 2 líneas, sin saludo largo).\n" +
-                    "2) Corrige SOLO las preguntas incorrectas listadas (máximo 3), explicando por qué la respuesta del alumno no coincide con el material.\n" +
-                    "   Debes cubrir TODAS las preguntas listadas, sin omitir ninguna.\n" +
-                    "   Si no hay información suficiente en el material, dilo explícitamente y sugiere revisar el módulo correspondiente.\n" +
-                    "3) Luego, escribe un mensaje motivacional corto.\n" +
-                    "4) Inmediatamente después del mensaje motivacional, agrega 'Puntos para seguir leyendo' con 2-3 puntos concretos del material.\n" +
-                    "5) Incluye exactamente 5 emojis repartidos en todo el texto.\n" +
-                    "6) No muestres respuestas correctas. Mantén el mensaje conciso.\n";
+                    "1) Empieza con un mensaje breve de ánimo (1-2 líneas).\n" +
+                    "2) Explica por qué están mal las respuestas (para cada pregunta), con base en el contenido.\n" +
+                    "3) Propón 2 o 3 preguntas de estudio para investigar en el aula.\n" +
+                    "4) Usa un tono claro y cercano.\n";
 
             List<Map<String, Object>> messages = new ArrayList<>();
             messages.add(Map.of("role", "system", "content", systemPrompt));
             messages.add(Map.of("role", "user", "content", userPrompt));
 
             String raw = generarRespuestaConChat(messages);
-            String filtered = postFilterIaResponse(raw);
-            return normalizarFeedbackExamen(filtered);
+            return postFilterIaResponse(raw);
         } catch (Exception e) {
             System.err.println("Error generando feedback examen: " + e.getMessage());
             return null;
@@ -1246,35 +1236,24 @@ public class ChatServiceSimple {
             sb.append(index++).append(") ");
             sb.append(p != null ? p.getEnunciado() : "Pregunta").append("\n");
             sb.append("   Respuesta del alumno: ").append(formatearRespuestaUsuario(r.getRespuestaUsuario())).append("\n");
+            sb.append("   Respuesta correcta: ").append(obtenerOpcionesCorrectas(p)).append("\n");
         }
         return sb.toString();
     }
-    
-    private String normalizarFeedbackExamen(String feedback) {
-        if (feedback == null) {
-            return null;
+
+    private String obtenerOpcionesCorrectas(Pregunta pregunta) {
+        if (pregunta == null || pregunta.getOpciones() == null) {
+            return "No disponible";
         }
-        String salida = feedback;
-        // Eliminar líneas con respuestas correctas si la IA las incluyó
-        salida = salida.replaceAll("(?im)^\\s*Respuesta correcta:.*$", "");
-        salida = salida.replaceAll("(?im)^.*la respuesta correcta.*$", "");
-        salida = salida.replaceAll("(?im)^.*la correcta es.*$", "");
-        // Eliminar frases no deseadas
-        salida = salida.replaceAll("(?im)^.*bienvenido.*$", "");
-        salida = salida.replaceAll("(?im)^.*buena suerte.*$", "");
-        // Limpiar espacios y líneas extra
-        salida = salida.replaceAll("(?m)\\n{3,}", "\n\n").trim();
-        // Limitar longitud total para evitar mensajes excesivos
-        final int maxChars = 900;
-        if (salida.length() > maxChars) {
-            salida = salida.substring(0, maxChars);
-            int lastBreak = salida.lastIndexOf('\n');
-            if (lastBreak > 200) {
-                salida = salida.substring(0, lastBreak);
-            }
-            salida = salida.trim() + "\n\n(Sugerencia: revisa los módulos para profundizar.)";
+        List<String> correctas = pregunta.getOpciones().stream()
+                .filter(Opcion::getEsCorrecta)
+                .map(Opcion::getDescripcion)
+                .filter(Objects::nonNull)
+                .toList();
+        if (correctas.isEmpty()) {
+            return "No disponible";
         }
-        return salida;
+        return String.join(" | ", correctas);
     }
 
     private String formatearRespuestaUsuario(String respuestaUsuario) {

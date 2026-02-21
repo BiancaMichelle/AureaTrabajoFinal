@@ -50,16 +50,9 @@ public class ExamenFeedbackService {
             }
 
             List<RespuestaIntento> incorrectas = respuestasIntento.stream()
-                    .filter(r -> Boolean.FALSE.equals(r.getEsCorrecta())
-                            || (r.getEsCorrecta() == null
-                                    && r.getPuntajeObtenido() != null
-                                    && r.getPuntajeObtenido().floatValue() == 0f))
-                    .collect(java.util.stream.Collectors.toList());
-
-            if (incorrectas.size() > 3) {
-                java.util.Collections.shuffle(incorrectas);
-                incorrectas = incorrectas.subList(0, 3);
-            }
+                    .filter(r -> Boolean.FALSE.equals(r.getEsCorrecta()))
+                    .limit(3)
+                    .toList();
 
             System.out.println("📊 [ExamenFeedbackService] Respuestas incorrectas encontradas: " + incorrectas.size());
 
@@ -83,12 +76,6 @@ public class ExamenFeedbackService {
 
             System.out.println(
                     "✅ [ExamenFeedbackService] Feedback generado correctamente. Longitud: " + feedback.length());
-
-            // Si la nota se publica automáticamente, enviamos el feedback en el momento de finalizar.
-            if (Boolean.TRUE.equals(examen.getPublicarNota())) {
-                enviarFeedbackInmediato(alumno, examen, feedback);
-                return;
-            }
 
             LocalDateTime ahora = LocalDateTime.now();
             LocalDateTime cierre = examen.getFechaCierre();
@@ -132,8 +119,6 @@ public class ExamenFeedbackService {
         Notificacion notif = new Notificacion();
         notif.setUsuario(alumno);
         notif.setTitulo("📌 Resultado del examen: " + (examen.getTitulo() != null ? examen.getTitulo() : "Examen"));
-        notif.setMensaje(mensaje);
-        notif.setTipo("CHAT_IA");
         notif.setLeida(false);
         notificacionRepository.save(notif);
         System.out.println("🔔 [ExamenFeedbackService] Notificación guardada en plataforma");

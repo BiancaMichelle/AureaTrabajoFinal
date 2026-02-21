@@ -526,16 +526,13 @@ public class ExamenController {
 
             intentoRepository.save(intento);
 
-            // NUEVA LÓGICA: Generar feedback SOLO si reprobó y la nota se publica automáticamente
+            // NUEVA LÓGICA: Generar feedback SIEMPRE que el alumno repruebe
             // Escala 0-10: el examen totaliza 10 puntos
             boolean reprobo = puntajeTotal < 6.0f;
-            boolean publicarNota = Boolean.TRUE.equals(examen.getPublicarNota());
-            boolean feedbackHabilitado = publicarNota && reprobo && intento.getEstado() == EstadoIntento.FINALIZADO;
-            System.out.println("FEEDBACK DEBUG: Escala 0-10. Puntaje: " + puntajeTotal + ", Reprobo: " + reprobo
-                    + ", PublicarNota: " + publicarNota + ", Estado: " + intento.getEstado()
-                    + ", FeedbackHabilitado: " + feedbackHabilitado);
+            System.out.println("FEEDBACK DEBUG: Escala 0-10. Puntaje: " + puntajeTotal + ", Reprobo: " + reprobo);
 
-            if (feedbackHabilitado) {
+
+            if (reprobo) {
                 String nombreAlumno = alumno.getNombre() + " " + alumno.getApellido();
                 System.out.println("📚 FEEDBACK DEBUG: Alumno " + nombreAlumno + " reprobó con " + puntajeTotal
                         + ", generando feedback...");
@@ -552,8 +549,17 @@ public class ExamenController {
                     System.err.println("❌ FEEDBACK DEBUG ERROR: " + e.getMessage());
                     e.printStackTrace();
                 }
+            } else if (Boolean.TRUE.equals(examen.getCalificacionAutomatica())) {
+                System.out.println("✅ FEEDBACK DEBUG: Aprobó con " + puntajeTotal + " y calificación automática ON");
+                try {
+                    examenFeedbackService.generarYProgramarFeedback(alumno, examen, intento, respuestasIntento);
+                    System.out.println("✅ FEEDBACK DEBUG: Método de servicio llamado correctamente");
+                } catch (Exception e) {
+                    System.err.println("❌ FEEDBACK DEBUG ERROR: " + e.getMessage());
+                    e.printStackTrace();
+                }
             } else {
-                System.out.println("ℹ️ FEEDBACK DEBUG: No se genera feedback para este intento.");
+                System.out.println("ℹ️ FEEDBACK DEBUG: Aprobó con " + puntajeTotal + ". No se genera feedback.");
             }
 
             Map<String, Object> response = new HashMap<>();
@@ -564,10 +570,9 @@ public class ExamenController {
                 ofertaId = examen.getModulo().getCurso().getIdOferta();
             }
             String redirectPath = ofertaId != null ? "/alumno/aula/" + ofertaId : "/alumno/aula";
+            boolean publicarNota = Boolean.TRUE.equals(examen.getPublicarNota());
             response.put("redirectUrl", redirectPath);
             response.put("publicarNota", publicarNota);
-            response.put("reprobo", reprobo);
-            response.put("feedbackHabilitado", feedbackHabilitado);
             if (publicarNota && intento.getEstado() == EstadoIntento.FINALIZADO) {
                 response.put("calificacion", puntajeTotal);
             }

@@ -576,23 +576,6 @@
                 .then(data => {
                     console.log('✅ Examen enviado:', data);
                     if (data.success) {
-                        const appendQueryParam = (url, key, value) => {
-                            if (!url) return url;
-                            const hasQuery = url.includes('?');
-                            const separator = hasQuery ? '&' : '?';
-                            return `${url}${separator}${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
-                        };
-
-                        let redirectUrl = data.redirectUrl || '/';
-                        if (data.publicarNota === true) {
-                            const resultado = data.reprobo === true ? 'reprobado' : 'aprobado';
-                            redirectUrl = appendQueryParam(redirectUrl, 'chatAbrir', '1');
-                            redirectUrl = appendQueryParam(redirectUrl, 'chatResultado', resultado);
-                            if (data.feedbackHabilitado === true) {
-                                redirectUrl = appendQueryParam(redirectUrl, 'chatFeedback', '1');
-                            }
-                        }
-
                         let mensaje = `
                             <h2 class="text-3xl font-bold text-green-600 mb-4">Examen Finalizado</h2>
                             <p class="text-lg text-gray-700 mb-6">Tus respuestas han sido enviadas con éxito.</p>
@@ -623,7 +606,7 @@
                         
                         mensaje += `
                             <div class="flex justify-center mt-8">
-                                <a href="${redirectUrl}" class="px-6 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors">
+                                <a href="${data.redirectUrl}" class="px-6 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors">
                                     Volver al Aula
                                 </a>
                             </div>
@@ -634,7 +617,7 @@
                         
                         // Ocultar footer
                         document.querySelector('footer').style.display = 'none';
-
+                        
                     } else {
                         console.error('❌ Error:', data.message);
                         alert('Error al entregar el examen: ' + (data.message || 'Error desconocido'));
