@@ -7,7 +7,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDate;
 import java.util.*;
@@ -27,26 +26,18 @@ public class EstadisticasController {
      */
     @GetMapping
     @Auditable(action = "ACCESO_ESTADISTICAS", entity = "Sistema")
-    public String mostrarEstadisticas(
-            Model model,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin) {
+    public String mostrarEstadisticas(Model model) {
         try {
-            if (rangoInvalido(fechaInicio, fechaFin)) {
-                model.addAttribute("error", "Rango de fechas inválido. Se mostrará el histórico completo.");
-                fechaInicio = null;
-                fechaFin = null;
-            }
             // Usar el service real para obtener datos
             Map<String, Object> metricas = estadisticasService.obtenerMetricasGenerales();
-            List<Map<String, Object>> demandaOfertas = estadisticasService.analizarDemandaOfertas(fechaInicio, fechaFin);
+            List<Map<String, Object>> demandaOfertas = estadisticasService.analizarDemandaOfertas();
             Map<String, Object> analisisDesercion = estadisticasService.analizarDesercion();
             Map<String, Object> proyeccionCrecimiento = estadisticasService.proyectarCrecimiento();
 
             // Nuevas estadísticas detalladas
-            model.addAttribute("statsOfertas", estadisticasService.obtenerEstadisticasOfertasDetalladas(fechaInicio, fechaFin));
-            model.addAttribute("statsInscripciones", estadisticasService.obtenerEstadisticasInscripciones(fechaInicio, fechaFin));
-            model.addAttribute("statsEconomia", estadisticasService.obtenerEstadisticasEconomicas(fechaInicio, fechaFin));
+            model.addAttribute("statsOfertas", estadisticasService.obtenerEstadisticasOfertasDetalladas());
+            model.addAttribute("statsInscripciones", estadisticasService.obtenerEstadisticasInscripciones());
+            model.addAttribute("statsEconomia", estadisticasService.obtenerEstadisticasEconomicas());
             
             // Agregar campos adicionales que necesita el template
             if (metricas != null && !metricas.containsKey("totalOfertas")) {
@@ -66,8 +57,6 @@ public class EstadisticasController {
             LocalDate hoy = LocalDate.now();
             model.addAttribute("fechaActualizacion", hoy);
             model.addAttribute("maxFechaHoy", hoy);
-            model.addAttribute("fechaInicioSeleccionada", fechaInicio);
-            model.addAttribute("fechaFinSeleccionada", fechaFin);
             
             return "admin/estadisticas";
             
@@ -78,8 +67,6 @@ public class EstadisticasController {
             model.addAttribute("demandaOfertas", new ArrayList<>());
             model.addAttribute("fechaActualizacion", hoy);
             model.addAttribute("maxFechaHoy", hoy);
-            model.addAttribute("fechaInicioSeleccionada", fechaInicio);
-            model.addAttribute("fechaFinSeleccionada", fechaFin);
             return "admin/estadisticas";
         }
     }
@@ -106,14 +93,9 @@ public class EstadisticasController {
     @GetMapping("/api/demanda")
     @ResponseBody
     @Auditable(action = "ANALISIS_DEMANDA", entity = "OfertaAcademica")
-    public ResponseEntity<List<Map<String, Object>>> analizarDemanda(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin) {
+    public ResponseEntity<List<Map<String, Object>>> analizarDemanda() {
         try {
-            if (rangoInvalido(fechaInicio, fechaFin)) {
-                return ResponseEntity.badRequest().body(new ArrayList<>());
-            }
-            List<Map<String, Object>> demanda = estadisticasService.analizarDemandaOfertas(fechaInicio, fechaFin);
+            List<Map<String, Object>> demanda = estadisticasService.analizarDemandaOfertas();
             return ResponseEntity.ok(demanda);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
@@ -182,14 +164,12 @@ public class EstadisticasController {
      */
     @GetMapping("/api/grafico-ofertas")
     @ResponseBody
-    public ResponseEntity<Map<String, Object>> obtenerDatosGraficoOfertas(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin) {
+    public ResponseEntity<Map<String, Object>> obtenerDatosGraficoOfertas() {
         try {
-            if (rangoInvalido(fechaInicio, fechaFin)) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Rango de fechas inválido"));
-            }
-            Map<String, Long> ofertasPorTipo = estadisticasService.obtenerOfertasPorTipo(fechaInicio, fechaFin);
+            Map<String, Object> metricas = estadisticasService.obtenerMetricasGenerales();
+            
+            @SuppressWarnings("unchecked")
+            Map<String, Long> ofertasPorTipo = (Map<String, Long>) metricas.get("ofertasPorTipo");
             
             if (ofertasPorTipo == null || ofertasPorTipo.isEmpty()) {
                 return ResponseEntity.ok(Map.of(
@@ -283,37 +263,22 @@ public class EstadisticasController {
 
     @GetMapping("/api/ofertas-detalladas")
     @ResponseBody
-    public ResponseEntity<Map<String, Object>> getOfertasDetalladas(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin) {
-        if (rangoInvalido(fechaInicio, fechaFin)) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Rango de fechas inválido"));
-        }
-        return ResponseEntity.ok(estadisticasService.obtenerEstadisticasOfertasDetalladas(fechaInicio, fechaFin));
+    public ResponseEntity<Map<String, Object>> getOfertasDetalladas() {
+        return ResponseEntity.ok(estadisticasService.obtenerEstadisticasOfertasDetalladas());
     }
 
     @GetMapping("/api/inscripciones-detalladas")
     @ResponseBody
-    public ResponseEntity<Map<String, Object>> getInscripcionesDetalladas(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin) {
-        if (rangoInvalido(fechaInicio, fechaFin)) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Rango de fechas inválido"));
-        }
-        Map<String, Object> stats = estadisticasService.obtenerEstadisticasInscripciones(fechaInicio, fechaFin);
+    public ResponseEntity<Map<String, Object>> getInscripcionesDetalladas() {
+        Map<String, Object> stats = estadisticasService.obtenerEstadisticasInscripciones();
         logger.info("GET /admin/estadisticas/api/inscripciones-detalladas -> keys: {}", stats.keySet());
         return ResponseEntity.ok(stats);
     }
     
     @GetMapping("/api/economia-detallada")
     @ResponseBody
-    public ResponseEntity<Map<String, Object>> getEconomiaDetallada(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin) {
-        if (rangoInvalido(fechaInicio, fechaFin)) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Rango de fechas inválido"));
-        }
-        return ResponseEntity.ok(estadisticasService.obtenerEstadisticasEconomicas(fechaInicio, fechaFin));
+    public ResponseEntity<Map<String, Object>> getEconomiaDetallada() {
+        return ResponseEntity.ok(estadisticasService.obtenerEstadisticasEconomicas());
     }
 
     /**
@@ -403,9 +368,5 @@ public class EstadisticasController {
         metricas.put("totalInscripciones", 0L);
         metricas.put("ingresosTotales", "0.00");
         return metricas;
-    }
-
-    private boolean rangoInvalido(LocalDate inicio, LocalDate fin) {
-        return inicio != null && fin != null && inicio.isAfter(fin);
     }
 }

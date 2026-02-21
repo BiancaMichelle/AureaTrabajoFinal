@@ -206,53 +206,6 @@
             color: #2d3748;
         }
 
-        .btn-apply {
-            background: var(--primary-gradient);
-            color: white;
-            box-shadow: 0 4px 6px rgba(102, 126, 234, 0.25);
-        }
-
-        .btn-apply:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 8px rgba(102, 126, 234, 0.35);
-            color: white;
-        }
-
-        .stats-filter-card {
-            margin-bottom: 1.25rem;
-        }
-
-        .stats-filter-card .card-header {
-            padding: 0.75rem 1rem;
-            font-size: 0.95rem;
-        }
-
-        .stats-filter-card .card-body {
-            padding: 0.75rem 1rem;
-        }
-
-        .stats-filter-card .form-control {
-            padding: 0.35rem 0.6rem;
-            font-size: 0.85rem;
-            height: 36px;
-        }
-
-        .stats-filter-card label {
-            margin-bottom: 0.25rem;
-        }
-
-        .stats-filter-card .action-btn {
-            padding: 0.55rem 1rem;
-            font-size: 0.85rem;
-        }
-
-        .stats-filter-actions {
-            display: flex;
-            gap: 0.6rem;
-            flex-wrap: wrap;
-            justify-content: flex-end;
-        }
-
         /* Report Modal custom styles */
         .modal-report-header {
             background: var(--primary-gradient);
@@ -286,40 +239,6 @@
                 <button id="btnOpenReportModal" class="action-btn btn-generate-report">
                     <i class="fas fa-file-download"></i> Exportar Reportes
                 </button>
-            </div>
-        </div>
-
-        <!-- Filtro de periodo -->
-        <div class="metric-card stats-filter-card">
-            <div class="card-header">
-                <span><i class="fas fa-calendar-alt me-2 text-primary"></i>Filtrar por periodo</span>
-                <small class="text-muted">Aplica a gráficos y ratios</small>
-            </div>
-            <div class="card-body">
-                <div class="row g-3 align-items-end">
-                    <div class="col-md-3">
-                        <label class="small text-muted">Desde</label>
-                        <input type="date" id="statsFechaInicio" class="form-control"
-                               th:value="${fechaInicioSeleccionada != null ? #temporals.format(fechaInicioSeleccionada, 'yyyy-MM-dd') : ''}"
-                               th:attr="max=${#temporals.format(maxFechaHoy, 'yyyy-MM-dd')}">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="small text-muted">Hasta</label>
-                        <input type="date" id="statsFechaFin" class="form-control"
-                               th:value="${fechaFinSeleccionada != null ? #temporals.format(fechaFinSeleccionada, 'yyyy-MM-dd') : ''}"
-                               th:attr="max=${#temporals.format(maxFechaHoy, 'yyyy-MM-dd')}">
-                    </div>
-                    <div class="col-md-6 stats-filter-actions">
-                        <button id="btnApplyStatsRange" class="action-btn btn-apply">
-                            <i class="fas fa-filter"></i> Aplicar
-                        </button>
-                        <button id="btnClearStatsRange" class="action-btn btn-refresh">
-                            <i class="fas fa-undo"></i> Limpiar
-                        </button>
-                    </div>
-                </div>
-                <div id="statsRangeAlert" class="alert alert-warning mt-3 d-none" role="alert"></div>
-                <div id="statsRangeHint" class="small text-muted mt-2">Mostrando el histórico completo.</div>
             </div>
         </div>
         
@@ -421,7 +340,7 @@
                                                 <th class="text-center">Demanda</th>
                                             </tr>
                                         </thead>
-                                        <tbody id="demandaOfertasBody">
+                                        <tbody>
                                             <tr th:if="${demandaOfertas == null or #lists.isEmpty(demandaOfertas)}">
                                                 <td colspan="4" class="text-center py-4 text-muted">No hay datos disponibles</td>
                                             </tr>
@@ -475,18 +394,18 @@
                             <div class="card-body">
                                 <div class="mb-4 text-center">
                                     <h6 class="text-muted text-uppercase mb-2">Tasa de Abandono</h6>
-                                    <h2 id="statsTasaAbandono" class="text-danger fw-bold" th:if="${statsInscripciones != null}" th:text="${#numbers.formatPercent(statsInscripciones['tasaAbandonoGlobal'], 1, 1)}">0%</h2>
+                                    <h2 class="text-danger fw-bold" th:if="${statsInscripciones != null}" th:text="${#numbers.formatPercent(statsInscripciones['tasaAbandonoGlobal'], 1, 1)}">0%</h2>
                                 </div>
                                 <hr>
                                 <div class="mb-4 text-center">
                                     <h6 class="text-muted text-uppercase mb-2">Nuevos vs Recurrentes</h6>
                                     <div class="d-flex justify-content-center gap-4">
                                         <div>
-                                            <span id="statsAlumnosNuevos" class="d-block text-success fw-bold h4" th:if="${statsInscripciones != null}" th:text="${statsInscripciones['alumnosNuevos']}">0</span>
+                                            <span class="d-block text-success fw-bold h4" th:if="${statsInscripciones != null}" th:text="${statsInscripciones['alumnosNuevos']}">0</span>
                                             <small class="text-muted">Nuevos</small>
                                         </div>
                                         <div>
-                                            <span id="statsAlumnosRecurrentes" class="d-block text-primary fw-bold h4" th:if="${statsInscripciones != null}" th:text="${statsInscripciones['alumnosRecurrentes']}">0</span>
+                                            <span class="d-block text-primary fw-bold h4" th:if="${statsInscripciones != null}" th:text="${statsInscripciones['alumnosRecurrentes']}">0</span>
                                             <small class="text-muted">Recurrentes</small>
                                         </div>
                                     </div>
@@ -595,7 +514,9 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             initGlobalCharts();
-            initStatsFilters();
+            loadOfertaCharts();
+            loadInscripcionCharts();
+            loadEconomicoCharts();
             
             // Modal Logic
             const modal = document.getElementById('statsReportModal');
@@ -617,10 +538,7 @@
                 if(e.target == modal) modal.style.display = 'none';
             };
 
-            const refreshBtn = document.getElementById('btnRefreshCharts');
-            if (refreshBtn) {
-                refreshBtn.onclick = () => applyStatsRange({ pushState: false });
-            }
+            document.getElementById('btnRefreshCharts').onclick = () => window.location.reload();
         });
 
         Chart.register(ChartDataLabels);
@@ -652,221 +570,6 @@
             formatter: formatEntero
         };
 
-        const formatPercent = (value) => {
-            if (value === null || value === undefined || value === '') return '';
-            const numero = Number(value);
-            if (!Number.isFinite(numero)) return value;
-            return (numero * 100).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 1 }) + '%';
-        };
-
-        function getStatsRangeValues() {
-            const inicioInput = document.getElementById('statsFechaInicio');
-            const finInput = document.getElementById('statsFechaFin');
-            return {
-                inicio: inicioInput ? inicioInput.value : '',
-                fin: finInput ? finInput.value : ''
-            };
-        }
-
-        function buildStatsQuery(range) {
-            const params = new URLSearchParams();
-            if (range && range.inicio) params.set('fechaInicio', range.inicio);
-            if (range && range.fin) params.set('fechaFin', range.fin);
-            const qs = params.toString();
-            return qs ? `?${qs}` : '';
-        }
-
-        function showStatsRangeAlert(msg) {
-            const alert = document.getElementById('statsRangeAlert');
-            if (!alert) return;
-            alert.textContent = msg;
-            alert.classList.remove('d-none');
-        }
-
-        function hideStatsRangeAlert() {
-            const alert = document.getElementById('statsRangeAlert');
-            if (!alert) return;
-            alert.textContent = '';
-            alert.classList.add('d-none');
-        }
-
-        function updateStatsRangeHint(range) {
-            const hint = document.getElementById('statsRangeHint');
-            if (!hint) return;
-            if (!range.inicio && !range.fin) {
-                hint.textContent = 'Mostrando el histórico completo.';
-                return;
-            }
-            const desde = range.inicio ? range.inicio : 'Inicio';
-            const hasta = range.fin ? range.fin : 'Hoy';
-            hint.textContent = `Mostrando del ${desde} al ${hasta}.`;
-        }
-
-        function validateStatsRange(range) {
-            const today = new Date().toISOString().slice(0, 10);
-            if (range.inicio && range.fin && range.inicio > range.fin) {
-                return 'La fecha desde no puede ser posterior a la fecha hasta.';
-            }
-            if (range.inicio && range.inicio > today) {
-                return 'La fecha desde no puede ser futura.';
-            }
-            if (range.fin && range.fin > today) {
-                return 'La fecha hasta no puede ser futura.';
-            }
-            return '';
-        }
-
-        function updateStatsUrl(range) {
-            const params = new URLSearchParams(window.location.search);
-            if (range.inicio) params.set('fechaInicio', range.inicio);
-            else params.delete('fechaInicio');
-            if (range.fin) params.set('fechaFin', range.fin);
-            else params.delete('fechaFin');
-            const qs = params.toString();
-            const newUrl = `${window.location.pathname}${qs ? '?' + qs : ''}`;
-            window.history.replaceState(null, '', newUrl);
-        }
-
-        function initStatsFilters() {
-            const inicioInput = document.getElementById('statsFechaInicio');
-            const finInput = document.getElementById('statsFechaFin');
-            const params = new URLSearchParams(window.location.search);
-            if (inicioInput && params.get('fechaInicio')) inicioInput.value = params.get('fechaInicio');
-            if (finInput && params.get('fechaFin')) finInput.value = params.get('fechaFin');
-            if (inicioInput && finInput && inicioInput.value) {
-                finInput.setAttribute('min', inicioInput.value);
-            }
-
-            if (inicioInput && finInput) {
-                inicioInput.addEventListener('change', () => {
-                    if (inicioInput.value) {
-                        finInput.setAttribute('min', inicioInput.value);
-                    } else {
-                        finInput.removeAttribute('min');
-                    }
-                });
-            }
-
-            const applyBtn = document.getElementById('btnApplyStatsRange');
-            if (applyBtn) {
-                applyBtn.addEventListener('click', () => applyStatsRange({ pushState: true }));
-            }
-            const clearBtn = document.getElementById('btnClearStatsRange');
-            if (clearBtn) {
-                clearBtn.addEventListener('click', () => clearStatsRange());
-            }
-
-            applyStatsRange({ pushState: false });
-        }
-
-        function applyStatsRange({ pushState }) {
-            const range = getStatsRangeValues();
-            const error = validateStatsRange(range);
-            if (error) {
-                showStatsRangeAlert(error);
-                return;
-            }
-            hideStatsRangeAlert();
-            updateStatsRangeHint(range);
-            if (pushState) updateStatsUrl(range);
-            loadOfertaCharts(range);
-            loadInscripcionCharts(range);
-            loadEconomicoCharts(range);
-            loadDemandaTable(range);
-        }
-
-        function clearStatsRange() {
-            const inicioInput = document.getElementById('statsFechaInicio');
-            const finInput = document.getElementById('statsFechaFin');
-            if (inicioInput) inicioInput.value = '';
-            if (finInput) {
-                finInput.value = '';
-                finInput.removeAttribute('min');
-            }
-            const range = getStatsRangeValues();
-            updateStatsUrl(range);
-            applyStatsRange({ pushState: false });
-        }
-
-        function buildRangeLabels(range) {
-            if (!range || (!range.inicio && !range.fin)) {
-                return last12MonthsLabels();
-            }
-            const endDate = range.fin ? new Date(range.fin + 'T00:00:00') : new Date();
-            const startDate = range.inicio ? new Date(range.inicio + 'T00:00:00') : new Date(endDate.getFullYear(), endDate.getMonth() - 11, 1);
-            const labels = [];
-            let cursor = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
-            const endMonth = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
-            while (cursor <= endMonth) {
-                labels.push(cursor.toISOString().slice(0, 7));
-                cursor.setMonth(cursor.getMonth() + 1);
-            }
-            return labels;
-        }
-
-        function updateInscripcionStats(data) {
-            if (!data) return;
-            const tasaEl = document.getElementById('statsTasaAbandono');
-            if (tasaEl && data.tasaAbandonoGlobal !== undefined) {
-                tasaEl.textContent = formatPercent(data.tasaAbandonoGlobal);
-            }
-            const nuevosEl = document.getElementById('statsAlumnosNuevos');
-            if (nuevosEl && data.alumnosNuevos !== undefined) {
-                nuevosEl.textContent = formatEntero(data.alumnosNuevos);
-            }
-            const recurrentesEl = document.getElementById('statsAlumnosRecurrentes');
-            if (recurrentesEl && data.alumnosRecurrentes !== undefined) {
-                recurrentesEl.textContent = formatEntero(data.alumnosRecurrentes);
-            }
-        }
-
-        function loadDemandaTable(range) {
-            const qs = buildStatsQuery(range);
-            fetch(`/admin/estadisticas/api/demanda${qs}`)
-            .then(r => r.json())
-            .then(data => {
-                const tbody = document.getElementById('demandaOfertasBody');
-                if (!tbody) return;
-                const rows = Array.isArray(data) ? data : [];
-                if (rows.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-muted">No hay datos disponibles</td></tr>';
-                    return;
-                }
-                tbody.innerHTML = rows.map(oferta => {
-                    const inscritos = oferta.cantidadInscritos || 0;
-                    const tasa = Number(oferta.tasaOcupacion || 0);
-                    const nivel = oferta.nivelDemanda || '';
-                    const porcentaje = Math.max(0, Math.min(100, tasa * 100));
-                    const barraClase = tasa > 0.8 ? 'bg-danger' : (tasa > 0.5 ? 'bg-info' : 'bg-success');
-                    const badgeClase = nivel === 'ALTA' ? 'bg-success' : 'bg-secondary';
-                    return `
-                        <tr>
-                            <td class="ps-4 fw-bold">${oferta.tituloOferta || 'Sin nombre'}</td>
-                            <td class="text-center">${formatEntero(inscritos)}</td>
-                            <td class="text-center">
-                                <div class="d-flex align-items-center justify-content-center">
-                                    <div class="progress w-50 me-2" style="height: 6px;">
-                                        <div class="progress-bar ${barraClase}" style="width: ${porcentaje}%;"></div>
-                                    </div>
-                                    <span class="small">${formatPercent(tasa)}</span>
-                                </div>
-                            </td>
-                            <td class="text-center">
-                                <span class="badge ${badgeClase}">${nivel}</span>
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
-            })
-            .catch(() => {
-                const tbody = document.getElementById('demandaOfertasBody');
-                if (tbody) {
-                    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-muted">No hay datos disponibles</td></tr>';
-                }
-            });
-        }
-
-
         function initGlobalCharts() {
             // Placeholder for global summary charts if any
         }
@@ -880,9 +583,8 @@
             }
         }
 
-        function loadOfertaCharts(range) {
-            const qs = buildStatsQuery(range);
-            fetch('/admin/estadisticas/api/ofertas-detalladas' + qs)
+        function loadOfertaCharts() {
+            fetch('/admin/estadisticas/api/ofertas-detalladas')
             .then(r => r.json())
             .then(data => {
                 // Estado
@@ -915,7 +617,7 @@
                 // Tipo (using same endpoint structure if added)
                  const porTipo = data.porTipo || {}; // Assuming we added it back to the map in service
                  // Fetch simple offers graph as fallback
-                 fetch('/admin/estadisticas/api/grafico-ofertas' + qs)
+                 fetch('/admin/estadisticas/api/grafico-ofertas')
                     .then(r => r.json())
                     .then(d => {
                         destroyChart('chartOfertasTipo');
@@ -972,9 +674,8 @@ function showStatsError(msg) {
     alert.textContent = msg;
     container.prepend(alert);
 }
-function loadInscripcionCharts(range) {
-            const qs = buildStatsQuery(range);
-            fetch('/admin/estadisticas/api/inscripciones-detalladas' + qs)
+function loadInscripcionCharts() {
+            fetch('/admin/estadisticas/api/inscripciones-detalladas')
             .then(r => {
                 if (!r.ok) throw new Error('HTTP status ' + r.status);
                 const ct = r.headers.get('content-type') || '';
@@ -984,14 +685,13 @@ function loadInscripcionCharts(range) {
             .then(data => {
                 console.log('Datos recibidos:', data);
                 const evol = data && data.evolucionMensual ? data.evolucionMensual : {};
-                updateInscripcionStats(data);
                 
                 let labels = Object.keys(evol);
                 let values = labels.map(k => evol[k]);
 
                 if (labels.length === 0) {
                     showStatsError('No hay datos de inscripciones disponibles.');
-                    labels = buildRangeLabels(range);
+                    labels = last12MonthsLabels();
                     values = labels.map(() => 0);
                 }
 
@@ -1053,10 +753,9 @@ function loadInscripcionCharts(range) {
             });
         }
 
-        function loadEconomicoCharts(range) {
+        function loadEconomicoCharts() {
             console.log('Cargando charts económicos...');
-            const qs = buildStatsQuery(range);
-            fetch('/admin/estadisticas/api/economia-detallada' + qs)
+            fetch('/admin/estadisticas/api/economia-detallada')
             .then(r => {
                 if (!r.ok) throw new Error('HTTP ' + r.status);
                 const ct = r.headers.get('content-type');
