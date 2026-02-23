@@ -92,7 +92,7 @@
                 </td>
                 <td th:text="${usuario.correo}" style="font-size: 0.9em;">usuario@email.com</td>
                 <td th:text="${usuario.numTelefono}">-</td>
-                <td th:text="${usuario.inscripciones != null ? usuario.inscripciones.size() : 0}" style="text-align: center;">0</td>
+                <td th:text="${(ofertasActivasPorUsuario != null and usuario.id != null and ofertasActivasPorUsuario[usuario.id.toString()] != null) ? ofertasActivasPorUsuario[usuario.id.toString()] : 0}" style="text-align: center;">0</td>
                 <td>
                     <div th:each="rol : ${usuario.roles}">
                         <span th:text="${rol.nombre}" style="display:block; font-size: 0.8em;">ROL</span>

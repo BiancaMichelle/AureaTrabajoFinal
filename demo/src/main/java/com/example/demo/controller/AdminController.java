@@ -12,6 +12,7 @@ import java.time.LocalTime;
 import java.time.Period;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -3174,44 +3175,105 @@ public class AdminController {
     @GetMapping("/admin/usuarios/listar")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> listarUsuarios(
-            @RequestParam(defaultValue = "0") int page, // ✅ CAMBIAR A 0 POR DEFECTO
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String rol,
+            @RequestParam(required = false) String estado,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false, defaultValue = "desc") String sortDir) {
 
         try {
-            System.out.println("📋 Solicitando usuarios REALES - página: " + page + ", tamaño: " + size);
+            int pageSafe = Math.max(0, page);
+            int sizeSafe = size > 0 ? size : 10;
+            String searchNorm = search != null ? search.trim().toLowerCase() : "";
+            String rolNorm = rol != null ? rol.trim().toUpperCase() : "";
+            String estadoNorm = estado != null ? estado.trim().toUpperCase() : "";
+            String sortField = sortBy != null ? sortBy.trim() : "";
+            boolean ascending = "asc".equalsIgnoreCase(sortDir);
 
-            // OBTENER USUARIOS REALES DE LA BASE DE DATOS
-            List<Usuario> todosUsuarios = usuarioRepository.findAll();
-            todosUsuarios.sort((a, b) -> {
-                LocalDateTime fa = a != null ? a.getFechaRegistro() : null;
-                LocalDateTime fb = b != null ? b.getFechaRegistro() : null;
-                if (fa == null && fb == null) return 0;
-                if (fa == null) return 1;
-                if (fb == null) return -1;
-                return fb.compareTo(fa); // más nuevo primero
-            });
-            System.out.println("👥 Usuarios encontrados en BD: " + todosUsuarios.size());
+            List<Usuario> todosUsuarios = usuarioRepository.findAll().stream()
+                    .filter(Objects::nonNull)
+                    .filter(u -> {
+                        if (searchNorm.isEmpty()) return true;
+                        String nombreCompleto = ((u.getNombre() != null ? u.getNombre() : "") + " " +
+                                (u.getApellido() != null ? u.getApellido() : "")).toLowerCase();
+                        String dni = u.getDni() != null ? u.getDni().toLowerCase() : "";
+                        String correo = u.getCorreo() != null ? u.getCorreo().toLowerCase() : "";
+                        return nombreCompleto.contains(searchNorm) || dni.contains(searchNorm) || correo.contains(searchNorm);
+                    })
+                    .filter(u -> {
+                        if (rolNorm.isEmpty()) return true;
+                        return u.getRoles() != null && u.getRoles().stream()
+                                .filter(Objects::nonNull)
+                                .map(Rol::getNombre)
+                                .filter(Objects::nonNull)
+                                .anyMatch(r -> r.equalsIgnoreCase(rolNorm));
+                    })
+                    .filter(u -> {
+                        if (estadoNorm.isEmpty()) return true;
+                        String estadoUsuario = u.isEstado() ? "ACTIVO" : "INACTIVO";
+                        return estadoUsuario.equalsIgnoreCase(estadoNorm);
+                    })
+                    .collect(Collectors.toList());
 
-            // ✅ CORREGIR PAGINACIÓN - VERIFICAR LÍMITES
-            int start = page * size;
-            int end = Math.min(start + size, todosUsuarios.size());
+            java.util.Comparator<Usuario> comparator = switch (sortField) {
+                case "dni" -> java.util.Comparator.comparing(
+                        u -> u.getDni() != null ? u.getDni().toLowerCase() : "",
+                        String.CASE_INSENSITIVE_ORDER
+                );
+                case "nombre" -> java.util.Comparator.comparing(
+                        u -> ((u.getNombre() != null ? u.getNombre() : "") + " " +
+                                (u.getApellido() != null ? u.getApellido() : "")).toLowerCase(),
+                        String.CASE_INSENSITIVE_ORDER
+                );
+                case "correo" -> java.util.Comparator.comparing(
+                        u -> u.getCorreo() != null ? u.getCorreo().toLowerCase() : "",
+                        String.CASE_INSENSITIVE_ORDER
+                );
+                case "roles" -> java.util.Comparator.comparing(
+                        u -> (u.getRoles() != null ? u.getRoles().stream()
+                                .filter(Objects::nonNull)
+                                .map(Rol::getNombre)
+                                .filter(Objects::nonNull)
+                                .sorted(String.CASE_INSENSITIVE_ORDER)
+                                .collect(Collectors.joining(","))
+                                : "").toLowerCase(),
+                        String.CASE_INSENSITIVE_ORDER
+                );
+                case "estado" -> java.util.Comparator.comparing(
+                        u -> (u.isEstado() ? "ACTIVO" : "INACTIVO"),
+                        String.CASE_INSENSITIVE_ORDER
+                );
+                case "fechaRegistro", "" -> java.util.Comparator.comparing(
+                        u -> u.getFechaRegistro() != null ? u.getFechaRegistro() : LocalDateTime.MIN
+                );
+                default -> java.util.Comparator.comparing(
+                        u -> u.getFechaRegistro() != null ? u.getFechaRegistro() : LocalDateTime.MIN
+                );
+            };
 
-            // ✅ EVITAR ERROR CUANDO START ES MAYOR QUE EL TAMAÑO DE LA LISTA
-            if (start >= todosUsuarios.size()) {
-                start = 0; // Volver a la primera página
-                page = 0;
+            if (!ascending) {
+                comparator = comparator.reversed();
+            }
+            todosUsuarios.sort(comparator);
+
+            int totalElements = todosUsuarios.size();
+            int totalPages = Math.max(1, (int) Math.ceil((double) totalElements / sizeSafe));
+            if (pageSafe >= totalPages) {
+                pageSafe = 0;
             }
 
-            List<Usuario> usuariosPagina = todosUsuarios.subList(start, end);
-
-            System.out.println("📄 Usuarios en esta página: " + usuariosPagina.size() + " (start: " + start + ", end: "
-                    + end + ")");
+            int start = pageSafe * sizeSafe;
+            int end = Math.min(start + sizeSafe, totalElements);
+            List<Usuario> usuariosPagina = start < end ? todosUsuarios.subList(start, end) : Collections.emptyList();
 
             // Convertir usuarios reales a formato para frontend
             List<Map<String, Object>> usuariosResponse = new ArrayList<>();
 
             for (Usuario usuario : usuariosPagina) {
                 Map<String, Object> usuarioMap = new HashMap<>();
+                usuarioMap.put("id", usuario.getId());
                 usuarioMap.put("dni", usuario.getDni());
                 usuarioMap.put("nombreCompleto", usuario.getNombre() + " " + usuario.getApellido());
                 usuarioMap.put("correo", usuario.getCorreo());
@@ -3227,9 +3289,9 @@ public class AdminController {
                 // Obtener roles reales
                 List<String> roles = new ArrayList<>();
                 if (usuario.getRoles() != null) {
-                    for (Rol rol : usuario.getRoles()) {
-                        if (rol != null && rol.getNombre() != null) {
-                            String nombreRol = convertirRolALegible(rol.getNombre());
+                    for (Rol rolItem : usuario.getRoles()) {
+                        if (rolItem != null && rolItem.getNombre() != null) {
+                            String nombreRol = convertirRolALegible(rolItem.getNombre());
                             roles.add(nombreRol);
                         }
                     }
@@ -3237,9 +3299,6 @@ public class AdminController {
                 usuarioMap.put("roles", roles);
 
                 usuariosResponse.add(usuarioMap);
-
-                System.out.println("✅ Usuario real: " + usuario.getNombre() + " " + usuario.getApellido() +
-                        " - DNI: " + usuario.getDni() + " - Roles: " + roles);
             }
 
             // Crear respuesta
@@ -3248,23 +3307,21 @@ public class AdminController {
 
             Map<String, Object> data = new HashMap<>();
             data.put("content", usuariosResponse);
-            data.put("totalElements", todosUsuarios.size());
-            data.put("totalPages", Math.max(1, (int) Math.ceil((double) todosUsuarios.size() / size))); // ✅ Mínimo 1
-                                                                                                        // página
-            data.put("size", size);
-            data.put("number", page);
+            data.put("totalElements", totalElements);
+            data.put("totalPages", totalPages);
+            data.put("size", sizeSafe);
+            data.put("number", pageSafe);
 
             response.put("data", data);
 
             Map<String, Object> pagination = new HashMap<>();
-            pagination.put("currentPage", page);
-            pagination.put("totalPages", Math.max(1, (int) Math.ceil((double) todosUsuarios.size() / size)));
-            pagination.put("totalElements", todosUsuarios.size());
-            pagination.put("pageSize", size);
+            pagination.put("currentPage", pageSafe);
+            pagination.put("totalPages", totalPages);
+            pagination.put("totalElements", totalElements);
+            pagination.put("pageSize", sizeSafe);
 
             response.put("pagination", pagination);
 
-            System.out.println("✅ Respuesta enviada - " + usuariosResponse.size() + " usuarios reales");
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {

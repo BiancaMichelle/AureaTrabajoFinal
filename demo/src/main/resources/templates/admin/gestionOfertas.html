@@ -3867,8 +3867,25 @@
                         currentSort.key = key;
                         currentSort.direction = 'asc';
                     }
+                    updateSortHeaderIndicators();
                     renderizarPaginaActual();
                 });
+            });
+            updateSortHeaderIndicators();
+        }
+
+        function updateSortHeaderIndicators() {
+            const table = document.getElementById('ofertas-table');
+            if (!table) return;
+            const headers = table.querySelectorAll('thead th');
+            const keyMap = ['nombre', 'tipo', 'modalidad', 'cupos', 'fechaInicio', 'fechaFin', 'estado', null];
+            headers.forEach((th, index) => {
+                const key = keyMap[index];
+                if (!key) return;
+                th.classList.remove('sort-asc', 'sort-desc');
+                if (currentSort.key === key) {
+                    th.classList.add(currentSort.direction === 'asc' ? 'sort-asc' : 'sort-desc');
+                }
             });
         }
 

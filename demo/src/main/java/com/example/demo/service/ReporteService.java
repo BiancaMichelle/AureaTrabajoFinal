@@ -1579,6 +1579,15 @@ public class ReporteService {
         
         String chartBase64 = generarGraficoTortaBase64(datosGrafico, "Distribución por Rol");
 
+        // --- Inscripciones activas por usuario (para columna "Ofertas") ---
+        Map<String, Integer> ofertasActivasPorUsuario = new HashMap<>();
+        for (Usuario usuario : usuarios) {
+            if (usuario != null && usuario.getId() != null) {
+                int activas = inscripcionRepository.countByAlumnoIdAndEstadoInscripcionTrue(usuario.getId());
+                ofertasActivasPorUsuario.put(usuario.getId().toString(), activas);
+            }
+        }
+
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
         
         // Periodo Text
@@ -1609,6 +1618,7 @@ public class ReporteService {
         data.put("usuariosActivos", usuariosActivos);
         data.put("usuariosInactivos", usuariosInactivos);
         data.put("nuevosIngresos", nuevosIngresos);
+        data.put("ofertasActivasPorUsuario", ofertasActivasPorUsuario);
         data.put("chartImage", chartBase64);
         data.put("estilos", cargarEstilos());
         agregarDatosBaseReporte(data);
@@ -1620,7 +1630,7 @@ public class ReporteService {
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("Usuarios");
 
-            String[] columns = {"ID", "DNI", "Nombre", "Apellido", "Correo", "Teléfono", "Roles", "Estado", "Fecha Registro"};
+            String[] columns = {"ID", "DNI", "Nombre", "Apellido", "Correo", "Teléfono", "Ofertas Activas", "Roles", "Estado", "Fecha Registro"};
             Row headerRow = sheet.createRow(0);
 
             CellStyle headerStyle = workbook.createCellStyle();
@@ -1645,13 +1655,17 @@ public class ReporteService {
                 row.createCell(3).setCellValue(usuario.getApellido() != null ? usuario.getApellido() : "");
                 row.createCell(4).setCellValue(usuario.getCorreo() != null ? usuario.getCorreo() : "");
                 row.createCell(5).setCellValue(usuario.getNumTelefono() != null ? usuario.getNumTelefono() : "");
+                int ofertasActivas = (usuario.getId() != null)
+                    ? inscripcionRepository.countByAlumnoIdAndEstadoInscripcionTrue(usuario.getId())
+                    : 0;
+                row.createCell(6).setCellValue(ofertasActivas);
 
                 String roles = usuario.getRoles() != null && !usuario.getRoles().isEmpty()
                     ? usuario.getRoles().stream().map(r -> r.getNombre()).collect(Collectors.joining(", "))
                     : "";
-                row.createCell(6).setCellValue(roles);
-                row.createCell(7).setCellValue(usuario.isEstado() ? "ACTIVO" : "INACTIVO");
-                row.createCell(8).setCellValue(usuario.getFechaRegistro() != null ? usuario.getFechaRegistro().format(formatter) : "");
+                row.createCell(7).setCellValue(roles);
+                row.createCell(8).setCellValue(usuario.isEstado() ? "ACTIVO" : "INACTIVO");
+                row.createCell(9).setCellValue(usuario.getFechaRegistro() != null ? usuario.getFechaRegistro().format(formatter) : "");
             }
 
             for (int i = 0; i < columns.length; i++) {

@@ -5,6 +5,19 @@
 <head>
     <title th:text="${instituto?.nombreInstituto ?: 'Instituto Aurea'}">Instituto Aurea</title>
     <style>
+        .hero-section .carousel-caption .container {
+            display: inline-block;
+            padding: 1rem 1.25rem;
+            background: rgba(0, 0, 0, 0.55);
+            border-radius: 12px;
+            backdrop-filter: blur(2px);
+        }
+
+        .hero-section .carousel-caption h1,
+        .hero-section .carousel-caption p {
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.75);
+        }
+
         .oferta-item .card {
             transition: transform 0.3s ease, box-shadow 0.3s ease;
             cursor: pointer;

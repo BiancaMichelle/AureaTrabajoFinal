@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', function () {
+﻿document.addEventListener('DOMContentLoaded', function () {
     // Referencias a elementos principales
     const btnShowForm = document.getElementById('btn-show-form');
     const formContainer = document.getElementById('form-container');
@@ -74,11 +74,11 @@ document.addEventListener('DOMContentLoaded', function () {
     let usuarioEnEdicion = null;
     let locationSystemInitialized = false;
 
-    // ✅ MOVER ESTAS REFERENCIAS A VARIABLES GLOBALES
+    // ? MOVER ESTAS REFERENCIAS A VARIABLES GLOBALES
     let selectedRolesContainer;
     let selectedChipsContainer;
 
-    // ✅ MOVER roleIcons A GLOBAL
+    // ? MOVER roleIcons A GLOBAL
     const roleIcons = {
         ALUMNO: 'fas fa-user-graduate',
         DOCENTE: 'fas fa-chalkboard-teacher',
@@ -101,11 +101,11 @@ document.addEventListener('DOMContentLoaded', function () {
     initializeHorariosDocente();
     initializeFilters();
     initializeTable();
-    initializeDateInput(); // ✅ Nueva función para configurar el input de fecha
+    initializeDateInput(); // ? Nueva función para configurar el input de fecha
     initializeDetalleUsuarioModal();
     initializeFotoDeleteForm();
 
-    // ✅ Configurar fecha máxima para el input de fecha (16 años atrás desde hoy)
+    // ? Configurar fecha máxima para el input de fecha (16 años atrás desde hoy)
     function initializeDateInput() {
         const fechaInput = document.getElementById('fechaNacimiento');
         if (fechaInput) {
@@ -113,7 +113,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const hace16Anos = new Date(hoy.getFullYear() - 16, hoy.getMonth(), hoy.getDate());
             const fechaMaxima = hace16Anos.toISOString().split('T')[0];
             fechaInput.setAttribute('max', fechaMaxima);
-            console.log('📅 Fecha máxima configurada:', fechaMaxima);
+            console.log('?? Fecha máxima configurada:', fechaMaxima);
         }
     }
 
@@ -162,11 +162,11 @@ document.addEventListener('DOMContentLoaded', function () {
                                     throw new Error(data.message || 'No se pudo borrar la foto');
                                 }
                                 renderDetalleUsuario(data.data || {});
-                                showNotification('✅ Foto eliminada', 'success');
+                                showNotification('? Foto eliminada', 'success');
                             })
                             .catch((error) => {
                                 console.error('Error eliminando foto:', error);
-                                showNotification(`❌ ${error.message || 'Error al eliminar foto'}`, 'error');
+                                showNotification(`? ${error.message || 'Error al eliminar foto'}`, 'error');
                             });
                     }
                 );
@@ -207,7 +207,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     mostrarNotificacion(blockingReason || 'No se puede dar de baja al usuario.', 'error');
                     // Opcional: Usar un alert modal si mostrarNotificacion es muy sutil
                     ModalConfirmacion.show(
-                        '⛔ ACCIÓN NO PERMITIDA',
+                        '? ACCIÓN NO PERMITIDA',
                         blockingReason || 'El usuario no puede ser eliminado en este momento.'
                     ).then(() => { }); // Solo cerrar
                     return;
@@ -220,7 +220,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (warningsStr) {
                     const warnings = JSON.parse(warningsStr);
                     if (warnings.length > 0) {
-                        mensaje = '⚠️ ADVERTENCIAS:\n\n' + warnings.map(w => '• ' + w).join('\n') + '\n\n' + mensaje;
+                        mensaje = '?? ADVERTENCIAS:\n\n' + warnings.map(w => '• ' + w).join('\n') + '\n\n' + mensaje;
                         type = 'danger'; // Rojo para advertencias fuertes
                     }
                 }
@@ -599,11 +599,11 @@ document.addEventListener('DOMContentLoaded', function () {
                                 uploadPlaceholder.style.display = 'flex';
                             }
                             btnBorrarFotoForm.style.display = 'none';
-                            showNotification('✅ Foto eliminada', 'success');
+                            showNotification('? Foto eliminada', 'success');
                         })
                         .catch((error) => {
                             console.error('Error eliminando foto:', error);
-                            showNotification(`❌ ${error.message || 'Error al eliminar foto'}`, 'error');
+                            showNotification(`? ${error.message || 'Error al eliminar foto'}`, 'error');
                         });
                 }
             );
@@ -855,10 +855,10 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function initializeLocationSystem() {
-        console.log("📍 Inicializando sistema de ubicación...");
+        console.log("?? Inicializando sistema de ubicación...");
 
         if (!paisSelect) {
-            console.error("❌ No se encontró el select de país");
+            console.error("? No se encontró el select de país");
             return;
         }
 
@@ -879,7 +879,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (selectedOption.value && selectedOption.getAttribute('data-codigo')) {
                 const countryCode = selectedOption.getAttribute('data-codigo');
                 hiddenCodigo.value = countryCode;
-                console.log("✅ País seleccionado - Código:", countryCode);
+                console.log("? País seleccionado - Código:", countryCode);
 
                 cargarProvinciasAdmin(countryCode);
             } else {
@@ -903,7 +903,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (selectedOption.value && selectedOption.getAttribute('data-code')) {
                 const provinceCode = selectedOption.getAttribute('data-code');
                 hiddenCodigo.value = provinceCode;
-                console.log("✅ Provincia seleccionada - Código:", provinceCode);
+                console.log("? Provincia seleccionada - Código:", provinceCode);
 
                 const countryCode = document.getElementById('paisCodigo').value;
                 cargarCiudadesAdmin(countryCode, provinceCode);
@@ -925,18 +925,18 @@ document.addEventListener('DOMContentLoaded', function () {
             if (selectedOption.value && selectedOption.getAttribute('data-id')) {
                 const cityId = selectedOption.getAttribute('data-id');
                 hiddenId.value = cityId;
-                console.log("✅ Ciudad seleccionada - ID:", cityId);
+                console.log("? Ciudad seleccionada - ID:", cityId);
             } else {
                 hiddenId.value = '';
             }
         });
 
-        console.log("✅ Sistema de ubicación configurado");
+        console.log("? Sistema de ubicación configurado");
     }
 
     // Funciones para cargar provincias y ciudades (versión admin)
     function cargarProvinciasAdmin(paisCode) {
-        console.log("🌍 Cargando provincias para país:", paisCode);
+        console.log("?? Cargando provincias para país:", paisCode);
 
         provinciaSelect.innerHTML = '<option value="">Cargando provincias...</option>';
         provinciaSelect.disabled = true;
@@ -949,7 +949,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 return response.json();
             })
             .then(provincias => {
-                console.log("📋 Provincias recibidas:", provincias);
+                console.log("?? Provincias recibidas:", provincias);
 
                 provinciaSelect.innerHTML = '<option value="">Selecciona una provincia</option>';
 
@@ -969,7 +969,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         provinciaSelect.appendChild(option);
                     });
                     provinciaSelect.disabled = false;
-                    console.log(`✅ ${provincias.length} provincias cargadas correctamente`);
+                    console.log(`? ${provincias.length} provincias cargadas correctamente`);
                 } else {
                     provinciaSelect.innerHTML = '<option value="">No hay provincias disponibles</option>';
                 }
@@ -981,14 +981,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 return provincias;
             })
             .catch(error => {
-                console.error('❌ Error cargando provincias:', error);
+                console.error('? Error cargando provincias:', error);
                 provinciaSelect.innerHTML = '<option value="">Error al cargar provincias</option>';
                 throw error;
             });
     }
 
     function cargarCiudadesAdmin(paisCode, provinciaCode) {
-        console.log("🏙️ Cargando ciudades para país:", paisCode, "provincia:", provinciaCode);
+        console.log("??? Cargando ciudades para país:", paisCode, "provincia:", provinciaCode);
 
         ciudadSelect.innerHTML = '<option value="">Cargando ciudades...</option>';
         ciudadSelect.disabled = true;
@@ -1001,7 +1001,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 return response.json();
             })
             .then(ciudades => {
-                console.log("📋 Ciudades recibidas:", ciudades);
+                console.log("?? Ciudades recibidas:", ciudades);
 
                 ciudadSelect.innerHTML = '<option value="">Selecciona una ciudad</option>';
 
@@ -1031,7 +1031,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 return ciudades;
             })
             .catch(error => {
-                console.error('❌ Error cargando ciudades:', error);
+                console.error('? Error cargando ciudades:', error);
                 ciudadSelect.innerHTML = '<option value="">Error al cargar ciudades</option>';
                 ciudadSelect.disabled = true;
                 ciudadSelect.required = false;
@@ -1053,7 +1053,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const provinciaCodigoValor = detalleUsuario.provincia?.codigo || '';
         const ciudadIdValor = detalleUsuario.ciudad?.id != null ? String(detalleUsuario.ciudad.id) : '';
 
-        console.log('📍 Cargando ubicación del usuario:', {
+        console.log('?? Cargando ubicación del usuario:', {
             pais: paisCodigoValor,
             provincia: provinciaCodigoValor,
             ciudad: ciudadIdValor
@@ -1068,12 +1068,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (paisHidden) {
                         paisHidden.value = paisCodigoValor;
                     }
-                    console.log('✅ País seleccionado:', paisOption.textContent);
+                    console.log('? País seleccionado:', paisOption.textContent);
 
                     // Cargar provincias y ESPERAR a que terminen de cargar
                     await cargarProvinciasAdmin(paisCodigoValor);
                 } else {
-                    console.warn('⚠️ No se encontró la opción de país con código:', paisCodigoValor);
+                    console.warn('?? No se encontró la opción de país con código:', paisCodigoValor);
                 }
             }
 
@@ -1086,7 +1086,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (provinciaHidden) {
                         provinciaHidden.value = provinciaCodigoValor;
                     }
-                    console.log('✅ Provincia seleccionada:', provinciaOption.textContent);
+                    console.log('? Provincia seleccionada:', provinciaOption.textContent);
 
                     const paisCodigoActual = paisHidden ? paisHidden.value : paisCodigoValor;
                     if (paisCodigoActual) {
@@ -1094,7 +1094,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         await cargarCiudadesAdmin(paisCodigoActual, provinciaCodigoValor);
                     }
                 } else {
-                    console.warn('⚠️ No se encontró la opción de provincia con código:', provinciaCodigoValor);
+                    console.warn('?? No se encontró la opción de provincia con código:', provinciaCodigoValor);
                 }
             }
 
@@ -1107,15 +1107,15 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (ciudadHidden) {
                         ciudadHidden.value = ciudadIdValor;
                     }
-                    console.log('✅ Ciudad seleccionada:', ciudadOption.textContent);
+                    console.log('? Ciudad seleccionada:', ciudadOption.textContent);
                 } else {
-                    console.warn('⚠️ No se encontró la opción de ciudad con ID:', ciudadIdValor);
+                    console.warn('?? No se encontró la opción de ciudad con ID:', ciudadIdValor);
                 }
             }
 
-            console.log('✅ Ubicación cargada correctamente');
+            console.log('? Ubicación cargada correctamente');
         } catch (error) {
-            console.error('❌ Error asignando ubicación del usuario:', error);
+            console.error('? Error asignando ubicación del usuario:', error);
         }
     }
 
@@ -1387,7 +1387,7 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('ciudadId').value = '';
     }
 
-    // ✅ Función para validar la fecha en el formulario
+    // ? Función para validar la fecha en el formulario
     function validateFechaNacimiento() {
         const fechaInput = document.getElementById('fechaNacimiento');
         let isValid = true;
@@ -1452,7 +1452,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (selectedChipsContainer) {
             selectedChipsContainer.innerHTML = '';
 
-            // ✅ SOLO MOSTRAR UN ROL
+            // ? SOLO MOSTRAR UN ROL
             if (selectedRoles.length > 0) {
                 const role = selectedRoles[0];
                 const chip = document.createElement('div');
@@ -1561,7 +1561,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // ✅ Función para quitar requeridos de todos los campos específicos
+    // ? Función para quitar requeridos de todos los campos específicos
     function removeAllSpecificRequired() {
         // Campos de alumno
         const colegioEgreso = document.getElementById('colegioEgreso');
@@ -1591,21 +1591,21 @@ document.addEventListener('DOMContentLoaded', function () {
         if (experiencia) experiencia.removeAttribute('required');
     }
 
-    // ✅ Función para mostrar campos de docente
+    // ? Función para mostrar campos de docente
     function showDocenteFields(show) {
         if (fieldsDocente) {
             fieldsDocente.style.display = show ? 'block' : 'none';
         }
     }
 
-    // ✅ Función para ocultar campos de docente
+    // ? Función para ocultar campos de docente
     function hideDocenteFields() {
         if (fieldsDocente) {
             fieldsDocente.style.display = 'none';
         }
     }
 
-    // ✅ Función para mostrar campos de alumno  
+    // ? Función para mostrar campos de alumno  
     function showAlumnoFields(show) {
         const fieldsAlumno = document.getElementById('fields-alumno');
         if (fieldsAlumno) {
@@ -1613,7 +1613,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // ✅ Función para ocultar campos de alumno
+    // ? Función para ocultar campos de alumno
     function hideAlumnoFields() {
         const fieldsAlumno = document.getElementById('fields-alumno');
         if (fieldsAlumno) {
@@ -1621,7 +1621,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // ✅ Función para ocultar todos los campos específicos
+    // ? Función para ocultar todos los campos específicos
     function hideAllSpecificFields() {
         hideDocenteFields();
         hideAlumnoFields();
@@ -1644,7 +1644,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     const row = e.target.closest('tr');
                     if (row) {
                         row.remove();
-                        actualizarContadorHorarios(); // ✅ Actualizar contador al eliminar
+                        actualizarContadorHorarios(); // ? Actualizar contador al eliminar
                     }
                 }
             });
@@ -1691,7 +1691,7 @@ document.addEventListener('DOMContentLoaded', function () {
         rows.forEach(row => tableBody.appendChild(row));
     }
 
-    // ✅ FUNCIÓN addHorarioDocente MEJORADA
+    // ? FUNCIÓN addHorarioDocente MEJORADA
     function formatearDiaParaMostrar(diaClave) {
         if (!diaClave) {
             return '';
@@ -1743,7 +1743,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        // ✅ VERIFICAR HORARIOS SOLAPADOS
+        // ? VERIFICAR HORARIOS SOLAPADOS
         if (existeHorarioSolapado(dia, horaDesde, horaHasta)) {
             showNotification('Ya existe un horario para este día en el mismo rango de horas', 'error');
             return;
@@ -1760,11 +1760,11 @@ document.addEventListener('DOMContentLoaded', function () {
         horaDesdeInput.value = '';
         horaHastaInput.value = '';
 
-        // ✅ ACTUALIZAR CONTADOR
+        // ? ACTUALIZAR CONTADOR
         actualizarContadorHorarios();
     }
 
-    // ✅ NUEVA: Función para verificar horarios solapados
+    // ? NUEVA: Función para verificar horarios solapados
     function existeHorarioSolapado(dia, nuevaHoraDesde, nuevaHoraHasta) {
         const filas = horariosDocenteTableBody.querySelectorAll('tr');
         const toMinutes = (valor) => {
@@ -1795,7 +1795,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return false;
     }
 
-    // ✅ NUEVA: Función para actualizar contador de horarios
+    // ? NUEVA: Función para actualizar contador de horarios
     function actualizarContadorHorarios() {
         const contador = document.getElementById('contador-horarios');
         const filas = horariosDocenteTableBody.querySelectorAll('tr').length;
@@ -1809,7 +1809,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function clearHorariosDocenteTable() {
         if (horariosDocenteTableBody) {
             horariosDocenteTableBody.innerHTML = '';
-            actualizarContadorHorarios(); // ✅ Actualizar contador al limpiar
+            actualizarContadorHorarios(); // ? Actualizar contador al limpiar
         }
     }
 
@@ -1861,20 +1861,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function applyFilters() {
         const filters = {
-            search: searchInput ? searchInput.value.toLowerCase() : '',
+            search: searchInput ? searchInput.value : '',
             rol: filtroRol ? filtroRol.value : '',
             estado: filtroEstado ? filtroEstado.value : '',
         };
-
-        const filtersActive = hasActiveFilters(filters);
-        if (filtersActive) {
-            loadUsuarios(1, { forceAll: true, filtersOverride: filters });
-            return;
-        }
-
-        // Aplicar filtros a la tabla
-        filterTable(filters);
-        setPaginationControlsVisible(true);
+        loadUsuarios(1, { filtersOverride: filters });
     }
 
     function clearFilters() {
@@ -1882,66 +1873,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (filtroRol) filtroRol.value = '';
         if (filtroEstado) filtroEstado.value = '';
 
-        applyFilters();
         pageSize = defaultPageSize;
-        setPaginationControlsVisible(true);
-        setupSortableUserHeaders();
         loadUsuarios(1);
-    }
-
-    function hasActiveFilters(filters = {}) {
-        return Object.values(filters).some((value) => value != null && `${value}`.trim() !== '');
-    }
-
-    function filterTable(filters) {
-        const table = document.getElementById('usuarios-table');
-        if (!table) return;
-
-        const rows = table.querySelectorAll('tbody tr');
-        let visibleCount = 0;
-
-        const normalizedFilters = {
-            search: filters.search ? `${filters.search}`.toLowerCase() : '',
-            rol: filters.rol ? `${filters.rol}`.toUpperCase() : '',
-            estado: filters.estado ? `${filters.estado}`.toUpperCase() : '',
-        };
-
-        rows.forEach(row => {
-            const cells = row.querySelectorAll('td');
-            if (cells.length === 0) return;
-
-            const dni = cells[0]?.textContent?.toLowerCase() || '';
-            const nombre = cells[1]?.textContent?.toLowerCase() || '';
-            const correo = cells[2]?.textContent?.toLowerCase() || '';
-            const roles = cells[3]?.textContent || '';
-            const estado = cells[4]?.textContent || '';
-
-            let showRow = true;
-
-            // Filtro de búsqueda
-            if (normalizedFilters.search) {
-                const searchMatch = nombre.includes(normalizedFilters.search) ||
-                    dni.includes(normalizedFilters.search) ||
-                    correo.includes(normalizedFilters.search);
-                if (!searchMatch) showRow = false;
-            }
-
-            // Filtro de rol
-            if (normalizedFilters.rol && !roles.toUpperCase().includes(normalizedFilters.rol)) {
-                showRow = false;
-            }
-
-            // Filtro de estado
-            if (normalizedFilters.estado && !estado.toUpperCase().includes(normalizedFilters.estado)) {
-                showRow = false;
-            }
-
-            row.style.display = showRow ? '' : 'none';
-            if (showRow) visibleCount++;
-        });
-
-        updateTableStats(visibleCount);
-        return visibleCount;
     }
 
     function updateTableStats(count) {
@@ -2039,7 +1972,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        // ✅ NO resetear el formulario completo si estamos en modo edición
+        // ? NO resetear el formulario completo si estamos en modo edición
         // Solo limpiamos errores y reseteamos algunos campos específicos
         if (mode === 'create') {
             resetForm();
@@ -2135,10 +2068,10 @@ document.addEventListener('DOMContentLoaded', function () {
         const rolPrincipal = (detalle?.rolPrincipal || (Array.isArray(detalle?.rolesRaw) ? detalle.rolesRaw[0] : '') || '').toUpperCase();
         applyRoleSelection(rolPrincipal);
 
-        console.log('👤 Rol principal del usuario:', rolPrincipal);
+        console.log('?? Rol principal del usuario:', rolPrincipal);
 
         if (rolPrincipal === 'ALUMNO') {
-            console.log('📚 Cargando datos de alumno:', {
+            console.log('?? Cargando datos de alumno:', {
                 colegioEgreso: detalle?.colegioEgreso,
                 añoEgreso: detalle?.añoEgreso,
                 ultimosEstudios: detalle?.ultimosEstudios
@@ -2147,7 +2080,7 @@ document.addEventListener('DOMContentLoaded', function () {
             setValue('añoEgreso', detalle?.añoEgreso);
             setSelectValue('ultimosEstudios', detalle?.ultimosEstudios);
         } else if (rolPrincipal === 'DOCENTE') {
-            console.log('👨‍🏫 Cargando datos de docente:', {
+            console.log('????? Cargando datos de docente:', {
                 matricula: detalle?.matricula,
                 experienciaActualizada: detalle?.experiencia,
                 experienciaBase: detalle?.experienciaBase,
@@ -2180,7 +2113,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const { identifier, nombre } = context;
 
         if (!identifier) {
-            showNotification('❌ No se pudo determinar el usuario a editar', 'error');
+            showNotification('? No se pudo determinar el usuario a editar', 'error');
             return;
         }
 
@@ -2191,7 +2124,7 @@ document.addEventListener('DOMContentLoaded', function () {
             showForm();
         } catch (error) {
             console.error('Error cargando usuario para edición:', error);
-            showNotification(`❌ ${error.message || 'No se pudo cargar el formulario de edición'}`, 'error', 10000);
+            showNotification(`? ${error.message || 'No se pudo cargar el formulario de edición'}`, 'error', 10000);
         } finally {
             // hideLoading();
         }
@@ -2201,7 +2134,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const { identifier, nombre } = context;
 
         if (!identifier) {
-            showNotification('❌ No se pudo determinar el usuario a visualizar', 'error');
+            showNotification('? No se pudo determinar el usuario a visualizar', 'error');
             return;
         }
 
@@ -2211,7 +2144,7 @@ document.addEventListener('DOMContentLoaded', function () {
             mostrarModalDetalleUsuario(detalle, context);
         } catch (error) {
             console.error('Error cargando usuario para visualización:', error);
-            showNotification(`❌ ${error.message || 'No se pudo mostrar el usuario seleccionado'}`, 'error', 10000);
+            showNotification(`? ${error.message || 'No se pudo mostrar el usuario seleccionado'}`, 'error', 10000);
         } finally {
             // hideLoading();
         }
@@ -2221,7 +2154,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const { identifier, nombre, dni } = context;
 
         if (!identifier) {
-            showNotification('❌ No se pudo determinar el usuario a eliminar', 'error');
+            showNotification('? No se pudo determinar el usuario a eliminar', 'error');
             return;
         }
 
@@ -2253,7 +2186,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             throw new Error(message);
                         }
 
-                        showNotification(body?.message || '✅ Usuario eliminado correctamente', 'success');
+                        showNotification(body?.message || '? Usuario eliminado correctamente', 'success');
                         usuariosCache.delete(String(identifier));
                         if (dni) {
                             usuariosCache.delete(String(dni));
@@ -2262,7 +2195,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     })
                     .catch(error => {
                         console.error('Error eliminando usuario:', error);
-                        showNotification(`❌ ${error.message || 'No se pudo eliminar el usuario'}`, 'error', 10000);
+                        showNotification(`? ${error.message || 'No se pudo eliminar el usuario'}`, 'error', 10000);
                     })
                     .finally(() => {
                         // hideLoading();
@@ -2275,7 +2208,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function validateForm() {
         let isValid = true;
 
-        // ✅ Validar campos básicos requeridos (siempre visibles)
+        // ? Validar campos básicos requeridos (siempre visibles)
         const basicRequiredFields = document.querySelectorAll(`
                 #dni[required], 
                 #nombre[required], 
@@ -2302,7 +2235,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
-        // ✅ Validar número de teléfono (solo números, mínimo 10 dígitos)
+        // ? Validar número de teléfono (solo números, mínimo 10 dígitos)
         const telefono = document.getElementById('telefono');
         if (telefono && telefono.value.trim()) {
             const telefonoLimpio = telefono.value.replace(/\D/g, ''); // Remover todo lo que no sea dígito
@@ -2325,12 +2258,12 @@ document.addEventListener('DOMContentLoaded', function () {
             isValid = false;
         }
 
-        // ✅ Validar ubicación
+        // ? Validar ubicación
         if (!validateLocation()) {
             isValid = false;
         }
 
-        // ✅ Validar campos de docente si corresponde
+        // ? Validar campos de docente si corresponde
         if (selectedRoles.includes('DOCENTE')) {
             const matricula = document.getElementById('matricula');
             const experiencia = document.getElementById('experiencia');
@@ -2350,12 +2283,12 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
 
-        // ✅ Validar fecha de nacimiento
+        // ? Validar fecha de nacimiento
         if (!validateFechaNacimiento()) {
             isValid = false;
         }
 
-        // ✅ Validar campos específicos según el rol seleccionado
+        // ? Validar campos específicos según el rol seleccionado
         if (selectedRoles.length > 0) {
             const rol = selectedRoles[0];
             if (rol === 'ALUMNO') {
@@ -2369,7 +2302,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return isValid;
     }
 
-    // ✅ NUEVA: Función para validar campos de alumno
+    // ? NUEVA: Función para validar campos de alumno
     function validateAlumnoFields() {
         let isValid = true;
 
@@ -2406,7 +2339,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (form) {
         form.addEventListener('submit', function (event) {
             event.preventDefault();
-            console.log('🧾 Submit de formulario detectado');
+            console.log('?? Submit de formulario detectado');
 
             if (form.dataset.mode === 'view') {
                 return;
@@ -2415,13 +2348,13 @@ document.addEventListener('DOMContentLoaded', function () {
             if (validateForm()) {
                 submitForm();
             } else {
-                console.warn('⚠️ Validación fallida, no se envía');
+                console.warn('?? Validación fallida, no se envía');
             }
         });
     }
 
     function submitForm(skipConfirm = false) {
-        console.log('🚀 Enviando formulario de usuario...');
+        console.log('?? Enviando formulario de usuario...');
 
         const form = document.getElementById('user-form');
         const formData = new FormData(form);
@@ -2430,7 +2363,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const identifier = form.dataset.identifier || form.dataset.originalDni || formData.get('dni');
 
         if (isEditMode && (!identifier || `${identifier}`.trim() === '')) {
-            showNotification('❌ No se pudo determinar el usuario a editar', 'error');
+            showNotification('? No se pudo determinar el usuario a editar', 'error');
             return;
         }
 
@@ -2455,8 +2388,8 @@ document.addEventListener('DOMContentLoaded', function () {
             formData.set('rol', selectedRoles[0]);
         }
 
-        // ✅ LOG: Verificar datos de ubicación
-        console.log('📍 Datos de ubicación enviados:', {
+        // ? LOG: Verificar datos de ubicación
+        console.log('?? Datos de ubicación enviados:', {
             paisCodigo: formData.get('paisCodigo'),
             provinciaCodigo: formData.get('provinciaCodigo'),
             ciudadId: formData.get('ciudadId')
@@ -2466,10 +2399,10 @@ document.addEventListener('DOMContentLoaded', function () {
             const horarios = obtenerHorariosDeTabla();
             if (horarios.length > 0) {
                 formData.set('horariosDisponibilidad', JSON.stringify(horarios));
-                console.log('📅 Enviando horarios como JSON:', horarios);
+                console.log('?? Enviando horarios como JSON:', horarios);
             }
-            // ✅ LOG: Verificar datos de docente
-            console.log('👨‍🏫 Datos de docente enviados:', {
+            // ? LOG: Verificar datos de docente
+            console.log('????? Datos de docente enviados:', {
                 matricula: formData.get('matricula'),
                 experiencia: formData.get('experiencia'),
                 horariosDisponibilidad: formData.get('horariosDisponibilidad')
@@ -2541,17 +2474,17 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             .then(data => {
                 if (data.success) {
-                    showNotification('✅ ' + data.message, 'success', 8000);
+                    showNotification('? ' + data.message, 'success', 8000);
                     resetForm();
                     hideForm();
                     const nextPage = isEditMode ? currentPage : 1;
                     loadUsuarios(nextPage || 1);
                 } else {
-                    // ✅ CAPTURAR MENSAJES DE ERROR ESPECÍFICOS DEL BACKEND
+                    // ? CAPTURAR MENSAJES DE ERROR ESPECÍFICOS DEL BACKEND
                     const errorMessage = data.message || (isEditMode ? 'Error desconocido al actualizar usuario' : 'Error desconocido al registrar usuario');
-                    showNotification('❌ ' + errorMessage, 'error', 10000);
+                    showNotification('? ' + errorMessage, 'error', 10000);
 
-                    // ✅ RESALTAR CAMPOS ESPECÍFICOS SI HAY ERRORES DE VALIDACIÓN
+                    // ? RESALTAR CAMPOS ESPECÍFICOS SI HAY ERRORES DE VALIDACIÓN
                     if (data.message && data.message.includes('correo electrónico')) {
                         const correoInput = document.getElementById('correo');
                         if (correoInput) {
@@ -2567,9 +2500,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             })
             .catch(error => {
-                console.error('💥 Error:', error);
+                console.error('?? Error:', error);
 
-                // ✅ MEJOR MANEJO DE DIFERENTES TIPOS DE ERROR
+                // ? MEJOR MANEJO DE DIFERENTES TIPOS DE ERROR
                 const accion = isEditMode ? 'actualizar' : 'registrar';
                 let errorMessage = `Error de conexión al ${accion} el usuario`;
 
@@ -2591,17 +2524,17 @@ document.addEventListener('DOMContentLoaded', function () {
                     errorMessage = error.message || 'Error de conexión al registrar el usuario';
                 }
 
-                showNotification('❌ ' + errorMessage, 'error', 10000);
+                showNotification('? ' + errorMessage, 'error', 10000);
             })
             .finally(() => {
-                // ✅ RESTAURAR BOTÓN
+                // ? RESTAURAR BOTÓN
                 submitBtn.innerHTML = originalText;
                 submitBtn.disabled = false;
                 // hideLoading();
             });
     }
 
-    // ✅ NUEVA FUNCIÓN: Mostrar loading
+    // ? NUEVA FUNCIÓN: Mostrar loading
     function showLoading(message = 'Procesando...') {
         // Crear overlay de loading
         const loadingOverlay = document.createElement('div');
@@ -2624,7 +2557,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 10);
     }
 
-    // ✅ NUEVA FUNCIÓN: Ocultar loading
+    // ? NUEVA FUNCIÓN: Ocultar loading
     function hideLoading() {
         const loadingOverlay = document.getElementById('loading-overlay');
         if (loadingOverlay) {
@@ -2637,7 +2570,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // ✅ MEJORAR LA FUNCIÓN DE NOTIFICACIONES
+    // ? MEJORAR LA FUNCIÓN DE NOTIFICACIONES
     function showNotification(message, type = 'info', duration = 8000) {
         // Cerrar notificaciones existentes del mismo tipo si es error
         if (type === 'error') {
@@ -2714,22 +2647,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Función para cargar usuarios en la tabla
     function loadUsuarios(page = 1, options = {}) {
-        console.log(`🔄 Cargando usuarios página ${page}...`);
+        console.log(`?? Cargando usuarios página ${page}...`);
 
         const serverPage = Math.max(0, page - 1);
-        const { forceAll = false, filtersOverride = null } = options;
+        const { filtersOverride = null } = options;
         const queryParams = new URLSearchParams();
 
         const activeFilters = filtersOverride || getCurrentFilters();
-        const filtersActive = forceAll || hasActiveFilters(activeFilters);
-
-        if (filtersActive) {
-            queryParams.set('page', 0);
-            queryParams.set('size', 10000);
-        } else {
-            pageSize = defaultPageSize;
-            queryParams.set('page', serverPage);
-            queryParams.set('size', pageSize);
+        pageSize = defaultPageSize;
+        queryParams.set('page', serverPage);
+        queryParams.set('size', pageSize);
+        if (currentSort?.key) {
+            queryParams.set('sortBy', currentSort.key);
+            queryParams.set('sortDir', currentSort.direction === 'asc' ? 'asc' : 'desc');
         }
         Object.entries(activeFilters).forEach(([key, value]) => {
             if (value !== undefined && value !== null && `${value}`.trim() !== '') {
@@ -2761,47 +2691,32 @@ document.addEventListener('DOMContentLoaded', function () {
                 return response.json();
             })
             .then(data => {
-                console.log('📊 RESPUESTA COMPLETA:', data);
+                console.log('?? RESPUESTA COMPLETA:', data);
 
                 if (data.success) {
                     const renderStats = populateUsuariosTable(data.data);
-
-                    if (!filtersActive) {
-                        if (data.pagination) {
-                            updatePagination(data.pagination);
-                        } else {
-                            const defaultPagination = {
-                                totalElements: renderStats.totalElements,
-                                totalPages: Math.max(1, Math.ceil(renderStats.totalElements / pageSize)),
-                                currentPage: serverPage,
-                                pageSize: pageSize
-                            };
-                            updatePagination(defaultPagination);
-                            console.log("⚠️ Usando paginación por defecto:", defaultPagination);
-                        }
-                    }
-
-                    const visibleCount = filterTable(activeFilters);
-                    if (filtersActive) {
-                        const singlePage = {
-                            totalElements: visibleCount || 0,
-                            totalPages: 1,
-                            currentPage: 0,
-                            pageSize: visibleCount || 1
-                        };
-                        updatePagination(singlePage);
-                        setPaginationControlsVisible(false);
+                    if (data.pagination) {
+                        updatePagination(data.pagination);
                     } else {
-                        setPaginationControlsVisible(true);
+                        const defaultPagination = {
+                            totalElements: renderStats.totalElements,
+                            totalPages: Math.max(1, Math.ceil(renderStats.totalElements / pageSize)),
+                            currentPage: serverPage,
+                            pageSize: pageSize
+                        };
+                        updatePagination(defaultPagination);
+                        console.log("?? Usando paginación por defecto:", defaultPagination);
                     }
+                    setPaginationControlsVisible(true);
+                    updateSortHeaderIndicators();
                 } else {
                     console.error('Error del servidor:', data.message);
-                    showNotification('❌ Error al cargar usuarios: ' + data.message, 'error', 10000);
+                    showNotification('? Error al cargar usuarios: ' + data.message, 'error', 10000);
                 }
             })
             .catch(error => {
                 console.error('Error cargando usuarios:', error);
-                showNotification('❌ Error al cargar usuarios desde el servidor', 'error', 10000);
+                showNotification('? Error al cargar usuarios desde el servidor', 'error', 10000);
 
                 // Mostrar mensaje de error en la tabla
                 if (tableBody) {
@@ -2823,7 +2738,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const serverCurrent = pagination?.currentPage ?? 0;
         currentPage = Math.min(totalPages, serverCurrent + 1);
 
-        console.log('📊 Actualizando paginación:', pagination);
+        console.log('?? Actualizando paginación:', pagination);
 
         const paginationInfo = document.querySelector('.pagination-info');
         if (paginationInfo) {
@@ -2940,23 +2855,20 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    function sortUsuariosData(data) {
-        const sortKey = currentSort?.key;
-        const dir = currentSort?.direction === 'desc' ? -1 : 1;
-        if (!sortKey) return Array.isArray(data) ? [...data] : [];
-        const list = Array.isArray(data) ? [...data] : [];
-        list.sort((a, b) => {
-            const va = getUsuarioSortValue(a, sortKey);
-            const vb = getUsuarioSortValue(b, sortKey);
-            if (va == null && vb == null) return 0;
-            if (va == null) return 1;
-            if (vb == null) return -1;
-            if (typeof va === 'number' && typeof vb === 'number') {
-                return (va - vb) * dir;
+    function updateSortHeaderIndicators() {
+        const table = document.getElementById('usuarios-table');
+        if (!table) return;
+
+        const headers = table.querySelectorAll('thead th');
+        const keyMap = ['dni', 'nombre', 'correo', 'roles', 'estado', 'fechaRegistro', null];
+        headers.forEach((th, index) => {
+            const key = keyMap[index];
+            if (!key) return;
+            th.classList.remove('sort-asc', 'sort-desc');
+            if (currentSort.key === key) {
+                th.classList.add(currentSort.direction === 'asc' ? 'sort-asc' : 'sort-desc');
             }
-            return String(va).localeCompare(String(vb), 'es', { sensitivity: 'base' }) * dir;
         });
-        return list;
     }
 
     function setupSortableUserHeaders() {
@@ -2964,7 +2876,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!table || table.dataset.sortInit === '1') return;
         table.dataset.sortInit = '1';
         const headers = table.querySelectorAll('thead th');
-        const keyMap = ['dni', 'nombreCompleto', 'correo', 'roles', 'estado', 'fechaRegistro', null];
+        const keyMap = ['dni', 'nombre', 'correo', 'roles', 'estado', 'fechaRegistro', null];
         headers.forEach((th, index) => {
             const key = keyMap[index];
             if (!key) return;
@@ -2976,10 +2888,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     currentSort.key = key;
                     currentSort.direction = 'asc';
                 }
-                populateUsuariosTable(currentUsuarios);
-                filterTable(getCurrentFilters());
+                updateSortHeaderIndicators();
+                loadUsuarios(1);
             });
         });
+        updateSortHeaderIndicators();
     }
 
     // Función para poblar la tabla con datos
@@ -3009,10 +2922,10 @@ document.addEventListener('DOMContentLoaded', function () {
             console.error('Estructura de datos no reconocida:', responseData);
         }
 
-        console.log('👥 Usuarios a mostrar:', usuarios.length);
+        console.log('?? Usuarios a mostrar:', usuarios.length);
 
         currentUsuarios = Array.isArray(usuarios) ? usuarios : [];
-        const sortedUsuarios = sortUsuariosData(currentUsuarios);
+        const sortedUsuarios = currentUsuarios;
 
         tableBody.innerHTML = '';
 
@@ -3087,6 +3000,7 @@ document.addEventListener('DOMContentLoaded', function () {
             tableBody.appendChild(row);
         });
 
+        updateTableStats(totalElements);
         return { totalElements, displayed: sortedUsuarios.length };
     }
 
@@ -3185,7 +3099,7 @@ document.addEventListener('DOMContentLoaded', function () {
             let dia = row.cells[0].textContent;
             const horarioTexto = row.cells[1].textContent;
 
-            // ✅ NORMALIZAR NOMBRES DE DÍAS (quitar acentos)
+            // ? NORMALIZAR NOMBRES DE DÍAS (quitar acentos)
             dia = normalizarNombreDia(dia);
 
             // Parsear horario (formato: "08:00 - 12:00")
@@ -3201,7 +3115,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return horarios;
     }
 
-    // ✅ FUNCIÓN: Normalizar nombres de días para el backend
+    // ? FUNCIÓN: Normalizar nombres de días para el backend
     function normalizarNombreDia(dia) {
         const normalizaciones = {
             'Lunes': 'LUNES',
@@ -3220,3 +3134,4 @@ document.addEventListener('DOMContentLoaded', function () {
 
     console.log('Gestión de Usuarios inicializada correctamente');
 });
+

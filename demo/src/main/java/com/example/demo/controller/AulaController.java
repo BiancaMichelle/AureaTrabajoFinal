@@ -490,6 +490,8 @@ public class AulaController {
              .orElse(null);
         
         List<Inscripciones> inscripciones = inscripcionRepository.findByOfertaIdOferta(id);
+        List<Tarea> tareasOferta = tareaRepository.findByCursoId(id);
+        List<Examen> examenesOferta = examenRepository.findByModulo_Curso_IdOferta(id);
 
         // Construir salida incluyendo la fecha de inscripción del alumno
         return inscripciones.stream()
@@ -506,11 +508,17 @@ public class AulaController {
                     map.put("dni", u.getDni());
                     map.put("name", u.getNombre() + " " + u.getApellido());
                     map.put("email", u.getCorreo());
+                    map.put("telefono", u.getNumTelefono());
+                    map.put("pais", u.getPais() != null ? u.getPais().getNombre() : null);
+                    map.put("provincia", u.getProvincia() != null ? u.getProvincia().getNombre() : null);
+                    map.put("ciudad", u.getCiudad() != null ? u.getCiudad().getNombre() : null);
                     String role = u.getRoles().isEmpty() ? "ESTUDIANTE" : u.getRoles().iterator().next().getNombre();
                     map.put("role", role);
                     map.put("avatar", (u.getNombre().substring(0, 1) + u.getApellido().substring(0, 1)).toUpperCase());
                     map.put("color", "bg-blue-100 text-blue-600");
                     map.put("fechaInscripcion", i.getFechaInscripcion());
+                    map.put("promedioCalificaciones", calcularPromedioAlumnoEnOferta(u, tareasOferta, examenesOferta));
+                    map.put("porcentajeAsistencia", calcularPorcentajeAsistenciaAlumno(id, u.getDni()));
                     return map;
                 })
                 .filter(Objects::nonNull)
@@ -518,6 +526,101 @@ public class AulaController {
                 .collect(Collectors.collectingAndThen(
                         Collectors.toMap(m -> m.get("dni"), m -> m, (a,b) -> a, LinkedHashMap::new),
                         map -> new ArrayList<>(map.values())));
+    }
+
+    @GetMapping("/api/oferta/{id}/calificaciones/{dni}")
+    @ResponseBody
+    public List<Map<String, Object>> getCalificacionesAlumnoOferta(@PathVariable Long id, @PathVariable String dni) {
+        Usuario alumno = usuarioRepository.findByDni(dni)
+                .or(() -> usuarioRepository.findByCorreo(dni))
+                .orElseThrow(() -> new RuntimeException("Alumno no encontrado"));
+
+        List<Map<String, Object>> resultado = new ArrayList<>();
+        List<Tarea> tareasOferta = tareaRepository.findByCursoId(id);
+        List<Examen> examenesOferta = examenRepository.findByModulo_Curso_IdOferta(id);
+
+        for (Tarea tarea : tareasOferta) {
+            entregaRepository.findByTareaAndEstudiante(tarea, alumno).ifPresent(entrega -> {
+                if (entrega.getCalificacion() != null) {
+                    Map<String, Object> row = new HashMap<>();
+                    row.put("tipo", "TAREA");
+                    row.put("actividad", tarea.getTitulo());
+                    row.put("fecha", entrega.getFechaEntrega() != null ? entrega.getFechaEntrega() : tarea.getLimiteEntrega());
+                    row.put("nota", entrega.getCalificacion());
+                    resultado.add(row);
+                }
+            });
+        }
+
+        for (Examen examen : examenesOferta) {
+            List<Intento> intentos = intentoRepository.findByAlumno_IdAndExamen_IdActividad(alumno.getId(), examen.getIdActividad());
+            Optional<Float> mejorNota = intentos.stream()
+                    .map(Intento::getCalificacion)
+                    .filter(Objects::nonNull)
+                    .max(Float::compare);
+
+            if (mejorNota.isPresent()) {
+                Optional<LocalDateTime> fecha = intentos.stream()
+                        .filter(i -> i.getCalificacion() != null && Objects.equals(i.getCalificacion(), mejorNota.get()))
+                        .map(Intento::getFechaFin)
+                        .filter(Objects::nonNull)
+                        .max(LocalDateTime::compareTo);
+
+                Map<String, Object> row = new HashMap<>();
+                row.put("tipo", "EXAMEN");
+                row.put("actividad", examen.getTitulo());
+                row.put("fecha", fecha.orElse(examen.getFechaCierre()));
+                row.put("nota", mejorNota.get());
+                resultado.add(row);
+            }
+        }
+
+        resultado.sort(Comparator.comparing(
+                r -> (LocalDateTime) r.get("fecha"),
+                Comparator.nullsLast(Comparator.reverseOrder()))
+        );
+
+        return resultado;
+    }
+
+    private Double calcularPromedioAlumnoEnOferta(Usuario alumno, List<Tarea> tareasOferta, List<Examen> examenesOferta) {
+        List<Double> notas = new ArrayList<>();
+
+        for (Tarea tarea : tareasOferta) {
+            entregaRepository.findByTareaAndEstudiante(tarea, alumno).ifPresent(entrega -> {
+                if (entrega.getCalificacion() != null) {
+                    notas.add(entrega.getCalificacion());
+                }
+            });
+        }
+
+        for (Examen examen : examenesOferta) {
+            List<Intento> intentos = intentoRepository.findByAlumno_IdAndExamen_IdActividad(alumno.getId(), examen.getIdActividad());
+            intentos.stream()
+                    .map(Intento::getCalificacion)
+                    .filter(Objects::nonNull)
+                    .max(Float::compare)
+                    .ifPresent(nota -> notas.add(nota.doubleValue()));
+        }
+
+        if (notas.isEmpty()) {
+            return null;
+        }
+
+        return notas.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+    }
+
+    private Double calcularPorcentajeAsistenciaAlumno(Long ofertaId, String dniAlumno) {
+        List<Asistencia> asistencias = asistenciaService.getAsistenciasPorAlumnoYOferta(ofertaId, dniAlumno);
+        if (asistencias == null || asistencias.isEmpty()) {
+            return null;
+        }
+
+        long asistenciasValidas = asistencias.stream()
+                .filter(a -> a.getEstado() == EstadoAsistencia.PRESENTE || a.getEstado() == EstadoAsistencia.TARDANZA)
+                .count();
+
+        return (asistenciasValidas * 100.0) / asistencias.size();
     }
 
     @GetMapping("/api/oferta/{id}/calendario")
