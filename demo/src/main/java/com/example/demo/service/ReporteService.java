@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.LocalDateTime;
 import java.text.NumberFormat;
@@ -14,6 +15,7 @@ import java.util.stream.Collectors;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.TreeMap;
 
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -26,21 +28,18 @@ import org.springframework.util.StreamUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.example.demo.model.OfertaAcademica;
-import com.example.demo.model.Categoria;
-import com.example.demo.model.Pago;
 import java.awt.Color;
-import com.example.demo.model.Curso;
-import com.example.demo.model.Docente;
-import com.example.demo.model.Instituto;
-import com.example.demo.model.Usuario;
+import com.example.demo.model.*;
 import com.example.demo.repository.OfertaAcademicaRepository;
 import com.example.demo.enums.EstadoOferta;
 import com.example.demo.repository.UsuarioRepository;
 import com.example.demo.repository.CuotaRepository;
 import com.example.demo.repository.InscripcionRepository;
+import com.example.demo.repository.AuditLogRepository;
 import com.example.demo.repository.CategoriaRepository;
+import com.example.demo.repository.NotificacionInscripcionRepository;
 import com.example.demo.enums.EstadoCuota;
+import com.example.demo.enums.EstadoPago;
 import com.lowagie.text.Chunk;
 import com.lowagie.text.Document;
 import com.lowagie.text.DocumentException;
@@ -53,6 +52,7 @@ import com.lowagie.text.pdf.*;
 
 import java.util.Map;
 import java.util.Base64;
+import java.util.Comparator;
 import java.awt.image.BufferedImage;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
@@ -61,6 +61,7 @@ import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.plot.PiePlot;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.renderer.category.BarRenderer;
+import org.jfree.chart.renderer.category.LineAndShapeRenderer;
 import org.jfree.data.category.DefaultCategoryDataset;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.data.general.DefaultPieDataset;
@@ -68,6 +69,7 @@ import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import com.example.demo.model.AuditLog;
+import com.example.demo.ia.service.ChatServiceSimple;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -75,6 +77,7 @@ import java.util.regex.Pattern;
 public class ReporteService {
 
     private static final Logger log = LoggerFactory.getLogger(ReporteService.class);
+    private static final DateTimeFormatter REPORT_DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     @Autowired
     private OfertaAcademicaRepository ofertaRepository;
@@ -87,6 +90,9 @@ public class ReporteService {
 
     @Autowired
     private InscripcionRepository inscripcionRepository;
+
+    @Autowired
+    private NotificacionInscripcionRepository notificacionInscripcionRepository;
     
     @Autowired
     private CategoriaRepository categoriaRepository;
@@ -101,7 +107,13 @@ public class ReporteService {
     private AuditLogService auditLogService;
 
     @Autowired
+    private AuditLogRepository auditLogRepository;
+
+    @Autowired
     private TemplateEngine templateEngine; // Thymeleaf Template Engine
+
+    @Autowired
+    private ChatServiceSimple chatServiceSimple;
 
     private String cargarEstilos() {
         try {
@@ -216,13 +228,13 @@ public class ReporteService {
         if (oferta.getFechaInicio() != null) {
             long diasParaInicio = java.time.temporal.ChronoUnit.DAYS.between(hoy, oferta.getFechaInicio());
             if (diasParaInicio >= 1 && diasParaInicio <= 3 && inscripcionesCount <= minAlumnos) {
-                return "Inicio inminente (" + diasParaInicio + " días) con matrícula insuficiente (" + inscripcionesCount + " inscritos. Mínimo: " + minAlumnos + ")";
+                return "Inicio inminente (" + diasParaInicio + " dias) con matricula insuficiente (" + inscripcionesCount + " inscritos. Minimo: " + minAlumnos + ")";
             }
         }
         if (oferta.getEstado() == EstadoOferta.ENCURSO && inscripcionesCount < minAlumnos) {
-            return "Matrícula insuficiente durante el cursado (" + inscripcionesCount + " inscritos. Mínimo: " + minAlumnos + ")";
+            return "Matricula insuficiente durante el cursado (" + inscripcionesCount + " inscritos. Minimo: " + minAlumnos + ")";
         }
-        return "Baja por baja demanda (inscriptos: " + inscripcionesCount + ", mínimo: " + minAlumnos + ")";
+        return "Baja por baja demanda (inscriptos: " + inscripcionesCount + ", minimo: " + minAlumnos + ")";
     }
 
     private List<Map<String, Object>> obtenerBajasPorAnalisis(List<OfertaAcademica> ofertas) {
@@ -237,7 +249,7 @@ public class ReporteService {
         Instituto instituto = institutoService.obtenerInstituto();
         int minAlumnos = instituto != null && instituto.getMinimoAlumnoBaja() != null ? instituto.getMinimoAlumnoBaja() : 5;
 
-        // 1) Bajas automáticas (cron)
+        // 1) Bajas automaticas (cron)
         List<AuditLog> autoLogs = auditLogService.obtenerPorAccion("BAJA_AUTOMATICA_OFERTA");
         for (AuditLog log : autoLogs) {
             if (log.getDetalles() == null) continue;
@@ -259,7 +271,7 @@ public class ReporteService {
                     }
                 }
             } catch (Exception e) {
-                // Ignorar parseos inválidos
+                // Ignorar parseos invalidos
             }
             if (id != null && idsFiltrados.contains(id) && !resultById.containsKey(id)) {
                 Map<String, Object> row = new java.util.HashMap<>();
@@ -271,7 +283,7 @@ public class ReporteService {
             }
         }
 
-        // 2) Bajas confirmadas manualmente desde el análisis (reportes)
+        // 2) Bajas confirmadas manualmente desde el analisis (reportes)
         List<AuditLog> manualLogs = auditLogService.obtenerPorAccion("DAR_DE_BAJA_OFERTAS_MANUAL");
         Pattern pattern = Pattern.compile("BAJA APLICADA:\\s*(.*?)\\s*\\(ID:\\s*(\\d+)\\)");
         for (AuditLog log : manualLogs) {
@@ -304,7 +316,7 @@ public class ReporteService {
      * Genera un PDF a partir de una plantilla HTML Thymeleaf
      */
     public ByteArrayInputStream generarReportePdfDesdePlantilla(String templateName, Map<String, Object> data) {
-        log.info("📄 Iniciando generación de PDF desde plantilla: {}", templateName);
+        log.info("Iniciando generacion de PDF desde plantilla: {}", templateName);
         try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
             Context context = new Context();
             context.setVariables(data);
@@ -315,7 +327,7 @@ public class ReporteService {
             
             // Validar HTML vacio
             if (htmlContent == null || htmlContent.isEmpty()) {
-                throw new RuntimeException("La plantilla generó un HTML vacío");
+                throw new RuntimeException("La plantilla genero un HTML vacio");
             }
 
             log.debug("Renderizando PDF con OpenHTMLToPDF...");
@@ -326,17 +338,17 @@ public class ReporteService {
             builder.run();
             
             byte[] pdfBytes = os.toByteArray();
-            log.info("✅ PDF generado exitosamente. Tamaño: {} bytes", pdfBytes.length);
+            log.info("PDF generado exitosamente. Tamano: {} bytes", pdfBytes.length);
             
             return new ByteArrayInputStream(pdfBytes);
         } catch (Exception e) {
-            log.error("❌ Error FATAL al generar PDF: {}", e.getMessage(), e);
+            log.error("Error FATAL al generar PDF: {}", e.getMessage(), e);
             throw new RuntimeException("Error generando PDF desde plantilla HTML: " + e.getMessage(), e);
         }
     }
 
     /**
-     * Genera un gráfico de torta (Pie Chart) y lo devuelve como String Base64 para embeber en HTML
+     * Genera un grafico de torta (Pie Chart) y lo devuelve como String Base64 para embeber en HTML
      */
     public String generarGraficoTortaBase64(Map<String, Number> datasetValues, String titulo) {
         try {
@@ -352,7 +364,7 @@ public class ReporteService {
                 true,
                 false);
 
-            // Mostrar valores en las etiquetas del gráfico (nombre + cantidad)
+            // Mostrar valores en las etiquetas del grafico (nombre + cantidad)
             PiePlot plot = (PiePlot) chart.getPlot();
             plot.setSimpleLabels(false);
             plot.setLabelGenerator(new StandardPieSectionLabelGenerator("{0}: {1}"));
@@ -370,7 +382,7 @@ public class ReporteService {
     }
 
     /**
-     * Genera un gráfico de barras (Categorías) y lo devuelve como String Base64
+     * Genera un grafico de barras (Categorias) y lo devuelve como String Base64
      */
     public String generarGraficoBarrasBase64(Map<String, Number> datasetValues, String titulo) {
         try {
@@ -381,7 +393,7 @@ public class ReporteService {
 
             JFreeChart chart = ChartFactory.createBarChart(
                     titulo,
-                    "Categoría",
+                    "Categoria",
                     "Cantidad",
                     dataset,
                     PlotOrientation.VERTICAL,
@@ -404,12 +416,88 @@ public class ReporteService {
             org.jfree.chart.ChartUtils.writeChartAsPNG(baos, chart, width, height);
             return Base64.getEncoder().encodeToString(baos.toByteArray());
         } catch (Exception e) {
-            log.error("Error al generar gráfico de barras", e);
+            log.error("Error al generar grafico de barras", e);
             return null;
         }
     }
 
-    public List<OfertaAcademica> filtrarOfertas(String nombre, String estado, Long categoriaId, LocalDate fechaInicio, LocalDate fechaFin, List<String> tipos) {
+    public String generarGraficoBarrasHorizontalesBase64(Map<String, Number> datasetValues, String titulo, String ejeX, String ejeY) {
+        try {
+            DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+            for (Map.Entry<String, Number> entry : datasetValues.entrySet()) {
+                dataset.addValue(entry.getValue(), "Cantidad", entry.getKey());
+            }
+
+            JFreeChart chart = ChartFactory.createBarChart(
+                    titulo,
+                    ejeX,
+                    ejeY,
+                    dataset,
+                    PlotOrientation.HORIZONTAL,
+                    false,
+                    true,
+                    false
+            );
+
+            CategoryPlot plot = chart.getCategoryPlot();
+            NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
+            rangeAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
+            rangeAxis.setLowerBound(0d);
+
+            BarRenderer renderer = (BarRenderer) plot.getRenderer();
+            renderer.setDrawBarOutline(false);
+            renderer.setShadowVisible(false);
+            renderer.setItemMargin(0.08);
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            int width = 1000;
+            int height = 460;
+            org.jfree.chart.ChartUtils.writeChartAsPNG(baos, chart, width, height);
+            return Base64.getEncoder().encodeToString(baos.toByteArray());
+        } catch (Exception e) {
+            log.error("Error al generar grafico de barras horizontales", e);
+            return null;
+        }
+    }
+
+    public String generarGraficoLineaBase64(Map<String, Number> datasetValues, String titulo, String ejeX, String ejeY) {
+        try {
+            DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+            for (Map.Entry<String, Number> entry : datasetValues.entrySet()) {
+                dataset.addValue(entry.getValue(), "Ingresos", entry.getKey());
+            }
+
+            JFreeChart chart = ChartFactory.createLineChart(
+                    titulo,
+                    ejeX,
+                    ejeY,
+                    dataset,
+                    PlotOrientation.VERTICAL,
+                    false,
+                    true,
+                    false
+            );
+
+            CategoryPlot plot = chart.getCategoryPlot();
+            NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
+            rangeAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
+            rangeAxis.setLowerBound(0d);
+
+            LineAndShapeRenderer renderer = (LineAndShapeRenderer) plot.getRenderer();
+            renderer.setDefaultShapesVisible(true);
+            renderer.setDefaultShapesFilled(true);
+            renderer.setDefaultStroke(new java.awt.BasicStroke(2.0f));
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            org.jfree.chart.ChartUtils.writeChartAsPNG(baos, chart, 1000, 460);
+            return Base64.getEncoder().encodeToString(baos.toByteArray());
+        } catch (Exception e) {
+            log.error("Error al generar grafico de linea", e);
+            return null;
+        }
+    }
+
+    public List<OfertaAcademica> filtrarOfertas(String nombre, String estado, Long categoriaId, LocalDate fechaInicio, LocalDate fechaFin, List<String> tipos, List<String> modalidades) {
         List<OfertaAcademica> todas = ofertaRepository.findAll();
 
         final List<String> tiposNormalizados;
@@ -423,13 +511,35 @@ public class ReporteService {
             tiposNormalizados = normalized.isEmpty() ? null : normalized;
         }
 
+        final List<String> modalidadesNormalizadas;
+        if (modalidades == null || modalidades.isEmpty()) {
+            modalidadesNormalizadas = null;
+        } else {
+            List<String> normalized = modalidades.stream()
+                    .map(this::normalizarTipo)
+                    .filter(s -> !s.isEmpty())
+                    .collect(Collectors.toList());
+            modalidadesNormalizadas = normalized.isEmpty() ? null : normalized;
+        }
+
         return todas.stream()
             .filter(o -> nombre == null || nombre.isEmpty() || o.getNombre().toLowerCase().contains(nombre.toLowerCase()))
             .filter(o -> estado == null || estado.isEmpty() || (o.getEstado() != null && o.getEstado().name().equalsIgnoreCase(estado)))
             .filter(o -> categoriaId == null || o.getCategorias().stream().anyMatch(c -> c.getIdCategoria().equals(categoriaId)))
-            .filter(o -> fechaInicio == null || (o.getFechaInicio() != null && !o.getFechaInicio().isBefore(fechaInicio)))
-            .filter(o -> fechaFin == null || (o.getFechaFin() != null && !o.getFechaFin().isAfter(fechaFin)))
+            // Filtro temporal por solapamiento (no exige que toda la oferta quede dentro del rango)
+            .filter(o -> {
+                if (fechaInicio == null) return true;
+                LocalDate finOferta = o.getFechaFin() != null ? o.getFechaFin() : o.getFechaInicio();
+                return finOferta == null || !finOferta.isBefore(fechaInicio);
+            })
+            .filter(o -> {
+                if (fechaFin == null) return true;
+                LocalDate inicioOferta = o.getFechaInicio() != null ? o.getFechaInicio() : o.getFechaFin();
+                return inicioOferta == null || !inicioOferta.isAfter(fechaFin);
+            })
             .filter(o -> tiposNormalizados == null || tiposNormalizados.contains(normalizarTipo(o.getTipoOferta())))
+            .filter(o -> modalidadesNormalizadas == null
+                    || (o.getModalidad() != null && modalidadesNormalizadas.contains(normalizarTipo(o.getModalidad().name()))))
             .collect(Collectors.toList());
     }
 
@@ -458,7 +568,7 @@ public class ReporteService {
 
     public ByteArrayInputStream generarReporteExcel(List<OfertaAcademica> ofertas) throws IOException {
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            Sheet sheet = workbook.createSheet("Ofertas Académicas");
+            Sheet sheet = workbook.createSheet("Ofertas Academicas");
 
             // Header
             String[] columns = {"ID", "Nombre", "Tipo", "Estado", "Inicio", "Fin", "Costo", "Inscriptos", "Activos", "Abandono (%)", "Ingresos Estimados"};
@@ -489,8 +599,8 @@ public class ReporteService {
                 row.createCell(1).setCellValue(oferta.getNombre());
                 row.createCell(2).setCellValue(oferta.getTipoOferta());
                 row.createCell(3).setCellValue(oferta.getEstado() != null ? oferta.getEstado().name() : "N/A");
-                row.createCell(4).setCellValue(oferta.getFechaInicio() != null ? oferta.getFechaInicio().toString() : "");
-                row.createCell(5).setCellValue(oferta.getFechaFin() != null ? oferta.getFechaFin().toString() : "");
+                row.createCell(4).setCellValue(oferta.getFechaInicio() != null ? oferta.getFechaInicio().format(REPORT_DATE_FORMAT) : "");
+                row.createCell(5).setCellValue(oferta.getFechaFin() != null ? oferta.getFechaFin().format(REPORT_DATE_FORMAT) : "");
                 row.createCell(6).setCellValue(oferta.getCostoInscripcion() != null ? oferta.getCostoInscripcion() : 0.0);
                 row.createCell(7).setCellValue(totalInscriptos);
                 row.createCell(8).setCellValue(activos);
@@ -509,14 +619,14 @@ public class ReporteService {
     }
 
     public ByteArrayInputStream generarReportePDF(List<OfertaAcademica> ofertas) {
-        // Configuramos márgenes: Izq, Der, Arr, Abajo (para dar espacio a encabezado/pie)
+        // Configuramos margenes: Izq, Der, Arr, Abajo (para dar espacio a encabezado/pie)
         Document document = new Document(PageSize.A4.rotate(), 40, 40, 60, 40);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         try {
             PdfWriter writer = PdfWriter.getInstance(document, out);
 
-            // --- DEFINICIÓN DE EVENTOS DE PÁGINA (Encabezado y Pie) ---
+            // --- DEFINICION DE EVENTOS DE PAGINA (Encabezado y Pie) ---
             writer.setPageEvent(new PdfPageEventHelper() {
                 PdfTemplate total;
                 BaseFont bf;
@@ -571,7 +681,7 @@ public class ReporteService {
                     cb.endText();
                     cb.restoreState();
 
-                    // --- PIE DE PÁGINA CONSISTENTE ---
+                    // --- PIE DE PAGINA CONSISTENTE ---
                     cb.saveState();
                     cb.setLineWidth(0.5f);
                     cb.moveTo(40, 30);
@@ -584,7 +694,7 @@ public class ReporteService {
                     cb.setTextMatrix(40, 20);
                     cb.showText("Informe Confidencial - Uso Interno");
                     
-                    String text = "Página " + writer.getPageNumber() + " de ";
+                    String text = "Pagina " + writer.getPageNumber() + " de ";
                     float textSize = bf.getWidthPoint(text, 9);
                     float x = width / 2; // Centrado
                     float y = 20;
@@ -610,14 +720,14 @@ public class ReporteService {
 
             document.open();
 
-            // --- 1. TÍTULO CON JERARQUÍA VISUAL ---
+            // --- 1. TITULO CON JERARQUIA VISUAL ---
             com.lowagie.text.Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18);
-            Paragraph title = new Paragraph("Reporte de Ofertas Académicas y Estadísticas", titleFont);
+            Paragraph title = new Paragraph("Reporte de Ofertas Academicas y Estadisticas", titleFont);
             title.setAlignment(Element.ALIGN_CENTER);
             title.setSpacingAfter(10f);
             document.add(title);
             
-            // Subtítulo descriptivo
+            // Subtitulo descriptivo
             Paragraph subtitle = new Paragraph("Informe detallado sobre programas educativos, inscripciones y rendimiento.", FontFactory.getFont(FontFactory.HELVETICA, 11, java.awt.Color.GRAY));
             subtitle.setAlignment(Element.ALIGN_CENTER);
             subtitle.setSpacingAfter(20f);
@@ -641,20 +751,39 @@ public class ReporteService {
     }
 
     private void addSummarySection(Document doc, List<OfertaAcademica> ofertas) throws DocumentException {
+        addSummarySection(doc, ofertas, null, null);
+    }
+
+    private void addSummarySection(Document doc, List<OfertaAcademica> ofertas, LocalDate fechaInicio, LocalDate fechaFin) throws DocumentException {
         PdfPTable summaryTable = new PdfPTable(4);
         summaryTable.setWidthPercentage(100);
         summaryTable.setSpacingBefore(10f);
         summaryTable.setSpacingAfter(20f);
         summaryTable.getDefaultCell().setBorder(0);
-        
-        // Cálculos estdísticos
-        int totalOfertas = ofertas.size();
-        long totalInscritos = ofertas.stream().mapToLong(o -> o.getInscripciones() != null ? o.getInscripciones().size() : 0).sum();
-        long activos = ofertas.stream().mapToLong(o -> o.getInscripciones() != null ? o.getInscripciones().stream().filter(i -> Boolean.TRUE.equals(i.getEstadoInscripcion())).count() : 0).sum();
-        double ingresos = ofertas.stream().mapToDouble(o -> {
-             int n = o.getInscripciones() != null ? o.getInscripciones().size() : 0;
-             return n * (o.getCostoInscripcion() != null ? o.getCostoInscripcion() : 0.0);
-        }).sum();
+
+        java.util.Set<Long> ofertasIncluidas = ofertas.stream()
+                .map(OfertaAcademica::getIdOferta)
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        List<com.example.demo.model.Inscripciones> inscripcionesFiltradas = inscripcionRepository.findAll().stream()
+                .filter(i -> i.getOferta() != null && i.getOferta().getIdOferta() != null)
+                .filter(i -> ofertasIncluidas.contains(i.getOferta().getIdOferta()))
+                .filter(i -> i.getFechaInscripcion() != null)
+                .filter(i -> fechaInicio == null || !i.getFechaInscripcion().isBefore(fechaInicio))
+                .filter(i -> fechaFin == null || !i.getFechaInscripcion().isAfter(fechaFin))
+                .collect(Collectors.toList());
+
+        int totalOfertas = (fechaInicio != null || fechaFin != null)
+                ? (int) inscripcionesFiltradas.stream().map(i -> i.getOferta().getIdOferta()).distinct().count()
+                : ofertas.size();
+        long totalInscritos = inscripcionesFiltradas.size();
+        long activos = inscripcionesFiltradas.stream()
+                .filter(i -> Boolean.TRUE.equals(i.getEstadoInscripcion()))
+                .count();
+        double ingresos = inscripcionesFiltradas.stream()
+                .mapToDouble(i -> i.getOferta().getCostoInscripcion() != null ? i.getOferta().getCostoInscripcion() : 0.0)
+                .sum();
 
         summaryTable.addCell(createKpiCell("Total Programas", String.valueOf(totalOfertas)));
         summaryTable.addCell(createKpiCell("Total Inscripciones", String.valueOf(totalInscritos)));
@@ -682,7 +811,7 @@ public class ReporteService {
     }
 
     private void addOfertasTable(Document doc, List<OfertaAcademica> ofertas) throws DocumentException {
-        // Configuración de tabla para legibilidad
+        // Configuracion de tabla para legibilidad
         PdfPTable table = new PdfPTable(8); // Reducir columnas para mejor espacio
         table.setWidthPercentage(100);
         table.setWidths(new int[]{4, 2, 2, 2, 2, 1, 1, 2});
@@ -717,8 +846,8 @@ public class ReporteService {
             addCell(table, oferta.getNombre(), dataFont, bgColor, Element.ALIGN_LEFT);
             addCell(table, oferta.getTipoOferta(), dataFont, bgColor, Element.ALIGN_CENTER);
             addCell(table, oferta.getEstado() != null ? oferta.getEstado().name() : "-", dataFont, bgColor, Element.ALIGN_CENTER);
-            addCell(table, oferta.getFechaInicio() != null ? oferta.getFechaInicio().toString() : "", dataFont, bgColor, Element.ALIGN_CENTER);
-            addCell(table, oferta.getFechaFin() != null ? oferta.getFechaFin().toString() : "", dataFont, bgColor, Element.ALIGN_CENTER);
+            addCell(table, oferta.getFechaInicio() != null ? oferta.getFechaInicio().format(REPORT_DATE_FORMAT) : "", dataFont, bgColor, Element.ALIGN_CENTER);
+            addCell(table, oferta.getFechaFin() != null ? oferta.getFechaFin().format(REPORT_DATE_FORMAT) : "", dataFont, bgColor, Element.ALIGN_CENTER);
             addCell(table, String.valueOf(totalInscriptos), dataFont, bgColor, Element.ALIGN_CENTER);
             addCell(table, String.valueOf(activos), dataFont, bgColor, Element.ALIGN_CENTER);
             addCell(table, String.format("$ %,.0f", ingresos), dataFont, bgColor, Element.ALIGN_RIGHT);
@@ -739,314 +868,351 @@ public class ReporteService {
         table.addCell(cell);
     }
 
-    public ByteArrayInputStream generarReporteEstadisticoPDF(List<OfertaAcademica> ofertas, LocalDate fechaInicio, LocalDate fechaFin) {
-        Document document = new Document(PageSize.A4, 40, 40, 110, 60); // Increased top margin for larger header
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
+    public ByteArrayInputStream generarReporteEstadisticoPDF(List<OfertaAcademica> ofertas, LocalDate fechaInicio, LocalDate fechaFin, String agrupacion) {
+        List<OfertaAcademica> ofertasSafe = ofertas != null ? ofertas : java.util.Collections.emptyList();
+        Instituto instituto = institutoService.obtenerInstituto();
+        String nombreInstitucion = (instituto != null && instituto.getNombreInstituto() != null && !instituto.getNombreInstituto().isBlank())
+                ? instituto.getNombreInstituto().trim()
+                : "la institucion";
 
-        try {
-            PdfWriter writer = PdfWriter.getInstance(document, out);
-            
-            // --- EVENT HELPER (Header/Footer) ---
-            writer.setPageEvent(new PdfPageEventHelper() {
-                BaseFont bf = null;
-                PdfTemplate total;
+        String periodoTexto = "Historico completo";
+        if (fechaInicio != null && fechaFin != null) {
+            periodoTexto = fechaInicio.format(REPORT_DATE_FORMAT) + " al " + fechaFin.format(REPORT_DATE_FORMAT);
+        } else if (fechaInicio != null) {
+            periodoTexto = "Desde " + fechaInicio.format(REPORT_DATE_FORMAT);
+        } else if (fechaFin != null) {
+            periodoTexto = "Hasta " + fechaFin.format(REPORT_DATE_FORMAT);
+        }
 
-                @Override
-                public void onOpenDocument(PdfWriter writer, Document document) {
-                    total = writer.getDirectContent().createTemplate(30, 16);
-                    try {
-                        bf = BaseFont.createFont(BaseFont.HELVETICA, BaseFont.CP1252, BaseFont.NOT_EMBEDDED);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
+        java.util.Set<Long> ofertaIds = ofertasSafe.stream()
+                .map(OfertaAcademica::getIdOferta)
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toSet());
 
-                @Override
-                public void onEndPage(PdfWriter writer, Document document) {
-                    PdfContentByte cb = writer.getDirectContent();
-                    cb.saveState();
-                    
-                    float width = document.getPageSize().getWidth();
-                    float height = document.getPageSize().getHeight();
-                    
-                    // --- HEADER ---
-                    float headerY = height - 35;
-                    
-                    // 1. Nombre del Sistema (Marca)
-                    cb.beginText();
-                    cb.setFontAndSize(bf, 16);
-                    cb.setColorFill(new java.awt.Color(44, 62, 80));
-                    cb.setTextMatrix(40, headerY);
-                    cb.showText("Aurea System");
-                    cb.endText();
-                    
-                    // 2. Nombre del Instituto
-                    String nombreInstituto = "Instituto Académico";
-                    if (!ofertas.isEmpty() && ofertas.get(0).getInstituto() != null) {
-                        nombreInstituto = ofertas.get(0).getInstituto().getNombreInstituto();
-                    }
-                    cb.beginText();
-                    cb.setFontAndSize(bf, 12);
-                    cb.setColorFill(java.awt.Color.GRAY);
-                    cb.setTextMatrix(40, headerY - 15);
-                    cb.showText(nombreInstituto);
-                    cb.endText();
+        List<com.example.demo.model.Inscripciones> inscripcionesPeriodo = inscripcionRepository.findAll().stream()
+                .filter(i -> i.getOferta() != null && i.getOferta().getIdOferta() != null)
+                .filter(i -> ofertaIds.contains(i.getOferta().getIdOferta()))
+                .filter(i -> i.getFechaInscripcion() != null)
+                .filter(i -> fechaInicio == null || !i.getFechaInscripcion().isBefore(fechaInicio))
+                .filter(i -> fechaFin == null || !i.getFechaInscripcion().isAfter(fechaFin))
+                .collect(Collectors.toList());
 
-                    // 3. Info Derecha (Fecha, Usuario)
-                    cb.beginText();
-                    cb.setFontAndSize(bf, 9);
-                    cb.setColorFill(java.awt.Color.BLACK);
-                    
-                    String usuario = "Generado por: Sistema";
-                    if (org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication() != null) {
-                        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-                        String name = auth.getName();
-                            if (auth.getPrincipal() instanceof com.example.demo.model.CustomUsuarioDetails) {
-                                com.example.demo.model.Usuario u = ((com.example.demo.model.CustomUsuarioDetails) auth.getPrincipal()).getUsuario();
-                            if (u != null) {
-                                String nombreCompleto = (u.getNombre() != null ? u.getNombre() : "") +
-                                        (u.getApellido() != null ? " " + u.getApellido() : "");
-                                String dni = u.getDni() != null ? u.getDni() : name;
-                                usuario = "Generado por: " + nombreCompleto.trim() + " - " + dni;
-                            } else {
-                                usuario = "Generado por: " + name;
-                            }
-                        } else {
-                            usuario = "Generado por: " + name;
-                        }
-                    }
-                    
-                    String fechaGen = "Generación: " + java.time.LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
-                    
-                    float lenUser = bf.getWidthPoint(usuario, 9);
-                    float lenDate = bf.getWidthPoint(fechaGen, 9);
-                    
-                    cb.setTextMatrix(width - 40 - lenDate, headerY);
-                    cb.showText(fechaGen);
-                    
-                    cb.setTextMatrix(width - 40 - lenUser, headerY - 12);
-                    cb.showText(usuario);
-                    cb.endText();
-                    
-                    // 4. Tipo de Reporte y Período (Diferenciado)
-                    cb.setLineWidth(1.5f);
-                    cb.setColorStroke(new java.awt.Color(74, 105, 189)); // Brand Blue
-                    cb.moveTo(40, headerY - 30);
-                    cb.lineTo(width - 40, headerY - 30);
-                    cb.stroke();
-                    
-                    cb.beginText();
-                    cb.setFontAndSize(bf, 14);
-                    cb.setColorFill(new java.awt.Color(74, 105, 189));
-                    cb.setTextMatrix(40, headerY - 50);
-                    cb.showText("Reporte Estadístico del Sistema Académico");
-                    cb.endText();
-                    
-                    cb.beginText();
-                    cb.setFontAndSize(bf, 10);
-                    cb.setColorFill(java.awt.Color.DARK_GRAY);
-                    String periodo = "Período Analizado: " + 
-                        (fechaInicio != null ? fechaInicio.toString() : "Inicio Historico") + " al " +
-                        (fechaFin != null ? fechaFin.toString() : "Actualidad");
-                    cb.setTextMatrix(40, headerY - 65);
-                    cb.showText(periodo);
-                    cb.endText();
+        long totalProgramas = (fechaInicio != null || fechaFin != null)
+                ? inscripcionesPeriodo.stream().map(i -> i.getOferta().getIdOferta()).distinct().count()
+                : ofertasSafe.size();
+        long totalInscripciones = inscripcionesPeriodo.size();
+        long alumnosActivos = inscripcionesPeriodo.stream().filter(i -> Boolean.TRUE.equals(i.getEstadoInscripcion())).count();
+        double ingresosEstimados = inscripcionesPeriodo.stream()
+                .mapToDouble(i -> i.getOferta().getCostoInscripcion() != null ? i.getOferta().getCostoInscripcion() : 0.0)
+                .sum();
 
-                    // Footer
-                    cb.setLineWidth(0.5f);
-                    cb.setColorStroke(java.awt.Color.GRAY);
-                    cb.moveTo(40, 30);
-                    cb.lineTo(width - 40, 30);
-                    cb.stroke();
-                    
-                    cb.beginText();
-                    cb.setFontAndSize(bf, 8);
-                    cb.setColorFill(java.awt.Color.GRAY);
-                    cb.setTextMatrix(40, 20);
-                    cb.showText("Aurea System - Informe Confidencial para Uso Gerencial");
-                    
-                    String text = "Página " + writer.getPageNumber() + " de ";
-                    float textSize = bf.getWidthPoint(text, 8);
-                    float x = width / 2;
-                    float y = 20;
+        Map<String, Long> ofertasPorTipo = inscripcionesPeriodo.stream()
+                .collect(Collectors.groupingBy(
+                        i -> i.getOferta().getTipoOferta() != null ? i.getOferta().getTipoOferta() : "Sin tipo",
+                        LinkedHashMap::new,
+                        Collectors.counting()));
 
-                    cb.setTextMatrix(x - textSize / 2, y);
-                    cb.showText(text);
-                    cb.endText();
+        Map<String, Long> ofertasPorModalidad = inscripcionesPeriodo.stream()
+                .collect(Collectors.groupingBy(
+                        i -> i.getOferta().getModalidad() != null ? i.getOferta().getModalidad().name() : "SIN_MODALIDAD",
+                        LinkedHashMap::new,
+                        Collectors.counting()));
 
-                    cb.addTemplate(total, x - textSize / 2 + textSize, y);
-                    cb.restoreState();
-                }
+        Map<String, Long> ofertasPorEstado = inscripcionesPeriodo.stream()
+                .collect(Collectors.groupingBy(
+                        i -> i.getOferta().getEstado() != null ? i.getOferta().getEstado().name() : "SIN_ESTADO",
+                        LinkedHashMap::new,
+                        Collectors.counting()));
 
-                @Override
-                public void onCloseDocument(PdfWriter writer, Document document) {
-                    total.beginText();
-                    total.setFontAndSize(bf, 8);
-                    total.setTextMatrix(0, 0);
-                    total.showText(String.valueOf(writer.getPageNumber() - 1));
-                    total.endText();
-                }
-            });
+        if (ofertasPorTipo.isEmpty()) ofertasPorTipo = java.util.Map.of("Sin datos", 0L);
+        if (ofertasPorModalidad.isEmpty()) ofertasPorModalidad = java.util.Map.of("Sin datos", 0L);
+        if (ofertasPorEstado.isEmpty()) ofertasPorEstado = java.util.Map.of("Sin datos", 0L);
 
-            document.open();
+        Map<String, Number> chartTipoData = new LinkedHashMap<>();
+        ofertasPorTipo.forEach(chartTipoData::put);
+        Map<String, Number> chartModalidadData = new LinkedHashMap<>();
+        ofertasPorModalidad.forEach(chartModalidadData::put);
+        Map<String, Number> chartEstadoData = new LinkedHashMap<>();
+        ofertasPorEstado.forEach(chartEstadoData::put);
 
-            // Font Styles
-            com.lowagie.text.Font h1Font = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14, new java.awt.Color(44, 62, 80));
-            // h2Font reservado para futuros subtítulos
-            com.lowagie.text.Font pFont = FontFactory.getFont(FontFactory.HELVETICA, 10);
-            
-            // --- 1. RESUMEN EJECUTIVO ---
-            document.add(new Paragraph("1. Resumen Ejecutivo", h1Font));
-            document.add(Chunk.NEWLINE);
-            addSummarySection(document, ofertas);
-            document.add(Chunk.NEWLINE);
+        String chartTipo = generarGraficoTortaBase64(chartTipoData, "Inscripciones por tipo");
+        String chartModalidad = generarGraficoTortaBase64(chartModalidadData, "Inscripciones por modalidad");
+        String chartEstado = generarGraficoTortaBase64(chartEstadoData, "Inscripciones por estado");
 
-            // --- 2. ESTADÍSTICAS DE OFERTAS ACADÉMICAS ---
-            document.add(new Paragraph("2. Estadísticas de Ofertas Académicas", h1Font));
-            document.add(new Paragraph("Desglose de la oferta educativa por tipo, modalidad y estado.", pFont));
-            document.add(Chunk.NEWLINE);
-            
-            // Cálculos
-            java.util.Map<String, Long> porEstado = ofertas.stream()
-                .collect(Collectors.groupingBy(o -> o.getEstado() != null ? o.getEstado().name() : "DESCONOCIDO", Collectors.counting()));
-            java.util.Map<String, Long> porModalidad = ofertas.stream()
-                .collect(Collectors.groupingBy(o -> o.getModalidad() != null ? o.getModalidad().name() : "SIN DEFINIR", Collectors.counting()));
-            java.util.Map<String, Long> porTipo = ofertas.stream()
-                .collect(Collectors.groupingBy(OfertaAcademica::getTipoOferta, Collectors.counting()));
+        List<Usuario> todosAlumnos = usuarioRepository.findByRolesNombre("ALUMNO");
+        long totalAlumnos = todosAlumnos.size();
+        long alumnosAlta = todosAlumnos.stream().filter(Usuario::isEstado).count();
+        long alumnosBaja = totalAlumnos - alumnosAlta;
 
-            if (porTipo.isEmpty()) porTipo = java.util.Map.of("Sin datos", 0L);
-            if (porEstado.isEmpty()) porEstado = java.util.Map.of("Sin datos", 0L);
-            if (porModalidad.isEmpty()) porModalidad = java.util.Map.of("Sin datos", 0L);
-            
-            // Gráficos (Tablas visuales)
-            addChartSection(document, "Ofertas por Tipo", porTipo, new java.awt.Color(230, 126, 34));
-            document.add(Chunk.NEWLINE);
-            addChartSection(document, "Ofertas por Estado", porEstado, new java.awt.Color(46, 204, 113));
-            document.add(Chunk.NEWLINE);
-            addChartSection(document, "Ofertas por Modalidad", porModalidad, new java.awt.Color(52, 152, 219));
-            document.add(Chunk.NEWLINE);
+        List<Usuario> todosDocentes = usuarioRepository.findByRolesNombre("DOCENTE");
+        long totalDocentes = todosDocentes.size();
+        long docentesAlta = todosDocentes.stream().filter(Usuario::isEstado).count();
+        long docentesBaja = totalDocentes - docentesAlta;
 
-            // --- 3. ESTADÍSTICAS DE ALUMNOS (Base de Datos) ---
-            document.add(new Paragraph("3. Estadísticas de Alumnos", h1Font));
-            document.add(Chunk.NEWLINE);
-            
-            // Obtener alumnos desde BD por Rol
-            List<Usuario> todosAlumnos = usuarioRepository.findByRolesNombre("ALUMNO");
-            long totalAlumnos = todosAlumnos.size();
-            long alumnosAlta = todosAlumnos.stream().filter(Usuario::isEstado).count();
-            long alumnosBaja = totalAlumnos - alumnosAlta;
-            
-            // Datos Operativos (Inscripciones)
-            
-            // Tabla KPIs Alumnos
-            PdfPTable studentsTable = new PdfPTable(3);
-            studentsTable.setWidthPercentage(100);
-            studentsTable.addCell(createKpiCell("Total Registrados", String.valueOf(totalAlumnos)));
-            studentsTable.addCell(createKpiCell("Alumnos de Alta", String.valueOf(alumnosAlta)));
-            studentsTable.addCell(createKpiCell("Alumnos de Baja", String.valueOf(alumnosBaja)));
-            document.add(studentsTable);
-            
-            document.add(Chunk.NEWLINE);
-
-            // --- 4. ESTADÍSTICAS DE DOCENTES (Base de Datos) ---
-            document.add(new Paragraph("4. Estadísticas de Docentes", h1Font));
-            document.add(Chunk.NEWLINE);
-            
-            // Obtener docentes desde BD por Rol
-            List<Usuario> todosDocentes = usuarioRepository.findByRolesNombre("DOCENTE");
-            long totalDocentes = todosDocentes.size();
-            long docentesAlta = todosDocentes.stream().filter(Usuario::isEstado).count();
-            long docentesBaja = totalDocentes - docentesAlta;
-            
-            // Docentes con asignación actual (filtrando de las ofertas)
-            java.util.Set<java.util.UUID> docentesAsignadosIds = new java.util.HashSet<>();
-             for (OfertaAcademica o : ofertas) {
-                if (o instanceof Curso) {
-                    Curso c = (Curso) o;
-                    if (c.getDocentes() != null) {
-                        for (Docente d : c.getDocentes()) {
-                             docentesAsignadosIds.add(d.getId());
-                        }
+        java.util.Set<java.util.UUID> docentesAsignadosIds = new java.util.HashSet<>();
+        for (OfertaAcademica o : ofertasSafe) {
+            if (o instanceof Curso) {
+                Curso c = (Curso) o;
+                if (c.getDocentes() != null) {
+                    for (Docente d : c.getDocentes()) {
+                        docentesAsignadosIds.add(d.getId());
                     }
                 }
             }
-            long docentesConAsignacion = docentesAsignadosIds.size();
-            long docentesSinAsignacion = docentesAlta - docentesConAsignacion;
-            if (docentesSinAsignacion < 0) docentesSinAsignacion = 0; // Prevent negative if data inconsistency
+        }
+        long docentesConAsignacion = docentesAsignadosIds.size();
 
-            // Tabla KPIs Docentes
-            PdfPTable teachersTable = new PdfPTable(3);
-            teachersTable.setWidthPercentage(100);
-            teachersTable.addCell(createKpiCell("Total Docentes", String.valueOf(totalDocentes)));
-            teachersTable.addCell(createKpiCell("Docentes de Alta", String.valueOf(docentesAlta)));
-            teachersTable.addCell(createKpiCell("Docentes de Baja", String.valueOf(docentesBaja)));
-            document.add(teachersTable);
-            
-            document.add(Chunk.NEWLINE);
-            
-            // --- GRÁFICO COMPARATIVO: Población Institucional ---
-            
-            // Obtener admins desde BD
-            List<Usuario> todosAdmins = usuarioRepository.findByRolesNombre("ADMIN");
-            long adminsAlta = todosAdmins.stream().filter(Usuario::isEstado).count();
-            
-            // Total Usuarios Sistema
-            long totalUsuariosSistema = usuarioRepository.count();
+        List<Usuario> todosAdmins = usuarioRepository.findByRolesNombre("ADMIN");
+        long adminsAlta = todosAdmins.stream().filter(Usuario::isEstado).count();
+        long totalUsuariosSistema = usuarioRepository.count();
 
-            java.util.Map<String, Long> poblacionData = new java.util.LinkedHashMap<>();
-            poblacionData.put("Alumnos de Alta", alumnosAlta);
-            poblacionData.put("Docentes de Alta", docentesAlta);
-            poblacionData.put("Admins de Alta", adminsAlta);
-            poblacionData.put("Total Usuarios", totalUsuariosSistema);
-            
-            addChartSection(document, "Comparativa Población Institucional (Altas vs Total)", poblacionData, new java.awt.Color(52, 73, 94));
-            document.add(Chunk.NEWLINE);
-            
-            // --- 5. INDICADORES CLAVE (KPIs Académicos) ---
-            document.add(new Paragraph("5. Indicadores Clave (KPIs Académicos)", h1Font));
-            document.add(Chunk.NEWLINE);
-            
-            // Tasa Ocupacion
-            long totalCupos = ofertas.stream().mapToLong(o -> o.getCupos() != null && o.getCupos() < 10000 ? o.getCupos() : 0).sum();
-            // Ignoramos cupos infinitos para el calculo de tasa
-            long inscritosEnOfertasConCupo = ofertas.stream()
+        long totalCupos = ofertasSafe.stream().mapToLong(o -> o.getCupos() != null && o.getCupos() < 10000 ? o.getCupos() : 0).sum();
+        long inscritosEnOfertasConCupo = ofertasSafe.stream()
                 .filter(o -> o.getCupos() != null && o.getCupos() < 10000)
-                .mapToLong(o -> o.getInscripciones() != null ? o.getInscripciones().size() : 0).sum();
-                
-            double tasaOcupacion = totalCupos > 0 ? (double) inscritosEnOfertasConCupo / totalCupos * 100 : 0;
-            
-            // Ofertas Baja Demanda (< 5 alumnos)
-            long bajaDemanda = ofertas.stream()
+                .mapToLong(o -> o.getInscripciones() != null ? o.getInscripciones().size() : 0)
+                .sum();
+        double tasaOcupacion = totalCupos > 0 ? (double) inscritosEnOfertasConCupo / totalCupos * 100 : 0;
+
+        long ofertasBajaDemanda = ofertasSafe.stream()
                 .filter(o -> o.getInscripciones() != null && o.getInscripciones().size() < 5)
                 .count();
 
-            PdfPTable kpiTable = new PdfPTable(2);
-            kpiTable.setWidthPercentage(100);
-            kpiTable.addCell(createKpiCell("Tasa de Ocupación Global", String.format("%.1f %%", tasaOcupacion)));
-            kpiTable.addCell(createKpiCell("Ofertas Baja Demanda (<5)", String.valueOf(bajaDemanda)));
-            document.add(kpiTable);
-            
-            document.add(Chunk.NEWLINE);
-            
-            // --- 6. ANÁLISIS COMPARATIVO ---
-            document.add(new Paragraph("6. Observaciones y Análisis", h1Font));
-            Paragraph obs = new Paragraph(
-                "Este reporte refleja la situación actual de los programas académicos. " + 
-                "Se recomienda revisar las ofertas con baja demanda para optimizar la asignación de docentes. " +
-                "La tasa de ocupación del " + String.format("%.1f%%", tasaOcupacion) + " indica " +
-                (tasaOcupacion > 70 ? "un alto rendimiento de las aulas." : "oportunidades de mejora en la captación."),
-                pFont
-            );
-            obs.setAlignment(Element.ALIGN_JUSTIFIED);
-            document.add(obs);
+        Map<Long, Long> inscripcionesPorOfertaPeriodo = inscripcionesPeriodo.stream()
+                .collect(Collectors.groupingBy(i -> i.getOferta().getIdOferta(), Collectors.counting()));
 
-            document.close();
+        List<String> ofertasMenorInscripcion = ofertasSafe.stream()
+                .sorted(Comparator.comparingLong(o -> inscripcionesPorOfertaPeriodo.getOrDefault(o.getIdOferta(), 0L)))
+                .limit(3)
+                .map(o -> o.getNombre() + " (" + inscripcionesPorOfertaPeriodo.getOrDefault(o.getIdOferta(), 0L) + ")")
+                .collect(Collectors.toList());
 
-        } catch (Exception ex) {
-            ex.printStackTrace();
+        List<String> ofertasMayorIngreso = ofertasSafe.stream()
+                .sorted((a, b) -> Double.compare(
+                        calcularIngresoOfertaPeriodo(b, inscripcionesPorOfertaPeriodo),
+                        calcularIngresoOfertaPeriodo(a, inscripcionesPorOfertaPeriodo)))
+                .limit(3)
+                .map(o -> o.getNombre() + " ($ " + String.format(Locale.US, "%.2f",
+                        calcularIngresoOfertaPeriodo(o, inscripcionesPorOfertaPeriodo)) + ")")
+                .collect(Collectors.toList());
+
+        LocalDate hoy = LocalDate.now();
+        LocalDate rangoInicio = fechaInicio != null ? fechaInicio : hoy.minusDays(30);
+        LocalDate rangoFin = fechaFin != null ? fechaFin : hoy;
+        if (rangoInicio.isAfter(rangoFin)) {
+            LocalDate aux = rangoInicio;
+            rangoInicio = rangoFin;
+            rangoFin = aux;
         }
 
-        return new ByteArrayInputStream(out.toByteArray());
+        String tipoComparacion = resolverTipoComparacion(agrupacion, rangoInicio, rangoFin);
+        LocalDate[] periodoAnterior = calcularPeriodoAnterior(rangoInicio, rangoFin, tipoComparacion);
+        LocalDate inicioAnterior = periodoAnterior[0];
+        LocalDate finAnterior = periodoAnterior[1];
+
+        long alumnosNuevosActual = contarUsuariosNuevosEnPeriodo("ALUMNO", rangoInicio, rangoFin);
+        long docentesNuevosActual = contarUsuariosNuevosEnPeriodo("DOCENTE", rangoInicio, rangoFin);
+        long adminsNuevosActual = contarUsuariosNuevosEnPeriodo("ADMIN", rangoInicio, rangoFin);
+
+        long alumnosNuevosAnterior = contarUsuariosNuevosEnPeriodo("ALUMNO", inicioAnterior, finAnterior);
+        long docentesNuevosAnterior = contarUsuariosNuevosEnPeriodo("DOCENTE", inicioAnterior, finAnterior);
+        long adminsNuevosAnterior = contarUsuariosNuevosEnPeriodo("ADMIN", inicioAnterior, finAnterior);
+
+        List<com.example.demo.model.Inscripciones> inscripcionesAnterior = inscripcionRepository.findAll().stream()
+                .filter(i -> i.getOferta() != null && i.getOferta().getIdOferta() != null)
+                .filter(i -> ofertaIds.contains(i.getOferta().getIdOferta()))
+                .filter(i -> i.getFechaInscripcion() != null)
+                .filter(i -> !i.getFechaInscripcion().isBefore(inicioAnterior) && !i.getFechaInscripcion().isAfter(finAnterior))
+                .collect(Collectors.toList());
+        long programasAnterior = inscripcionesAnterior.stream()
+                .map(i -> i.getOferta().getIdOferta())
+                .distinct()
+                .count();
+
+        List<Map<String, Object>> poblacionHeatmap = new java.util.ArrayList<>();
+        poblacionHeatmap.add(crearFilaHeatmap("Altas de alumnos", alumnosNuevosActual, alumnosNuevosAnterior));
+        poblacionHeatmap.add(crearFilaHeatmap("Altas de docentes", docentesNuevosActual, docentesNuevosAnterior));
+        poblacionHeatmap.add(crearFilaHeatmap("Altas de admins", adminsNuevosActual, adminsNuevosAnterior));
+        poblacionHeatmap.add(crearFilaHeatmap("Inscripciones", totalInscripciones, inscripcionesAnterior.size()));
+        poblacionHeatmap.add(crearFilaHeatmap("Programas con actividad", totalProgramas, programasAnterior));
+
+        String etiquetaComparacion = switch (tipoComparacion) {
+            case "semana" -> "semana anterior";
+            case "mes" -> "mes anterior";
+            case "anio" -> "anio anterior";
+            default -> "periodo anterior equivalente";
+        };
+        String periodoActualTxt = rangoInicio.format(REPORT_DATE_FORMAT) + " al " + rangoFin.format(REPORT_DATE_FORMAT);
+        String periodoAnteriorTxt = inicioAnterior.format(REPORT_DATE_FORMAT) + " al " + finAnterior.format(REPORT_DATE_FORMAT);
+        String narrativaComparativaBase = construirNarrativaComparativa(
+                etiquetaComparacion, periodoActualTxt, periodoAnteriorTxt,
+                totalInscripciones, inscripcionesAnterior.size(),
+                alumnosNuevosActual, alumnosNuevosAnterior,
+                docentesNuevosActual, docentesNuevosAnterior,
+                adminsNuevosActual, adminsNuevosAnterior);
+
+        Map<String, Object> payloadNarrativaIA = new HashMap<>();
+        payloadNarrativaIA.put("institucion", nombreInstitucion);
+        payloadNarrativaIA.put("periodoActual", periodoActualTxt);
+        payloadNarrativaIA.put("periodoAnterior", periodoAnteriorTxt);
+        payloadNarrativaIA.put("comparacionContra", etiquetaComparacion);
+        payloadNarrativaIA.put("inscripcionesActual", totalInscripciones);
+        payloadNarrativaIA.put("inscripcionesAnterior", inscripcionesAnterior.size());
+        payloadNarrativaIA.put("altasAlumnosActual", alumnosNuevosActual);
+        payloadNarrativaIA.put("altasAlumnosAnterior", alumnosNuevosAnterior);
+        payloadNarrativaIA.put("altasDocentesActual", docentesNuevosActual);
+        payloadNarrativaIA.put("altasDocentesAnterior", docentesNuevosAnterior);
+        payloadNarrativaIA.put("altasAdminsActual", adminsNuevosActual);
+        payloadNarrativaIA.put("altasAdminsAnterior", adminsNuevosAnterior);
+
+        String narrativaComparativaIA = null;
+        try {
+            narrativaComparativaIA = chatServiceSimple.generarNarrativaComparativaEstadistica(payloadNarrativaIA);
+        } catch (Exception ignored) {
+        }
+        String narrativaComparativa = (narrativaComparativaIA != null && !narrativaComparativaIA.isBlank())
+                ? narrativaComparativaIA
+                : narrativaComparativaBase;
+
+        double coberturaDocente = docentesAlta > 0 ? (docentesConAsignacion * 100.0 / docentesAlta) : 0.0;
+        String detalleBajaInscripcion = ofertasMenorInscripcion.isEmpty()
+                ? "No se detectaron ofertas con baja inscripcion."
+                : "Ofertas con menor inscripcion en el periodo: " + String.join(", ", ofertasMenorInscripcion) + ".";
+        String detalleIngresos = ofertasMayorIngreso.isEmpty()
+                ? "No hubo ingresos registrados por ofertas en el periodo."
+                : "Ofertas con mayores ingresos: " + String.join(", ", ofertasMayorIngreso) + ".";
+
+        String observaciones = "Este reporte de " + nombreInstitucion + " refleja la situacion del periodo analizado. "
+                + "La tasa de ocupacion general fue " + String.format(Locale.US, "%.1f%%", tasaOcupacion) + " y la cobertura docente activa fue "
+                + String.format(Locale.US, "%.1f%%", coberturaDocente) + " (" + docentesConAsignacion + " de " + docentesAlta + " docentes activos con asignacion). "
+                + detalleBajaInscripcion + " "
+                + detalleIngresos + " "
+                + "Se recomienda reforzar la difusion en ofertas de baja inscripcion y sostener las que muestran mayor retorno.";
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("fechaEmision", LocalDate.now().format(REPORT_DATE_FORMAT));
+        data.put("nombreInstitucion", nombreInstitucion);
+        data.put("periodoReporte", periodoTexto);
+        data.put("reporteId", "RE-" + System.currentTimeMillis());
+        data.put("totalProgramas", totalProgramas);
+        data.put("totalInscripciones", totalInscripciones);
+        data.put("alumnosActivos", alumnosActivos);
+        data.put("ingresosEstimados", String.format("$ %.2f", ingresosEstimados));
+        data.put("ofertasPorTipo", ofertasPorTipo);
+        data.put("ofertasPorModalidad", ofertasPorModalidad);
+        data.put("ofertasPorEstado", ofertasPorEstado);
+        data.put("chartTipo", chartTipo);
+        data.put("chartModalidad", chartModalidad);
+        data.put("chartEstado", chartEstado);
+        data.put("totalAlumnos", totalAlumnos);
+        data.put("alumnosAlta", alumnosAlta);
+        data.put("alumnosBaja", alumnosBaja);
+        data.put("totalDocentes", totalDocentes);
+        data.put("docentesAlta", docentesAlta);
+        data.put("docentesBaja", docentesBaja);
+        data.put("docentesConAsignacion", docentesConAsignacion);
+        data.put("adminsAlta", adminsAlta);
+        data.put("totalUsuariosSistema", totalUsuariosSistema);
+        data.put("tasaOcupacion", String.format("%.1f %%", tasaOcupacion));
+        data.put("ofertasBajaDemanda", ofertasBajaDemanda);
+        data.put("observaciones", observaciones);
+        data.put("poblacionHeatmap", poblacionHeatmap);
+        data.put("narrativaComparativa", narrativaComparativa);
+        data.put("periodoComparadoEtiqueta", etiquetaComparacion);
+        data.put("periodoActualTexto", periodoActualTxt);
+        data.put("periodoAnteriorTexto", periodoAnteriorTxt);
+        data.put("estilos", cargarEstilos());
+        agregarDatosBaseReporte(data);
+
+        return generarReportePdfDesdePlantilla("reporte/reporteEstadistico", data);
+    }
+
+    private String resolverTipoComparacion(String agrupacion, LocalDate inicio, LocalDate fin) {
+        String agr = agrupacion != null ? agrupacion.trim().toLowerCase(Locale.ROOT) : "";
+        if ("semana".equals(agr)) return "semana";
+        if ("mes".equals(agr)) return "mes";
+        if ("anio".equals(agr) || "ano".equals(agr) || "year".equals(agr)) return "anio";
+
+        long dias = java.time.temporal.ChronoUnit.DAYS.between(inicio, fin) + 1;
+        if (dias <= 8) return "semana";
+        if (dias <= 35) return "mes";
+        if (dias >= 330) return "anio";
+        return "periodo";
+    }
+
+    private LocalDate[] calcularPeriodoAnterior(LocalDate inicio, LocalDate fin, String tipoComparacion) {
+        return switch (tipoComparacion) {
+            case "semana" -> new LocalDate[]{inicio.minusWeeks(1), fin.minusWeeks(1)};
+            case "mes" -> new LocalDate[]{inicio.minusMonths(1), fin.minusMonths(1)};
+            case "anio" -> new LocalDate[]{inicio.minusYears(1), fin.minusYears(1)};
+            default -> {
+                long dias = java.time.temporal.ChronoUnit.DAYS.between(inicio, fin) + 1;
+                LocalDate finAnt = inicio.minusDays(1);
+                LocalDate iniAnt = finAnt.minusDays(Math.max(dias - 1, 0));
+                yield new LocalDate[]{iniAnt, finAnt};
+            }
+        };
+    }
+
+    private long contarUsuariosNuevosEnPeriodo(String rol, LocalDate inicio, LocalDate fin) {
+        if (inicio == null || fin == null) return 0;
+        return usuarioRepository.findByRolesNombre(rol).stream()
+                .filter(u -> u.getFechaRegistro() != null)
+                .map(u -> u.getFechaRegistro().toLocalDate())
+                .filter(f -> !f.isBefore(inicio) && !f.isAfter(fin))
+                .count();
+    }
+
+    private Map<String, Object> crearFilaHeatmap(String indicador, long actual, long anterior) {
+        double variacion = anterior > 0 ? ((double) (actual - anterior) / anterior) * 100.0 : (actual > 0 ? 100.0 : 0.0);
+        double intensidad = Math.min(Math.abs(variacion), 100.0) / 100.0;
+        String fondo;
+        String texto = "#0f172a";
+        if (variacion >= 0) {
+            fondo = "rgba(34, 197, 94, " + String.format(Locale.US, "%.2f", 0.12 + intensidad * 0.55) + ")";
+        } else {
+            fondo = "rgba(239, 68, 68, " + String.format(Locale.US, "%.2f", 0.12 + intensidad * 0.55) + ")";
+        }
+        Map<String, Object> fila = new HashMap<>();
+        fila.put("indicador", indicador);
+        fila.put("actual", actual);
+        fila.put("anterior", anterior);
+        fila.put("variacion", String.format(Locale.US, "%+.1f%%", variacion));
+        fila.put("bgColor", fondo);
+        fila.put("textColor", texto);
+        return fila;
+    }
+
+    private String construirNarrativaComparativa(
+            String etiquetaComparacion,
+            String periodoActualTxt,
+            String periodoAnteriorTxt,
+            long inscripcionesActual,
+            long inscripcionesAnterior,
+            long alumnosActual,
+            long alumnosAnterior,
+            long docentesActual,
+            long docentesAnterior,
+            long adminsActual,
+            long adminsAnterior) {
+        double varInsc = inscripcionesAnterior > 0
+                ? ((double) (inscripcionesActual - inscripcionesAnterior) / inscripcionesAnterior) * 100.0
+                : (inscripcionesActual > 0 ? 100.0 : 0.0);
+        String tendenciaInsc = varInsc >= 0 ? "crecimiento" : "caida";
+
+        return "Comparativa automatica contra " + etiquetaComparacion + ". "
+                + "Periodo actual: " + periodoActualTxt + ". "
+                + "Periodo anterior: " + periodoAnteriorTxt + ". "
+                + "Inscripciones: " + inscripcionesActual + " vs " + inscripcionesAnterior + " (" + String.format(Locale.US, "%+.1f%%", varInsc) + ", " + tendenciaInsc + "). "
+                + "Altas de alumnos: " + alumnosActual + " vs " + alumnosAnterior + ". "
+                + "Altas de docentes: " + docentesActual + " vs " + docentesAnterior + ". "
+                + "Altas de administradores: " + adminsActual + " vs " + adminsAnterior + ".";
+    }
+
+    private double calcularIngresoOfertaPeriodo(OfertaAcademica oferta, Map<Long, Long> inscripcionesPorOfertaPeriodo) {
+        if (oferta == null || oferta.getIdOferta() == null) return 0.0;
+        long cantidad = inscripcionesPorOfertaPeriodo.getOrDefault(oferta.getIdOferta(), 0L);
+        double costo = oferta.getCostoInscripcion() != null ? oferta.getCostoInscripcion() : 0.0;
+        return cantidad * costo;
     }
 
     private void addChartSection(Document doc, String chartTitle, java.util.Map<String, Long> data, java.awt.Color barColor) throws DocumentException {
@@ -1054,7 +1220,7 @@ public class ReporteService {
         container.setWidthPercentage(100);
         container.getDefaultCell().setBorder(0);
         
-        // Header del Gráfico
+        // Header del Grafico
         PdfPCell headerCell = new PdfPCell(new Phrase(chartTitle, FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12)));
         headerCell.setBorder(0);
         headerCell.setPaddingBottom(10f);
@@ -1333,11 +1499,14 @@ public class ReporteService {
     }
 
     /**
-     * Versión HTML+CSS (Profesional) del reporte de pagos
+     * Version HTML+CSS (Profesional) del reporte de pagos
      */
     public ByteArrayInputStream generarReportePagosPDF(List<Pago> pagos, Long filtroCursoId) {
-        // Calcular estadísticas
-        double totalMonto = pagos.stream().mapToDouble(p -> p.getMonto() != null ? p.getMonto().doubleValue() : 0).sum();
+        // Calcular estadisticas: recaudado solo de pagos efectivamente completados
+        double totalMonto = pagos.stream()
+                .filter(p -> p.getEstadoPago() == EstadoPago.COMPLETADO)
+                .mapToDouble(p -> p.getMonto() != null ? p.getMonto().doubleValue() : 0)
+                .sum();
         
         // --- 1. Calcular Morosidad (Cuotas vencidas) ---
         LocalDate today = LocalDate.now();
@@ -1350,6 +1519,8 @@ public class ReporteService {
             .collect(Collectors.toList());
 
         long morososCount = cuotasVencidas.stream()
+            .filter(c -> c.getInscripcion() != null && c.getInscripcion().getAlumno() != null
+                    && c.getInscripcion().getAlumno().getId() != null)
             .map(c -> c.getInscripcion().getAlumno().getId())
             .distinct()
             .count();
@@ -1371,18 +1542,32 @@ public class ReporteService {
                .limit(100) // Limitamos para no romper el PDF si son muchas
                .map(c -> {
                    Map<String, Object> map = new java.util.HashMap<>();
-                   map.put("alumno", c.getInscripcion().getAlumno().getNombre() + " " + c.getInscripcion().getAlumno().getApellido());
-                   map.put("curso", c.getInscripcion().getOferta() != null ? c.getInscripcion().getOferta().getNombre() : "N/A");
+                   String alumno = "-";
+                   if (c.getInscripcion() != null && c.getInscripcion().getAlumno() != null) {
+                       String nombre = c.getInscripcion().getAlumno().getNombre() != null ? c.getInscripcion().getAlumno().getNombre() : "";
+                       String apellido = c.getInscripcion().getAlumno().getApellido() != null ? c.getInscripcion().getAlumno().getApellido() : "";
+                       String completo = (nombre + " " + apellido).trim();
+                       alumno = completo.isBlank() ? "-" : completo;
+                   }
+                   map.put("alumno", alumno);
+                   map.put("curso", (c.getInscripcion() != null && c.getInscripcion().getOferta() != null)
+                           ? c.getInscripcion().getOferta().getNombre() : "N/A");
                    map.put("cuota", "C-" + c.getNumeroCuota());
-                   map.put("vencimiento", c.getFechaVencimiento() != null ? c.getFechaVencimiento().toString() : "-");
+                   map.put("vencimiento", c.getFechaVencimiento() != null
+                           ? c.getFechaVencimiento().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                           : "-");
+                   long diasAtraso = c.getFechaVencimiento() != null
+                           ? java.time.temporal.ChronoUnit.DAYS.between(c.getFechaVencimiento(), today)
+                           : 0L;
+                   map.put("diasAtraso", Math.max(diasAtraso, 0L));
                    map.put("monto", String.format("$ %.2f", c.getMonto() != null ? c.getMonto().doubleValue() : 0.0));
-                   // Calcular interés simple del 5% como regla de negocio de ejemplo para el reporte
+                   // Calcular interes simple del 5% como regla de negocio de ejemplo para el reporte
                    double interes = (c.getMonto() != null ? c.getMonto().doubleValue() * 0.05 : 0.0);
                    map.put("interes", String.format("$ %.2f", interes));
                    return map;
                }).collect(Collectors.toList());
 
-        // Preparar datos para el gráfico
+        // Preparar datos para el grafico
         Map<String, Number> datosGrafico = pagos.stream()
             .collect(Collectors.groupingBy(
                 p -> p.getEstadoPago().toString(),
@@ -1391,12 +1576,43 @@ public class ReporteService {
             .entrySet().stream()
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
-        String chartBase64 = generarGraficoTortaBase64(datosGrafico, "Distribución por Estado");
+        String chartBase64 = generarGraficoTortaBase64(datosGrafico, "Distribucion por Estado");
+
+        // Graficos temporales para seguimiento financiero
+        List<Pago> pagosCompletados = pagos.stream()
+                .filter(p -> p.getEstadoPago() == EstadoPago.COMPLETADO && p.getFechaPago() != null)
+                .collect(Collectors.toList());
+        YearMonth mesActual = YearMonth.now();
+        YearMonth mesAnterior = mesActual.minusMonths(1);
+        Map<String, Number> datosComparativoMes = new LinkedHashMap<>();
+        double totalMesAnterior = pagosCompletados.stream()
+                .filter(p -> YearMonth.from(p.getFechaPago()).equals(mesAnterior))
+                .mapToDouble(p -> p.getMonto() != null ? p.getMonto().doubleValue() : 0.0)
+                .sum();
+        double totalMesActual = pagosCompletados.stream()
+                .filter(p -> YearMonth.from(p.getFechaPago()).equals(mesActual))
+                .mapToDouble(p -> p.getMonto() != null ? p.getMonto().doubleValue() : 0.0)
+                .sum();
+        datosComparativoMes.put(mesAnterior.getMonth().name() + " " + mesAnterior.getYear(), totalMesAnterior);
+        datosComparativoMes.put(mesActual.getMonth().name() + " " + mesActual.getYear(), totalMesActual);
+        String chartComparativoMesBase64 = generarGraficoBarrasBase64(datosComparativoMes, "Comparativo mensual");
+
+        Map<String, Number> datosLineaIngresos = new LinkedHashMap<>();
+        for (int d = 1; d <= mesActual.lengthOfMonth(); d++) {
+            final int dia = d;
+            double montoDia = pagosCompletados.stream()
+                    .filter(p -> YearMonth.from(p.getFechaPago()).equals(mesActual))
+                    .filter(p -> p.getFechaPago().getDayOfMonth() == dia)
+                    .mapToDouble(p -> p.getMonto() != null ? p.getMonto().doubleValue() : 0.0)
+                    .sum();
+            datosLineaIngresos.put(String.valueOf(dia), montoDia);
+        }
+        String chartLineaIngresosBase64 = generarGraficoLineaBase64(datosLineaIngresos, "Linea de tiempo de ingresos (mes actual)", "Dia", "Monto");
 
         // Preparar contexto Thymeleaf
         Map<String, Object> data = new java.util.HashMap<>();
         data.put("pagos", pagos);
-        data.put("fechaEmision", LocalDate.now().toString());
+        data.put("fechaEmision", LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
         data.put("reporteId", "RP-" + System.currentTimeMillis());
         data.put("totalRecaudado", String.format("$ %.2f", totalMonto));
         data.put("cantidadTransacciones", pagos.size());
@@ -1405,6 +1621,8 @@ public class ReporteService {
         data.put("ingresosPorCurso", ingresosPorCurso);
         data.put("detalleCuotas", detalleCuotasList); // Pasamos la nueva lista al contexto
         data.put("chartImage", chartBase64);
+        data.put("chartComparativoMes", chartComparativoMesBase64);
+        data.put("chartLineaIngresos", chartLineaIngresosBase64);
         data.put("estilos", cargarEstilos());
         data.put("mostrarFiscalEnHeader", true);
         agregarDatosBaseReporte(data);
@@ -1413,7 +1631,7 @@ public class ReporteService {
     }
 
     /**
-     * Versión HTML+CSS (Profesional) del reporte de ofertas
+     * Version HTML+CSS (Profesional) del reporte de ofertas
      */
     public ByteArrayInputStream generarReporteOfertasPDF(List<OfertaAcademica> ofertas, LocalDate fechaInicio, LocalDate fechaFin) {
         // --- KPIs ---
@@ -1431,7 +1649,7 @@ public class ReporteService {
                     return insc * cost;
                 }).sum();
 
-        // Calculo de ocupación y alertas (Ofertas con cupos definidos)
+        // Calculo de ocupacion y alertas (Ofertas con cupos definidos)
         long ofertasConBajaOcupacion = ofertas.stream()
             .filter(o -> {
                 if(o.getCupos() == null || o.getCupos() >= 2000000000) return false;
@@ -1447,7 +1665,18 @@ public class ReporteService {
                 return insc >= o.getCupos();
             }).count();
 
-        // --- Gráfico: Ofertas por Tipo ---
+        // Tasa de llenado global (% cupos ocupados vs cupos disponibles)
+        long cuposTotales = ofertas.stream()
+                .filter(o -> o.getCupos() != null && o.getCupos() < 2000000000)
+                .mapToLong(OfertaAcademica::getCupos)
+                .sum();
+        long inscritosEnOfertasConCupo = ofertas.stream()
+                .filter(o -> o.getCupos() != null && o.getCupos() < 2000000000)
+                .mapToLong(o -> o.getInscripciones() != null ? o.getInscripciones().size() : 0)
+                .sum();
+        double tasaLlenadoGlobal = cuposTotales > 0 ? (inscritosEnOfertasConCupo * 100.0 / cuposTotales) : 0.0;
+
+        // --- Grafico: Ofertas por Tipo ---
         Map<String, Number> datosGrafico = ofertas.stream()
             .collect(Collectors.groupingBy(
                 o -> o.getTipoOferta() != null ? o.getTipoOferta() : "DESCONOCIDO", 
@@ -1456,9 +1685,161 @@ public class ReporteService {
             .entrySet().stream()
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
-        String chartBase64 = generarGraficoTortaBase64(datosGrafico, "Distribución por Tipo");
+        String chartBase64 = datosGrafico.isEmpty()
+                ? null
+                : generarGraficoTortaBase64(datosGrafico, "Distribucion por Tipo");
 
-        // --- Inscripciones por Categoría ---
+        // --- Comparativo por modalidad (inscripciones totales) ---
+        Map<String, Number> comparativoModalidad = new LinkedHashMap<>();
+        comparativoModalidad.put("PRESENCIAL", 0L);
+        comparativoModalidad.put("VIRTUAL", 0L);
+        comparativoModalidad.put("HIBRIDA", 0L);
+        for (OfertaAcademica oferta : ofertas) {
+            long insc = oferta.getInscripciones() != null ? oferta.getInscripciones().size() : 0;
+            if (oferta.getModalidad() != null) {
+                String key = oferta.getModalidad().name();
+                comparativoModalidad.put(key, ((Number) comparativoModalidad.getOrDefault(key, 0L)).longValue() + insc);
+            }
+        }
+        long totalModalidad = comparativoModalidad.values().stream()
+                .mapToLong(v -> v != null ? v.longValue() : 0L)
+                .sum();
+        String chartModalidadComparativo = totalModalidad <= 0
+                ? null
+                : generarGraficoBarrasHorizontalesBase64(
+                        comparativoModalidad,
+                        "Inscripciones por modalidad",
+                        "Inscripciones",
+                        "Modalidad"
+                );
+
+        // --- Tendencia temporal de inscripcion ---
+        Map<LocalDate, Long> inscripcionesPorFecha = ofertas.stream()
+                .filter(o -> o.getInscripciones() != null)
+                .flatMap(o -> o.getInscripciones().stream())
+                .filter(i -> i.getFechaInscripcion() != null)
+                .filter(i -> (fechaInicio == null || !i.getFechaInscripcion().isBefore(fechaInicio))
+                        && (fechaFin == null || !i.getFechaInscripcion().isAfter(fechaFin)))
+                .collect(Collectors.groupingBy(Inscripciones::getFechaInscripcion, Collectors.counting()));
+        Map<String, Number> tendenciaInscripciones = new LinkedHashMap<>();
+        inscripcionesPorFecha.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .forEach(e -> tendenciaInscripciones.put(e.getKey().format(REPORT_DATE_FORMAT), e.getValue()));
+        String chartTendenciaInscripcion = tendenciaInscripciones.isEmpty()
+                ? null
+                : generarGraficoLineaBase64(
+                        tendenciaInscripciones,
+                        "Tendencia de inscripcion por fecha",
+                        "Fecha",
+                        "Inscripciones"
+                );
+
+        // % de inscripciones en la ultima semana antes del inicio (agregado)
+        long totalInscripcionesConFecha = ofertas.stream()
+                .filter(o -> o.getInscripciones() != null)
+                .flatMap(o -> o.getInscripciones().stream())
+                .filter(i -> i.getFechaInscripcion() != null)
+                .count();
+        long inscripcionesUltimaSemana = ofertas.stream()
+                .filter(o -> o.getFechaInicio() != null && o.getInscripciones() != null)
+                .flatMap(o -> o.getInscripciones().stream()
+                        .filter(i -> i.getFechaInscripcion() != null)
+                        .filter(i -> !i.getFechaInscripcion().isBefore(o.getFechaInicio().minusDays(7))
+                                && !i.getFechaInscripcion().isAfter(o.getFechaInicio())))
+                .count();
+        double porcentajeUltimaSemana = totalInscripcionesConFecha > 0
+                ? (inscripcionesUltimaSemana * 100.0 / totalInscripcionesConFecha)
+                : 0.0;
+
+        // --- Lista de espera / interes vs inscripcion / evolucion de interes ---
+        List<Map<String, Object>> listaEsperaConsolidada = new java.util.ArrayList<>();
+        List<Map<String, Object>> interesVsInscripcion = new java.util.ArrayList<>();
+        List<Map<String, Object>> evolucionInteresPeriodo = new java.util.ArrayList<>();
+        final boolean agruparSemanal = fechaInicio != null
+                && fechaFin != null
+                && java.time.temporal.ChronoUnit.DAYS.between(fechaInicio, fechaFin) <= 93;
+        DateTimeFormatter mesFormatter = DateTimeFormatter.ofPattern("MM/yyyy");
+
+        for (OfertaAcademica oferta : ofertas) {
+            long insc = oferta.getInscripciones() != null ? oferta.getInscripciones().size() : 0;
+            List<NotificacionInscripcion> solicitudes = notificacionInscripcionRepository.findByOferta(oferta);
+            long interesados = solicitudes.size();
+
+            Map<String, Object> ivs = new HashMap<>();
+            ivs.put("oferta", oferta.getNombre());
+            ivs.put("interesados", interesados); // proxy de interes (solicitudes de notificacion)
+            ivs.put("inscriptos", insc);
+            ivs.put("conversion", interesados > 0 ? String.format(Locale.US, "%.1f%%", (insc * 100.0 / interesados)) : "-");
+            interesVsInscripcion.add(ivs);
+
+            Map<LocalDate, Long> porFechaSolicitud = solicitudes.stream()
+                    .filter(n -> n.getFechaSolicitud() != null)
+                    .collect(Collectors.groupingBy(n -> n.getFechaSolicitud().toLocalDate(), Collectors.counting()));
+            if (!porFechaSolicitud.isEmpty()) {
+                Map<LocalDate, Long> solicitudesPorPeriodo = porFechaSolicitud.entrySet().stream()
+                        .collect(Collectors.groupingBy(
+                                e -> {
+                                    LocalDate f = e.getKey();
+                                    if (agruparSemanal) {
+                                        int delta = f.getDayOfWeek().getValue() - 1;
+                                        return f.minusDays(delta);
+                                    }
+                                    return LocalDate.of(f.getYear(), f.getMonth(), 1);
+                                },
+                                TreeMap::new,
+                                Collectors.summingLong(Map.Entry::getValue)
+                        ));
+                Long periodoAnterior = null;
+                for (Map.Entry<LocalDate, Long> entry : solicitudesPorPeriodo.entrySet()) {
+                    long actual = entry.getValue();
+                    String variacion = "-";
+                    if (periodoAnterior != null && periodoAnterior > 0) {
+                        double var = ((actual - periodoAnterior) * 100.0) / periodoAnterior;
+                        variacion = String.format(Locale.US, "%+.1f%%", var);
+                    }
+                    Map<String, Object> filaPeriodo = new HashMap<>();
+                    filaPeriodo.put("oferta", oferta.getNombre());
+                    filaPeriodo.put("periodo", agruparSemanal
+                            ? entry.getKey().format(REPORT_DATE_FORMAT)
+                            : entry.getKey().format(mesFormatter));
+                    filaPeriodo.put("solicitudes", actual);
+                    filaPeriodo.put("variacion", variacion);
+                    evolucionInteresPeriodo.add(filaPeriodo);
+                    periodoAnterior = actual;
+                }
+            }
+
+            boolean cupoAgotado = oferta.getCupos() != null && oferta.getCupos() < 2000000000 && insc >= oferta.getCupos();
+            if (cupoAgotado) {
+                List<NotificacionInscripcion> pendientes = notificacionInscripcionRepository.findByOfertaAndNotificadoFalse(oferta);
+                if (!pendientes.isEmpty()) {
+                    String cupoTexto = (oferta.getCupos() == null || oferta.getCupos() >= 2000000000)
+                            ? "Sin limite"
+                            : String.valueOf(oferta.getCupos());
+                    Map<String, Object> fila = new HashMap<>();
+                    fila.put("oferta", oferta.getNombre());
+                    fila.put("cupo", cupoTexto);
+                    fila.put("inscriptos", insc);
+                    fila.put("enEspera", pendientes.size());
+                    listaEsperaConsolidada.add(fila);
+                }
+            }
+        }
+        interesVsInscripcion.sort((a, b) -> Long.compare(
+                ((Number) b.get("interesados")).longValue(),
+                ((Number) a.get("interesados")).longValue()
+        ));
+        evolucionInteresPeriodo.sort((a, b) -> {
+            int cmp = String.valueOf(a.get("oferta")).compareToIgnoreCase(String.valueOf(b.get("oferta")));
+            if (cmp != 0) return cmp;
+            return String.valueOf(a.get("periodo")).compareTo(String.valueOf(b.get("periodo")));
+        });
+        listaEsperaConsolidada.sort((a, b) -> Integer.compare(
+                ((Number) b.get("enEspera")).intValue(),
+                ((Number) a.get("enEspera")).intValue()
+        ));
+
+        // --- Inscripciones por Categoria ---
         Map<String, Long> inscripcionesPorCategoria = new LinkedHashMap<>();
         List<Categoria> categoriasSistema = categoriaRepository.findAll();
         for (Categoria categoria : categoriasSistema) {
@@ -1470,13 +1851,13 @@ public class ReporteService {
             long insc = oferta.getInscripciones() != null ? oferta.getInscripciones().size() : 0;
             List<Categoria> categorias = oferta.getCategorias();
             if (categorias == null || categorias.isEmpty()) {
-                inscripcionesPorCategoria.merge("Sin categorías", insc, Long::sum);
+                inscripcionesPorCategoria.merge("Sin categorias", insc, Long::sum);
                 continue;
             }
             for (Categoria categoria : categorias) {
                 String nombre = (categoria != null && categoria.getNombre() != null && !categoria.getNombre().isBlank())
                         ? categoria.getNombre()
-                        : "Sin categoría";
+                        : "Sin categoria";
                 inscripcionesPorCategoria.merge(nombre, insc, Long::sum);
             }
         }
@@ -1499,13 +1880,16 @@ public class ReporteService {
         for (Map.Entry<String, Long> entry : inscripcionesPorCategoria.entrySet()) {
             inscripcionesPorCategoriaChart.put(entry.getKey(), entry.getValue());
         }
-        String chartCategoriasBase64 = generarGraficoBarrasBase64(inscripcionesPorCategoriaChart, "Inscripciones por Categoría");
+        long totalCategorias = inscripcionesPorCategoria.values().stream().mapToLong(Long::longValue).sum();
+        String chartCategoriasBase64 = totalCategorias <= 0
+                ? null
+                : generarGraficoBarrasBase64(inscripcionesPorCategoriaChart, "Inscripciones por Categoria");
 
         // --- Contexto ---
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
         
         // Periodo Text
-        String periodoTexto = "Histórico Completo";
+        String periodoTexto = "Historico Completo";
         if (fechaInicio != null && fechaFin != null) {
             periodoTexto = fechaInicio.format(formatter) + " al " + fechaFin.format(formatter);
         } else if (fechaInicio != null) {
@@ -1531,67 +1915,211 @@ public class ReporteService {
         data.put("totalInscritos", totalInscritos);
         data.put("ofertasBajaOcupacion", ofertasConBajaOcupacion);
         data.put("ofertasLlenas", ofertasLlenas);
+        data.put("tasaLlenadoGlobal", String.format(Locale.US, "%.1f%%", tasaLlenadoGlobal));
         data.put("ingresosEstimados", String.format("$ %.2f", ingresosEstimados));
         data.put("chartImage", chartBase64);
+        data.put("chartModalidadComparativo", chartModalidadComparativo);
+        data.put("chartTendenciaInscripcion", chartTendenciaInscripcion);
+        data.put("porcentajeUltimaSemana", String.format(Locale.US, "%.1f%%", porcentajeUltimaSemana));
         data.put("estilos", cargarEstilos());
         List<Map<String, Object>> bajasAutomaticas = obtenerBajasPorAnalisis(ofertas);
         data.put("bajasAutomaticas", bajasAutomaticas);
         data.put("bajasAutomaticasCount", bajasAutomaticas.size());
         data.put("inscripcionesPorCategoria", inscripcionesPorCategoriaList);
         data.put("chartCategorias", chartCategoriasBase64);
+        data.put("listaEsperaConsolidada", listaEsperaConsolidada);
+        data.put("interesVsInscripcion", interesVsInscripcion);
+        data.put("evolucionInteresPeriodo", evolucionInteresPeriodo);
+        data.put("etiquetaPeriodoInteres", agruparSemanal ? "Semana" : "Mes");
         agregarDatosBaseReporte(data);
 
         return generarReportePdfDesdePlantilla("reporte/reporteOfertas", data);
     }
 
     /**
-     * Versión HTML+CSS (Profesional) del reporte de usuarios
+     * Version HTML+CSS (Profesional) del reporte de usuarios
      */
     @Transactional(readOnly = true)
-    public ByteArrayInputStream generarReporteUsuariosPDF(List<Usuario> usuarios, LocalDate fechaInicio, LocalDate fechaFin) {
-        // --- KPIs ---
+    public ByteArrayInputStream generarReporteUsuariosPDF(List<Usuario> usuarios, LocalDate fechaInicio, LocalDate fechaFin, Integer inactividadDias) {
         long totalUsuariosReporte = usuarios.size();
         long totalUsuariosSistema = usuarioRepository.count();
         long usuariosActivos = usuarios.stream().filter(Usuario::isEstado).count();
         long usuariosInactivos = totalUsuariosReporte - usuariosActivos;
 
-        // Nuevos en el periodo (solo si hay fechaInicio)
-        long nuevosIngresos = 0;
-        if(fechaInicio != null) {
-             nuevosIngresos = usuarios.stream().filter(u -> u.getFechaRegistro() != null && !u.getFechaRegistro().toLocalDate().isBefore(fechaInicio)).count();
-        } else {
-             // Si no hay filtro fecha inicio, mostramos total como nuevos (o 0 según semántica)
-             nuevosIngresos = totalUsuariosReporte; 
-        }
-        
-        // --- Distribución por Rol ---
-        // Asumiendo que un usuario puede tener varios roles, contamos ocurrencias de roles principales
+        int umbralInactividad = (inactividadDias != null && inactividadDias > 0) ? inactividadDias : 30;
+        LocalDate hoy = LocalDate.now();
+
+        long nuevosIngresos = usuarios.stream()
+                .filter(u -> u.getFechaRegistro() != null)
+                .filter(u -> fechaInicio == null || !u.getFechaRegistro().toLocalDate().isBefore(fechaInicio))
+                .filter(u -> fechaFin == null || !u.getFechaRegistro().toLocalDate().isAfter(fechaFin))
+                .count();
+
         Map<String, Long> rolesCount = usuarios.stream()
-            .flatMap(u -> u.getRoles().stream())
-            .collect(Collectors.groupingBy(
-                r -> r.getNombre(), // Nombre del rol
-                Collectors.counting()
-            ));
+                .filter(u -> u.getRoles() != null)
+                .flatMap(u -> u.getRoles().stream())
+                .filter(r -> r != null && r.getNombre() != null && !r.getNombre().isBlank())
+                .collect(Collectors.groupingBy(r -> r.getNombre(), Collectors.counting()));
 
-        // --- Gráfico: Usuarios por Rol ---
-        Map<String, Number> datosGrafico = new java.util.HashMap<>();
-        rolesCount.forEach((k, v) -> datosGrafico.put(k, v));
-        
-        String chartBase64 = generarGraficoTortaBase64(datosGrafico, "Distribución por Rol");
-
-        // --- Inscripciones activas por usuario (para columna "Ofertas") ---
         Map<String, Integer> ofertasActivasPorUsuario = new HashMap<>();
+        Map<String, String> ultimoAccesoPorUsuario = new HashMap<>();
+        Map<String, String> estadoInscripcionPorUsuario = new HashMap<>();
+        Map<String, String> modalidadPreferidaPorUsuario = new HashMap<>();
         for (Usuario usuario : usuarios) {
             if (usuario != null && usuario.getId() != null) {
                 int activas = inscripcionRepository.countByAlumnoIdAndEstadoInscripcionTrue(usuario.getId());
-                ofertasActivasPorUsuario.put(usuario.getId().toString(), activas);
+                String id = usuario.getId().toString();
+                ofertasActivasPorUsuario.put(id, activas);
+
+                LocalDateTime ultimoAcceso = obtenerUltimoAccesoUsuario(usuario.getId());
+                ultimoAccesoPorUsuario.put(id,
+                        ultimoAcceso != null ? ultimoAcceso.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : "-");
+
+                estadoInscripcionPorUsuario.put(id, calcularEstadoInscripcionUsuario(usuario.getId(), activas));
+                modalidadPreferidaPorUsuario.put(id, calcularModalidadPreferidaUsuario(usuario.getId()));
             }
         }
 
+        long totalInscripcionesActivasUsuarios = ofertasActivasPorUsuario.values().stream().mapToLong(Integer::longValue).sum();
+        double promedioInscripcionesPorUsuario = totalUsuariosReporte > 0
+                ? (double) totalInscripcionesActivasUsuarios / totalUsuariosReporte
+                : 0.0;
+        long usuariosConInscripcionActiva = ofertasActivasPorUsuario.values().stream().filter(v -> v != null && v > 0).count();
+        double porcentajeUsuariosConInscripcion = totalUsuariosReporte > 0
+                ? (usuariosConInscripcionActiva * 100.0 / totalUsuariosReporte)
+                : 0.0;
+
+        long alumnosConInscripcion = usuarios.stream()
+                .filter(u -> tieneRol(u, "ALUMNO"))
+                .filter(u -> u.getId() != null && ofertasActivasPorUsuario.getOrDefault(u.getId().toString(), 0) > 0)
+                .count();
+        long alumnosSinActividadReciente = usuarios.stream()
+                .filter(u -> tieneRol(u, "ALUMNO"))
+                .filter(u -> u.getId() != null && ofertasActivasPorUsuario.getOrDefault(u.getId().toString(), 0) > 0)
+                .filter(u -> {
+                    LocalDateTime ultimo = obtenerUltimoAccesoUsuario(u.getId());
+                    if (ultimo == null) return true;
+                    return java.time.temporal.ChronoUnit.DAYS.between(ultimo.toLocalDate(), hoy) > umbralInactividad;
+                })
+                .count();
+        double tasaAbandono = alumnosConInscripcion > 0 ? (alumnosSinActividadReciente * 100.0 / alumnosConInscripcion) : 0.0;
+        double tasaRetencion = 100.0 - tasaAbandono;
+
+        String rolPredominante = rolesCount.entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse("SIN_ROL");
+        long cantidadRolPredominante = rolesCount.getOrDefault(rolPredominante, 0L);
+
+        Map<String, Number> datosGraficoRol = new LinkedHashMap<>();
+        rolesCount.entrySet().stream().sorted(Map.Entry.comparingByKey())
+                .forEach(e -> datosGraficoRol.put(e.getKey(), e.getValue()));
+        if (datosGraficoRol.isEmpty()) datosGraficoRol.put("Sin datos", 0);
+        String chartRolesBase64 = generarGraficoTortaBase64(datosGraficoRol, "Distribucion de usuarios por rol");
+
+        Map<String, Number> datosGraficoEstado = new LinkedHashMap<>();
+        datosGraficoEstado.put("Activos", usuariosActivos);
+        datosGraficoEstado.put("Inactivos", usuariosInactivos);
+        String chartEstadoBase64 = generarGraficoTortaBase64(datosGraficoEstado, "Estado de usuarios filtrados");
+
+        Map<String, Long> modalidadCount = modalidadPreferidaPorUsuario.values().stream()
+                .filter(m -> m != null && !m.isBlank() && !"-".equals(m))
+                .collect(Collectors.groupingBy(m -> m, Collectors.counting()));
+        Map<String, Number> datosGraficoModalidad = new LinkedHashMap<>();
+        datosGraficoModalidad.put("PRESENCIAL", modalidadCount.getOrDefault("PRESENCIAL", 0L));
+        datosGraficoModalidad.put("VIRTUAL", modalidadCount.getOrDefault("VIRTUAL", 0L));
+        datosGraficoModalidad.put("HIBRIDA", modalidadCount.getOrDefault("HIBRIDA", 0L));
+        String chartModalidadBase64 = generarGraficoBarrasHorizontalesBase64(
+                datosGraficoModalidad,
+                "Modalidad preferida por usuarios",
+                "Cantidad de usuarios",
+                "Modalidad"
+        );
+
+        long nuevosIngresosAnterior = 0;
+        long usuariosActivosAnterior = 0;
+        boolean mostrarComparacionPeriodo = false;
+        String comparacionPeriodoTexto = "";
+        String chartComparativaBase64 = null;
+        if (fechaInicio != null && fechaFin != null && !fechaFin.isBefore(fechaInicio)) {
+            mostrarComparacionPeriodo = true;
+            String tipoComparacion = resolverTipoComparacion(null, fechaInicio, fechaFin);
+            LocalDate[] periodoAnterior = calcularPeriodoAnterior(fechaInicio, fechaFin, tipoComparacion);
+            LocalDate inicioAnterior = periodoAnterior[0];
+            LocalDate finAnterior = periodoAnterior[1];
+
+            List<Usuario> usuariosPrevios = usuarioRepository.findAll().stream()
+                    .filter(u -> u.getFechaRegistro() != null)
+                    .filter(u -> {
+                        LocalDate f = u.getFechaRegistro().toLocalDate();
+                        return !f.isBefore(inicioAnterior) && !f.isAfter(finAnterior);
+                    })
+                    .collect(Collectors.toList());
+            nuevosIngresosAnterior = usuariosPrevios.size();
+            usuariosActivosAnterior = usuariosPrevios.stream().filter(Usuario::isEstado).count();
+
+            double variacionAltas = nuevosIngresosAnterior > 0
+                    ? ((double) (nuevosIngresos - nuevosIngresosAnterior) / nuevosIngresosAnterior) * 100.0
+                    : (nuevosIngresos > 0 ? 100.0 : 0.0);
+            String etiquetaComparacion = switch (tipoComparacion) {
+                case "semana" -> "semana anterior";
+                case "mes" -> "mes anterior";
+                case "anio" -> "anio anterior";
+                default -> "periodo anterior equivalente";
+            };
+            comparacionPeriodoTexto = "Altas en periodo: " + nuevosIngresos
+                    + " vs " + nuevosIngresosAnterior + " (" + String.format(Locale.US, "%+.1f%%", variacionAltas)
+                    + ") respecto de " + etiquetaComparacion + ".";
+
+            Map<String, Number> datosComparativa = new LinkedHashMap<>();
+            datosComparativa.put("Altas actual", nuevosIngresos);
+            datosComparativa.put("Altas anterior", nuevosIngresosAnterior);
+            datosComparativa.put("Activos actual", usuariosActivos);
+            datosComparativa.put("Activos anterior", usuariosActivosAnterior);
+            chartComparativaBase64 = generarGraficoBarrasBase64(datosComparativa, "Comparativa periodo actual vs anterior");
+        }
+
+        String observacionesUsuariosBase = "Usuarios filtrados: " + totalUsuariosReporte + " de " + totalUsuariosSistema + ". "
+                + "Rol predominante: " + rolPredominante + " (" + cantidadRolPredominante + "). "
+                + "Inscripciones activas: " + totalInscripcionesActivasUsuarios + ".";
+
+        Map<String, Object> payloadNarrativaUsuariosIA = new HashMap<>();
+        payloadNarrativaUsuariosIA.put("totalUsuariosSistema", totalUsuariosSistema);
+        payloadNarrativaUsuariosIA.put("totalUsuariosReporte", totalUsuariosReporte);
+        payloadNarrativaUsuariosIA.put("usuariosActivos", usuariosActivos);
+        payloadNarrativaUsuariosIA.put("usuariosInactivos", usuariosInactivos);
+        payloadNarrativaUsuariosIA.put("nuevosIngresos", nuevosIngresos);
+        payloadNarrativaUsuariosIA.put("rolesCount", rolesCount);
+        payloadNarrativaUsuariosIA.put("totalInscripcionesActivasUsuarios", totalInscripcionesActivasUsuarios);
+        payloadNarrativaUsuariosIA.put("promedioInscripcionesPorUsuario", String.format(Locale.US, "%.2f", promedioInscripcionesPorUsuario));
+        payloadNarrativaUsuariosIA.put("usuariosConInscripcionActiva", usuariosConInscripcionActiva);
+        payloadNarrativaUsuariosIA.put("porcentajeUsuariosConInscripcionActiva", String.format(Locale.US, "%.1f", porcentajeUsuariosConInscripcion));
+        payloadNarrativaUsuariosIA.put("rolPredominante", rolPredominante);
+        payloadNarrativaUsuariosIA.put("tasaRetencion", String.format(Locale.US, "%.1f", tasaRetencion));
+        payloadNarrativaUsuariosIA.put("tasaAbandono", String.format(Locale.US, "%.1f", tasaAbandono));
+        payloadNarrativaUsuariosIA.put("umbralInactividadDias", umbralInactividad);
+
+        String observacionesUsuariosIA = null;
+        try {
+            observacionesUsuariosIA = chatServiceSimple.generarNarrativaReporteUsuarios(payloadNarrativaUsuariosIA);
+        } catch (Exception ignored) {
+        }
+        String observacionesUsuarios = (observacionesUsuariosIA != null && !observacionesUsuariosIA.isBlank()
+                && esNarrativaUsuariosConsistente(observacionesUsuariosIA, tasaAbandono, tasaRetencion))
+                ? resumirObservacionCorta(observacionesUsuariosIA)
+                : observacionesUsuariosBase;
+
+        List<String> observacionesBreves = new java.util.ArrayList<>();
+        observacionesBreves.add("Periodo: " + (fechaInicio != null && fechaFin != null ? fechaInicio.format(REPORT_DATE_FORMAT) + " al " + fechaFin.format(REPORT_DATE_FORMAT) : "historico"));
+        observacionesBreves.add("Retencion " + String.format(Locale.US, "%.1f%%", tasaRetencion)
+                + " | Abandono " + String.format(Locale.US, "%.1f%%", tasaAbandono)
+                + " (inactividad > " + umbralInactividad + " dias).");
+        if (mostrarComparacionPeriodo) {
+            observacionesBreves.add(comparacionPeriodoTexto);
+        }
+
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-        
-        // Periodo Text
-        String periodoTexto = "Histórico Completo";
+        String periodoTexto = "Historico Completo";
         if (fechaInicio != null && fechaFin != null) {
             periodoTexto = fechaInicio.format(formatter) + " al " + fechaFin.format(formatter);
         } else if (fechaInicio != null) {
@@ -1600,13 +2128,11 @@ public class ReporteService {
             periodoTexto = "Hasta " + fechaFin.format(formatter);
         }
 
-        // Info usuario generador
         String generadoPor = "Sistema";
         if (org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication() != null) {
              generadoPor = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
         }
 
-        // --- Contexto ---
         Map<String, Object> data = new java.util.HashMap<>();
         data.put("usuarios", usuarios);
         data.put("fechaEmision", LocalDate.now().format(formatter));
@@ -1618,26 +2144,138 @@ public class ReporteService {
         data.put("usuariosActivos", usuariosActivos);
         data.put("usuariosInactivos", usuariosInactivos);
         data.put("nuevosIngresos", nuevosIngresos);
+        data.put("altasPeriodo", nuevosIngresos);
+        data.put("tasaRetencion", String.format(Locale.US, "%.1f%%", tasaRetencion));
+        data.put("tasaAbandono", String.format(Locale.US, "%.1f%%", tasaAbandono));
+        data.put("umbralInactividadDias", umbralInactividad);
         data.put("ofertasActivasPorUsuario", ofertasActivasPorUsuario);
-        data.put("chartImage", chartBase64);
+        data.put("ultimoAccesoPorUsuario", ultimoAccesoPorUsuario);
+        data.put("estadoInscripcionPorUsuario", estadoInscripcionPorUsuario);
+        data.put("modalidadPreferidaPorUsuario", modalidadPreferidaPorUsuario);
+        data.put("observacionesUsuarios", observacionesUsuarios);
+        data.put("observacionesBreves", observacionesBreves);
+        data.put("comparacionPeriodoUsuarios", comparacionPeriodoTexto);
+        data.put("mostrarComparacionPeriodoUsuarios", mostrarComparacionPeriodo);
+        data.put("chartImage", chartRolesBase64);
+        data.put("chartRolesImage", chartRolesBase64);
+        data.put("chartEstadoImage", chartEstadoBase64);
+        data.put("chartModalidadImage", chartModalidadBase64);
+        data.put("chartComparativaImage", chartComparativaBase64);
         data.put("estilos", cargarEstilos());
         agregarDatosBaseReporte(data);
 
         return generarReportePdfDesdePlantilla("reporte/reporteUsuarios", data);
     }
 
+    private String resumirObservacionCorta(String texto) {
+        if (texto == null || texto.isBlank()) return "";
+        String limpio = texto.replaceAll("\\s+", " ").trim();
+        return limpio;
+    }
+public List<Usuario> filtrarUsuariosPorInactividad(List<Usuario> usuarios, Integer inactividadDias) {
+        if (usuarios == null || inactividadDias == null || inactividadDias <= 0) return usuarios;
+        LocalDate hoy = LocalDate.now();
+        return usuarios.stream()
+                .filter(u -> {
+                    if (u == null || u.getId() == null) return false;
+                    LocalDateTime ultimo = obtenerUltimoAccesoUsuario(u.getId());
+                    if (ultimo == null) return true;
+                    long dias = java.time.temporal.ChronoUnit.DAYS.between(ultimo.toLocalDate(), hoy);
+                    return dias > inactividadDias;
+                })
+                .collect(Collectors.toList());
+    }
+
+    private LocalDateTime obtenerUltimoAccesoUsuario(java.util.UUID usuarioId) {
+        try {
+            List<AuditLog> logs = auditLogRepository.findByUsuarioId(usuarioId);
+            return logs.stream()
+                    .filter(l -> l.isExito())
+                    .filter(l -> l.getAccion() != null)
+                    .filter(l -> {
+                        String accion = l.getAccion().trim().toUpperCase(Locale.ROOT);
+                        return "INICIO_SESION".equals(accion) || "LOGIN".equals(accion);
+                    })
+                    .filter(l -> l.getFecha() != null)
+                    .map(l -> {
+                        LocalDate d = l.getFecha().toLocalDate();
+                        java.time.LocalTime t = l.getHora() != null ? l.getHora().toLocalTime() : java.time.LocalTime.MIN;
+                        return LocalDateTime.of(d, t);
+                    })
+                    .max(LocalDateTime::compareTo)
+                    .orElse(null);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private boolean tieneRol(Usuario usuario, String rol) {
+        if (usuario == null || usuario.getRoles() == null) return false;
+        return usuario.getRoles().stream().anyMatch(r -> r != null && rol.equalsIgnoreCase(r.getNombre()));
+    }
+
+    private String calcularEstadoInscripcionUsuario(java.util.UUID usuarioId, int inscripcionesActivas) {
+        if (inscripcionesActivas <= 0) return "SIN INSCRIPCION ACTIVA";
+        try {
+            List<com.example.demo.model.Cuota> cuotas = cuotaRepository.findByUsuarioId(usuarioId);
+            boolean conMora = cuotas.stream().anyMatch(c ->
+                    c.getEstado() == EstadoCuota.PENDIENTE
+                            && c.getFechaVencimiento() != null
+                            && c.getFechaVencimiento().isBefore(LocalDate.now()));
+            return conMora ? "CON MORA" : "AL DIA";
+        } catch (Exception e) {
+            return "ACTIVA";
+        }
+    }
+
+    private String calcularModalidadPreferidaUsuario(java.util.UUID usuarioId) {
+        try {
+            List<Inscripciones> inscripciones = inscripcionRepository.findAll().stream()
+                    .filter(i -> i.getAlumno() != null && usuarioId.equals(i.getAlumno().getId()))
+                    .filter(i -> i.getOferta() != null && i.getOferta().getModalidad() != null)
+                    .collect(Collectors.toList());
+            if (inscripciones.isEmpty()) return "-";
+            return inscripciones.stream()
+                    .collect(Collectors.groupingBy(i -> i.getOferta().getModalidad().name(), Collectors.counting()))
+                    .entrySet().stream()
+                    .max(Map.Entry.comparingByValue())
+                    .map(Map.Entry::getKey)
+                    .orElse("-");
+        } catch (Exception e) {
+            return "-";
+        }
+    }
+
+    private boolean esNarrativaUsuariosConsistente(String texto, double tasaAbandono, double tasaRetencion) {
+        if (texto == null || texto.isBlank()) return false;
+        String t = texto.toLowerCase(Locale.ROOT);
+
+        if (t.contains("inactividad") && t.contains("usuarios registrados durante")) {
+            return false;
+        }
+        if (tasaAbandono >= 50.0 && (t.contains("abandono baja") || t.contains("abandono muy baja") || t.contains("alta retencion"))) {
+            return false;
+        }
+        if (tasaRetencion >= 70.0 && t.contains("retencion baja")) {
+            return false;
+        }
+        if (tasaRetencion <= 40.0 && t.contains("alta retencion")) {
+            return false;
+        }
+        return true;
+    }
+
     public ByteArrayInputStream generarReporteUsuariosExcel(List<Usuario> usuarios) throws IOException {
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("Usuarios");
 
-            String[] columns = {"ID", "DNI", "Nombre", "Apellido", "Correo", "Teléfono", "Ofertas Activas", "Roles", "Estado", "Fecha Registro"};
+            String[] columns = {"ID", "DNI", "Nombre", "Apellido", "Correo", "Telefono", "Ofertas Activas", "Roles", "Estado", "Fecha Registro"};
             Row headerRow = sheet.createRow(0);
 
             CellStyle headerStyle = workbook.createCellStyle();
             org.apache.poi.ss.usermodel.Font font = workbook.createFont();
             font.setBold(true);
             headerStyle.setFont(font);
-
             for (int i = 0; i < columns.length; i++) {
                 Cell cell = headerRow.createCell(i);
                 cell.setCellValue(columns[i]);
@@ -1761,3 +2399,4 @@ public class ReporteService {
         return "$ " + valor;
     }
 }
+

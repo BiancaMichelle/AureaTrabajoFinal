@@ -74,13 +74,13 @@ public class ReporteSemanalScheduler {
 
         try {
             // Ofertas
-            List<OfertaAcademica> ofertas = reporteService.filtrarOfertas(null, null, null, null, null, null);
+            List<OfertaAcademica> ofertas = reporteService.filtrarOfertas(null, null, null, null, null, null, null);
             ByteArrayInputStream ofertasPdf = reporteService.generarReporteOfertasPDF(ofertas, null, null);
             String ofertasFile = guardarReporteEnDisco(ofertasPdf.readAllBytes(), "reporte_ofertas_semanal", "pdf");
 
             // Usuarios
             List<Usuario> usuarios = reporteService.filtrarUsuarios(null, null, null, fechaInicio, fechaFin);
-            ByteArrayInputStream usuariosPdf = reporteService.generarReporteUsuariosPDF(usuarios, fechaInicio, fechaFin);
+            ByteArrayInputStream usuariosPdf = reporteService.generarReporteUsuariosPDF(usuarios, fechaInicio, fechaFin, null);
             String usuariosFile = guardarReporteEnDisco(usuariosPdf.readAllBytes(), "reporte_usuarios_semanal", "pdf");
 
             // Pagos

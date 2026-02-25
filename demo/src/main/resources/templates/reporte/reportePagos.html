@@ -1,18 +1,17 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" 
+<html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{reporte/layout/baseReporte :: layout(~{::style}, ~{::div.report-content})}">
 <head>
     <style>
-        /* Estilos específicos para este reporte si hicieran falta */
+        /* Estilos especificos para este reporte si hicieran falta */
     </style>
 </head>
 <body>
 
 <div class="report-content">
-    
+
     <h2>Reporte de Pagos y Transacciones</h2>
-    
-    <!-- Resumen KPI Fila 1 -->
+
     <table class="layout-table" style="margin-bottom: 20px;">
         <tr>
             <td style="width: 50%; padding: 0 5px;">
@@ -34,7 +33,6 @@
         </tr>
     </table>
 
-    <!-- Resumen KPI Fila 2 (Morosidad) -->
     <table class="layout-table" style="margin-bottom: 30px;">
         <tr>
             <td style="width: 50%; padding: 0 5px;">
@@ -56,15 +54,23 @@
         </tr>
     </table>
 
-    <!-- Gráfico Estadístico (Imagen Base64) -->
     <div class="chart-container" th:if="${chartImage != null}">
-        <h3>Distribución de Pagos por Estado</h3>
-        <img th:src="'data:image/png;base64,' + ${chartImage}" alt="Gráfico de Pagos" style="width: 100%; max-height: 300px; object-fit: contain;"/>
+        <h3>Distribucion de Pagos por Estado</h3>
+        <img th:src="'data:image/png;base64,' + ${chartImage}" alt="Grafico de Pagos" style="width: 100%; max-height: 300px; object-fit: contain;"/>
+    </div>
+
+    <div class="chart-container" th:if="${chartComparativoMes != null}">
+        <h3>Comparativo mes actual vs mes anterior</h3>
+        <img th:src="'data:image/png;base64,' + ${chartComparativoMes}" alt="Comparativo mensual" style="width: 100%; max-height: 300px; object-fit: contain;"/>
+    </div>
+
+    <div class="chart-container" th:if="${chartLineaIngresos != null}">
+        <h3>Linea de tiempo de ingresos (mes actual)</h3>
+        <img th:src="'data:image/png;base64,' + ${chartLineaIngresos}" alt="Linea temporal de ingresos" style="width: 100%; max-height: 300px; object-fit: contain;"/>
     </div>
 
     <div class="page-break"></div>
 
-    <!-- Desglose por Curso -->
     <div th:if="${ingresosPorCurso != null and !ingresosPorCurso.isEmpty()}">
         <h3>Ingresos por Curso / Oferta</h3>
         <table class="data-table">
@@ -83,9 +89,8 @@
         </table>
     </div>
 
-    <!-- Informe de Morosidad (Cuotas Pendientes Vencidas) -->
     <div th:if="${detalleCuotas != null and !detalleCuotas.isEmpty()}">
-        <h3>Informe de Morosidad (Cuotas Vencidas - Top 100)</h3>
+        <h3>Reporte de Morosidad (Cuotas Vencidas - Top 100)</h3>
         <table class="data-table">
             <thead>
                 <tr>
@@ -93,8 +98,9 @@
                     <th>Curso</th>
                     <th>Cuota</th>
                     <th>Vencimiento</th>
+                    <th>Dias de atraso</th>
                     <th>Monto Base</th>
-                    <th>Interés (Est. 5%)</th>
+                    <th>Interes (Est. 5%)</th>
                 </tr>
             </thead>
             <tbody>
@@ -102,7 +108,8 @@
                     <td th:text="${c['alumno']}">Juan Perez</td>
                     <td th:text="${c['curso']}">Java</td>
                     <td th:text="${c['cuota']}">C-1</td>
-                    <td th:text="${c['vencimiento']}">2026-01-01</td>
+                    <td th:text="${c['vencimiento']}">01/01/2026</td>
+                    <td th:text="${c['diasAtraso']}" style="text-align: center; color: #b91c1c; font-weight: bold;">0</td>
                     <td th:text="${c['monto']}">$100.00</td>
                     <td th:text="${c['interes']}" style="color: #ef4444;">$5.00</td>
                 </tr>
@@ -111,7 +118,7 @@
     </div>
 
     <h3>Detalle de Transacciones (Pagos Realizados)</h3>
-    
+
     <table class="data-table">
         <thead>
             <tr>
@@ -135,13 +142,20 @@
                 </td>
                 <td th:text="${pago.descripcion}">Concepto</td>
                 <td>
-                    <span th:text="${pago.estadoPago}" 
+                    <span th:text="${pago.estadoPago}"
                           th:class="'status-badge status-' + ${pago.estadoPago}">COMPLETADO</span>
                 </td>
                 <td style="text-align: right;" th:text="'$ ' + ${#numbers.formatDecimal(pago.monto, 1, 'COMMA', 2, 'POINT')}">$ 100.00</td>
             </tr>
         </tbody>
     </table>
+
+    <div style="margin-top: 34px; page-break-inside: avoid;">
+        <h3>Firma del Responsable Administrativo</h3>
+        <div style="margin-top: 38px; border-top: 1px solid #111827; width: 340px; padding-top: 8px;">
+            Nombre y firma
+        </div>
+    </div>
 
 </div>
 

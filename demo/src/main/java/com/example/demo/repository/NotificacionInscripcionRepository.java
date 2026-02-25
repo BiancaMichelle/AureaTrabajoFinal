@@ -17,5 +17,7 @@ public interface NotificacionInscripcionRepository extends JpaRepository<Notific
     
     Optional<NotificacionInscripcion> findByUsuarioAndOfertaAndNotificadoFalse(Usuario usuario, OfertaAcademica oferta);
     
+    List<NotificacionInscripcion> findByOferta(OfertaAcademica oferta);
+
     List<NotificacionInscripcion> findByOfertaAndNotificadoFalse(OfertaAcademica oferta);
 }

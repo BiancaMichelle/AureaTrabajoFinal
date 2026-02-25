@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" 
+<html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{reporte/layout/baseReporte :: layout(~{::style}, ~{::div.report-content})}">
 <head>
     <style>
@@ -11,20 +11,70 @@
             font-size: 8pt !important;
             padding: 4px !important;
         }
+        .chart-grid {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 16px;
+        }
+        .chart-grid td {
+            width: 100%;
+            vertical-align: top;
+            padding: 6px;
+        }
+        .chart-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            background: #ffffff;
+            padding: 8px;
+            page-break-inside: avoid;
+            text-align: center;
+        }
+        .break-before-title {
+            page-break-before: always;
+        }
+        .chart-title {
+            font-size: 10pt;
+            font-weight: 700;
+            margin: 0 0 6px 0;
+            text-align: center;
+        }
+        .chart-image {
+            display: block;
+            margin: 0 auto;
+        }
+        .obs-footer {
+            margin-top: 14px;
+            padding: 10px;
+            border-left: 4px solid #1d4ed8;
+            background: #f8fafc;
+        }
+        .obs-footer h3 {
+            margin: 0 0 6px 0;
+        }
+        .obs-footer ul {
+            margin: 0;
+            padding-left: 16px;
+            font-size: 9pt;
+            line-height: 1.45;
+        }
+        .obs-footer p {
+            margin: 8px 0 0 0;
+            font-size: 9pt;
+            line-height: 1.45;
+        }
     </style>
 </head>
 <body>
 
 <div class="report-content">
-    
+
     <div style="text-align: center; margin-bottom: 20px;">
         <h2>Reporte de Usuarios del Sistema</h2>
         <p style="font-size: 10pt; color: #666; margin-top: -10px;">
             Periodo analizado: <span th:text="${periodoReporte}"></span>
         </p>
     </div>
-    
-    <!-- Resumen KPI Fila 1 -->
+
     <table class="layout-table" style="margin-bottom: 20px;">
         <tr>
             <td style="width: 25%; padding: 0 5px;">
@@ -46,15 +96,15 @@
             <td style="width: 25%; padding: 0 5px;">
                 <div class="summary-box">
                     <div class="summary-box-content">
-                        <div class="summary-label">Nuevos Ingresos<br/>(En Periodo)</div>
-                        <div class="summary-value" th:text="${nuevosIngresos}" style="color: #10b981;">0</div>
+                        <div class="summary-label">Altas en Periodo</div>
+                        <div class="summary-value" th:text="${altasPeriodo}" style="color: #10b981;">0</div>
                     </div>
                 </div>
             </td>
             <td style="width: 25%; padding: 0 5px;">
                 <div class="summary-box">
                     <div class="summary-box-content">
-                        <div class="summary-label">Estado de Baja<br/>(Del Filtro)</div>
+                        <div class="summary-label">Inactivos (Filtro)</div>
                         <div class="summary-value" th:text="${usuariosInactivos}" style="color: #ef4444;">0</div>
                     </div>
                 </div>
@@ -62,34 +112,91 @@
         </tr>
     </table>
 
-    <!-- Gráfico Estadístico (Imagen Base64) -->
-    <div class="chart-container" th:if="${chartImage != null}">
-        <h3>Distribución de Usuarios por Rol</h3>
-        <img th:src="'data:image/png;base64,' + ${chartImage}" alt="Gráfico de Usuarios" style="width: 100%; max-height: 300px; object-fit: contain;"/>
-    </div>
+    <table class="layout-table" style="margin-bottom: 10px;">
+        <tr>
+            <td style="width: 50%; padding: 0 5px;">
+                <div class="summary-box">
+                    <div class="summary-box-content">
+                        <div class="summary-label">Tasa de Retencion</div>
+                        <div class="summary-value" th:text="${tasaRetencion}" style="color: #16a34a;">0%</div>
+                    </div>
+                </div>
+            </td>
+            <td style="width: 50%; padding: 0 5px;">
+                <div class="summary-box">
+                    <div class="summary-box-content">
+                        <div class="summary-label" th:text="'Tasa de Abandono (>' + ${umbralInactividadDias} + ' dias)'">Tasa de Abandono</div>
+                        <div class="summary-value" th:text="${tasaAbandono}" style="color: #dc2626;">0%</div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <p th:if="${mostrarComparacionPeriodoUsuarios}" style="font-size: 9pt; color: #334155; margin: 4px 0 10px 0;" th:text="${comparacionPeriodoUsuarios}">Comparacion de periodo</p>
+
+    <table class="chart-grid">
+        <tr>
+            <td>
+                <div class="chart-card" th:if="${chartRolesImage != null}">
+                    <div class="chart-title">Distribución de Usuarios por Rol</div>
+                    <img class="chart-image" th:src="'data:image/png;base64,' + ${chartRolesImage}" alt="Grafico roles" style="width: 100%; max-height: 260px; object-fit: contain;"/>
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <div class="chart-card" th:if="${chartEstadoImage != null}">
+                    <div class="chart-title">Estado de Usuarios</div>
+                    <img class="chart-image" th:src="'data:image/png;base64,' + ${chartEstadoImage}" alt="Grafico estado" style="width: 100%; max-height: 260px; object-fit: contain;"/>
+                </div>
+            </td>
+        </tr>
+    </table>
 
     <div class="page-break"></div>
 
-    <h3>Listado de Usuarios</h3>
-    
+    <table class="chart-grid">
+        <tr>
+            <td>
+                <div class="chart-card" th:if="${chartModalidadImage != null}">
+                    <div class="chart-title">Modalidad Preferida de Usuarios</div>
+                    <img class="chart-image" th:src="'data:image/png;base64,' + ${chartModalidadImage}" alt="Grafico modalidad" style="width: 100%; max-height: 260px; object-fit: contain;"/>
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <div class="chart-card" th:if="${mostrarComparacionPeriodoUsuarios and chartComparativaImage != null}">
+                    <div class="chart-title">Comparativa de Periodo: Actual vs Anterior</div>
+                    <img class="chart-image" th:src="'data:image/png;base64,' + ${chartComparativaImage}" alt="Grafico comparativa" style="width: 100%; max-height: 260px; object-fit: contain;"/>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <div class="page-break"></div>
+
+    <h3 class="break-before-title">Listado de Usuarios</h3>
+
     <table class="data-table">
         <thead>
             <tr>
-                <th style="width: 12%;">DNI</th>
-                <th style="width: 25%;">Nombre Completo</th>
-                <th style="width: 20%;">Correo</th>
-                <th style="width: 13%;">Teléfono</th>
-                <th style="width: 10%;">Ofertas</th>
-                <th style="width: 12%;">Roles</th>
-                <th style="width: 8%;">Estado</th>
+                <th style="width: 10%;">DNI</th>
+                <th style="width: 18%;">Nombre Completo</th>
+                <th style="width: 16%;">Correo</th>
+                <th style="width: 8%;">Telefono</th>
+                <th style="width: 6%;">Ofertas</th>
+                <th style="width: 8%;">Roles</th>
+                <th style="width: 6%;">Estado</th>
+                <th style="width: 8%;">Registro</th>
+                <th style="width: 10%;">Ultimo Acceso</th>
             </tr>
         </thead>
         <tbody>
             <tr th:each="usuario : ${usuarios}">
                 <td th:text="${usuario.dni}">12345678</td>
-                <td>
-                    <span th:text="${usuario.nombre + ' ' + usuario.apellido}" style="font-weight: bold;">Nombre Apellido</span>
-                </td>
+                <td><span th:text="${usuario.nombre + ' ' + usuario.apellido}" style="font-weight: bold;">Nombre Apellido</span></td>
                 <td th:text="${usuario.correo}" style="font-size: 0.9em;">usuario@email.com</td>
                 <td th:text="${usuario.numTelefono}">-</td>
                 <td th:text="${(ofertasActivasPorUsuario != null and usuario.id != null and ofertasActivasPorUsuario[usuario.id.toString()] != null) ? ofertasActivasPorUsuario[usuario.id.toString()] : 0}" style="text-align: center;">0</td>
@@ -102,9 +209,19 @@
                     <span th:if="${usuario.estado}" class="status-badge" style="background-color: #d1fae5; color: #065f46; font-size: 0.8em;">ACTIVO</span>
                     <span th:unless="${usuario.estado}" class="status-badge" style="background-color: #fee2e2; color: #b91c1c; font-size: 0.8em;">BAJA</span>
                 </td>
+                <td th:text="${usuario.fechaRegistro != null ? #temporals.format(usuario.fechaRegistro, 'dd/MM/yyyy') : '-'}">01/01/2026</td>
+                <td th:text="${(ultimoAccesoPorUsuario != null and usuario.id != null and ultimoAccesoPorUsuario[usuario.id.toString()] != null) ? ultimoAccesoPorUsuario[usuario.id.toString()] : '-'}">-</td>
             </tr>
         </tbody>
     </table>
+
+    <div class="obs-footer break-before-title">
+        <h3>Observaciones Finales</h3>
+        <ul>
+            <li th:each="obs : ${observacionesBreves}" th:text="${obs}">Observacion breve</li>
+        </ul>
+        <p th:text="${observacionesUsuarios}">Resumen corto.</p>
+    </div>
 
 </div>
 

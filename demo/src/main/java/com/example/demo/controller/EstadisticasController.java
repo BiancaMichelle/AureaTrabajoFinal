@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDate;
 import java.util.*;
@@ -57,6 +58,8 @@ public class EstadisticasController {
             LocalDate hoy = LocalDate.now();
             model.addAttribute("fechaActualizacion", hoy);
             model.addAttribute("maxFechaHoy", hoy);
+            model.addAttribute("fechaInicioDefault", hoy.minusDays(30));
+            model.addAttribute("fechaFinDefault", hoy);
             
             return "admin/estadisticas";
             
@@ -279,6 +282,24 @@ public class EstadisticasController {
     @ResponseBody
     public ResponseEntity<Map<String, Object>> getEconomiaDetallada() {
         return ResponseEntity.ok(estadisticasService.obtenerEstadisticasEconomicas());
+    }
+
+    @GetMapping("/api/inscripciones-temporal")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> getInscripcionesTemporal(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
+            @RequestParam(required = false) List<String> tiposOferta,
+            @RequestParam(required = false) List<String> modalidades,
+            @RequestParam(required = false, defaultValue = "dia") String agrupacion) {
+        try {
+            return ResponseEntity.ok(
+                    estadisticasService.obtenerEstadisticasInscripcionesTemporales(
+                            fechaInicio, fechaFin, tiposOferta, modalidades, agrupacion));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error", "No se pudieron cargar estadisticas temporales: " + e.getMessage()));
+        }
     }
 
     /**

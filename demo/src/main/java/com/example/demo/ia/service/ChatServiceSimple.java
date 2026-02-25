@@ -1398,6 +1398,71 @@ public class ChatServiceSimple {
         }
     }
 
+    public String generarNarrativaComparativaEstadistica(Map<String, Object> datos) {
+        try {
+            String systemPrompt = "Eres analista academico de una institucion especifica (no general ni multi-institucion). " +
+                    "Redacta un resumen comparativo claro y ejecutivo en espanol neutro, sin markdown, sin listas, maximo 110 palabras. " +
+                    "No inventes datos. Usa solo los valores recibidos. " +
+                    "Incluye: 1) comparacion del periodo actual vs anterior, 2) tendencia principal, 3) una recomendacion accionable para esta institucion.";
+
+            String userPrompt = "Datos estructurados para redactar narrativa comparativa:\n" +
+                    objectMapper.writeValueAsString(datos) + "\n\n" +
+                    "Escribe un unico parrafo profesional para incluir en un reporte estadistico de esta institucion.";
+
+            List<Map<String, Object>> messages = new ArrayList<>();
+            messages.add(Map.of("role", "system", "content", systemPrompt));
+            messages.add(Map.of("role", "user", "content", userPrompt));
+
+            String raw = generarRespuestaConChat(messages);
+            if (raw == null || raw.isBlank()) return null;
+
+            String limpio = raw.replace("\n", " ").replace("\r", " ").trim();
+            while (limpio.contains("  ")) {
+                limpio = limpio.replace("  ", " ");
+            }
+            return limpio;
+        } catch (Exception e) {
+            System.err.println("Error generando narrativa comparativa IA: " + e.getMessage());
+            return null;
+        }
+    }
+
+    public String generarNarrativaReporteUsuarios(Map<String, Object> datos) {
+        try {
+            String systemPrompt = "Eres analista institucional. " +
+                    "Redacta un resumen ejecutivo en espanol neutro, sin markdown y en un unico parrafo (entre 120 y 220 palabras). " +
+                    "Usa solo los datos proporcionados, incluye comparaciones entre roles, nivel de actividad en inscripciones y una recomendacion concreta. " +
+                    "Regla obligatoria: no expreses personas en decimales ni fracciones (no usar frases como '0,18 personas'). " +
+                    "Si hay decimales, aplicalos solo a tasas, porcentajes o promedios de inscripciones por usuario. " +
+                    "Reglas de consistencia obligatorias: " +
+                    "1) Si la tasa de abandono es alta, no la describas como baja ni como alta retencion. " +
+                    "2) Si la tasa de retencion es alta, no afirmes abandono alto. " +
+                    "3) Inactividad se refiere a falta de acceso, no a falta de registros. " +
+                    "4) No uses frases ambiguas o contradictorias. " +
+                    "5) Si no hay suficiente dato para afirmar una tendencia, dilo explicitamente como 'sin evidencia suficiente'.";
+
+            String userPrompt = "Datos del reporte de usuarios:\n" +
+                    objectMapper.writeValueAsString(datos) + "\n\n" +
+                    "Genera un texto de observaciones para el reporte.";
+
+            List<Map<String, Object>> messages = new ArrayList<>();
+            messages.add(Map.of("role", "system", "content", systemPrompt));
+            messages.add(Map.of("role", "user", "content", userPrompt));
+
+            String raw = generarRespuestaConChat(messages);
+            if (raw == null || raw.isBlank()) return null;
+
+            String limpio = raw.replace("\n", " ").replace("\r", " ").trim();
+            while (limpio.contains("  ")) {
+                limpio = limpio.replace("  ", " ");
+            }
+            return limpio;
+        } catch (Exception e) {
+            System.err.println("Error generando narrativa IA de reporte de usuarios: " + e.getMessage());
+            return null;
+        }
+    }
+
     /**
  * Obtiene todas las ofertas académicas activas y en curso,
  * excluyendo aquellas en las que el usuario es docente.

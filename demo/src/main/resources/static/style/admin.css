@@ -6085,3 +6085,32 @@ textarea.form-control:focus {
     transform: translateY(0);
 }
 
+/* =================   BOTONES DE REPORTES (UNIFICADOS)   ================= */
+.btn-reporte-unificado {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px !important;
+    border-radius: 10px !important;
+    border: 1px solid #1d4ed8 !important;
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%) !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    text-decoration: none !important;
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.25) !important;
+    transition: all 0.2s ease !important;
+}
+
+.btn-reporte-unificado:hover {
+    background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%) !important;
+    color: #ffffff !important;
+    border-color: #1e40af !important;
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px rgba(37, 99, 235, 0.33) !important;
+}
+
+.btn-reporte-unificado:active {
+    transform: translateY(0);
+}
+

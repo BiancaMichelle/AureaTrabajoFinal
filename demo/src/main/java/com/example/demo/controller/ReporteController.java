@@ -170,7 +170,9 @@ public class ReporteController {
             @RequestParam(required = false) Long categoriaId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
+            @RequestParam(required = false) String agrupacion,
             @RequestParam(required = false) List<String> tipos,
+            @RequestParam(required = false) List<String> modalidades,
             @RequestParam(required = false, defaultValue = "ofertas") String tipoReporte,
             HttpServletRequest request
     ) throws Exception {
@@ -180,7 +182,12 @@ public class ReporteController {
             tipos = null;
         }
 
-        List<OfertaAcademica> ofertas = reporteService.filtrarOfertas(nombre, estado, categoriaId, fechaInicio, fechaFin, tipos);
+        // Para el reporte estadístico, el período seleccionado se usa como marco temporal del informe,
+        // pero no debe vaciar el universo de ofertas por fecha de inicio/fin de la oferta.
+        LocalDate filtroFechaInicioOfertas = "estadistico".equalsIgnoreCase(tipoReporte) ? null : fechaInicio;
+        LocalDate filtroFechaFinOfertas = "estadistico".equalsIgnoreCase(tipoReporte) ? null : fechaFin;
+        List<OfertaAcademica> ofertas = reporteService.filtrarOfertas(
+                nombre, estado, categoriaId, filtroFechaInicioOfertas, filtroFechaFinOfertas, tipos, modalidades);
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
         String periodoTexto = "Histórico completo";
@@ -193,27 +200,24 @@ public class ReporteController {
         }
         
         ByteArrayInputStream stream;
-        String filename;
         MediaType mediaType;
         String fileExtension;
 
         if ("excel".equalsIgnoreCase(formato)) {
             stream = reporteService.generarReporteExcel(ofertas);
-            filename = "reporte_" + tipoReporte + ".xlsx";
             mediaType = MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
             fileExtension = "xlsx";
         } else {
             // Default to PDF
             if ("estadistico".equalsIgnoreCase(tipoReporte)) {
-                stream = reporteService.generarReporteEstadisticoPDF(ofertas, fechaInicio, fechaFin);
-                filename = "reporte_estadistico.pdf";
+                stream = reporteService.generarReporteEstadisticoPDF(ofertas, fechaInicio, fechaFin, agrupacion);
             } else {
                 stream = reporteService.generarReporteOfertasPDF(ofertas, fechaInicio, fechaFin);
-                filename = "reporte_ofertas_profesional.pdf";
             }
             mediaType = MediaType.APPLICATION_PDF;
             fileExtension = "pdf";
         }
+        String filename = construirNombreArchivo("reporte-" + tipoReporte, periodoTexto, fileExtension);
         
         byte[] content = stream.readAllBytes();
         String savedFile = guardarReporteEnDisco(content, "reporte_" + tipoReporte, fileExtension);
@@ -269,9 +273,11 @@ public class ReporteController {
             @RequestParam(required = false) String nombre,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
+            @RequestParam(required = false) Integer inactividadDias,
             HttpServletRequest request
     ) throws java.io.IOException { // Added exception
         List<Usuario> usuarios = reporteService.filtrarUsuarios(rol, estado, nombre, fechaInicio, fechaFin);
+        usuarios = reporteService.filtrarUsuariosPorInactividad(usuarios, inactividadDias);
         DateTimeFormatter formatterUsuarios = DateTimeFormatter.ofPattern("dd/MM/yyyy");
         String periodoUsuarios = "Histórico completo";
         if (fechaInicio != null && fechaFin != null) {
@@ -282,21 +288,19 @@ public class ReporteController {
             periodoUsuarios = "Hasta " + fechaFin.format(formatterUsuarios);
         }
         ByteArrayInputStream stream;
-        String filename;
         MediaType mediaType;
         String extension;
 
         if ("excel".equalsIgnoreCase(formato)) {
             stream = reporteService.generarReporteUsuariosExcel(usuarios);
-            filename = "reporte_usuarios.xlsx";
             mediaType = MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
             extension = "xlsx";
         } else {
-            stream = reporteService.generarReporteUsuariosPDF(usuarios, fechaInicio, fechaFin);
-            filename = "reporte_usuarios.pdf";
+            stream = reporteService.generarReporteUsuariosPDF(usuarios, fechaInicio, fechaFin, inactividadDias);
             mediaType = MediaType.APPLICATION_PDF;
             extension = "pdf";
         }
+        String filename = construirNombreArchivo("reporte-usuarios", periodoUsuarios, extension);
         
         byte[] content = stream.readAllBytes();
         String savedFile = guardarReporteEnDisco(content, "reporte_usuarios", extension);
@@ -377,5 +381,30 @@ public class ReporteController {
             e.printStackTrace();
             return null;
         }
+    }
+
+    private String construirNombreArchivo(String tipo, String periodo, String extension) {
+        String fechaDescarga = LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yy"));
+        String periodoSeguro = sanitizarNombre(periodo)
+                .replace(" al ", "_a_")
+                .replace(" desde ", "_desde_")
+                .replace(" hasta ", "_hasta_");
+        return tipo + "-" + fechaDescarga + "-" + periodoSeguro + "." + extension;
+    }
+
+    private String sanitizarNombre(String input) {
+        if (input == null || input.isBlank()) return "historico";
+        return input
+                .toLowerCase()
+                .replace("/", "-")
+                .replace("\\", "-")
+                .replace(":", "-")
+                .replace("*", "")
+                .replace("?", "")
+                .replace("\"", "")
+                .replace("<", "")
+                .replace(">", "")
+                .replace("|", "")
+                .replaceAll("\\s+", "_");
     }
 }

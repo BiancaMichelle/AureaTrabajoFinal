@@ -7,10 +7,19 @@
 <body>
 
     <main class="main-content">
+        <style>
+            .trend-chart-wrap {
+                width: 100%;
+                max-width: 900px;
+                height: 280px;
+                margin: 0 auto;
+                position: relative;
+            }
+        </style>
         <header class="main-header">
             <h1><i class="fas fa-credit-card"></i> Gestión de Pagos</h1>
             <div class="header-actions">
-                <a th:href="@{/admin/pagos/reporte(estado=${estadoSeleccionado}, dni=${dniBusqueda}, fechaInicio=${fechaInicioSeleccionada}, fechaFin=${fechaFinSeleccionada}, tipo=${tipoSeleccionado}, cursoId=${ofertaSeleccionada})}" class="btn-primary" target="_blank">
+                <a th:href="@{/admin/pagos/reporte(estado=${estadoSeleccionado}, dni=${dniBusqueda}, fechaInicio=${fechaInicioSeleccionada}, fechaFin=${fechaFinSeleccionada}, tipo=${tipoSeleccionado}, cursoId=${ofertaSeleccionada})}" class="btn-primary btn-reporte-unificado" target="_blank">
                     <i class="fas fa-file-pdf"></i> Generar Reporte
                 </a>
             </div>
@@ -62,6 +71,11 @@
                                     th:selected="${ofertaSeleccionada == oferta.idOferta}"></option>
                         </select>
                     </div>
+                    <div class="form-group" style="flex: 1; min-width: 180px;">
+                        <label for="atrasoMinDias">Vencidos hace mas de (dias):</label>
+                        <input type="number" id="atrasoMinDias" name="atrasoMinDias" class="form-control"
+                               min="0" th:value="${atrasoMinDias}" placeholder="Ej: 30">
+                    </div>
                     <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Filtrar</button>
                     <a th:href="@{/admin/pagos}" class="btn btn-secondary"><i class="fas fa-eraser"></i> Limpiar</a>
                 </form>
@@ -70,8 +84,8 @@
 
         <div class="admin-card mt-4">
             <div class="card-header">
-                <h2>Pagos</h2>
-                <p style="color: #cec0fc; font-size: 0.9rem; margin: 5px 0 0 0;">Haz clic en un pago para ver su detalle</p>
+                <h2>Todos los Pagos</h2>
+                <p style="color: #cec0fc; font-size: 0.9rem; margin: 5px 0 0 0;">Listado general de pagos. Haz clic en una fila para ver su detalle.</p>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -147,6 +161,27 @@
             </div>
         </div>
 
+        <div class="admin-card mt-4">
+            <div class="card-header">
+                <h2>Tendencia Temporal de Ingresos</h2>
+            </div>
+            <div class="card-body" style="display: grid; grid-template-columns: 1fr; gap: 20px;">
+                <div>
+                    <h3 style="margin-bottom: 8px;">Comparativo mes actual vs mes anterior</h3>
+                    <div class="trend-chart-wrap">
+                        <canvas id="chartComparativoMes"></canvas>
+                    </div>
+                </div>
+                <div>
+                    <h3 style="margin-bottom: 8px;">Linea de tiempo de ingresos (mes actual)</h3>
+                    <div class="trend-chart-wrap">
+                        <canvas id="chartLineaIngresos"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script th:inline="javascript">
             window.togglePagos = function(row) {
                 const pagoId = row.getAttribute('data-pago');
@@ -160,8 +195,108 @@
                     }
                 });
             };
-        </script>
 
+            window.enviarRecordatorio = async function(cuotaId) {
+                const csrfToken = document.querySelector('meta[name=\"_csrf\"]')?.getAttribute('content');
+                const csrfHeader = document.querySelector('meta[name=\"_csrf_header\"]')?.getAttribute('content');
+                try {
+                    const headers = { 'Content-Type': 'application/json' };
+                    if (csrfToken && csrfHeader) headers[csrfHeader] = csrfToken;
+                    const res = await fetch('/admin/pagos/morosidad/recordatorio/' + cuotaId, {
+                        method: 'POST',
+                        headers
+                    });
+                    const data = await res.json();
+                    alert(data.message || (data.success ? 'Recordatorio enviado.' : 'No se pudo enviar recordatorio.'));
+                } catch (e) {
+                    alert('Error de conexion al enviar recordatorio.');
+                }
+            };
+
+            const mesActualLabel = /*[[${mesActualLabel}]]*/ 'MES ACTUAL';
+            const mesAnteriorLabel = /*[[${mesAnteriorLabel}]]*/ 'MES ANTERIOR';
+            const totalMesActual = /*[[${totalMesActual}]]*/ 0;
+            const totalMesAnterior = /*[[${totalMesAnterior}]]*/ 0;
+            const labelsDias = /*[[${labelsDias}]]*/ [];
+            const ingresosDias = /*[[${ingresosDias}]]*/ [];
+            const ingresosDiasNoNegativos = (ingresosDias || []).map(v => Math.max(0, Number(v) || 0));
+
+            if (typeof Chart !== 'undefined') {
+                const ctxComp = document.getElementById('chartComparativoMes');
+                if (ctxComp) {
+                    new Chart(ctxComp, {
+                        type: 'bar',
+                        data: {
+                            labels: [mesAnteriorLabel, mesActualLabel],
+                            datasets: [{
+                                label: 'Ingresos ($)',
+                                data: [Math.max(0, Number(totalMesAnterior) || 0), Math.max(0, Number(totalMesActual) || 0)],
+                                backgroundColor: ['#6366f1', '#10b981']
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Mes'
+                                    }
+                                },
+                                y: {
+                                    beginAtZero: true,
+                                    min: 0,
+                                    title: {
+                                        display: true,
+                                        text: 'Ingresos (ARS)'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                const ctxLinea = document.getElementById('chartLineaIngresos');
+                if (ctxLinea) {
+                    new Chart(ctxLinea, {
+                        type: 'line',
+                        data: {
+                            labels: labelsDias,
+                            datasets: [{
+                                label: 'Ingresos diarios ($)',
+                                data: ingresosDiasNoNegativos,
+                                borderColor: '#3b82f6',
+                                backgroundColor: 'rgba(59,130,246,0.2)',
+                                fill: true,
+                                tension: 0.25,
+                                pointRadius: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Dia del mes'
+                                    }
+                                },
+                                y: {
+                                    beginAtZero: true,
+                                    min: 0,
+                                    title: {
+                                        display: true,
+                                        text: 'Monto ingresado (ARS)'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+        </script>
     </main>
 
 </body>

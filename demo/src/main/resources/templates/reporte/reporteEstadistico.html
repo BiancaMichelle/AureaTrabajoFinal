@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{reporte/layout/baseReporte :: layout(~{::style}, ~{::div.report-content})}">
+<head>
+    <style>
+        @page {
+            size: A4;
+            margin: 1.5cm;
+        }
+        .data-table, .data-table th, .data-table td {
+            font-family: Arial, sans-serif !important;
+            font-size: 8.5pt !important;
+            padding: 4px !important;
+        }
+        .heatmap-table td, .heatmap-table th {
+            font-family: Arial, sans-serif !important;
+            font-size: 8.5pt !important;
+            padding: 6px !important;
+            border: 1px solid #e2e8f0;
+        }
+        .narrativa-box {
+            margin-top: 10px;
+            padding: 10px;
+            border-left: 4px solid #2563eb;
+            background: #f8fafc;
+            color: #1e293b;
+            font-size: 9pt;
+            line-height: 1.45;
+        }
+    </style>
+</head>
+<body>
+
+<div class="report-content">
+    <div style="text-align: center; margin-bottom: 20px;">
+        <h2 th:text="'Reporte Estadistico de ' + ${nombreInstitucion}">Reporte Estadistico de la institucion</h2>
+        <p style="font-size: 10pt; color: #666; margin-top: -10px;">
+            Periodo analizado: <span th:text="${periodoReporte}"></span>
+        </p>
+    </div>
+
+    <table class="layout-table" style="margin-bottom: 20px;">
+        <tr>
+            <td style="width: 25%; padding: 0 5px;">
+                <div class="summary-box">
+                    <div class="summary-box-content">
+                        <div class="summary-label">Total Programas</div>
+                        <div class="summary-value" th:text="${totalProgramas}">0</div>
+                    </div>
+                </div>
+            </td>
+            <td style="width: 25%; padding: 0 5px;">
+                <div class="summary-box">
+                    <div class="summary-box-content">
+                        <div class="summary-label">Total Inscripciones</div>
+                        <div class="summary-value" th:text="${totalInscripciones}">0</div>
+                    </div>
+                </div>
+            </td>
+            <td style="width: 25%; padding: 0 5px;">
+                <div class="summary-box">
+                    <div class="summary-box-content">
+                        <div class="summary-label">Alumnos Activos</div>
+                        <div class="summary-value" th:text="${alumnosActivos}">0</div>
+                    </div>
+                </div>
+            </td>
+            <td style="width: 25%; padding: 0 5px;">
+                <div class="summary-box">
+                    <div class="summary-box-content">
+                        <div class="summary-label">Ingresos Estimados</div>
+                        <div class="summary-value" th:text="${ingresosEstimados}">$ 0.00</div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <h3>Distribucion de Inscripciones por Tipo</h3>
+    <div class="chart-container" th:if="${chartTipo != null}" style="margin-bottom: 10px;">
+        <img th:src="'data:image/png;base64,' + ${chartTipo}" alt="Grafico por tipo" style="width: 100%; max-height: 280px; object-fit: contain;"/>
+    </div>
+    <table class="data-table">
+        <thead>
+            <tr><th>Tipo</th><th style="text-align: right;">Cantidad</th></tr>
+        </thead>
+        <tbody>
+            <tr th:each="e : ${ofertasPorTipo}">
+                <td th:text="${e.key}">Curso</td>
+                <td style="text-align: right;" th:text="${e.value}">0</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>Distribucion de Inscripciones por Modalidad</h3>
+    <div class="chart-container" th:if="${chartModalidad != null}" style="margin-bottom: 10px;">
+        <img th:src="'data:image/png;base64,' + ${chartModalidad}" alt="Grafico por modalidad" style="width: 100%; max-height: 280px; object-fit: contain;"/>
+    </div>
+    <table class="data-table">
+        <thead>
+            <tr><th>Modalidad</th><th style="text-align: right;">Cantidad</th></tr>
+        </thead>
+        <tbody>
+            <tr th:each="e : ${ofertasPorModalidad}">
+                <td th:text="${e.key}">VIRTUAL</td>
+                <td style="text-align: right;" th:text="${e.value}">0</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>Distribucion de Inscripciones por Estado de Oferta</h3>
+    <div class="chart-container" th:if="${chartEstado != null}" style="margin-bottom: 10px;">
+        <img th:src="'data:image/png;base64,' + ${chartEstado}" alt="Grafico por estado" style="width: 100%; max-height: 280px; object-fit: contain;"/>
+    </div>
+    <table class="data-table">
+        <thead>
+            <tr><th>Estado</th><th style="text-align: right;">Cantidad</th></tr>
+        </thead>
+        <tbody>
+            <tr th:each="e : ${ofertasPorEstado}">
+                <td th:text="${e.key}">ACTIVA</td>
+                <td style="text-align: right;" th:text="${e.value}">0</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="page-break"></div>
+
+    <h3>Poblacion Institucional</h3>
+    <table class="data-table">
+        <thead>
+            <tr><th>Indicador</th><th style="text-align: right;">Valor</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Total Alumnos</td><td style="text-align: right;" th:text="${totalAlumnos}">0</td></tr>
+            <tr><td>Alumnos de Alta</td><td style="text-align: right;" th:text="${alumnosAlta}">0</td></tr>
+            <tr><td>Alumnos de Baja</td><td style="text-align: right;" th:text="${alumnosBaja}">0</td></tr>
+            <tr><td>Total Docentes</td><td style="text-align: right;" th:text="${totalDocentes}">0</td></tr>
+            <tr><td>Docentes de Alta</td><td style="text-align: right;" th:text="${docentesAlta}">0</td></tr>
+            <tr><td>Docentes de Baja</td><td style="text-align: right;" th:text="${docentesBaja}">0</td></tr>
+            <tr><td>Docentes con Asignacion</td><td style="text-align: right;" th:text="${docentesConAsignacion}">0</td></tr>
+            <tr><td>Admins de Alta</td><td style="text-align: right;" th:text="${adminsAlta}">0</td></tr>
+            <tr><td>Total Usuarios Sistema</td><td style="text-align: right;" th:text="${totalUsuariosSistema}">0</td></tr>
+        </tbody>
+    </table>
+
+    <h3>Mapa de calor comparativo de poblacion</h3>
+    <p style="font-size: 9pt; color: #666; margin-top: -6px;">
+        Periodo actual: <span th:text="${periodoActualTexto}"></span> |
+        Referencia: <span th:text="${periodoComparadoEtiqueta}"></span> (<span th:text="${periodoAnteriorTexto}"></span>)
+    </p>
+    <table class="heatmap-table" style="width: 100%; border-collapse: collapse; margin-bottom: 8px;">
+        <thead>
+        <tr>
+            <th style="text-align: left; width: 42%;">Indicador</th>
+            <th style="text-align: right; width: 19%;">Actual</th>
+            <th style="text-align: right; width: 19%;">Anterior</th>
+            <th style="text-align: right; width: 20%;">Variacion</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="fila : ${poblacionHeatmap}"
+            th:style="'background-color:' + ${fila.bgColor} + '; color:' + ${fila.textColor}">
+            <td th:text="${fila.indicador}">Indicador</td>
+            <td style="text-align: right;" th:text="${fila.actual}">0</td>
+            <td style="text-align: right;" th:text="${fila.anterior}">0</td>
+            <td style="text-align: right; font-weight: bold;" th:text="${fila.variacion}">+0.0%</td>
+        </tr>
+        </tbody>
+    </table>
+    <div class="narrativa-box" th:text="${narrativaComparativa}">
+        Comparativa automatica del periodo.
+    </div>
+
+    <h3>Indicadores Clave</h3>
+    <table class="data-table">
+        <thead>
+            <tr><th>Indicador</th><th style="text-align: right;">Valor</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Tasa de Ocupacion Global</td><td style="text-align: right;" th:text="${tasaOcupacion}">0%</td></tr>
+            <tr><td>Ofertas Baja Demanda (&lt; 5)</td><td style="text-align: right;" th:text="${ofertasBajaDemanda}">0</td></tr>
+        </tbody>
+    </table>
+
+    <h3>Observaciones</h3>
+    <p th:text="${observaciones}">Observaciones del periodo analizado.</p>
+</div>
+
+</body>
+</html>

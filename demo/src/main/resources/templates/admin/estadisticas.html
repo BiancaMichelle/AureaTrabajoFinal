@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/adminBase :: layout(~{::title}, ~{::content})}" lang="es">
 <head>
     <title>Estadísticas Académicas - Aurea</title>
@@ -50,6 +50,25 @@
             color: white;
         }
 
+        .kpi-row .stats-card {
+            aspect-ratio: 1 / 1;
+            max-width: 210px;
+            margin: 0 auto;
+        }
+
+        .kpi-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        .kpi-row > [class*='col-'] {
+            flex: 0 1 210px;
+            width: auto;
+            padding: 0;
+        }
+
         .stats-card:hover {
             transform: translateY(-5px);
             box-shadow: var(--hover-shadow);
@@ -59,6 +78,10 @@
             padding: 1.5rem;
             position: relative;
             z-index: 1;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
 
         .stats-card .icon-bg {
@@ -223,6 +246,221 @@
             margin-bottom: 0.5rem;
             display: block;
         }
+
+        .time-filters-card {
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            border-radius: 14px;
+            box-shadow: var(--card-shadow);
+            padding: 1.1rem 1.25rem;
+            margin-bottom: 1.1rem;
+            border: 1px solid #dbe4f0;
+        }
+
+        .time-filters-title {
+            font-size: 0.78rem;
+            color: #64748b;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 0.75rem;
+        }
+
+        .time-filters-grid {
+            display: grid;
+            grid-template-columns: repeat(12, minmax(0, 1fr));
+            gap: 0.85rem;
+            align-items: end;
+        }
+
+        .tf-col-3 { grid-column: span 3; }
+        .tf-col-2 { grid-column: span 2; }
+        .tf-col-4 { grid-column: span 4; }
+        .tf-col-12 { grid-column: span 12; }
+
+        .tf-field {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 0.65rem 0.75rem;
+        }
+
+        .tf-field label {
+            display: block;
+            font-size: 0.72rem;
+            font-weight: 800;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 0.45rem;
+        }
+
+        .tf-field .form-control,
+        .tf-field .form-select {
+            border: 1px solid #dbe4f0;
+            border-radius: 8px;
+            box-shadow: none;
+            font-weight: 600;
+        }
+
+        .tf-field .form-control:focus,
+        .tf-field .form-select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+        }
+
+        .time-range-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.45rem;
+            margin-top: 0.6rem;
+        }
+
+        .time-range-pill {
+            border: 1px solid #cbd5e1;
+            background: #fff;
+            color: #334155;
+            padding: 0.35rem 0.6rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .time-range-pill:hover {
+            border-color: #94a3b8;
+            background: #f8fafc;
+        }
+
+        .time-range-pill.active {
+            border-color: #4f46e5;
+            background: #eef2ff;
+            color: #312e81;
+            box-shadow: inset 0 0 0 1px rgba(79, 70, 229, 0.25);
+        }
+
+        .time-range-help {
+            margin-top: 0.45rem;
+            font-size: 0.72rem;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        .filter-chip-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.45rem;
+        }
+
+        .filter-chip-input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .filter-chip {
+            display: inline-flex;
+            align-items: center;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #334155;
+            padding: 0.42rem 0.7rem;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.18s ease;
+        }
+
+        .filter-chip:hover {
+            border-color: #94a3b8;
+            background: #f8fafc;
+        }
+
+        .filter-chip-input:checked + .filter-chip {
+            border-color: #667eea;
+            background: #eef2ff;
+            color: #3730a3;
+            box-shadow: inset 0 0 0 1px rgba(102, 126, 234, 0.25);
+        }
+
+        .filter-toast {
+            position: fixed;
+            top: 92px;
+            right: 20px;
+            z-index: 1080;
+            background: #ffffff;
+            border-left: 4px solid #10b981;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.15);
+            padding: 0.85rem 0.95rem;
+            min-width: 260px;
+            max-width: 360px;
+            opacity: 0;
+            transform: translateX(24px);
+            pointer-events: none;
+            transition: all 0.28s ease;
+        }
+
+        .filter-toast.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .filter-toast-title {
+            font-size: 0.82rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 800;
+            color: #047857;
+            margin-bottom: 0.2rem;
+        }
+
+        .filter-toast-msg {
+            color: #0f172a;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+
+        @media (max-width: 992px) {
+            .tf-col-3, .tf-col-2, .tf-col-4 { grid-column: span 6; }
+        }
+
+        @media (max-width: 768px) {
+            .tf-col-3, .tf-col-2, .tf-col-4 { grid-column: span 12; }
+            .kpi-row .stats-card {
+                max-width: 240px;
+            }
+            .kpi-row > [class*='col-'] {
+                flex-basis: min(100%, 240px);
+            }
+        }
+
+        .summary-chip {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 0.85rem 1rem;
+            height: 100%;
+        }
+
+        .summary-chip .k {
+            color: #64748b;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+        }
+
+        .summary-chip .v {
+            color: #0f172a;
+            font-size: 1.4rem;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-top: 0.25rem;
+        }
     </style>
 
     <!-- Header / Actions -->
@@ -241,6 +479,11 @@
                 </button>
             </div>
         </div>
+
+        <div id="filterToast" class="filter-toast" aria-live="polite">
+            <div class="filter-toast-title">Filtros aplicados</div>
+            <div id="filterToastMsg" class="filter-toast-msg">Se actualizaron las estadisticas.</div>
+        </div>
         
         <!-- Alerts -->
         <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -249,7 +492,7 @@
         </div>
         
         <!-- KPI Cards Row -->
-        <div class="row mb-4 g-4">
+        <div class="row mb-4 g-4 kpi-row">
             <!-- Usuarios -->
             <div class="col-xl-3 col-md-6">
                 <div class="stats-card bg-gradient-info h-100">
@@ -287,6 +530,142 @@
                         <i class="fas fa-coins icon-bg"></i>
                         <span class="stats-value" th:text="${metricas != null ? ('$' + metricas['ingresosTotales']) : '$0.00'}">$0.00</span>
                         <span class="stats-label">Ingresos Generados</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="time-filters-card">
+            <div class="time-filters-title">Filtros Temporales</div>
+            <div class="time-filters-grid">
+                <div class="tf-col-3">
+                    <div class="tf-field">
+                        <label for="fltFechaInicio">Periodo: desde</label>
+                        <input id="fltFechaInicio" type="date" class="form-control"
+                               th:value="${#temporals.format(fechaInicioDefault, 'yyyy-MM-dd')}"
+                               th:attr="max=${#temporals.format(maxFechaHoy, 'yyyy-MM-dd')}">
+                    </div>
+                </div>
+                <div class="tf-col-3">
+                    <div class="tf-field">
+                        <label for="fltFechaFin">Periodo: hasta</label>
+                        <input id="fltFechaFin" type="date" class="form-control"
+                               th:value="${#temporals.format(fechaFinDefault, 'yyyy-MM-dd')}"
+                               th:attr="max=${#temporals.format(maxFechaHoy, 'yyyy-MM-dd')}">
+                    </div>
+                </div>
+                <div class="tf-col-2">
+                    <div class="tf-field">
+                        <label for="fltAgrupacion">Agrupacion</label>
+                        <select id="fltAgrupacion" class="form-select">
+                            <option value="dia">Dia</option>
+                            <option value="semana">Semana</option>
+                            <option value="mes">Mes</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="tf-col-4">
+                    <div class="tf-field">
+                        <label>Tipo de oferta</label>
+                        <div class="filter-chip-group">
+                            <input class="filter-chip-input fltTipoCheck" type="checkbox" id="tipoCurso" value="curso" checked>
+                            <label class="filter-chip" for="tipoCurso">Curso</label>
+
+                            <input class="filter-chip-input fltTipoCheck" type="checkbox" id="tipoCharla" value="charla" checked>
+                            <label class="filter-chip" for="tipoCharla">Charla</label>
+
+                            <input class="filter-chip-input fltTipoCheck" type="checkbox" id="tipoSeminario" value="seminario" checked>
+                            <label class="filter-chip" for="tipoSeminario">Seminario</label>
+
+                            <input class="filter-chip-input fltTipoCheck" type="checkbox" id="tipoFormacion" value="formacion" checked>
+                            <label class="filter-chip" for="tipoFormacion">Formacion</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="tf-col-12">
+                    <div class="tf-field">
+                        <label>Atajos de periodo</label>
+                        <div class="time-range-pills">
+                            <button type="button" class="time-range-pill" data-days="7">7 dias</button>
+                            <button type="button" class="time-range-pill" data-days="30">30 dias</button>
+                            <button type="button" class="time-range-pill" data-days="90">90 dias</button>
+                            <button type="button" class="time-range-pill" data-days="180">6 meses</button>
+                        </div>
+                        <div class="time-range-help">Selecciona un atajo para completar fechas. Se aplica al hacer click en "Aplicar filtros".</div>
+                    </div>
+                </div>
+                <div class="tf-col-4">
+                    <div class="tf-field">
+                        <label>Modalidad</label>
+                        <div class="filter-chip-group">
+                            <input class="filter-chip-input fltModalidadCheck" type="checkbox" id="modVirtual" value="virtual" checked>
+                            <label class="filter-chip" for="modVirtual">Virtual</label>
+
+                            <input class="filter-chip-input fltModalidadCheck" type="checkbox" id="modPresencial" value="presencial" checked>
+                            <label class="filter-chip" for="modPresencial">Presencial</label>
+
+                            <input class="filter-chip-input fltModalidadCheck" type="checkbox" id="modHibrida" value="hibrida" checked>
+                            <label class="filter-chip" for="modHibrida">Hibrida</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="tf-col-4 text-end">
+                    <button id="btnAplicarTemporal" class="action-btn btn-refresh">
+                        <i class="fas fa-filter"></i> Aplicar filtros
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-lg-3 col-md-6">
+                <div class="summary-chip">
+                    <div class="k">Total inscripciones</div>
+                    <div id="sumTotalInscripciones" class="v">0</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="summary-chip">
+                    <div class="k">Pico del periodo</div>
+                    <div id="sumPico" class="v">-</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="summary-chip">
+                    <div class="k">Comparativa periodo</div>
+                    <div id="sumComparativa" class="v">0%</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="summary-chip">
+                    <div class="k">Ultima inscripcion</div>
+                    <div id="sumUltima" class="v">sin registros</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+            <div class="col-lg-7">
+                <div class="metric-card">
+                    <div class="card-header">
+                        <span>Tendencia por modalidad</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="chartTemporalModalidad"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <div class="metric-card">
+                    <div class="card-header">
+                        <span>Tipo de oferta por modalidad (apilado)</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="chartTemporalTipoModalidad"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -335,7 +714,7 @@
                                         <thead>
                                             <tr>
                                                 <th class="ps-4">Oferta Académica</th>
-                                                <th class="text-center">Inscritos</th>
+                                                <th class="text-center">Inscriptos</th>
                                                 <th class="text-center">Tasa Ocupación</th>
                                                 <th class="text-center">Demanda</th>
                                             </tr>
@@ -458,6 +837,11 @@
                 <div class="modal-body p-4">
                     <form id="statsReportForm" action="/admin/reportes/ofertas/descargar" method="get">
                         <input type="hidden" name="tipoReporte" value="estadistico">
+                        <input type="hidden" name="fechaInicio" id="reportFechaInicio">
+                        <input type="hidden" name="fechaFin" id="reportFechaFin">
+                        <input type="hidden" name="agrupacion" id="reportAgrupacion">
+                        <div id="reportTiposContainer"></div>
+                        <div id="reportModalidadesContainer"></div>
                         <!-- Form fields preserved -->
                         <div class="mb-4">
                             <label class="form-section-label">Formato de Salida</label>
@@ -473,31 +857,21 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label fw-bold text-muted small text-uppercase">Filtros Opcionales</label>
-                            <input type="text" name="nombre" class="form-control mb-2" placeholder="Buscar por palabra clave..." style="display: block; width: 100%; padding: 0.375rem 0.75rem;">
-                            <select name="estado" class="form-select mb-2" style="display: block; width: 100%; padding: 0.375rem 2.25rem 0.375rem 0.75rem;">
-                                <option value="">Todos los estados</option>
-                                <option value="PUBLICADO">Publicado</option>
-                                <option value="BORRADOR">Borrador</option>
-                                <option value="DE_BAJA">De Baja</option>
-                            </select>
-                            
-                            <div class="row g-2" style="display: flex; gap: 0.5rem;">
-                                <div class="col-6" style="flex: 1;">
-                                    <label class="small text-muted">Desde</label>
-                                    <input type="date" name="fechaInicio" class="form-control" style="width: 100%;"
-                                           th:attr="max=${#temporals.format(maxFechaHoy, 'yyyy-MM-dd')}">
-                                </div>
-                                <div class="col-6" style="flex: 1;">
-                                    <label class="small text-muted">Hasta</label>
-                                     <input type="date" name="fechaFin" class="form-control" style="width: 100%;"
-                                         th:attr="max=${#temporals.format(maxFechaHoy, 'yyyy-MM-dd')}">
-                                </div>
+                            <label class="form-label fw-bold text-muted small text-uppercase">Resumen de filtros aplicados</label>
+                            <div class="p-3 rounded border bg-light">
+                                <div class="small text-muted mb-1">Periodo</div>
+                                <div id="reportResumenPeriodo" class="fw-semibold mb-2">-</div>
+                                <div class="small text-muted mb-1">Agrupacion</div>
+                                <div id="reportResumenAgrupacion" class="fw-semibold mb-2">-</div>
+                                <div class="small text-muted mb-1">Tipos</div>
+                                <div id="reportResumenTipos" class="fw-semibold mb-2">-</div>
+                                <div class="small text-muted mb-1">Modalidades</div>
+                                <div id="reportResumenModalidades" class="fw-semibold">-</div>
                             </div>
                         </div>
 
                          <div class="d-grid mt-4">
-                            <button type="submit" class="btn btn-primary btn-lg" style="width: 100%; padding: 0.5rem 1rem;">
+                            <button type="submit" class="btn btn-primary btn-lg btn-reporte-unificado" style="width: 100%; padding: 0.5rem 1rem;">
                                 <i class="fas fa-download me-2"></i>Descargar Reporte
                             </button>
                         </div>
@@ -517,6 +891,7 @@
             loadOfertaCharts();
             loadInscripcionCharts();
             loadEconomicoCharts();
+            loadTemporalInscripciones();
             
             // Modal Logic
             const modal = document.getElementById('statsReportModal');
@@ -525,6 +900,7 @@
             
             if(openBtn) {
                 openBtn.onclick = () => {
+                    hydrateReportFiltersFromApplied();
                     modal.style.display = 'block';
                     modal.classList.add('show');
                 };
@@ -539,6 +915,39 @@
             };
 
             document.getElementById('btnRefreshCharts').onclick = () => window.location.reload();
+            const btnAplicar = document.getElementById('btnAplicarTemporal');
+            if (btnAplicar) btnAplicar.onclick = () => loadTemporalInscripciones(true);
+            document.querySelectorAll('.time-range-pill').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const days = Number(btn.dataset.days || 30);
+                    const end = new Date();
+                    const start = new Date();
+                    start.setDate(end.getDate() - days);
+                    const toIso = d => d.toISOString().slice(0, 10);
+                    const iniInput = document.getElementById('fltFechaInicio');
+                    const finInput = document.getElementById('fltFechaFin');
+                    if (iniInput) iniInput.value = toIso(start);
+                    if (finInput) finInput.value = toIso(end);
+                    syncTimeRangePills(btn);
+                });
+            });
+            const iniInput = document.getElementById('fltFechaInicio');
+            const finInput = document.getElementById('fltFechaFin');
+            if (iniInput) iniInput.addEventListener('change', () => syncTimeRangePills());
+            if (finInput) finInput.addEventListener('change', () => syncTimeRangePills());
+            syncTimeRangePills();
+
+            const reportForm = document.getElementById('statsReportForm');
+            if (reportForm) {
+                reportForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    hydrateReportFiltersFromApplied();
+                    const rPeriodo = document.getElementById('reportResumenPeriodo')?.innerText || '-';
+                    const rTipos = document.getElementById('reportResumenTipos')?.innerText || '-';
+                    const rModalidades = document.getElementById('reportResumenModalidades')?.innerText || '-';
+                    openReportConfirm(rPeriodo, rTipos, rModalidades, () => reportForm.submit());
+                });
+            }
         });
 
         Chart.register(ChartDataLabels);
@@ -575,6 +984,7 @@
         }
         
         let charts = {};
+        let lastAppliedTemporalFilters = null;
 
         function destroyChart(id) {
             if (charts[id]) {
@@ -695,6 +1105,8 @@ function loadInscripcionCharts() {
                     values = labels.map(() => 0);
                 }
 
+                const labelsFormateados = formatTemporalLabels(labels, 'mes');
+
                 destroyChart('chartInscripcionesEvol');
                 
                 const ctx = document.getElementById('chartInscripcionesEvol');
@@ -706,7 +1118,7 @@ function loadInscripcionCharts() {
                 charts['chartInscripcionesEvol'] = new Chart(ctx, {
                     type: 'line',
                     data: {
-                        labels: labels,
+                        labels: labelsFormateados,
                         datasets: [{
                             label: 'Inscripciones Mensuales',
                             data: values,
@@ -849,7 +1261,307 @@ function loadInscripcionCharts() {
             })
             .catch(e => console.error('Error economía:', e));
         }
+    
+        function getSelectedModalidades() {
+            const checked = Array.from(document.querySelectorAll('.fltModalidadCheck:checked'));
+            return checked.map(i => i.value);
+        }
+
+        function getSelectedTipos() {
+            const checked = Array.from(document.querySelectorAll('.fltTipoCheck:checked'));
+            return checked.map(i => i.value);
+        }
+
+        function loadTemporalInscripciones(showToast = false) {
+            const fechaInicio = document.getElementById('fltFechaInicio')?.value || '';
+            const fechaFin = document.getElementById('fltFechaFin')?.value || '';
+            const agrupacion = document.getElementById('fltAgrupacion')?.value || 'dia';
+            const tipos = getSelectedTipos();
+            const modalidades = getSelectedModalidades();
+
+            const qs = new URLSearchParams();
+            if (fechaInicio) qs.append('fechaInicio', fechaInicio);
+            if (fechaFin) qs.append('fechaFin', fechaFin);
+            if (agrupacion) qs.append('agrupacion', agrupacion);
+            tipos.forEach(t => qs.append('tiposOferta', t));
+            modalidades.forEach(m => qs.append('modalidades', m));
+
+            fetch('/admin/estadisticas/api/inscripciones-temporal?' + qs.toString())
+                .then(r => r.json())
+                .then(data => {
+                    const resumen = data.resumen || {};
+                    document.getElementById('sumTotalInscripciones').innerText = formatEntero(resumen.totalInscripciones || 0);
+                    const picoFechaFormateada = resumen.picoFecha
+                        ? (formatTemporalLabels([resumen.picoFecha], 'dia')[0] || resumen.picoFecha)
+                        : null;
+                    document.getElementById('sumPico').innerText = picoFechaFormateada ? `${picoFechaFormateada} (${formatEntero(resumen.picoCantidad || 0)})` : '-';
+                    const pct = Number(resumen.variacionPeriodoPct || 0);
+                    document.getElementById('sumComparativa').innerText = `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
+                    document.getElementById('sumUltima').innerText = resumen.ultimaInscripcion || 'sin registros';
+
+                    renderTemporalLine(data.lineasModalidad || {});
+                    renderTemporalStacked(data.barrasTipoModalidad || {});
+                    lastAppliedTemporalFilters = {
+                        fechaInicio,
+                        fechaFin,
+                        agrupacion,
+                        tipos: [...tipos],
+                        modalidades: [...modalidades]
+                    };
+                    if (showToast) {
+                        showFilterToast(resumen.totalInscripciones || 0, resumen.periodo || '');
+                    }
+                })
+                .catch(err => console.error('Error temporal inscripciones:', err));
+        }
+
+        function showFilterToast(total, periodo) {
+            const toast = document.getElementById('filterToast');
+            const msg = document.getElementById('filterToastMsg');
+            if (!toast || !msg) return;
+            msg.innerText = `Resultados actualizados: ${formatEntero(total)} inscripciones (${periodo || 'periodo seleccionado'})`;
+            toast.classList.add('show');
+            window.clearTimeout(window.__filterToastTimer);
+            window.__filterToastTimer = window.setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2600);
+        }
+
+        function openReportConfirm(periodo, tipos, modalidades, onConfirm) {
+            if (typeof ModalConfirmacion === 'undefined' || typeof ModalConfirmacion.show !== 'function') {
+                if (typeof onConfirm === 'function') onConfirm();
+                return;
+            }
+            const detalle = [
+                `Periodo: ${periodo || '-'}`,
+                `Tipos: ${tipos || '-'}`,
+                `Modalidades: ${modalidades || '-'}`
+            ].join('\n');
+            ModalConfirmacion.show('Confirmar descarga de reporte', detalle, onConfirm, {
+                type: 'confirm',
+                confirmText: 'Descargar',
+                cancelText: 'Cancelar',
+                showCancel: true
+            });
+        }
+
+        function hydrateReportFiltersFromApplied() {
+            const base = lastAppliedTemporalFilters || {
+                fechaInicio: document.getElementById('fltFechaInicio')?.value || '',
+                fechaFin: document.getElementById('fltFechaFin')?.value || '',
+                agrupacion: document.getElementById('fltAgrupacion')?.value || 'dia',
+                tipos: getSelectedTipos(),
+                modalidades: getSelectedModalidades()
+            };
+
+            const reportFechaInicio = document.getElementById('reportFechaInicio');
+            const reportFechaFin = document.getElementById('reportFechaFin');
+            const reportAgrupacion = document.getElementById('reportAgrupacion');
+            if (reportFechaInicio) reportFechaInicio.value = base.fechaInicio || '';
+            if (reportFechaFin) reportFechaFin.value = base.fechaFin || '';
+            if (reportAgrupacion) reportAgrupacion.value = base.agrupacion || 'dia';
+
+            const tiposContainer = document.getElementById('reportTiposContainer');
+            if (tiposContainer) {
+                tiposContainer.innerHTML = '';
+                (base.tipos || []).forEach(t => {
+                    const i = document.createElement('input');
+                    i.type = 'hidden';
+                    i.name = 'tipos';
+                    i.value = t;
+                    tiposContainer.appendChild(i);
+                });
+            }
+
+            const modalidadesContainer = document.getElementById('reportModalidadesContainer');
+            if (modalidadesContainer) {
+                modalidadesContainer.innerHTML = '';
+                (base.modalidades || []).forEach(m => {
+                    const i = document.createElement('input');
+                    i.type = 'hidden';
+                    i.name = 'modalidades';
+                    i.value = m;
+                    modalidadesContainer.appendChild(i);
+                });
+            }
+
+            const periodo = (base.fechaInicio && base.fechaFin)
+                ? `${formatTemporalLabels([base.fechaInicio], 'dia')[0]} al ${formatTemporalLabels([base.fechaFin], 'dia')[0]}`
+                : (base.fechaInicio || base.fechaFin || 'Sin periodo');
+            const agrupacion = (base.agrupacion || 'dia').toUpperCase();
+            const tipos = (base.tipos && base.tipos.length) ? base.tipos.join(', ') : 'Todos';
+            const modalidades = (base.modalidades && base.modalidades.length) ? base.modalidades.join(', ') : 'Todas';
+
+            const repPeriodo = document.getElementById('reportResumenPeriodo');
+            const repAgrupacion = document.getElementById('reportResumenAgrupacion');
+            const repTipos = document.getElementById('reportResumenTipos');
+            const repModalidades = document.getElementById('reportResumenModalidades');
+            if (repPeriodo) repPeriodo.innerText = periodo;
+            if (repAgrupacion) repAgrupacion.innerText = agrupacion;
+            if (repTipos) repTipos.innerText = tipos;
+            if (repModalidades) repModalidades.innerText = modalidades;
+        }
+
+        function syncTimeRangePills(forceActiveBtn = null) {
+            const pills = Array.from(document.querySelectorAll('.time-range-pill'));
+            pills.forEach(p => p.classList.remove('active'));
+            if (forceActiveBtn) {
+                forceActiveBtn.classList.add('active');
+                return;
+            }
+
+            const ini = document.getElementById('fltFechaInicio')?.value;
+            const fin = document.getElementById('fltFechaFin')?.value;
+            if (!ini || !fin) return;
+
+            const dIni = new Date(ini + 'T00:00:00');
+            const dFin = new Date(fin + 'T00:00:00');
+            if (Number.isNaN(dIni.getTime()) || Number.isNaN(dFin.getTime())) return;
+            const diffDays = Math.round((dFin - dIni) / 86400000);
+
+            const match = pills.find(p => Number(p.dataset.days || 0) === diffDays);
+            if (match) match.classList.add('active');
+        }
+
+        function formatDateDMY(dateObj) {
+            const dd = `${dateObj.getDate()}`.padStart(2, '0');
+            const mm = `${dateObj.getMonth() + 1}`.padStart(2, '0');
+            const yyyy = dateObj.getFullYear();
+            return `${dd}/${mm}/${yyyy}`;
+        }
+
+        function formatTemporalLabels(labels, agrupacion) {
+            return (labels || []).map(raw => {
+                if (!raw) return raw;
+
+                // dia: yyyy-MM-dd -> dd/MM/yyyy
+                if (agrupacion === 'dia' && /^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+                    const d = new Date(`${raw}T00:00:00`);
+                    if (!Number.isNaN(d.getTime())) return formatDateDMY(d);
+                }
+
+                // mes: yyyy-MM -> 01/MM/yyyy (inicio de mes)
+                if (agrupacion === 'mes' && /^\d{4}-\d{2}$/.test(raw)) {
+                    const d = new Date(`${raw}-01T00:00:00`);
+                    if (!Number.isNaN(d.getTime())) return formatDateDMY(d);
+                }
+
+                // semana: yyyy-Www -> fecha inicio de semana (lunes)
+                if (agrupacion === 'semana' && /^\d{4}-W\d{2}$/.test(raw)) {
+                    const [yearStr, weekStr] = raw.split('-W');
+                    const year = Number(yearStr);
+                    const week = Number(weekStr);
+                    if (Number.isFinite(year) && Number.isFinite(week)) {
+                        const jan4 = new Date(year, 0, 4);
+                        const jan4Day = jan4.getDay() || 7; // 1=lunes ... 7=domingo
+                        const mondayWeek1 = new Date(jan4);
+                        mondayWeek1.setDate(jan4.getDate() - (jan4Day - 1));
+                        const monday = new Date(mondayWeek1);
+                        monday.setDate(mondayWeek1.getDate() + (week - 1) * 7);
+                        return formatDateDMY(monday);
+                    }
+                }
+
+                return raw;
+            });
+        }
+
+        function renderTemporalLine(payload) {
+            const agrupacion = document.getElementById('fltAgrupacion')?.value || 'dia';
+            const labels = formatTemporalLabels(payload.labels || [], agrupacion);
+            const virtual = payload.virtual || [];
+            const presencial = payload.presencial || [];
+            const hibrida = payload.hibrida || [];
+
+            destroyChart('chartTemporalModalidad');
+            charts['chartTemporalModalidad'] = new Chart(document.getElementById('chartTemporalModalidad'), {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [
+                        { label: 'Virtual', data: virtual, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.12)', tension: 0.2, fill: true, borderWidth: 3, pointRadius: 4, pointHoverRadius: 6 },
+                        { label: 'Presencial', data: presencial, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.12)', tension: 0.2, fill: true, borderWidth: 3, pointRadius: 4, pointHoverRadius: 6 },
+                        { label: 'Hibrida', data: hibrida, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.12)', tension: 0.2, fill: true, borderWidth: 3, pointRadius: 4, pointHoverRadius: 6 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true, position: 'top' },
+                        datalabels: {
+                            color: '#111827',
+                            backgroundColor: 'rgba(255,255,255,0.98)',
+                            borderColor: 'rgba(148,163,184,0.35)',
+                            borderWidth: 1,
+                            borderRadius: 8,
+                            padding: { top: 3, right: 7, bottom: 3, left: 7 },
+                            font: { weight: '800', size: 12 },
+                            align: 'top',
+                            anchor: 'end',
+                            formatter: (v) => v > 0 ? formatEntero(v) : ''
+                        }
+                    },
+                    scales: {
+                        x: { ticks: { maxRotation: 0, autoSkip: true } },
+                        y: {
+                            beginAtZero: true,
+                            ticks: { precision: 0, callback: (v) => formatEntero(v) },
+                            grid: { color: 'rgba(148,163,184,0.25)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderTemporalStacked(payload) {
+            const labels = payload.labels || [];
+            const virtual = payload.virtual || [];
+            const presencial = payload.presencial || [];
+            const hibrida = payload.hibrida || [];
+
+            destroyChart('chartTemporalTipoModalidad');
+            charts['chartTemporalTipoModalidad'] = new Chart(document.getElementById('chartTemporalTipoModalidad'), {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        { label: 'Virtual', data: virtual, backgroundColor: '#3b82f6' },
+                        { label: 'Presencial', data: presencial, backgroundColor: '#10b981' },
+                        { label: 'Hibrida', data: hibrida, backgroundColor: '#f59e0b' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true, position: 'top' },
+                        datalabels: {
+                            color: '#ffffff',
+                            backgroundColor: 'rgba(15,23,42,0.85)',
+                            borderRadius: 7,
+                            padding: { top: 3, right: 7, bottom: 3, left: 7 },
+                            font: { weight: '900', size: 12 },
+                            formatter: (v) => v > 0 ? formatEntero(v) : '',
+                            anchor: 'center',
+                            align: 'center',
+                            clamp: true
+                        }
+                    },
+                    scales: {
+                        x: { stacked: true, ticks: { autoSkip: false } },
+                        y: {
+                            stacked: true,
+                            beginAtZero: true,
+                            ticks: { precision: 0, callback: (v) => formatEntero(v) },
+                            grid: { color: 'rgba(148,163,184,0.25)' }
+                        }
+                    }
+                }
+            });
+        }
     </script>
 </div>
 </body>
 </html>
+

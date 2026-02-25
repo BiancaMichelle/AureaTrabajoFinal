@@ -84,6 +84,45 @@
             color: #dc3545 !important;
         }
 
+        .estado-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 130px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            line-height: 1;
+            border: 1px solid transparent;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+
+        .estado-abierta {
+            background: #dcfce7;
+            border-color: #86efac;
+            color: #166534;
+        }
+
+        .estado-curso {
+            background: #fef9c3;
+            border-color: #fde047;
+            color: #854d0e;
+        }
+
+        .estado-finalizado {
+            background: #e5e7eb;
+            border-color: #d1d5db;
+            color: #374151;
+        }
+
+        .estado-cerrada {
+            background: #fee2e2;
+            border-color: #fca5a5;
+            color: #991b1b;
+        }
+
         /* =========================================
    1. ESTILOS DEL SWITCH (MODO MANUAL/AUTO)
    ========================================= */
@@ -621,9 +660,9 @@
         <header class="main-header">
             <h1><i class="fas fa-graduation-cap"></i> Gestión de Ofertas Académicas</h1>
             <div class="header-actions">
-                <button id="btn-show-report-modal" class="btn-secondary"
-                    style="background-color: #28a745; color: white; margin-right: 10px;">
-                    <i class="fas fa-file-alt"></i> Generar Informes
+                <button id="btn-show-report-modal" class="btn-secondary btn-reporte-unificado"
+                    style="margin-right: 10px;">
+                    <i class="fas fa-file-alt"></i> Generar Reportes
                 </button>
                 <button id="btn-show-form" class="btn-primary">
                     <i class="fas fa-plus-circle"></i> Nueva Oferta
@@ -1235,6 +1274,12 @@
                                 th:text="${#lists.size(ofertas ?: {})}">0</strong> ofertas</span>
                     </div>
                 </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; margin: 0 0 12px 0;">
+                    <span class="estado-badge estado-abierta">INSCRIPCIONES ABIERTAS</span>
+                    <span class="estado-badge estado-curso">EN CURSO</span>
+                    <span class="estado-badge estado-finalizado">FINALIZADO</span>
+                    <span class="estado-badge estado-cerrada">INSCRIPCIONES CERRADAS</span>
+                </div>
 
                 <div class="table-container">
                     <table id="ofertas-table" class="ofertas-table">
@@ -1264,7 +1309,14 @@
                                 <td th:text="${#temporals.format(oferta.fechaInicio, 'dd/MM/yyyy')}">01/01/2024</td>
                                 <td th:text="${#temporals.format(oferta.fechaFin, 'dd/MM/yyyy')}">31/12/2024</td>
                                 <td>
-                                    <span class="estado-badge" th:text="${oferta.estado}">ACTIVA</span>
+                                    <span class="estado-badge"
+                                          th:text="${oferta.estado}"
+                                          th:classappend="${
+                                            oferta.estado != null and oferta.estado.name() == 'ACTIVA' ? ' estado-abierta' :
+                                            (oferta.estado != null and oferta.estado.name() == 'ENCURSO' ? ' estado-curso' :
+                                            (oferta.estado != null and oferta.estado.name() == 'FINALIZADO' ? ' estado-finalizado' :
+                                            ' estado-cerrada'))
+                                          }">ACTIVA</span>
                                 </td>
                                 <td class="acciones-cell">
                                     <button class="btn-accion btn-ver" title="Ver información"
@@ -1594,7 +1646,7 @@
                             </div>
                             <div class="info-item">
                                 <label>Estado:</label>
-                                <span id="detalle-estado" class="badge">-</span>
+                                <span id="detalle-estado" class="estado-badge">-</span>
                             </div>
                             <div class="info-item">
                                 <label>Categorías:</label>
@@ -2449,12 +2501,13 @@
             // Establecer el enlace en el campo
             document.getElementById('enlace').value = window.location.origin + videoUrl;
             
-            mostrarNotificacion(`Videoconferencia programada para ${fecha} ${hora}. Moderador: ${disertante}`, 'success');
+            const fechaMostrada = formatearFecha(fecha) || fecha;
+            mostrarNotificacion(`Videoconferencia programada para ${fechaMostrada} ${hora}. Moderador: ${disertante}`, 'success');
             
             console.log('?? Videoconferencia generada:');
             console.log('   - Room: ' + safeRoomName);
             console.log('   - Moderador: ' + disertante);
-            console.log('   - Fecha: ' + fecha);
+            console.log('   - Fecha: ' + (formatearFecha(fecha) || fecha));
             console.log('   - Hora: ' + hora);
             console.log('   - URL: ' + videoUrl);
         };
@@ -2522,7 +2575,13 @@
                 fechas.push(`${yyyy}-${mm}-${dd}`);
             }
 
-            preview.textContent = `Selecciona ${numero} fechas (entre ${fechaInicio} y ${fechaFin}).`;
+            const formatearFechaCorta = (isoDate) => {
+                if (!isoDate) return '-';
+                const parts = isoDate.split('-');
+                if (parts.length !== 3) return isoDate;
+                return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            };
+            preview.textContent = `Selecciona ${numero} fechas (entre ${formatearFechaCorta(fechaInicio)} y ${formatearFechaCorta(fechaFin)}).`;
             fechasList.innerHTML = fechas.map((f, idx) => {
                 const valor = existentes[idx] || f;
                 return `
@@ -3789,6 +3848,14 @@
                 .toUpperCase();
         }
 
+        function getEstadoBadgeClass(estado) {
+            const value = normalizeText(estado);
+            if (value === 'ACTIVA') return 'estado-abierta';
+            if (value === 'ENCURSO') return 'estado-curso';
+            if (value === 'FINALIZADO') return 'estado-finalizado';
+            return 'estado-cerrada';
+        }
+
         function parseDateValue(value) {
             if (!value) return null;
             if (value instanceof Date) {
@@ -4070,6 +4137,8 @@
                     const idLiteral = rawId != null ? JSON.stringify(rawId) : 'null';
                     const dataId = rawId != null ? rawId : '';
                     const nombreLiteral = JSON.stringify(oferta.nombre || '');
+                    const estadoTexto = oferta.estado || 'ACTIVA';
+                    const estadoClase = getEstadoBadgeClass(estadoTexto);
 
                     fila.innerHTML = `
                     <td>${oferta.nombre || '-'}</td>
@@ -4083,7 +4152,7 @@
                     </td>
                     <td>${oferta.fechaInicio ? formatearFecha(oferta.fechaInicio) : '-'}</td>
                     <td>${oferta.fechaFin ? formatearFecha(oferta.fechaFin) : '-'}</td>
-                    <td><span class="estado-badge">${oferta.estado || 'ACTIVA'}</span></td>
+                    <td><span class="estado-badge ${estadoClase}">${estadoTexto}</span></td>
                     <td class="acciones-cell">
                         <button class="btn-accion btn-ver" title="Ver información" data-id="${dataId}" onclick="verDetalleOferta(${idLiteral})">
                             <i class="fas fa-eye"></i>
@@ -4224,7 +4293,7 @@
                 const estadoElement = document.getElementById('detalle-estado');
                 if (estadoElement) {
                     estadoElement.textContent = estado;
-                    estadoElement.className = `badge estado-${estado}`;
+                    estadoElement.className = `estado-badge ${getEstadoBadgeClass(estado)}`;
                     console.log('? Estado asignado:', estado);
                 } else {
                     console.error('? Elemento detalle-estado no encontrado');
@@ -4666,7 +4735,7 @@
                             const estadoElement = document.getElementById('detalle-estado');
                             if (estadoElement) {
                                 estadoElement.textContent = data.nuevoEstado;
-                                estadoElement.className = `badge estado-${data.nuevoEstado}`;
+                                estadoElement.className = `estado-badge ${getEstadoBadgeClass(data.nuevoEstado)}`;
                             }
 
                             // Mostrar notificación de éxito
@@ -5079,7 +5148,8 @@
 
                             // Lógica de advertencia solicitada
                             if (oferta.estado === 'ACTIVA' && fechaInicio < hoy) {
-                                mensajeConfirmacion = `?? ADVERTENCIA: Esta oferta está ACTIVA y su fecha de inicio (${oferta.fechaInicio}) ya ha pasado.\n\n¿Estás seguro que deseas modificar información de una oferta que ya está en curso?`;
+                                const fechaInicioFormateada = formatearFecha(oferta.fechaInicio) || oferta.fechaInicio;
+                                mensajeConfirmacion = `?? ADVERTENCIA: Esta oferta está ACTIVA y su fecha de inicio (${fechaInicioFormateada}) ya ha pasado.\n\n¿Estás seguro que deseas modificar información de una oferta que ya está en curso?`;
                             } else if (oferta.estado === 'DE_BAJA') {
                                 mensajeConfirmacion = `?? ADVERTENCIA: Estás a punto de modificar una oferta que está DE BAJA.\n\n¿Estás seguro que deseas continuar?`;
                             }
@@ -5760,7 +5830,7 @@
                 <span class="close-report-modal"
                     style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
                 <h2 style="margin-top: 0; color: #333; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px;"><i
-                        class="fas fa-file-invoice"></i> Generar Informe</h2>
+                        class="fas fa-file-invoice"></i> Generar Reporte</h2>
 
                 <form id="report-form" action="/admin/reportes/ofertas/descargar" method="get"
                     style="margin-top: 20px;">
@@ -5847,8 +5917,7 @@
                         style="text-align: right; margin-top: 25px; border-top: 1px solid #f0f0f0; padding-top: 15px;">
                         <button type="button" class="close-report-btn"
                             style="padding: 8px 16px; margin-right: 10px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancelar</button>
-                        <button type="submit"
-                            style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        <button type="submit" class="btn-reporte-unificado">
                             <i class="fas fa-download"></i> Descargar
                         </button>
                     </div>

@@ -3,14 +3,17 @@ package com.example.demo.service;
 import com.example.demo.model.*;
 import com.example.demo.repository.*;
 import com.example.demo.enums.EstadoOferta;
+import com.example.demo.enums.Modalidad;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.WeekFields;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.text.Normalizer;
 
 import java.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
@@ -492,5 +495,224 @@ public class EstadisticasService {
             e.printStackTrace();
         }
         return stats;
+    }
+
+    public Map<String, Object> obtenerEstadisticasInscripcionesTemporales(
+            LocalDate fechaInicio,
+            LocalDate fechaFin,
+            List<String> tiposOferta,
+            List<String> modalidades,
+            String agrupacion) {
+
+        LocalDate hoy = LocalDate.now();
+        LocalDate inicio = fechaInicio != null ? fechaInicio : hoy.minusDays(30);
+        LocalDate fin = fechaFin != null ? fechaFin : hoy;
+        if (inicio.isAfter(fin)) {
+            LocalDate aux = inicio;
+            inicio = fin;
+            fin = aux;
+        }
+        final LocalDate inicioFiltro = inicio;
+        final LocalDate finFiltro = fin;
+
+        Set<String> tiposSet = tiposOferta == null ? Collections.emptySet() :
+                tiposOferta.stream().filter(Objects::nonNull).map(this::normalizarTexto).filter(s -> !s.isEmpty())
+                        .collect(Collectors.toSet());
+        Set<String> modalidadesSet = modalidades == null ? Collections.emptySet() :
+                modalidades.stream().filter(Objects::nonNull).map(this::normalizarTexto).filter(s -> !s.isEmpty())
+                        .collect(Collectors.toSet());
+
+        List<Inscripciones> filtradas = inscripcionRepository.findAll().stream()
+                .filter(i -> i.getFechaInscripcion() != null)
+                .filter(i -> !i.getFechaInscripcion().isBefore(inicioFiltro) && !i.getFechaInscripcion().isAfter(finFiltro))
+                .filter(i -> i.getOferta() != null)
+                .filter(i -> tiposSet.isEmpty() || tiposSet.contains(normalizarTexto(i.getOferta().getTipoOferta())))
+                .filter(i -> {
+                    Modalidad mod = i.getOferta().getModalidad();
+                    String modName = mod != null ? normalizarTexto(mod.name()) : "";
+                    return modalidadesSet.isEmpty() || modalidadesSet.contains(modName);
+                })
+                .collect(Collectors.toList());
+
+        String nivel = (agrupacion == null || agrupacion.isBlank()) ? "dia" : agrupacion.toLowerCase(Locale.ROOT);
+
+        List<String> labels = new ArrayList<>();
+        List<Long> serieVirtual = new ArrayList<>();
+        List<Long> seriePresencial = new ArrayList<>();
+        List<Long> serieHibrida = new ArrayList<>();
+
+        Map<String, Long> virtualMap = new LinkedHashMap<>();
+        Map<String, Long> presencialMap = new LinkedHashMap<>();
+        Map<String, Long> hibridaMap = new LinkedHashMap<>();
+
+        for (Inscripciones ins : filtradas) {
+            LocalDate f = ins.getFechaInscripcion();
+            String key = agruparFecha(f, nivel);
+            String modalidad = ins.getOferta().getModalidad() != null ? ins.getOferta().getModalidad().name() : "SIN_MODALIDAD";
+
+            if ("VIRTUAL".equalsIgnoreCase(modalidad)) {
+                virtualMap.merge(key, 1L, Long::sum);
+            } else if ("PRESENCIAL".equalsIgnoreCase(modalidad)) {
+                presencialMap.merge(key, 1L, Long::sum);
+            } else if ("HIBRIDA".equalsIgnoreCase(modalidad)) {
+                hibridaMap.merge(key, 1L, Long::sum);
+            }
+        }
+
+        Set<String> keys = new TreeSet<>();
+        keys.addAll(virtualMap.keySet());
+        keys.addAll(presencialMap.keySet());
+        keys.addAll(hibridaMap.keySet());
+
+        for (String k : keys) {
+            labels.add(k);
+            serieVirtual.add(virtualMap.getOrDefault(k, 0L));
+            seriePresencial.add(presencialMap.getOrDefault(k, 0L));
+            serieHibrida.add(hibridaMap.getOrDefault(k, 0L));
+        }
+
+        Map<String, Map<String, Long>> tipoModalidad = new HashMap<>();
+        for (Inscripciones ins : filtradas) {
+            String tipo = normalizarTexto(ins.getOferta().getTipoOferta());
+            String modalidad = ins.getOferta().getModalidad() != null ? ins.getOferta().getModalidad().name() : "SIN_MODALIDAD";
+            tipoModalidad.computeIfAbsent(tipo, k -> new HashMap<>()).merge(modalidad, 1L, Long::sum);
+        }
+
+        List<String> tiposBase = tiposSet.isEmpty()
+                ? Arrays.asList("curso", "charla", "seminario", "formacion")
+                : new ArrayList<>(tiposSet);
+        tiposBase.sort(Comparator.comparingInt(this::ordenTipo));
+
+        List<String> tiposLabels = tiposBase.stream()
+                .map(this::tipoDisplay)
+                .collect(Collectors.toList());
+        List<Long> tipoVirtual = new ArrayList<>();
+        List<Long> tipoPresencial = new ArrayList<>();
+        List<Long> tipoHibrida = new ArrayList<>();
+        for (String tipo : tiposBase) {
+            Map<String, Long> mm = tipoModalidad.getOrDefault(tipo, Collections.emptyMap());
+            tipoVirtual.add(mm.getOrDefault("VIRTUAL", 0L));
+            tipoPresencial.add(mm.getOrDefault("PRESENCIAL", 0L));
+            tipoHibrida.add(mm.getOrDefault("HIBRIDA", 0L));
+        }
+
+        Map<LocalDate, Long> porDia = filtradas.stream()
+                .collect(Collectors.groupingBy(Inscripciones::getFechaInscripcion, Collectors.counting()));
+        LocalDate picoDia = null;
+        long picoValor = 0;
+        for (Map.Entry<LocalDate, Long> e : porDia.entrySet()) {
+            if (e.getValue() > picoValor) {
+                picoValor = e.getValue();
+                picoDia = e.getKey();
+            }
+        }
+
+        long totalActual = filtradas.size();
+        long totalAnterior = contarPeriodoAnterior(inicioFiltro, finFiltro, tiposSet, modalidadesSet);
+        double variacionPct = totalAnterior > 0 ? ((double) (totalActual - totalAnterior) / totalAnterior) * 100.0 : 0.0;
+
+        LocalDate ultima = filtradas.stream()
+                .map(Inscripciones::getFechaInscripcion)
+                .max(LocalDate::compareTo)
+                .orElse(null);
+        String ultimaInscripcion = calcularTiempoRelativo(ultima, hoy);
+
+        Map<String, Object> resumen = new HashMap<>();
+        resumen.put("totalInscripciones", totalActual);
+        resumen.put("periodo", inicioFiltro + " a " + finFiltro);
+        resumen.put("picoFecha", picoDia != null ? picoDia.toString() : null);
+        resumen.put("picoCantidad", picoValor);
+        resumen.put("totalPeriodoAnterior", totalAnterior);
+        resumen.put("variacionPeriodoPct", variacionPct);
+        resumen.put("ultimaInscripcion", ultimaInscripcion);
+
+        Map<String, Object> lineas = new HashMap<>();
+        lineas.put("labels", labels);
+        lineas.put("virtual", serieVirtual);
+        lineas.put("presencial", seriePresencial);
+        lineas.put("hibrida", serieHibrida);
+
+        Map<String, Object> barras = new HashMap<>();
+        barras.put("labels", tiposLabels);
+        barras.put("virtual", tipoVirtual);
+        barras.put("presencial", tipoPresencial);
+        barras.put("hibrida", tipoHibrida);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("resumen", resumen);
+        response.put("lineasModalidad", lineas);
+        response.put("barrasTipoModalidad", barras);
+        response.put("agrupacion", nivel);
+        return response;
+    }
+
+    private String agruparFecha(LocalDate fecha, String nivel) {
+        if ("mes".equals(nivel)) {
+            return fecha.format(DateTimeFormatter.ofPattern("yyyy-MM"));
+        }
+        if ("semana".equals(nivel)) {
+            WeekFields wf = WeekFields.ISO;
+            int week = fecha.get(wf.weekOfWeekBasedYear());
+            int year = fecha.get(wf.weekBasedYear());
+            return String.format("%d-W%02d", year, week);
+        }
+        return fecha.toString();
+    }
+
+    private long contarPeriodoAnterior(LocalDate inicio, LocalDate fin, Set<String> tipos, Set<String> modalidades) {
+        long dias = java.time.temporal.ChronoUnit.DAYS.between(inicio, fin) + 1;
+        LocalDate finAnterior = inicio.minusDays(1);
+        LocalDate inicioAnterior = finAnterior.minusDays(Math.max(dias - 1, 0));
+
+        return inscripcionRepository.findAll().stream()
+                .filter(i -> i.getFechaInscripcion() != null)
+                .filter(i -> !i.getFechaInscripcion().isBefore(inicioAnterior) && !i.getFechaInscripcion().isAfter(finAnterior))
+                .filter(i -> i.getOferta() != null)
+                .filter(i -> tipos.isEmpty() || tipos.contains(normalizarTexto(i.getOferta().getTipoOferta())))
+                .filter(i -> {
+                    String modName = i.getOferta().getModalidad() != null ? normalizarTexto(i.getOferta().getModalidad().name()) : "";
+                    return modalidades.isEmpty() || modalidades.contains(modName);
+                })
+                .count();
+    }
+
+    private String calcularTiempoRelativo(LocalDate fecha, LocalDate hoy) {
+        if (fecha == null) return "sin registros";
+        long dias = java.time.temporal.ChronoUnit.DAYS.between(fecha, hoy);
+        if (dias <= 0) return "hoy";
+        if (dias == 1) return "hace 1 dia";
+        if (dias < 7) return "hace " + dias + " dias";
+        long semanas = dias / 7;
+        if (semanas == 1) return "hace 1 semana";
+        if (semanas < 5) return "hace " + semanas + " semanas";
+        long meses = dias / 30;
+        if (meses <= 1) return "hace 1 mes";
+        return "hace " + meses + " meses";
+    }
+
+    private String normalizarTexto(String value) {
+        if (value == null) return "";
+        String nfd = Normalizer.normalize(value, Normalizer.Form.NFD);
+        return nfd.replaceAll("\\p{M}", "").trim().toLowerCase(Locale.ROOT);
+    }
+
+    private int ordenTipo(String tipo) {
+        return switch (tipo) {
+            case "curso" -> 1;
+            case "charla" -> 2;
+            case "seminario" -> 3;
+            case "formacion" -> 4;
+            default -> 99;
+        };
+    }
+
+    private String tipoDisplay(String tipo) {
+        return switch (tipo) {
+            case "curso" -> "Curso";
+            case "charla" -> "Charla";
+            case "seminario" -> "Seminario";
+            case "formacion" -> "Formacion";
+            default -> tipo == null ? "-" : tipo;
+        };
     }
 }

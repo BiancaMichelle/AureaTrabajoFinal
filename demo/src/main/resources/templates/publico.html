@@ -345,7 +345,7 @@
                                                 <span th:if="${#authorization.expression('isAuthenticated()')}" th:remove="tag">
                                                     <th:block th:if="${(idsInscritos == null or !#sets.contains(idsInscritos, oferta.idOferta)) and (idsDocente == null or !#sets.contains(idsDocente, oferta.idOferta))}">
                                                          <!-- Inscripciones ABIERTAS -->
-                                                         <form th:if="${oferta.inscripcionesAbiertas}" th:action="@{/alumno/inscribirse/{id}(id=${oferta.idOferta})}" method="post" class="d-inline" target="_blank" 
+                                                         <form th:if="${oferta.inscripcionesAbiertas and oferta.tieneCuposDisponibles()}" th:action="@{/alumno/inscribirse/{id}(id=${oferta.idOferta})}" method="post" class="d-inline" target="_blank" 
                                                                th:data-nombre="${oferta.nombre}" 
                                                                th:data-gratuito="${oferta.costoInscripcion == null or oferta.costoInscripcion == 0}"
                                                                th:data-tipo="${oferta.tipoOferta}"
@@ -353,6 +353,14 @@
                                                               <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                                                               <button type="submit" class="btn btn-sm btn-primary rounded-pill px-3" title="Inscripción Rápida">Inscribirse <i class="fas fa-user-plus ms-1"></i></button>
                                                          </form>
+                                                         <button th:if="${oferta.inscripcionesAbiertas and !oferta.tieneCuposDisponibles()}"
+                                                                 class="btn btn-sm btn-outline-secondary rounded-pill px-3"
+                                                                 title="Me interesa la proxima edicion"
+                                                                 th:attr="data-oferta-id=${oferta.idOferta},data-oferta-nombre=${oferta.nombre}"
+                                                                 onclick="mostrarModalInteresCupo(this.getAttribute('data-oferta-id'), this.getAttribute('data-oferta-nombre'))"
+                                                                 type="button">
+                                                              <i class="fas fa-heart me-1"></i>Me interesa
+                                                         </button>
                                                          <!-- Inscripciones PRÓXIMAMENTE -->
                                                          <button th:if="${!oferta.inscripcionesAbiertas and oferta.estadoInscripcion == 'Próximamente'}" 
                                                                  class="btn btn-sm btn-warning rounded-pill px-3" 
@@ -466,7 +474,7 @@
                                                 <span th:if="${#authorization.expression('isAuthenticated()')}" th:remove="tag">
                                                     <th:block th:if="${(idsInscritos == null or !#sets.contains(idsInscritos, oferta.idOferta)) and (idsDocente == null or !#sets.contains(idsDocente, oferta.idOferta))}">
                                                          <!-- Inscripciones ABIERTAS -->
-                                                         <form th:if="${oferta.inscripcionesAbiertas}" th:action="@{/alumno/inscribirse/{id}(id=${oferta.idOferta})}" method="post" class="d-inline" target="_blank" 
+                                                         <form th:if="${oferta.inscripcionesAbiertas and oferta.tieneCuposDisponibles()}" th:action="@{/alumno/inscribirse/{id}(id=${oferta.idOferta})}" method="post" class="d-inline" target="_blank" 
                                                                th:data-nombre="${oferta.nombre}" 
                                                                th:data-gratuito="${oferta.costoInscripcion == null or oferta.costoInscripcion == 0}"
                                                                th:data-tipo="${oferta.tipoOferta}"
@@ -474,6 +482,14 @@
                                                               <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                                                               <button type="submit" class="btn btn-sm btn-success rounded-pill px-3" title="Inscripción Rápida">Inscribirse <i class="fas fa-user-plus ms-1"></i></button>
                                                          </form>
+                                                         <button th:if="${oferta.inscripcionesAbiertas and !oferta.tieneCuposDisponibles()}"
+                                                                 class="btn btn-sm btn-outline-secondary rounded-pill px-3"
+                                                                 title="Me interesa la proxima edicion"
+                                                                 th:attr="data-oferta-id=${oferta.idOferta},data-oferta-nombre=${oferta.nombre}"
+                                                                 onclick="mostrarModalInteresCupo(this.getAttribute('data-oferta-id'), this.getAttribute('data-oferta-nombre'))"
+                                                                 type="button">
+                                                              <i class="fas fa-heart me-1"></i>Me interesa
+                                                         </button>
                                                          <!-- Inscripciones PRÓXIMAMENTE -->
                                                          <button th:if="${!oferta.inscripcionesAbiertas and oferta.estadoInscripcion == 'Próximamente'}" 
                                                                  class="btn btn-sm btn-warning rounded-pill px-3" 
@@ -587,7 +603,7 @@
                                                     <!-- Botones Accion -->
                                                     <th:block th:if="${(idsInscritos == null or !#sets.contains(idsInscritos, oferta.idOferta)) and (idsDocente == null or !#sets.contains(idsDocente, oferta.idOferta))}">
                                                          <!-- Inscripciones ABIERTAS -->
-                                                         <form th:if="${oferta.inscripcionesAbiertas}" th:action="@{/alumno/inscribirse/{id}(id=${oferta.idOferta})}" method="post" class="d-inline" target="_blank" 
+                                                         <form th:if="${oferta.inscripcionesAbiertas and oferta.tieneCuposDisponibles()}" th:action="@{/alumno/inscribirse/{id}(id=${oferta.idOferta})}" method="post" class="d-inline" target="_blank" 
                                                                th:data-nombre="${oferta.nombre}" 
                                                                th:data-gratuito="${oferta.costoInscripcion == null or oferta.costoInscripcion == 0}"
                                                                th:data-tipo="${oferta.tipoOferta}"
@@ -595,6 +611,14 @@
                                                               <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                                                               <button type="submit" class="btn btn-sm btn-danger rounded-pill px-3" title="Inscripción Rápida">Inscribirse <i class="fas fa-user-plus ms-1"></i></button>
                                                          </form>
+                                                         <button th:if="${oferta.inscripcionesAbiertas and !oferta.tieneCuposDisponibles()}"
+                                                                 class="btn btn-sm btn-outline-secondary rounded-pill px-3"
+                                                                 title="Me interesa la proxima edicion"
+                                                                 th:attr="data-oferta-id=${oferta.idOferta},data-oferta-nombre=${oferta.nombre}"
+                                                                 onclick="mostrarModalInteresCupo(this.getAttribute('data-oferta-id'), this.getAttribute('data-oferta-nombre'))"
+                                                                 type="button">
+                                                              <i class="fas fa-heart me-1"></i>Me interesa
+                                                         </button>
                                                          <!-- Inscripciones PRÓXIMAMENTE -->
                                                          <button th:if="${!oferta.inscripcionesAbiertas and oferta.estadoInscripcion == 'Próximamente'}" 
                                                                  class="btn btn-sm btn-warning rounded-pill px-3" 
@@ -707,7 +731,7 @@
                                                     <!-- Botones Accion -->
                                                     <th:block th:if="${(idsInscritos == null or !#sets.contains(idsInscritos, oferta.idOferta)) and (idsDocente == null or !#sets.contains(idsDocente, oferta.idOferta))}">
                                                          <!-- Inscripciones ABIERTAS -->
-                                                         <form th:if="${oferta.inscripcionesAbiertas}" th:action="@{/alumno/inscribirse/{id}(id=${oferta.idOferta})}" method="post" class="d-inline" target="_blank" 
+                                                         <form th:if="${oferta.inscripcionesAbiertas and oferta.tieneCuposDisponibles()}" th:action="@{/alumno/inscribirse/{id}(id=${oferta.idOferta})}" method="post" class="d-inline" target="_blank" 
                                                                th:data-nombre="${oferta.nombre}" 
                                                                th:data-gratuito="${oferta.costoInscripcion == null or oferta.costoInscripcion == 0}"
                                                                th:data-tipo="${oferta.tipoOferta}"
@@ -715,6 +739,14 @@
                                                               <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                                                               <button type="submit" class="btn btn-sm btn-info rounded-pill px-3" title="Inscripción Rápida">Inscribirse <i class="fas fa-user-plus ms-1"></i></button>
                                                          </form>
+                                                         <button th:if="${oferta.inscripcionesAbiertas and !oferta.tieneCuposDisponibles()}"
+                                                                 class="btn btn-sm btn-outline-secondary rounded-pill px-3"
+                                                                 title="Me interesa la proxima edicion"
+                                                                 th:attr="data-oferta-id=${oferta.idOferta},data-oferta-nombre=${oferta.nombre}"
+                                                                 onclick="mostrarModalInteresCupo(this.getAttribute('data-oferta-id'), this.getAttribute('data-oferta-nombre'))"
+                                                                 type="button">
+                                                              <i class="fas fa-heart me-1"></i>Me interesa
+                                                         </button>
                                                          <!-- Inscripciones PRÓXIMAMENTE -->
                                                          <button th:if="${!oferta.inscripcionesAbiertas and oferta.estadoInscripcion == 'Próximamente'}" 
                                                                  class="btn btn-sm btn-warning rounded-pill px-3" 
@@ -1193,6 +1225,94 @@
                 });
                 
                 // Limpiar el modal cuando se cierre
+                modalElement.addEventListener('hidden.bs.modal', function () {
+                    modalElement.remove();
+                });
+            }
+
+            function mostrarModalInteresCupo(ofertaId, ofertaNombre) {
+                const modalAnterior = document.getElementById('modalInteresCupo');
+                if (modalAnterior) {
+                    modalAnterior.remove();
+                }
+
+                const modalHtml = `
+                    <div class="modal fade" id="modalInteresCupo" tabindex="-1" aria-labelledby="modalInteresCupoLabel" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header bg-secondary text-white">
+                                    <h5 class="modal-title" id="modalInteresCupoLabel">
+                                        <i class="fas fa-heart"></i> Oferta con cupo agotado
+                                    </h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <p class="text-center mb-2"><strong>${ofertaNombre}</strong> no tiene cupos disponibles en este momento.</p>
+                                    <div class="alert alert-info mb-0" role="alert">
+                                        <i class="bi bi-info-circle"></i> Si lo deseas, registramos tu interes para la proxima edicion.
+                                    </div>
+                                    <div id="interesCupoMensaje" class="mt-3"></div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                    <button type="button" class="btn btn-primary" id="btnRegistrarInteresCupo" data-oferta-id="${ofertaId}">
+                                        <i class="fas fa-heart me-1"></i>Me interesa
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+                const modalElement = document.getElementById('modalInteresCupo');
+                const modal = new bootstrap.Modal(modalElement);
+                modal.show();
+
+                document.getElementById('btnRegistrarInteresCupo').addEventListener('click', function() {
+                    const btn = this;
+                    const ofertaIdFromBtn = btn.getAttribute('data-oferta-id');
+                    btn.disabled = true;
+                    btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Enviando...';
+
+                    const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+                    const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+                    const headers = { 'Content-Type': 'application/json' };
+                    if (csrfToken && csrfHeader) {
+                        headers[csrfHeader] = csrfToken;
+                    }
+
+                    fetch(`/alumno/notificar-inscripcion/${ofertaIdFromBtn}`, {
+                        method: 'POST',
+                        headers: headers
+                    })
+                    .then(response => {
+                        if (response.status === 401 || response.status === 403) {
+                            window.location.href = '/login?redirect=/publico';
+                            return null;
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (!data) return;
+                        if (data.success) {
+                            mostrarToast('Interes registrado para la proxima edicion', 'success');
+                            setTimeout(() => modal.hide(), 1200);
+                        } else {
+                            const mensajeDiv = document.getElementById('interesCupoMensaje');
+                            mensajeDiv.innerHTML = `<div class="alert alert-warning">${data.message}</div>`;
+                            btn.disabled = false;
+                            btn.innerHTML = '<i class="fas fa-heart me-1"></i>Me interesa';
+                        }
+                    })
+                    .catch(() => {
+                        const mensajeDiv = document.getElementById('interesCupoMensaje');
+                        mensajeDiv.innerHTML = '<div class="alert alert-danger">No se pudo registrar el interes. Intenta nuevamente.</div>';
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fas fa-heart me-1"></i>Me interesa';
+                    });
+                });
+
                 modalElement.addEventListener('hidden.bs.modal', function () {
                     modalElement.remove();
                 });
