@@ -11,7 +11,8 @@ function toggleDropdown() {
 
 // Cierra el dropdown si se hace clic fuera de él
 window.onclick = function(event) {
-    if (!event.target.matches('.profile-pic')) {
+    const clickDentroPerfil = event.target.closest('.profile-dropdown');
+    if (!clickDentroPerfil) {
         var dropdowns = document.getElementsByClassName("dropdown-menu");
         for (var i = 0; i < dropdowns.length; i++) {
             var openDropdown = dropdowns[i];

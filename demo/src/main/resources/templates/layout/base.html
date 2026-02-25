@@ -99,9 +99,18 @@
                 
                 <li class="nav-menu-item" sec:authorize="isAuthenticated()">
                     <div class="profile-dropdown">
-                        <img th:src="${#authentication.principal.usuario.foto != null and !#authentication.principal.usuario.foto.isEmpty() ? #authentication.principal.usuario.foto : '/img/perfil-de-usuario.jpg'}" 
-                             src="/img/perfil-de-usuario.jpg" 
-                             alt="Foto de perfil" class="profile-pic" onclick="toggleDropdown()">
+                        <div class="profile-dropdown-trigger" onclick="toggleDropdown()">
+                            <img th:src="${#authentication.principal.usuario.foto != null and !#authentication.principal.usuario.foto.isEmpty() ? #authentication.principal.usuario.foto : '/img/perfil-de-usuario.jpg'}" 
+                                 src="/img/perfil-de-usuario.jpg" 
+                                 alt="Foto de perfil" class="profile-pic">
+                            <div class="profile-user-meta">
+                                <span class="profile-user-name"
+                                      th:text="${#authentication.principal.usuario != null ? ((#authentication.principal.usuario.nombre != null ? #authentication.principal.usuario.nombre : '') + ' ' + (#authentication.principal.usuario.apellido != null ? #authentication.principal.usuario.apellido : '')).trim() : 'Usuario'}">Usuario</span>
+                                <span class="profile-user-role" sec:authorize="hasAuthority('ADMIN')">Admin</span>
+                                <span class="profile-user-role" sec:authorize="!hasAuthority('ADMIN') and hasAuthority('DOCENTE')">Docente</span>
+                                <span class="profile-user-role" sec:authorize="!hasAuthority('ADMIN') and !hasAuthority('DOCENTE') and hasAuthority('ALUMNO')">Estudiante</span>
+                            </div>
+                        </div>
                         <div id="dropdownMenu" class="dropdown-menu">
                             <a th:href="@{/alumno/perfil}" sec:authorize="hasAuthority('ALUMNO') or hasAuthority('DOCENTE')">
                                 <i class="fas fa-user"></i> Mi Perfil
