@@ -404,6 +404,7 @@ public class AlumnoController {
             RedirectAttributes redirectAttributes) {
         try {
             String dni = principal.getName();
+            System.out.println("💳 Iniciando pago de cuota ID: " + cuotaId + " para usuario: " + dni);
 
             Usuario alumno = usuarioRepository.findByDni(dni)
                     .orElseThrow(() -> new RuntimeException("Alumno no encontrado"));
@@ -412,36 +413,57 @@ public class AlumnoController {
 
                 Cuota cuota = cuotaRepository.findById(cuotaIdSeguro)
                     .orElseThrow(() -> new RuntimeException("Cuota no encontrada"));
+            
+            System.out.println("📋 Cuota encontrada: Número " + cuota.getNumeroCuota() + 
+                             ", Estado: " + cuota.getEstado() + 
+                             ", Monto: $" + cuota.getMonto());
 
             if (cuota.getInscripcion() == null || cuota.getInscripcion().getAlumno() == null
                     || !cuota.getInscripcion().getAlumno().getId().equals(alumno.getId())) {
+                System.err.println("❌ Validación fallida: No tienes acceso a esta cuota");
                 redirectAttributes.addFlashAttribute("error", "No tienes acceso a esta cuota");
                 return "redirect:/alumno/mis-pagos";
             }
 
-            if (cuota.getInscripcion().getOferta().getEstado() != EstadoOferta.ACTIVA) {
-                redirectAttributes.addFlashAttribute("error", "La oferta académica asociada ya no está activa");
+            if (cuota.getInscripcion().getOferta() == null) {
+                System.err.println("❌ Validación fallida: La cuota no tiene oferta asociada");
+                redirectAttributes.addFlashAttribute("error", "Error: La cuota no tiene oferta asociada");
+                return "redirect:/alumno/mis-pagos";
+            }
+
+            EstadoOferta estadoOferta = cuota.getInscripcion().getOferta().getEstado();
+            if (estadoOferta != EstadoOferta.ACTIVA && estadoOferta != EstadoOferta.ENCURSO) {
+                System.err.println("❌ Validación fallida: La oferta no está activa ni en curso. Estado: " + estadoOferta);
+                redirectAttributes.addFlashAttribute("error", "La oferta académica asociada no está disponible para pagos");
                 return "redirect:/alumno/mis-pagos";
             }
 
             BigDecimal saldoPendiente = calcularSaldoPendiente(cuota);
+            System.out.println("💰 Saldo pendiente calculado: $" + saldoPendiente);
+            
             if (saldoPendiente.compareTo(BigDecimal.ZERO) <= 0) {
+                System.out.println("⚠️ Saldo pendiente es 0 o negativo");
                 redirectAttributes.addFlashAttribute("success", "Esta cuota ya está al día");
                 return "redirect:/alumno/mis-pagos";
             }
 
+            System.out.println("🔨 Construyendo request para MercadoPago...");
             ReferenceRequest request = construirReferenciaCuota(cuota, alumno, saldoPendiente);
 
+            System.out.println("📤 Llamando a createPreferenceForCuota...");
             ResponseDTO response = mercadoPagoService.createPreferenceForCuota(
                     request,
                     alumno,
                     cuota.getInscripcion().getOferta(),
                     cuota);
 
+            System.out.println("✅ Preferencia creada para cuota: " + response.preferenceId());
+            System.out.println("🔗 URL de redirección: " + response.redirectUrl());
             return "redirect:" + response.redirectUrl();
 
         } catch (Exception e) {
             System.err.println("❌ Error al iniciar pago de cuota: " + e.getMessage());
+            e.printStackTrace();
             redirectAttributes.addFlashAttribute("error", "No pudimos iniciar el pago. Intenta nuevamente.");
             return "redirect:/alumno/mis-pagos";
         }

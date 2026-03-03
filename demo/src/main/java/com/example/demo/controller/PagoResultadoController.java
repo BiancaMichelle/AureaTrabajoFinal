@@ -48,7 +48,7 @@ public class PagoResultadoController {
             mercadoPagoService.procesarNotificacionPago(payment_id);
         }
 
-        // REDIRECCIÓN INTELIGENTE AL AULA
+        // REDIRECCIÓN INTELIGENTE AL AULA O MIS-PAGOS
         try {
             java.util.Optional<Pago> pagoOpt = java.util.Optional.empty();
 
@@ -62,7 +62,14 @@ public class PagoResultadoController {
 
             if (pagoOpt.isPresent()) {
                 Pago pago = pagoOpt.get();
-                // Si es un curso/oferta, redirigir directo al aula
+                
+                // Si es pago de cuota mensual, redirigir a mis-pagos
+                if (Boolean.TRUE.equals(pago.getEsCuotaMensual())) {
+                    log.info("💳 Pago de cuota completado, redirigiendo a mis-pagos");
+                    return "redirect:/alumno/mis-pagos?pagoExitoso=true";
+                }
+                
+                // Si es un curso/oferta (inscripción), redirigir directo al aula
                 if (pago.getOferta() != null) {
                     Long ofertaId = pago.getOferta().getIdOferta();
                     log.info("🎓 Redirigiendo al aula de la oferta ID: {}", ofertaId);
