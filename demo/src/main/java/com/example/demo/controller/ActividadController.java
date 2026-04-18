@@ -1,6 +1,8 @@
 package com.example.demo.controller;
 
 import java.io.IOException;
+import java.security.Principal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -8,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -23,19 +26,27 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.example.demo.enums.EstadoCuota;
 import com.example.demo.enums.TipoEntrega;
 import com.example.demo.enums.TipoPregunta;
 import com.example.demo.model.Archivo;
+import com.example.demo.model.Cuota;
 import com.example.demo.model.Examen;
+import com.example.demo.model.Inscripciones;
 import com.example.demo.model.Material;
 import com.example.demo.model.Modulo;
 import com.example.demo.model.Tarea;
+import com.example.demo.model.Usuario;
 import com.example.demo.repository.ArchivoRepository;
 import com.example.demo.repository.ActividadRepository;
 import com.example.demo.model.Actividad;
+import com.example.demo.repository.CuotaRepository;
+import com.example.demo.repository.InscripcionRepository;
 import com.example.demo.repository.MaterialRepository;
 import com.example.demo.repository.ModuloRepository;
+import com.example.demo.repository.UsuarioRepository;
 import com.example.demo.service.ExamenService;
+import com.example.demo.service.InstitutoService;
 import com.example.demo.service.TareaService;
 import com.example.demo.service.ExamenService.PoolDTO;
 import com.example.demo.service.ExamenService.PreguntaDTO;
@@ -65,6 +76,18 @@ public class ActividadController {
     
     @Autowired
     private ArchivoRepository archivoRepository;
+    
+    @Autowired
+    private InscripcionRepository inscripcionRepository;
+    
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+    
+    @Autowired
+    private CuotaRepository cuotaRepository;
+    
+    @Autowired
+    private InstitutoService institutoService;
     
     @PostMapping("/actividad/crearExamen")
     @PreAuthorize("hasAnyAuthority('DOCENTE', 'ADMIN')")
@@ -287,28 +310,178 @@ public class ActividadController {
     
     @GetMapping("/actividad/material/{materialId}/archivos")
     @ResponseBody
-    public ResponseEntity<List<Map<String, Object>>> obtenerArchivosMaterial(@PathVariable Long materialId) {
-        List<Archivo> archivos = archivoRepository.findByMaterialIdActividad(materialId);
-        
-        List<Map<String, Object>> archivosInfo = archivos.stream().map(archivo -> {
-            Map<String, Object> info = new HashMap<>();
-            info.put("id", archivo.getIdArchivo());
-            info.put("nombre", archivo.getNombre());
-            info.put("tipoMime", archivo.getTipoMime());
-            info.put("tamano", archivo.getTamano());
-            info.put("fechaSubida", archivo.getFechaSubida());
-            return info;
-        }).toList();
-        
-        return ResponseEntity.ok(archivosInfo);
+    public ResponseEntity<?> obtenerArchivosMaterial(@PathVariable Long materialId, 
+                                                      Principal principal,
+                                                      Authentication authentication) {
+        try {
+            // Verificar que el material existe
+            Material material = materialRepository.findById(materialId)
+                    .orElseThrow(() -> new RuntimeException("Material no encontrado"));
+            
+            // Verificar permisos: Docente/Admin siempre tiene acceso
+            boolean esDocenteOAdmin = authentication.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("DOCENTE") || a.getAuthority().equals("ADMIN"));
+            
+            if (!esDocenteOAdmin) {
+                // Para alumnos, verificar que estén inscritos en la oferta del curso
+                String dni = principal.getName();
+                Usuario usuario = usuarioRepository.findByDni(dni)
+                        .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                
+                Long ofertaId = material.getModulo().getCurso().getIdOferta();
+                List<Inscripciones> inscripciones = inscripcionRepository.findByAlumnoDniAndOfertaId(dni, ofertaId);
+                
+                Inscripciones inscripcionActiva = inscripciones.stream()
+                        .filter(i -> Boolean.TRUE.equals(i.getEstadoInscripcion()))
+                        .findFirst()
+                        .orElse(null);
+                
+                if (inscripcionActiva == null) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                            .body(Map.of("error", "No tienes acceso a este material"));
+                }
+                
+                // Validar mora para materiales
+                System.out.println("🎯 ============ VALIDACIÓN DE MORA PARA MATERIALES ===========");
+                com.example.demo.model.Instituto instituto = institutoService.obtenerInstituto();
+                Integer diasMoraPermitidos = instituto.getDiasMoraBloqueoMaterial();
+                if (diasMoraPermitidos == null) diasMoraPermitidos = 0;
+                System.out.println("🎯 Días de mora permitidos (Materiales): " + diasMoraPermitidos);
+
+                List<Cuota> cuotas = cuotaRepository
+                        .findByInscripcionIdInscripcion(inscripcionActiva.getIdInscripcion());
+                System.out.println("🎯 Total cuotas encontradas: " + cuotas.size());
+                
+                List<Cuota> cuotasVencidas = cuotas.stream()
+                        .filter(c -> (c.getEstado() == EstadoCuota.PENDIENTE || c.getEstado() == EstadoCuota.VENCIDA) &&
+                                c.getFechaVencimiento() != null &&
+                                c.getFechaVencimiento().isBefore(LocalDate.now()))
+                        .collect(Collectors.toList());
+                System.out.println("🎯 Cuotas vencidas (PENDIENTES o VENCIDAS): " + cuotasVencidas.size());
+
+                if (!cuotasVencidas.isEmpty()) {
+                    long maxDiasMora = cuotasVencidas.stream()
+                            .mapToLong(c -> java.time.temporal.ChronoUnit.DAYS.between(c.getFechaVencimiento(),
+                                    LocalDate.now()))
+                            .max().orElse(0);
+                    System.out.println("🎯 Máximo días de mora calculado: " + maxDiasMora);
+                    System.out.println("🎯 Comparación: " + maxDiasMora + " > " + diasMoraPermitidos + " = "
+                            + (maxDiasMora > diasMoraPermitidos));
+
+                    if (maxDiasMora > diasMoraPermitidos) {
+                        System.out.println("🚫 BLOQUEANDO MATERIAL - Mora excesiva (" + maxDiasMora + " días, límite: " + diasMoraPermitidos + ")");
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                                .body(Map.of(
+                                    "bloqueado", true,
+                                    "error", "Acceso bloqueado por mora",
+                                    "diasMora", maxDiasMora,
+                                    "limiteMora", diasMoraPermitidos,
+                                    "mensaje", "Tienes pagos pendientes. Por favor regulariza tu situación."
+                                ));
+                    }
+                } else {
+                    System.out.println("✅ Sin cuotas vencidas - Acceso permitido");
+                }
+            }
+            
+            // Si tiene permiso, devolver los archivos
+            List<Archivo> archivos = archivoRepository.findByMaterialIdActividad(materialId);
+            
+            List<Map<String, Object>> archivosInfo = archivos.stream().map(archivo -> {
+                Map<String, Object> info = new HashMap<>();
+                info.put("id", archivo.getIdArchivo());
+                info.put("nombre", archivo.getNombre());
+                info.put("tipoMime", archivo.getTipoMime());
+                info.put("tamano", archivo.getTamano());
+                info.put("fechaSubida", archivo.getFechaSubida());
+                return info;
+            }).toList();
+            
+            return ResponseEntity.ok(archivosInfo);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Error al obtener archivos: " + e.getMessage()));
+        }
     }
     
     @GetMapping("/archivo/{archivoId}/descargar")
-    public ResponseEntity<byte[]> descargarArchivo(@PathVariable Long archivoId, @RequestParam(required = false, defaultValue = "false") boolean download) {
+    public ResponseEntity<?> descargarArchivo(@PathVariable Long archivoId, 
+                                               @RequestParam(required = false, defaultValue = "false") boolean download,
+                                               Principal principal,
+                                               Authentication authentication) {
         try {
             Archivo archivo = archivoRepository.findById(archivoId)
                     .orElseThrow(() -> new RuntimeException("Archivo no encontrado"));
 
+            // Verificar permisos: Docente/Admin siempre tiene acceso
+            boolean esDocenteOAdmin = authentication.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("DOCENTE") || a.getAuthority().equals("ADMIN"));
+            
+            if (!esDocenteOAdmin) {
+                // Para alumnos, verificar que estén inscritos
+                String dni = principal.getName();
+                Usuario usuario = usuarioRepository.findByDni(dni)
+                        .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                
+                // Obtener la oferta desde el material asociado al archivo
+                Material material = archivo.getMaterial();
+                if (material == null) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                            .body("No tienes permiso para descargar este archivo".getBytes());
+                }
+                
+                Long ofertaId = material.getModulo().getCurso().getIdOferta();
+                List<Inscripciones> inscripciones = inscripcionRepository.findByAlumnoDniAndOfertaId(dni, ofertaId);
+                
+                Inscripciones inscripcionActiva = inscripciones.stream()
+                        .filter(i -> Boolean.TRUE.equals(i.getEstadoInscripcion()))
+                        .findFirst()
+                        .orElse(null);
+                
+                if (inscripcionActiva == null) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                            .body("No tienes acceso a este archivo".getBytes());
+                }
+                
+                // Validar mora para descarga de archivos
+                System.out.println("🎯 Validando mora para descarga de archivo ID: " + archivoId);
+                com.example.demo.model.Instituto instituto = institutoService.obtenerInstituto();
+                Integer diasMoraPermitidos = instituto.getDiasMoraBloqueoMaterial();
+                if (diasMoraPermitidos == null) diasMoraPermitidos = 0;
+
+                List<Cuota> cuotas = cuotaRepository
+                        .findByInscripcionIdInscripcion(inscripcionActiva.getIdInscripcion());
+                
+                List<Cuota> cuotasVencidas = cuotas.stream()
+                        .filter(c -> (c.getEstado() == EstadoCuota.PENDIENTE || c.getEstado() == EstadoCuota.VENCIDA) &&
+                                c.getFechaVencimiento() != null &&
+                                c.getFechaVencimiento().isBefore(LocalDate.now()))
+                        .collect(Collectors.toList());
+
+                if (!cuotasVencidas.isEmpty()) {
+                    long maxDiasMora = cuotasVencidas.stream()
+                            .mapToLong(c -> java.time.temporal.ChronoUnit.DAYS.between(c.getFechaVencimiento(),
+                                    LocalDate.now()))
+                            .max().orElse(0);
+
+                    if (maxDiasMora > diasMoraPermitidos) {
+                        System.out.println("🚫 BLOQUEANDO DESCARGA - Mora excesiva (" + maxDiasMora + " días, límite: " + diasMoraPermitidos + ")");
+                        String mensajeHtml = "<html><body style='font-family: Arial; text-align: center; padding: 50px;'>" +
+                                "<h2 style='color: #dc2626;'>⚠️ Descarga Bloqueada</h2>" +
+                                "<p>Tienes <b>" + maxDiasMora + " días</b> de mora (límite: " + diasMoraPermitidos + " días)</p>" +
+                                "<p>Por favor, regulariza tus pagos para acceder al contenido.</p>" +
+                                "<a href='/alumno/mis-pagos' style='display: inline-block; margin-top: 20px; padding: 10px 20px; background: #dc2626; color: white; text-decoration: none; border-radius: 5px;'>Ir a Mis Pagos</a>" +
+                                "</body></html>";
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                                .contentType(org.springframework.http.MediaType.TEXT_HTML)
+                                .body(mensajeHtml.getBytes());
+                    }
+                }
+            }
+
+            // Si tiene permiso, permitir descarga
             org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
             headers.setContentType(org.springframework.http.MediaType.parseMediaType(archivo.getTipoMime()));
             
@@ -322,8 +495,11 @@ public class ActividadController {
             return ResponseEntity.ok()
                     .headers(headers)
                     .body(archivo.getContenido());
+                    
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(("Error: " + e.getMessage()).getBytes());
         }
     }
     

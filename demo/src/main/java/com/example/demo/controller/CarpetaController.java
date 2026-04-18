@@ -1,11 +1,14 @@
 package com.example.demo.controller;
 
 import java.io.IOException;
+import java.security.Principal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -22,14 +25,23 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.example.demo.enums.EstadoCuota;
 import com.example.demo.model.Archivo;
 import com.example.demo.model.Carpeta;
+import com.example.demo.model.Cuota;
+import com.example.demo.model.Inscripciones;
 import com.example.demo.model.Material;
 import com.example.demo.model.Modulo;
+import com.example.demo.model.OfertaAcademica;
+import com.example.demo.model.Usuario;
 import com.example.demo.repository.ArchivoRepository;
 import com.example.demo.repository.CarpetaRepository;
+import com.example.demo.repository.CuotaRepository;
+import com.example.demo.repository.InscripcionRepository;
 import com.example.demo.repository.MaterialRepository;
 import com.example.demo.repository.ModuloRepository;
+import com.example.demo.repository.UsuarioRepository;
+import com.example.demo.service.InstitutoService;
 
 @Controller
 @RequestMapping("/carpeta")
@@ -39,13 +51,23 @@ public class CarpetaController {
     private final ArchivoRepository archivoRepository;
     private final ModuloRepository moduloRepository;
     private final MaterialRepository materialRepository;
+    private final UsuarioRepository usuarioRepository;
+    private final InscripcionRepository inscripcionRepository;
+    private final CuotaRepository cuotaRepository;
+    private final InstitutoService institutoService;
 
     public CarpetaController(CarpetaRepository carpetaRepository, ArchivoRepository archivoRepository,
-            ModuloRepository moduloRepository, MaterialRepository materialRepository) {
+            ModuloRepository moduloRepository, MaterialRepository materialRepository,
+            UsuarioRepository usuarioRepository, InscripcionRepository inscripcionRepository,
+            CuotaRepository cuotaRepository, InstitutoService institutoService) {
         this.carpetaRepository = carpetaRepository;
         this.archivoRepository = archivoRepository;
         this.moduloRepository = moduloRepository;
         this.materialRepository = materialRepository;
+        this.usuarioRepository = usuarioRepository;
+        this.inscripcionRepository = inscripcionRepository;
+        this.cuotaRepository = cuotaRepository;
+        this.institutoService = institutoService;
     }
 
     @PostMapping("/crear")
@@ -88,7 +110,7 @@ public class CarpetaController {
             info.put("tamano", archivo.getTamano());
             info.put("fechaSubida", archivo.getFechaSubida().toString());
             return info;
-        }).toList();
+        }).collect(Collectors.toList());
 
         return ResponseEntity.ok(archivosInfo);
     }
@@ -139,11 +161,97 @@ public class CarpetaController {
     }
 
     @GetMapping("/archivo/{archivoId}/descargar")
-    public ResponseEntity<byte[]> descargarArchivo(@PathVariable Long archivoId, @RequestParam(required = false, defaultValue = "false") boolean download) {
+    public ResponseEntity<byte[]> descargarArchivo(@PathVariable Long archivoId, 
+            @RequestParam(required = false, defaultValue = "false") boolean download,
+            Principal principal) {
         try {
             Archivo archivo = archivoRepository.findById(archivoId)
                     .orElseThrow(() -> new RuntimeException("Archivo no encontrado"));
 
+            // Validar mora solo para alumnos
+            if (principal != null) {
+                String dni = principal.getName(); // En este sistema el DNI es el username
+                Usuario usuario = usuarioRepository.findByDni(dni).orElse(null);
+                
+                if (usuario != null) {
+                    // Verificar si es alumno
+                    boolean esAlumno = usuario.getRoles().stream()
+                            .anyMatch(rol -> "ALUMNO".equals(rol.getNombre()));
+                    
+                    if (esAlumno) {
+                        // Obtener carpeta y su módulo
+                        Carpeta carpeta = archivo.getCarpeta();
+                        if (carpeta != null) {
+                            Modulo modulo = carpeta.getModulo();
+                            if (modulo != null) {
+                                OfertaAcademica oferta = modulo.getCurso();
+                            
+                                // Buscar inscripción activa
+                                List<Inscripciones> inscripciones = inscripcionRepository.findByAlumnoDniAndOfertaId(dni, oferta.getIdOferta());
+                                Inscripciones inscripcionActiva = inscripciones.stream()
+                                        .filter(i -> Boolean.TRUE.equals(i.getEstadoInscripcion()))
+                                        .findFirst()
+                                        .orElse(null);
+                            
+                                if (inscripcionActiva != null) {
+                                    // Validar mora
+                                    System.out.println("🎯 Validando mora para descarga de archivo carpeta ID: " + archivoId);
+                                    com.example.demo.model.Instituto instituto = institutoService.obtenerInstituto();
+                                    Integer diasMoraPermitidos = instituto.getDiasMoraBloqueoMaterial();
+                                    if (diasMoraPermitidos == null) diasMoraPermitidos = 0;
+
+                                    List<Cuota> cuotas = cuotaRepository.findByInscripcionIdInscripcion(inscripcionActiva.getIdInscripcion());
+                                    List<Cuota> cuotasVencidas = cuotas.stream()
+                                            .filter(c -> (c.getEstado() == EstadoCuota.PENDIENTE || c.getEstado() == EstadoCuota.VENCIDA) &&
+                                                    c.getFechaVencimiento() != null &&
+                                                    c.getFechaVencimiento().isBefore(LocalDate.now()))
+                                            .collect(Collectors.toList());
+
+                                    if (!cuotasVencidas.isEmpty()) {
+                                        long maxDiasMora = cuotasVencidas.stream()
+                                                .mapToLong(c -> java.time.temporal.ChronoUnit.DAYS.between(c.getFechaVencimiento(), LocalDate.now()))
+                                                .max().orElse(0);
+
+                                        System.out.println("🎯 Días máximos de mora: " + maxDiasMora);
+                                        System.out.println("🎯 Límite permitido: " + diasMoraPermitidos);
+
+                                        if (maxDiasMora > diasMoraPermitidos) {
+                                            System.out.println("❌ ACCESO BLOQUEADO POR MORA");
+                                            String mensajeHtml = String.format(
+                                                "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Acceso Bloqueado</title>" +
+                                                "<style>body{font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;" +
+                                                "height:100vh;margin:0;background:linear-gradient(135deg,#667eea 0%%,#764ba2 100%%)}" +
+                                                ".container{background:white;padding:40px;border-radius:15px;box-shadow:0 10px 40px rgba(0,0,0,0.3);" +
+                                                "text-align:center;max-width:500px}.icon{font-size:60px;color:#e74c3c;margin-bottom:20px}" +
+                                                "h1{color:#333;margin-bottom:10px}p{color:#666;margin:15px 0}.stats{display:flex;justify-content:space-around;" +
+                                                "margin:30px 0;padding:20px;background:#f8f9fa;border-radius:10px}.stat{text-align:center}" +
+                                                ".stat-value{font-size:32px;font-weight:bold;color:#e74c3c}.stat-label{font-size:14px;color:#666;margin-top:5px}" +
+                                                ".btn{display:inline-block;padding:12px 30px;margin:10px;background:#e74c3c;color:white;text-decoration:none;" +
+                                                "border-radius:25px;transition:0.3s;cursor:pointer;border:none;font-size:16px}" +
+                                                ".btn:hover{background:#c0392b;transform:translateY(-2px)}" +
+                                                ".btn-secondary{background:#95a5a6}.btn-secondary:hover{background:#7f8c8d}</style>" +
+                                                "<script>function goBack(){window.history.back();}</script></head><body>" +
+                                                "<div class='container'><div class='icon'>🔒</div><h1>Material Bloqueado</h1>" +
+                                                "<p>No puedes acceder a este material debido a pagos pendientes</p>" +
+                                                "<div class='stats'><div class='stat'><div class='stat-value'>%d</div><div class='stat-label'>Días de Mora</div></div>" +
+                                                "<div class='stat'><div class='stat-value'>%d</div><div class='stat-label'>Límite Permitido</div></div></div>" +
+                                                "<a href='/alumno/mis-pagos' class='btn'>💳 Regularizar mis Pagos</a>" +
+                                                "<button onclick='goBack()' class='btn btn-secondary'>← Volver</button></div></body></html>",
+                                                maxDiasMora, diasMoraPermitidos
+                                            );
+                                            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                                                    .contentType(MediaType.TEXT_HTML)
+                                                    .body(mensajeHtml.getBytes());
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Si no está bloqueado, proceder con la descarga normal
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.parseMediaType(archivo.getTipoMime()));
             
@@ -158,6 +266,7 @@ public class CarpetaController {
                     .headers(headers)
                     .body(archivo.getContenido());
         } catch (Exception e) {
+            System.err.println("Error al descargar archivo: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
         }
     }
@@ -249,12 +358,12 @@ public class CarpetaController {
                 aInfo.put("tipoMime", archivo.getTipoMime());
                 aInfo.put("tamano", archivo.getTamano());
                 return aInfo;
-            }).toList();
+            }).collect(Collectors.toList());
             
             info.put("archivos", archivosInfo);
             
             return info;
-        }).toList();
+        }).collect(Collectors.toList());
 
         return ResponseEntity.ok(materialesInfo);
     }
@@ -274,7 +383,7 @@ public class CarpetaController {
             info.put("tamano", archivo.getTamano());
             info.put("tipo", "ARCHIVO");
             return info;
-        }).toList();
+        }).collect(Collectors.toList());
 
         // 2. Materiales (con sus archivos)
         List<Map<String, Object>> materiales = carpeta.getMateriales().stream().map(material -> {
@@ -289,11 +398,11 @@ public class CarpetaController {
                 aInfo.put("id", archivo.getIdArchivo());
                 aInfo.put("nombre", archivo.getNombre());
                 return aInfo;
-            }).toList();
+            }).collect(Collectors.toList());
             
             info.put("archivos", archs);
             return info;
-        }).toList();
+        }).collect(Collectors.toList());
         
         Map<String, Object> response = new HashMap<>();
         response.put("archivos", archivosDirectos);

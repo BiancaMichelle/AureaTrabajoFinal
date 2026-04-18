@@ -86,8 +86,15 @@ public class SecurityConfig {
                         .requestMatchers("/docente/**").hasAuthority("DOCENTE")
                         .requestMatchers("/ia/chat/**", "/ia/status", "/ia/health").permitAll()
                         .requestMatchers("/ia/**").hasAnyAuthority("ALUMNO", "DOCENTE", "ADMIN")
-                        .requestMatchers("/modulo/**", "/crearModulo", "/ofertaAcademica/**", "/actividad/**",
-                                "/pool/**")
+                        .requestMatchers("/modulo/**", "/crearModulo", "/ofertaAcademica/**")
+                        .hasAnyAuthority("DOCENTE", "ADMIN")
+                        .requestMatchers("/pool/**")
+                        .hasAnyAuthority("DOCENTE", "ADMIN")
+                        // Permitir a alumnos ver materiales y descargar archivos
+                        .requestMatchers("/actividad/material/*/archivos", "/archivo/*/descargar")
+                        .hasAnyAuthority("ALUMNO", "DOCENTE", "ADMIN")
+                        // Resto de endpoints de actividad solo para docentes/admin
+                        .requestMatchers("/actividad/**")
                         .hasAnyAuthority("DOCENTE", "ADMIN")
                         .requestMatchers("/examen/**").hasAnyAuthority("ALUMNO", "DOCENTE", "ADMIN")
                         .anyRequest().authenticated())
