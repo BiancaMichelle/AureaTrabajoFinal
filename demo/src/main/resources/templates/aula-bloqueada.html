@@ -194,16 +194,16 @@
                 <i class="fas fa-exclamation-triangle"></i>
             </div>
             
-            <h1 class="mora-title">Clase en Vivo Bloqueada</h1>
+            <h1 class="mora-title">Aula Bloqueada</h1>
             
             <div class="alert-warning-custom">
                 <i class="fas fa-info-circle"></i>
-                <p>No puede acceder a esta clase en vivo debido a pagos pendientes. El resto del curso permanece accesible.</p>
+                <p>No puede acceder a esta aula debido a pagos pendientes. Debe regularizar su situación para continuar con sus estudios.</p>
             </div>
 
             <p class="mora-description">
-                Para poder unirse a las clases en vivo, debe regularizar sus cuotas vencidas. 
-                Puede seguir accediendo a los materiales, tareas y otras actividades del curso.
+                Para poder acceder al aula y participar en todas las actividades del curso, debe regularizar sus cuotas vencidas. 
+                Una vez realizado el pago, podrá volver a acceder automáticamente.
             </p>
 
             <div class="mora-stats">
@@ -223,14 +223,14 @@
                     Regularizar mis Pagos
                 </a>
                 
-                <a th:href="@{/alumno/aula/{ofertaId}(ofertaId=${ofertaId})}" class="mora-button mora-button-secondary">
+                <a href="/alumno/mis-ofertas" class="mora-button mora-button-secondary">
                     <i class="fas fa-arrow-left"></i>
-                    Volver al Curso
+                    Volver a Mis Cursos
                 </a>
             </div>
 
             <div class="mora-footer">
-                <p><i class="fas fa-check-circle"></i> Una vez acreditado el pago, podrá unirse a las clases en vivo automáticamente.</p>
+                <p><i class="fas fa-check-circle"></i> Una vez acreditado el pago, podrá acceder al aula automáticamente.</p>
             </div>
         </div>
     </div>

@@ -1047,28 +1047,31 @@ public class AlumnoController {
                 }
             }
 
-            // Verificar bloqueo por mora en aula
+            // Verificar bloqueo por mora total del aula
             Instituto instituto = institutoService.obtenerInstituto();
             Integer limiteMoraAula = instituto != null ? instituto.getDiasMoraBloqueoAula() : null;
             int diasMora = obtenerMaxDiasMora(inscripcion);
-            boolean bloqueadoPorMora = limiteMoraAula != null && limiteMoraAula > 0 && diasMora >= limiteMoraAula;
+            
+            System.out.println("🎯 Validando bloqueo total de aula:");
+            System.out.println("   - Días de mora calculados: " + diasMora);
+            System.out.println("   - Límite configurado (diasMoraBloqueoAula): " + limiteMoraAula);
+            
+            // Bloquear si excede el límite (no alcanza)
+            boolean bloqueadoPorMora = limiteMoraAula != null && limiteMoraAula > 0 && diasMora > limiteMoraAula;
 
-            System.out.println("🔍 DEBUG BLOQUEO MORA:");
-            System.out.println("   - Días de mora: " + diasMora);
-            System.out.println("   - Límite configurado: " + limiteMoraAula);
-            System.out.println("   - ¿Bloqueado?: " + bloqueadoPorMora);
+            System.out.println("   - ¿Bloqueado por mora? " + bloqueadoPorMora);
 
             if (bloqueadoPorMora) {
-                System.out.println("🚫 RETORNANDO VISTA BLOQUEADA");
-                model.addAttribute("curso", oferta);
+                System.out.println("🚫 ACCESO AL AULA BLOQUEADO - Redirigiendo a aula-bloqueada.html");
+                model.addAttribute("ofertaId", ofertaId);
                 model.addAttribute("diasMora", Integer.valueOf(diasMora));
-                model.addAttribute("limiteMoraAula", limiteMoraAula);
+                model.addAttribute("limiteMora", limiteMoraAula);
                 
-                // Retornar vista especial sin layout
+                // Retornar vista especial de bloqueo total
                 return "aula-bloqueada";
             }
             
-            System.out.println("✅ No hay bloqueo por mora, cargando contenido normal");
+            System.out.println("✅ Acceso permitido - Mora dentro del límite");
             model.addAttribute("bloqueadoPorMora", Boolean.FALSE);
             
             // Si es un curso o formación, cargar módulos y contenido
