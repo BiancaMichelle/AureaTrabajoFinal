@@ -64,6 +64,7 @@ public class ClaseController {
     private final com.example.demo.repository.ArchivoRepository archivoRepository;
     private final com.example.demo.repository.DocenteRepository docenteRepository;
     private final com.example.demo.repository.InscripcionRepository inscripcionRepository;
+    private final com.example.demo.repository.TareaRepository tareaRepository;
     private final CuotaRepository cuotaRepository;
     private final InstitutoService institutoService;
     private final PasswordEncoder passwordEncoder;
@@ -79,6 +80,7 @@ public class ClaseController {
             com.example.demo.repository.ArchivoRepository archivoRepository,
             com.example.demo.repository.DocenteRepository docenteRepository,
             com.example.demo.repository.InscripcionRepository inscripcionRepository,
+            com.example.demo.repository.TareaRepository tareaRepository,
             CuotaRepository cuotaRepository,
             InstitutoService institutoService,
             PasswordEncoder passwordEncoder,
@@ -93,6 +95,7 @@ public class ClaseController {
         this.archivoRepository = archivoRepository;
         this.docenteRepository = docenteRepository;
         this.inscripcionRepository = inscripcionRepository;
+        this.tareaRepository = tareaRepository;
         this.cuotaRepository = cuotaRepository;
         this.institutoService = institutoService;
         this.passwordEncoder = passwordEncoder;
@@ -310,11 +313,14 @@ public class ClaseController {
                 
                 if (!cuotasVencidas.isEmpty()) {
                     long maxDiasMora = cuotasVencidas.stream()
-                        .mapToLong(c -> java.time.temporal.ChronoUnit.DAYS.between(c.getFechaVencimiento(), LocalDateTime.now()))
+                        .mapToLong(c -> java.time.temporal.ChronoUnit.DAYS.between(c.getFechaVencimiento(), LocalDate.now()))
                         .max().orElse(0);
                         
                     if (maxDiasMora > diasMoraPermitidos) {
-                         return "aula-bloqueada"; 
+                        model.addAttribute("diasMora", maxDiasMora);
+                        model.addAttribute("limiteMora", diasMoraPermitidos);
+                        model.addAttribute("ofertaId", ofertaId);
+                        return "aula-bloqueada"; 
                     }
                 }
             }
@@ -366,6 +372,158 @@ public class ClaseController {
 
             model.addAttribute("error", "No se pudo cargar la sala: " + e.getMessage());
             return "clase-espera"; 
+        }
+    }
+
+    @GetMapping("/validar-mora-aula/{claseId}")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> validarMoraAula(@PathVariable UUID claseId, Principal principal) {
+        try {
+            System.out.println("🎯 Validando mora para videoconferencia - Clase ID: " + claseId);
+            System.out.println("   - Usuario: " + principal.getName());
+            
+            // Obtener clase y validar
+            Clase clase = claseService.findById(claseId).orElse(null);
+            if (clase == null) {
+                System.out.println("❌ Clase no encontrada");
+                return ResponseEntity.badRequest().body(Map.of("error", "Clase no encontrada"));
+            }
+            
+            // Verificar si es docente o admin (no se les bloquea)
+            Usuario usuario = usuarioRepository.findByDni(principal.getName()).orElse(null);
+            if (usuario != null) {
+                boolean esDocente = usuario.getRoles().stream()
+                        .anyMatch(r -> r.getNombre().equals("DOCENTE") || r.getNombre().equals("ADMIN"));
+                if (esDocente) {
+                    System.out.println("✅ Usuario es docente/admin - Acceso permitido");
+                    return ResponseEntity.ok(Map.of("bloqueado", false));
+                }
+            }
+            
+            Long ofertaId = clase.getModulo().getCurso().getIdOferta();
+            List<Inscripciones> inscripciones = inscripcionRepository.findByAlumnoDniAndOfertaId(principal.getName(), ofertaId);
+            
+            Inscripciones inscripcionActiva = inscripciones.stream()
+                    .filter(i -> Boolean.TRUE.equals(i.getEstadoInscripcion()))
+                    .findFirst()
+                    .orElse(null);
+            
+            if (inscripcionActiva == null) {
+                System.out.println("❌ No hay inscripción activa");
+                return ResponseEntity.status(403).body(Map.of(
+                    "bloqueado", true,
+                    "error", "No estás inscrito"
+                ));
+            }
+            
+            // Validar mora para aulas/videoconferencias (usa el mismo límite que actividades)
+            Integer diasMoraPermitidos = institutoService.obtenerInstituto().getDiasMoraBloqueoActividad();
+            if (diasMoraPermitidos == null) diasMoraPermitidos = 0;
+            
+            System.out.println("   - Días mora permitidos (actividad): " + diasMoraPermitidos);
+            
+            List<Cuota> cuotas = cuotaRepository.findByInscripcionIdInscripcion(inscripcionActiva.getIdInscripcion());
+            System.out.println("   - Cuotas encontradas: " + cuotas.size());
+            
+            List<Cuota> cuotasVencidas = cuotas.stream()
+                .filter(c -> (com.example.demo.enums.EstadoCuota.PENDIENTE.equals(c.getEstado()) || 
+                             com.example.demo.enums.EstadoCuota.VENCIDA.equals(c.getEstado())) &&
+                        c.getFechaVencimiento() != null &&
+                        c.getFechaVencimiento().isBefore(LocalDate.now()))
+                .toList();
+            
+            System.out.println("   - Cuotas vencidas: " + cuotasVencidas.size());
+            
+            if (!cuotasVencidas.isEmpty()) {
+                long maxDiasMora = cuotasVencidas.stream()
+                    .mapToLong(c -> java.time.temporal.ChronoUnit.DAYS.between(c.getFechaVencimiento(), LocalDate.now()))
+                    .max().orElse(0);
+                
+                System.out.println("   - Días de mora máximos: " + maxDiasMora);
+                System.out.println("   - ¿Bloquear? " + (maxDiasMora > diasMoraPermitidos));
+                
+                if (maxDiasMora > diasMoraPermitidos) {
+                    System.out.println("🚫 BLOQUEADO - Mora excede el límite");
+                    return ResponseEntity.status(403).body(Map.of(
+                        "bloqueado", true,
+                        "diasMora", maxDiasMora,
+                        "limiteMora", diasMoraPermitidos,
+                        "ofertaId", ofertaId,
+                        "mensaje", "Tienes pagos pendientes que superan el límite permitido"
+                    ));
+                }
+            }
+            
+            System.out.println("✅ Validación de mora pasada - Acceso permitido");
+            return ResponseEntity.ok(Map.of("bloqueado", false));
+            
+        } catch (Exception e) {
+            System.out.println("❌ Error en validación de mora: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of(
+                "error", "Error al validar mora: " + e.getMessage()
+            ));
+        }
+    }
+
+    @GetMapping("/validar-mora/{tareaId}")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> validarMoraTarea(@PathVariable Long tareaId, Principal principal) {
+        try {
+            // Obtener tarea y validar inscripción
+            com.example.demo.model.Tarea tarea = tareaRepository.findById(tareaId).orElse(null);
+            if (tarea == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Tarea no encontrada"));
+            }
+            
+            Long ofertaId = tarea.getModulo().getCurso().getIdOferta();
+            List<Inscripciones> inscripciones = inscripcionRepository.findByAlumnoDniAndOfertaId(principal.getName(), ofertaId);
+            
+            Inscripciones inscripcionActiva = inscripciones.stream()
+                    .filter(i -> Boolean.TRUE.equals(i.getEstadoInscripcion()))
+                    .findFirst()
+                    .orElse(null);
+            
+            if (inscripcionActiva == null) {
+                return ResponseEntity.status(403).body(Map.of(
+                    "bloqueado", true,
+                    "error", "No estás inscrito"
+                ));
+            }
+            
+            // Validar mora para actividades
+            Integer diasMoraPermitidos = institutoService.obtenerInstituto().getDiasMoraBloqueoActividad();
+            if (diasMoraPermitidos == null) diasMoraPermitidos = 0;
+            
+            List<Cuota> cuotas = cuotaRepository.findByInscripcionIdInscripcion(inscripcionActiva.getIdInscripcion());
+            List<Cuota> cuotasVencidas = cuotas.stream()
+                .filter(c -> (com.example.demo.enums.EstadoCuota.PENDIENTE.equals(c.getEstado()) || 
+                             com.example.demo.enums.EstadoCuota.VENCIDA.equals(c.getEstado())) &&
+                        c.getFechaVencimiento() != null &&
+                        c.getFechaVencimiento().isBefore(LocalDate.now()))
+                .toList();
+            
+            if (!cuotasVencidas.isEmpty()) {
+                long maxDiasMora = cuotasVencidas.stream()
+                    .mapToLong(c -> java.time.temporal.ChronoUnit.DAYS.between(c.getFechaVencimiento(), LocalDate.now()))
+                    .max().orElse(0);
+                
+                if (maxDiasMora > diasMoraPermitidos) {
+                    return ResponseEntity.status(403).body(Map.of(
+                        "bloqueado", true,
+                        "diasMora", maxDiasMora,
+                        "limiteMora", diasMoraPermitidos,
+                        "mensaje", "Tienes pagos pendientes que superan el límite permitido"
+                    ));
+                }
+            }
+            
+            return ResponseEntity.ok(Map.of("bloqueado", false));
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "error", "Error al validar mora: " + e.getMessage()
+            ));
         }
     }
 

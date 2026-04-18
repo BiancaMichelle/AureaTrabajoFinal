@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clase Bloqueada - Pagos Pendientes</title>
+    <title>Material Bloqueado - Pagos Pendientes</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
@@ -113,6 +113,8 @@
             font-weight: 600;
             font-size: 16px;
             transition: transform 0.2s, box-shadow 0.2s;
+            border: none;
+            cursor: pointer;
         }
 
         .mora-button-primary {
@@ -194,16 +196,16 @@
                 <i class="fas fa-exclamation-triangle"></i>
             </div>
             
-            <h1 class="mora-title">Clase en Vivo Bloqueada</h1>
+            <h1 class="mora-title">Material Bloqueado</h1>
             
             <div class="alert-warning-custom">
                 <i class="fas fa-info-circle"></i>
-                <p>No puede acceder a esta clase en vivo debido a pagos pendientes. El resto del curso permanece accesible.</p>
+                <p>No puede descargar este archivo debido a pagos pendientes. El resto del curso permanece accesible.</p>
             </div>
 
             <p class="mora-description">
-                Para poder unirse a las clases en vivo, debe regularizar sus cuotas vencidas. 
-                Puede seguir accediendo a los materiales, tareas y otras actividades del curso.
+                Para poder descargar materiales del curso, debe regularizar sus cuotas vencidas. 
+                Puede seguir accediendo a las clases, tareas y otras actividades del curso.
             </p>
 
             <div class="mora-stats">
@@ -223,14 +225,14 @@
                     Regularizar mis Pagos
                 </a>
                 
-                <a th:href="@{/alumno/aula/{ofertaId}(ofertaId=${ofertaId})}" class="mora-button mora-button-secondary">
+                <button onclick="window.history.back()" class="mora-button mora-button-secondary">
                     <i class="fas fa-arrow-left"></i>
-                    Volver al Curso
-                </a>
+                    Volver
+                </button>
             </div>
 
             <div class="mora-footer">
-                <p><i class="fas fa-check-circle"></i> Una vez acreditado el pago, podrá unirse a las clases en vivo automáticamente.</p>
+                <p><i class="fas fa-check-circle"></i> Una vez acreditado el pago, podrá descargar los materiales automáticamente.</p>
             </div>
         </div>
     </div>

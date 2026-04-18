@@ -217,31 +217,69 @@ public class CarpetaController {
 
                                         if (maxDiasMora > diasMoraPermitidos) {
                                             System.out.println("❌ ACCESO BLOQUEADO POR MORA");
-                                            String mensajeHtml = String.format(
-                                                "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Acceso Bloqueado</title>" +
-                                                "<style>body{font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;" +
-                                                "height:100vh;margin:0;background:linear-gradient(135deg,#667eea 0%%,#764ba2 100%%)}" +
-                                                ".container{background:white;padding:40px;border-radius:15px;box-shadow:0 10px 40px rgba(0,0,0,0.3);" +
-                                                "text-align:center;max-width:500px}.icon{font-size:60px;color:#e74c3c;margin-bottom:20px}" +
-                                                "h1{color:#333;margin-bottom:10px}p{color:#666;margin:15px 0}.stats{display:flex;justify-content:space-around;" +
-                                                "margin:30px 0;padding:20px;background:#f8f9fa;border-radius:10px}.stat{text-align:center}" +
-                                                ".stat-value{font-size:32px;font-weight:bold;color:#e74c3c}.stat-label{font-size:14px;color:#666;margin-top:5px}" +
-                                                ".btn{display:inline-block;padding:12px 30px;margin:10px;background:#e74c3c;color:white;text-decoration:none;" +
-                                                "border-radius:25px;transition:0.3s;cursor:pointer;border:none;font-size:16px}" +
-                                                ".btn:hover{background:#c0392b;transform:translateY(-2px)}" +
-                                                ".btn-secondary{background:#95a5a6}.btn-secondary:hover{background:#7f8c8d}</style>" +
-                                                "<script>function goBack(){window.history.back();}</script></head><body>" +
-                                                "<div class='container'><div class='icon'>🔒</div><h1>Material Bloqueado</h1>" +
-                                                "<p>No puedes acceder a este material debido a pagos pendientes</p>" +
-                                                "<div class='stats'><div class='stat'><div class='stat-value'>%d</div><div class='stat-label'>Días de Mora</div></div>" +
-                                                "<div class='stat'><div class='stat-value'>%d</div><div class='stat-label'>Límite Permitido</div></div></div>" +
-                                                "<a href='/alumno/mis-pagos' class='btn'>💳 Regularizar mis Pagos</a>" +
-                                                "<button onclick='goBack()' class='btn btn-secondary'>← Volver</button></div></body></html>",
+                                            
+                                            // Crear vista HTML usando template
+                                            String htmlContent = String.format(
+                                                "<!DOCTYPE html>" +
+                                                "<html lang=\"es\">" +
+                                                "<head>" +
+                                                "<meta charset=\"UTF-8\">" +
+                                                "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">" +
+                                                "<title>Material Bloqueado - Pagos Pendientes</title>" +
+                                                "<link href=\"https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css\" rel=\"stylesheet\">" +
+                                                "<link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css\">" +
+                                                "<style>" +
+                                                "body{margin:0;padding:0;min-height:100vh;background:linear-gradient(135deg,#f59e0b 0%%,#d97706 100%%);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;display:flex;align-items:center;justify-content:center}" +
+                                                ".mora-container{max-width:600px;width:100%%;padding:20px}" +
+                                                ".mora-card{background:#ffffff;border-radius:16px;padding:40px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3)}" +
+                                                ".mora-icon{width:80px;height:80px;margin:0 auto 20px;background:linear-gradient(135deg,#f59e0b 0%%,#d97706 100%%);border-radius:50%%;display:flex;align-items:center;justify-content:center;color:white;font-size:40px}" +
+                                                ".mora-title{font-size:28px;font-weight:700;color:#1f2937;margin-bottom:16px}" +
+                                                ".mora-description{color:#6b7280;font-size:16px;line-height:1.6;margin-bottom:24px}" +
+                                                ".mora-stats{display:flex;justify-content:center;gap:30px;margin:30px 0;padding:20px;background:#fef3c7;border-radius:12px;border:2px solid #fbbf24}" +
+                                                ".mora-stat{text-align:center}" +
+                                                ".mora-stat-label{font-size:12px;color:#92400e;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;font-weight:600}" +
+                                                ".mora-stat-value{font-size:32px;font-weight:700;color:#d97706}" +
+                                                ".mora-stat-value.limit{color:#059669}" +
+                                                ".mora-buttons{display:flex;flex-direction:column;gap:12px;margin-top:24px}" +
+                                                ".mora-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:16px;transition:transform 0.2s,box-shadow 0.2s;border:none;cursor:pointer}" +
+                                                ".mora-button-primary{background:linear-gradient(135deg,#f59e0b 0%%,#d97706 100%%);color:white;box-shadow:0 4px 12px rgba(245,158,11,0.3)}" +
+                                                ".mora-button-primary:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(245,158,11,0.4);color:white}" +
+                                                ".mora-button-secondary{background:#f3f4f6;color:#374151;border:2px solid #e5e7eb}" +
+                                                ".mora-button-secondary:hover{background:#e5e7eb;transform:translateY(-2px);color:#374151}" +
+                                                ".mora-footer{margin-top:30px;padding-top:20px;border-top:1px solid #e5e7eb;color:#6b7280;font-size:14px}" +
+                                                ".alert-warning-custom{background:#fef3c7;border:2px solid #fbbf24;border-radius:8px;padding:16px;margin-bottom:24px;display:flex;align-items:center;gap:12px;text-align:left}" +
+                                                ".alert-warning-custom i{color:#d97706;font-size:24px;flex-shrink:0}" +
+                                                ".alert-warning-custom p{margin:0;color:#92400e;font-weight:500}" +
+                                                "@media (max-width:640px){.mora-card{padding:30px 20px}.mora-stats{flex-direction:column;gap:20px}.mora-title{font-size:24px}}" +
+                                                "</style>" +
+                                                "</head>" +
+                                                "<body>" +
+                                                "<div class=\"mora-container\">" +
+                                                "<div class=\"mora-card\">" +
+                                                "<div class=\"mora-icon\"><i class=\"fas fa-exclamation-triangle\"></i></div>" +
+                                                "<h1 class=\"mora-title\">Material Bloqueado</h1>" +
+                                                "<div class=\"alert-warning-custom\">" +
+                                                "<i class=\"fas fa-info-circle\"></i>" +
+                                                "<p>No puede descargar este archivo debido a pagos pendientes. El resto del curso permanece accesible.</p>" +
+                                                "</div>" +
+                                                "<p class=\"mora-description\">Para poder descargar materiales del curso, debe regularizar sus cuotas vencidas. Puede seguir accediendo a las clases, tareas y otras actividades del curso.</p>" +
+                                                "<div class=\"mora-stats\">" +
+                                                "<div class=\"mora-stat\"><div class=\"mora-stat-label\">Días de Mora</div><div class=\"mora-stat-value\">%d</div></div>" +
+                                                "<div class=\"mora-stat\"><div class=\"mora-stat-label\">Límite Permitido</div><div class=\"mora-stat-value limit\">%d</div></div>" +
+                                                "</div>" +
+                                                "<div class=\"mora-buttons\">" +
+                                                "<a href=\"/alumno/mis-pagos\" class=\"mora-button mora-button-primary\"><i class=\"fas fa-credit-card\"></i> Regularizar mis Pagos</a>" +
+                                                "<button onclick=\"window.history.back()\" class=\"mora-button mora-button-secondary\"><i class=\"fas fa-arrow-left\"></i> Volver</button>" +
+                                                "</div>" +
+                                                "<div class=\"mora-footer\"><p><i class=\"fas fa-check-circle\"></i> Una vez acreditado el pago, podrá descargar los materiales automáticamente.</p></div>" +
+                                                "</div></div>" +
+                                                "</body></html>",
                                                 maxDiasMora, diasMoraPermitidos
                                             );
+                                            
                                             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                                                     .contentType(MediaType.TEXT_HTML)
-                                                    .body(mensajeHtml.getBytes());
+                                                    .body(htmlContent.getBytes());
                                         }
                                     }
                                 }
